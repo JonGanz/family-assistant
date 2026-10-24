@@ -51,6 +51,8 @@ updated: 2026-10-23
 - Launch each task as a sub-agent (Sonnet 5.5, medium effort unless the plan says otherwise), with the brief file as its prompt. Run the tasks of a wave in parallel, and don't start a wave before its dependencies are done.
 - Ownership is strict: an agent edits only its `owns` paths. Between waves, the main session integrates (build, test), fixes small issues, updates task `status`, and logs the result.
 - **Verify every external name you write into a design or brief**, including image names, crate and package names, and API paths. If you're unsure, check it (for example `docker pull`, a registry search, or a research sub-agent). A wrong image name, `binwiper/ntfy` instead of `binwiederhier/ntfy`, went from Platform.md into the compose file.
+- **Run CI-equivalent checks against a fresh Postgres** (a throwaway container with `SQLX_OFFLINE=true`), never only the long-lived dev DB. Its state (existing roles, migrated tables) hides failures.
+- **Once a migration has been deployed anywhere, never edit it.** Add a new migration instead. (Before release, an edit is OK if every DB's `_sqlx_migrations` checksum is updated.)
 - **Never quote aggregate numbers (test counts and the like) without computing them from the output.**
 - Briefs must require `cargo fmt` and enough disk space. Check `df -h /` before launching build-heavy waves.
 - Cross-check briefs before launching: every column, table, or dependency a task needs must be owned and created by an earlier or same-wave task.

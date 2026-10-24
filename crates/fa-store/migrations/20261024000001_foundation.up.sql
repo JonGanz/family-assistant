@@ -17,17 +17,25 @@
 --   sets it, and the repository functions for those paths return minimal rows.
 -- * System-wide tables (job, schedule, system_status) have no RLS.
 
--- Serialise concurrent migrators (CREATE ROLE is cluster-wide).
-SELECT pg_advisory_xact_lock(7243001);
-
+-- CREATE ROLE is cluster-wide, but advisory locks are per-database, so migrators running
+-- concurrently in different databases of one cluster (e.g. parallel #[sqlx::test] DBs) can race.
+-- Tolerate a concurrent creator instead of relying on a lock.
 DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'fa_app') THEN
-        CREATE ROLE fa_app NOLOGIN NOSUPERUSER NOBYPASSRLS;
+        BEGIN
+            CREATE ROLE fa_app NOLOGIN NOSUPERUSER NOBYPASSRLS;
+        EXCEPTION WHEN duplicate_object OR unique_violation THEN
+            NULL;
+        END;
     END IF;
+    BEGIN
+        EXECUTE format('GRANT fa_app TO %I', current_user);
+    EXCEPTION WHEN unique_violation OR SQLSTATE 'XX000' THEN
+        NULL; -- concurrent identical grant ("tuple concurrently updated")
+    END;
 END
 $$;
-GRANT fa_app TO CURRENT_USER;
 GRANT USAGE ON SCHEMA public TO fa_app;
 
 CREATE FUNCTION app_household() RETURNS uuid
