@@ -28,7 +28,7 @@ You are a sub-agent implementing one task of the M1 milestone of the Family Assi
    - `Units {Metric, Imperial}`
    - `SourceKind {Google, Caldav, Ics}`
    - `SourceState {Ok, NeedsReauth, Error}`
-   - `Visibility {Full, Busy, Hidden}`
+   - `Visibility {Full, Busy}` (D-036)
    - `EventOrigin {Synced, Extracted, Manual}`
    - `EventStatus {Proposed, Approved, Written, Rejected}`
    - `RuleAction {Alert, Task}`
@@ -42,9 +42,9 @@ You are a sub-agent implementing one task of the M1 milestone of the Family Assi
    - Unknown panel kinds are kept as they are, so round trips don't lose them.
    - `validate()`: agenda_days 1..=14, at most 12 panels, known orientation and theme.
    - `Default` is the "Family hub" preset.
-5. **Visibility:** the module `calendar` with the pure `view(event: &EventMeta, cal: &CalendarMeta, viewer: &Viewer, flags: &HouseholdFlags) -> Visibility`, implementing the Feeds.md §3.5 table (option C of Q-034, unless the processed answer says otherwise):
+5. **Visibility:** the module `calendar` with the pure `view(event: &EventMeta, cal: &CalendarMeta, viewer: &Viewer, flags: &HouseholdFlags) -> Visibility`, implementing the Feeds.md §3.5 table (D-036: adult-owned private events are Busy for children and the dashboard when the flag is on; adults always see Full):
    - `EventMeta{is_private}`
-   - `CalendarMeta{members: &[MemberId], dashboard_visibility}`
+   - `CalendarMeta{members: &[(MemberId, Role)], owner_role: Option<Role>}`
    - `Viewer = AdultUser | ChildUser(MemberId) | Device | ElevatedDevice`
    - `HouseholdFlags{private_events_as_busy}`
 

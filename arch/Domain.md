@@ -5,7 +5,7 @@ status: draft
 updated: 2026-10-24
 drawio: Domain.drawio
 drawio_src: src/Domain.py
-depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034]
+depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034, D-036]
 milestone: M0
 ---
 
@@ -79,10 +79,10 @@ The decision results for a message (category, time_sensitive, member links, is_b
 |---|---|
 | `OAuthAccount` | provider: `google`, owner Member, email, scopes[], secret, state (shared with Gmail in M3) |
 | `CalendarSource` | kind: `google\|caldav\|ics`, owner Member?, oauth_account? / url, username? / secret? (CalDAV password or the ICS URL), writable, poll_minutes, state |
-| `Calendar` | source, remote_id, name, color, enabled, members[] (M:N), dashboard_visibility **[Q-034]**, sync_state, is_default_target |
+| `Calendar` | source, remote_id, name, color, enabled, members[] (M:N), sync_state, is_default_target |
 | `Event` | calendar?, remote_uid?, instance_key, title, start_at, end_at, all_day (+ start_date/end_date), location?, is_private, cancelled, members[] (M:N, M3), origin: `synced\|extracted\|manual`, status? (`null` when synced; `proposed\|approved\|written\|rejected`), confidence?, source_ref, dedupe_key |
 
-Synced events are stored **one row per occurrence** (recurrences are expanded in the sync window). Full table detail, sync, and visibility rules are in [Feeds.md](Feeds.md) §2–3.
+Synced events are stored **one row per occurrence** (recurrences are expanded in the sync window). Visibility (D-036): everything is shown, but adults' source-private events appear as Busy to the dashboard and children. Full table detail, sync, and visibility rules are in [Feeds.md](Feeds.md) §2–3.
 
 ## Package: Tasks (M2)
 | Class | Key attributes | Notes |

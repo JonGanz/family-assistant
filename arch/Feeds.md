@@ -5,13 +5,13 @@ status: draft
 updated: 2026-10-24
 drawio: Feeds.drawio
 drawio_src: src/Feeds.py
-depends_on: [D-004, D-006, D-008, D-014, D-017, D-018, D-019, D-023, D-034, D-035]
+depends_on: [D-004, D-006, D-008, D-014, D-017, D-018, D-019, D-023, D-034, D-035, D-036]
 milestone: M1
 ---
 
 # Feeds: calendar read & weather (DRAFT v1)
 
-This doc covers the backend half of M1: pulling calendars and weather in, storing them, and turning weather into advisories. The UI half is in [Frontend.md](Frontend.md). Calendar **writes**, event extraction, and the approval inbox come in M3 (`Ingest.md`). Items marked **[Q-034]** depend on an open question.
+This doc covers the backend half of M1: pulling calendars and weather in, storing them, and turning weather into advisories. The UI half is in [Frontend.md](Frontend.md). Calendar **writes**, event extraction, and the approval inbox come in M3 (`Ingest.md`).
 
 ## 1. Crates (page "Components")
 | Crate | Responsibility | Depends on |
@@ -31,11 +31,11 @@ This refines the Calendar and Weather packages of [Domain.md](Domain.md). All ta
 
 | Table | Key columns | Notes |
 |---|---|---|
-| `household` (+cols) | `units: metric\|imperial` (default `metric`), `calendar_past_days` (30), `calendar_future_days` (400), `weather_retention_days` (7), `private_events_as_busy` (true) **[Q-034]** | Editable in the UI (Settings → Household) |
+| `household` (+cols) | `units: metric\|imperial` (default `metric`), `calendar_past_days` (30), `calendar_future_days` (400), `weather_retention_days` (7), `private_events_as_busy` (true, D-036) | Editable in the UI (Settings → Household) |
 | `oauth_account` | provider: `google`, owner_member, email, scopes[], secret (refresh token), state: `ok\|needs_reauth\|error`, last_error? | One per connected Google account. Gmail (M3) reuses it with extra scopes (incremental consent) |
 | `oauth_pending` | state (PK), session, member, pkce_verifier, return_to, expires_at (10 min) | Short-lived flow state, cleaned hourly by the `oauth.cleanup` job |
 | `calendar_source` | kind: `google\|caldav\|ics`, name, owner_member?, oauth_account? (google), url? (caldav base), username? (caldav), secret? (caldav password, **or the whole ICS URL**), writable=false, poll_minutes (default 15, ICS 60), state, last_synced_at?, last_error?, archived_at? | `owner_member = null` means a household source. ICS URLs often embed a secret token (Google's "secret address", school portals), so the URL is a `Secret` and the API shows it masked |
-| `calendar` | source, remote_id, name, color, enabled, dashboard_visibility: `full\|busy\|hidden` (default `full`) **[Q-034]**, is_default_target (M3), sync_state (Google `syncToken` / CalDAV `getctag` / ICS `ETag`), last_full_sync_at | Unique `(source, remote_id)`. An ICS source has exactly one calendar |
+| `calendar` | source, remote_id, name, color, enabled, is_default_target (M3), sync_state (Google `syncToken` / CalDAV `getctag` / ICS `ETag`), last_full_sync_at | Unique `(source, remote_id)`. An ICS source has exactly one calendar |
 | `calendar_member` | calendar ↔ member (M:N) | No members means a **household calendar** |
 | `event` | calendar?, remote_uid?, instance_key (`''` or the RECURRENCE-ID as UTC ISO), title, description?, location?, start_at, end_at, all_day, start_date?/end_date? (all-day), source_tz?, is_private, cancelled, origin: `synced\|extracted\|manual`, status? (`null` for synced; `proposed\|approved\|written\|rejected` from M3), confidence?, source_ref, dedupe_key, remote_etag?, version | **One row per occurrence** (see §3.3). Unique `(calendar, remote_uid, instance_key)`. Index on `(household_id, start_at)` |
 | `event_member` | event ↔ member | Used by extracted events (M3). Synced events take their members from the calendar |
@@ -78,14 +78,16 @@ This refines the Calendar and Weather packages of [Domain.md](Domain.md). All ta
 ### 3.4 Member linking (M1)
 An event's members are the members of its calendar. A calendar with no members is a household calendar. Linking events by content (attendee e-mail, title mentions) is a System One decision point, `event.member_link`, in M3/M4 (D-027).
 
-### 3.5 Visibility **[Q-034]**
-`fa-calendar` applies one function, `visible(event, viewer)`, to every query. The result is **full**, **busy** (title, location, and description are replaced by "Busy"), or **hidden**.
+### 3.5 Visibility (D-036)
+`fa-calendar` applies one pure function, `fa_domain::calendar::view(event, calendar, viewer, flags)`, to every query. The result is **full** or **busy** (title, location, and description are replaced by "Busy"; the time block and member colour stay). Scope rules (which events a viewer gets at all) are applied in the query.
+
+**Adult-owned private event:** the event is private at its source (`visibility=private\|confidential`, `CLASS:PRIVATE\|CONFIDENTIAL`) **and** at least one linked member is an adult. A calendar with no members uses its source owner instead, and with no owner either it counts as an adult's.
 
 | Viewer | Rule |
 |---|---|
 | Adult user | Everything, in full |
-| Child user | Events on calendars linked to them, plus household calendars. Masking as for the dashboard |
-| Dashboard device | All enabled calendars, masked by `calendar.dashboard_visibility`, and private events shown as busy when `private_events_as_busy` is on |
+| Child user | Events on calendars linked to them, plus household calendars. Adult-owned private events are busy when `private_events_as_busy` is on |
+| Dashboard device | All enabled calendars. Adult-owned private events are busy when `private_events_as_busy` is on |
 | Elevated device | Same as the dashboard device. Elevation is only for actions |
 
 ## 4. Weather
@@ -127,7 +129,7 @@ The S2-suggested rules and LLM advisories of D-017 come in M4. Weather-driven ta
 ## 5. Configuration (D-018)
 - The household TOML gains `[household] units`, `calendar_past_days`, `calendar_future_days`, `weather_retention_days`, `private_events_as_busy`, plus `[[calendar_sources]]` and `[[weather_rules]]`.
 - Calendar sources are **exported without secrets**: Google sources export as a placeholder that needs reconnecting, CalDAV without the password, and ICS without the URL. On import, these sources come in **disabled** with the state `needs_reauth`, and the UI asks for the missing credential.
-- `calendar_sources[].calendars[]` carries `remote_id`, `enabled`, `members` (member keys), `color`, and `dashboard_visibility`, so linking survives a round trip.
+- `calendar_sources[].calendars[]` carries `remote_id`, `enabled`, `members` (member keys), and `color`, so linking survives a round trip.
 
 ## 6. Cross-process change events (ChangeBus)
 The api and the worker are separate processes (Platform.md §3), so the worker can't use the api's in-process SSE `Hub`. The bridge works like this:

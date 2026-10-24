@@ -36,7 +36,7 @@ assoc(p1, lab, msg, "*", "1")
 
 p1.box("Calendar (M1/M3)", 20, 540, 1460, 300, PKG)
 cs = cls(p1, "CalendarSource", ["kind: google|caldav|ics", "owner?, oauth_account?", "secret? (password | ICS URL)", "poll_minutes, state", "writable"], 40, 590)
-cal = cls(p1, "Calendar", ["remote_id, name, color", "enabled", "dashboard_visibility [Q-034]", "sync_state", "is_default_target"], 300, 590)
+cal = cls(p1, "Calendar", ["remote_id, name, color", "enabled", "sync_state", "is_default_target"], 300, 590)
 oac = cls(p1, "OAuthAccount", ["provider: google", "email, scopes[]", "secret, state"], 900, 590)
 assoc(p1, oac, cs, "0..1", "*")
 ev = cls(p1, "Event", ["remote_uid, instance_key (1 row/occurrence)", "title, start_at, end_at, all_day", "location?, is_private, cancelled", "origin, source_ref", "status?: proposed|approved|written|rejected", "confidence?", "dedupe_key"], 560, 590, 260)

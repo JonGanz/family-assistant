@@ -27,10 +27,8 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Batch 13, open
-| ID | Title | Area |
-|---|---|---|
-| [Q-034](Q-034-event-visibility.md) | Who sees which calendar events (dashboard, children) | frontend |
+## Open
+_None. The next question number is Q-035._
 
 ## Resolved
 | ID | Title | Decisions |
@@ -68,3 +66,4 @@ decisions: []
 | [Q-031](resolved/Q-031-update-mechanism.md) | How updates are deployed | D-033 |
 | [Q-032](resolved/Q-032-email-metadata-kept.md) | What email metadata survives the content purge | D-034 |
 | [Q-033](resolved/Q-033-repo-visibility.md) | Repository visibility & license | D-035 |
+| [Q-034](resolved/Q-034-event-visibility.md) | Who sees which calendar events (dashboard, children) | D-036 |

@@ -28,8 +28,8 @@ You are a sub-agent implementing one task of the M1 milestone of the Family Assi
      - `test_source(NewSource) -> TestResult{calendars, sample_events (≤ 3), error?}` (no writes);
      - `create_source(actor_household, owner, NewSource) -> (SourceView, Vec<CalendarView>)`: stores the credential as a Secret (the CalDAV password, or the **whole ICS URL**), discovers synchronously, and inserts the calendars disabled (an ICS source gets exactly one calendar, enabled);
      - `update_source` (a credential change resets the state to `ok` and enqueues a sync), `archive_source`, `enqueue_sync(source)`;
-     - `update_calendar(patch)` (members, colour, enabled, `dashboard_visibility`), which publishes `calendar.updated` over the full window;
-     - `events(viewer, flags, from, to, member: Option) -> Vec<EventView>`: `EventRepo::range` + `view()` + mask; hidden events are omitted; the `member` filter keeps events linked to that member; a child viewer only gets their own and household calendars; the range is capped at 400 days (error above).
+     - `update_calendar(patch)` (members, colour, enabled), which publishes `calendar.updated` over the full window;
+     - `events(viewer, flags, from, to, member: Option) -> Vec<EventView>`: `EventRepo::range` + `view()` + mask (D-036); the `member` filter keeps events linked to that member; a child viewer only gets their own and household calendars; the range is capped at 400 days (error above).
 2. **Sync** (`sync_source(source_id)`), following Feeds.md §3.3 exactly:
    1. Discover: upsert calendars (new ones disabled) and archive the ones that went missing.
    2. For each enabled calendar, fetch with the right mode:
@@ -67,7 +67,7 @@ You are a sub-agent implementing one task of the M1 milestone of the Family Assi
      - a Google incremental sync with a cancelled item, then `410` → full resync;
      - 401 → `needs_reauth`;
    - the `due()` → enqueue idempotency;
-   - `events()` applying `view()` for an adult, a child (own + household calendars only), and a device (busy masking, hidden omitted, private as busy);
+   - `events()` applying `view()` for an adult, a child (own + household calendars only), and a device (an adult-owned private event is busy, a child-owned private event is full, and with the flag off everything is full);
    - `calendar.updated` published on commit.
 
 ## Acceptance

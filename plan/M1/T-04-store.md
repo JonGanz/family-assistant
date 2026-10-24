@@ -61,7 +61,7 @@ You are a sub-agent implementing one task of the M1 milestone of the Family Assi
      - `delete_by_uid(conn, calendar, uid, instance_key: Option<&str>)` (Google cancellations);
      - `delete_calendar_events(conn, calendar)` (on resync or archive);
      - `prune_before(conn, before) -> u64` (synced only);
-     - `range(conn, from, to, calendars: Option<&[CalendarId]>) -> Vec<EventRow>`. An `EventRow` carries the event fields **plus** its calendar's `color`, `dashboard_visibility`, and member IDs (an aggregated array), so fa-calendar can apply `view()` without N+1 queries.
+     - `range(conn, from, to, calendars: Option<&[CalendarId]>) -> Vec<EventRow>`. An `EventRow` carries the event fields **plus** its calendar's `color`, its member IDs with their roles (aggregated arrays), and the source owner's role, so fa-calendar can apply `view()` without N+1 queries.
    - **WeatherSnapshotRepo:** `insert(conn, provider, current, hourly, daily) -> id`, `latest(conn) -> Option<WeatherSnapshot>`, `delete_older_than(conn, before) -> u64`.
    - **WeatherRuleRepo:** `insert`, `get`, `list(conn, statuses: Option<&[RuleStatus]>)`, `update(conn, &rule, expected_version)`, `archive`, `ensure_default(conn, name, condition, action, severity, message) -> bool` (inserts only if no rule with that name and `suggested_by = default` exists, even an archived one).
    - **AdvisoryRepo:** `upsert_by_dedupe(conn, rule, text, severity, valid_from, valid_until, source, dedupe_key) -> (id, changed: bool)` (doesn't resurrect a dismissed advisory); `active(conn, now) -> Vec<Advisory>` (not dismissed, `valid_until > now`); `dismiss(conn, id, by_member: Option)`; `delete_expired(conn, before) -> u64`.

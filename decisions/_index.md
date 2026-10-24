@@ -44,3 +44,5 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-033](D-033-compose-sample-hoster-deploys.md) | Ship a complete docker-compose sample; deployment/update strategy is the hoster's choice | accepted | Q-031 | arch/Platform.md |
 | [D-034](D-034-configurable-mail-retention.md) | Email retention is a configurable policy; content kept while it helps local learning; provenance always | accepted | Q-032 | arch/Domain.md, arch/Platform.md, arch/Overall.md |
 | [D-035](D-035-agpl-public.md) | Public repository and images under AGPL-3.0-or-later | accepted | Q-033 | arch/Platform.md |
+| [D-036](D-036-event-visibility.md) | Show all events; adults' private events appear as Busy | accepted | Q-034 | arch/Feeds.md, arch/Frontend.md, arch/Domain.md |
+| [D-036](D-036-event-visibility.md) | Show all events; adults' private events appear as Busy | accepted | Q-034 | ['arch/Feeds.md', 'arch/Frontend.md', 'arch/Domain.md'] |

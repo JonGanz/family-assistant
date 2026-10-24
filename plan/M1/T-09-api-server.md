@@ -26,7 +26,7 @@ You are a sub-agent implementing one task of the M1 milestone (Dashboard core) o
 
 ## Work
 1. **Routes:** implement every row of the plan's *HTTP API v1 additions* table, with exactly those paths, actors, DTOs (from fa-domain), and status codes. Handlers stay thin: they authorise through `Policy::authorize` with the M1 actions, call the feature crate, and map errors to problem+json.
-   - **Visibility:** `/events` and `/dashboard` use the feature crate's masked queries, which call `fa_domain::calendar::view()`. Never return a hidden event, or a busy event's title, location, or description.
+   - **Visibility:** `/events` and `/dashboard` use the feature crate's masked queries, which call `fa_domain::calendar::view()`. Never return an event outside the viewer's scope, or a busy event's title, location, or description.
    - **Avatars:** enforce the 512 KB limit before buffering (`DefaultBodyLimit` on that route), sniff the type from the magic bytes rather than trusting `Content-Type`, and return 413 or 415.
    - **OAuth:** `start` redirects with 302. `callback` redirects to `/oauth/done?account=…&return_to=…` or `?error=…`, never to an arbitrary URL: `return_to` must be a same-origin path.
    - **Sources:** `POST /calendar-sources` and `/test` discover synchronously with a 20 s timeout. Responses never contain secrets: show only `masked_url` (scheme://host/…).
@@ -56,7 +56,7 @@ You are a sub-agent implementing one task of the M1 milestone (Dashboard core) o
    - `user add` and `device pair` switch to the System-capable fa-auth services from T-07, and the duplicated token logic is removed.
 6. **Tests** (sqlx::test + tower `oneshot`):
    - an RBAC matrix over the new routes (adult, child, device, elevated device, anonymous);
-   - `/events` masking for a child and for the device under each `dashboard_visibility` and `private_events_as_busy`;
+   - `/events` masking for a child and for the device for adult-owned and child-owned private events, with `private_events_as_busy` on and off;
    - avatar 413 and 415;
    - OAuth `return_to` open-redirect rejection;
    - the shape of `/dashboard`;

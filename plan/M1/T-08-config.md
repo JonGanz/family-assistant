@@ -27,7 +27,7 @@ You are a sub-agent implementing one task of the M1 milestone (Dashboard core) o
 1. **Process config** (figment, env + file): add `google_client_id: Option<String>` (`FA_GOOGLE_CLIENT_ID`), `google_client_secret: Option<Secret-ish String>` (`FA_GOOGLE_CLIENT_SECRET`, redacted in `Debug`), `public_url: Option<Url>` (`FA_PUBLIC_URL`), `open_meteo_url: Url` (`FA_OPEN_METEO_URL`, default `https://api.open-meteo.com`), and `allow_http_feeds: bool` (`FA_ALLOW_HTTP_FEEDS`, default false). Validation: when a Google client ID is set, `public_url` is required and must be https (or http when `allow_http_feeds` is on, for dev).
 2. **Household TOML schema:**
    - `[household]` gains `units`, `calendar_past_days`, `calendar_future_days`, `weather_retention_days`, and `private_events_as_busy`. Each is optional, with the defaults from Feeds.md §2.
-   - New `[[calendar_sources]]` table: `{key, kind, name, owner? (member key), url? (caldav only), username?, poll_minutes?, enabled?}` with `[[calendar_sources.calendars]] {remote_id, name?, enabled, color?, members = [member keys], dashboard_visibility}`.
+   - New `[[calendar_sources]]` table: `{key, kind, name, owner? (member key), url? (caldav only), username?, poll_minutes?, enabled?}` with `[[calendar_sources.calendars]] {remote_id, name?, enabled, color?, members = [member keys]}`.
    - New `[[weather_rules]]` table: `{name, condition, action, severity, message, status}`.
 3. **Export** writes the new sections **without secrets**:
    - Google sources become `kind = "google"` with no account, and a comment saying they need reconnecting.

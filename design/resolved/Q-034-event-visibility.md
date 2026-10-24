@@ -1,12 +1,12 @@
 ---
 id: Q-034
 title: Who sees which calendar events (dashboard, children)
-status: open
+status: resolved
 batch: 13
 area: frontend
 created: 2026-10-24
-resolved:
-decisions: []
+resolved: 2026-10-24
+decisions: [D-036]
 ---
 
 # Q-034: Who sees which calendar events (dashboard, children)

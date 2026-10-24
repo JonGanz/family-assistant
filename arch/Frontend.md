@@ -5,13 +5,13 @@ status: draft
 updated: 2026-10-24
 drawio: Frontend.drawio
 drawio_src: src/Frontend.py
-depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031]
+depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036]
 milestone: M1
 ---
 
 # Frontend (DRAFT v1)
 
-This doc describes the Vue 3 PWA in `apps/web`: one app with two shells. The **app shell** is for signed-in people on phones and desktops. The **kiosk shell** is `/dashboard` on the Echo Show and other wall screens. This version covers what M1 builds. Later milestones add screens (tasks M2, inbox and labelling M3, pipelines and backends M4, meals M5). Backend data comes from [Feeds.md](Feeds.md). Items marked **[Q-034]** depend on an open question.
+This doc describes the Vue 3 PWA in `apps/web`: one app with two shells. The **app shell** is for signed-in people on phones and desktops. The **kiosk shell** is `/dashboard` on the Echo Show and other wall screens. This version covers what M1 builds. Later milestones add screens (tasks M2, inbox and labelling M3, pipelines and backends M4, meals M5). Backend data comes from [Feeds.md](Feeds.md).
 
 ## 1. Structure (page "Components")
 ```
@@ -39,8 +39,8 @@ apps/web/src/
 | `/` | app | user | **Today**: my agenda (or the whole household for adults), weather card, active advisories |
 | `/calendar` | app | user | Agenda, week, and month views. Filter by member. Child users see only what §3.5 of Feeds.md allows |
 | `/members` | app | user | M0 list + avatar upload and colour picker, plus interests, hobbies, and responsibilities editing |
-| `/settings/household` | app | adult | name, tz, location (lat/lon + label, with a "use this device's location" button), units, calendar window, `private_events_as_busy` **[Q-034]** |
-| `/settings/calendars` | app | adult | sources (add Google / CalDAV / ICS, state, last sync, sync now, reconnect), calendars (enable, colour, members, dashboard visibility **[Q-034]**) |
+| `/settings/household` | app | adult | name, tz, location (lat/lon + label, with a "use this device's location" button), units, calendar window, `private_events_as_busy` (D-036) |
+| `/settings/calendars` | app | adult | sources (add Google / CalDAV / ICS, state, last sync, sync now, reconnect), calendars (enable, colour, members) |
 | `/settings/weather` | app | adult | rules list, editor with live validation and preview, enable or disable |
 | `/settings/devices` | app | adult | M0 pairing + **dashboard layout editor** (§4) |
 | `/settings/status` | app | adult | System status: sources, last weather fetch, backup age, queue depth and dead jobs |

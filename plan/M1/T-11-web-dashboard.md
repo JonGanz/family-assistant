@@ -15,7 +15,7 @@ You are a sub-agent implementing one task of the M1 milestone (Dashboard core) o
 
 ## Read first
 - arch/Frontend.md §4 (Dashboard), §5, §7
-- arch/Feeds.md §3.5 (what busy and hidden mean for display)
+- arch/Feeds.md §3.5 (what busy means for display; D-036)
 - plan/M1.md: `/dashboard`, `/devices/{id}`, the SSE kinds, and the *Web ownership split*
 - `apps/web/src/gen/api.d.ts`, the T-03 layout engine (`dashboard/layout/`), and the T-03 shared components and utilities
 - the M0 kiosk code (`kiosk/`, `stores/dashboard.ts`, `views/DashboardView.vue`, `views/DevicesView.vue`)
