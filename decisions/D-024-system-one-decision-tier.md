@@ -10,6 +10,8 @@ affects: [arch/Overall.md, arch/AI.md (future), arch/Ingest.md (future)]
 research: [R-001]
 ---
 
+> **Refined by [D-026](D-026-hardware-adaptive-backends.md) (placement), [D-027](D-027-system-one-scope.md) (decision points), [D-028](D-028-knn-and-eval-sample.md) (kNN), [D-029](D-029-configurable-decision-pipeline.md) (configurable pipeline).**
+
 # D-024: System 1 tier = System One decision models (pluggable)
 
 ## Context

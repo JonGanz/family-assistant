@@ -36,7 +36,7 @@ updated: 2026-10-23
 ## Standing technical constraints
 - Everything runs locally. Any AI work uses local LLMs on 32 GB RAM and an 8 GB RTX 3070. Budget for roughly 7–8B models at Q4 and small embedding models.
 - Go deterministic first: rules, headers, parsers, and schema.org data. Use the LLM only for what rules cannot handle, and make it return structured JSON.
-- Optional or hardware-dependent features get a **toggle**, with a suggested default (the user keeps asking for this).
+- **Configurable, not hard-coded.** Design for *any* household and *any* hardware, and treat the reference setup (a Ubuntu core node plus one RTX 3070 gaming PC) as just the default profile. Optional or hardware-dependent features get a toggle with a suggested default, and behaviour that is likely to vary should be data that can be edited in the UI (see D-026, D-029). The user has asked for this repeatedly.
 - Intelligence comes in tiers: rules, then System 1, then System 2. **"System 1" means System One decision models** (https://systemonemodels.org/, see R-001 and D-024), not a small generative LLM. System 2 is the generative LLM on the GPU node.
 - **If the user names an unfamiliar term, product, or site, research it (a sub-agent writes up an `R-NNN`) before designing around it. Don't guess.**
 - Design around family members. Each member has a role (adult or child) and has interests, hobbies, and responsibilities.

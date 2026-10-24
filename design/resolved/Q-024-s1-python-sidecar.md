@@ -1,12 +1,12 @@
 ---
 id: Q-024
 title: Python runtime exception for System One models
-status: open
+status: resolved
 batch: 4
 area: tech
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-025]
 research: [R-001]
 ---
 

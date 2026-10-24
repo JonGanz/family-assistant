@@ -1,12 +1,12 @@
 ---
 id: Q-025
 title: Where System One models run
-status: open
+status: resolved
 batch: 4
 area: infra
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-026]
 research: [R-001]
 ---
 

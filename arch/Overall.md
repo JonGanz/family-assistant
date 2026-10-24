@@ -5,88 +5,96 @@ status: draft
 updated: 2026-10-23
 drawio: Overall.drawio
 drawio_src: src/Overall.py
-depends_on: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012, D-013, D-014, D-015, D-017, D-018, D-019, D-020, D-021, D-023, D-024]
+depends_on: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012, D-013, D-014, D-015, D-017, D-018, D-019, D-020, D-021, D-023, D-024, D-025, D-026, D-027, D-028, D-029]
 research: [R-001]
 ---
 
-# Overall Architecture (DRAFT v4)
+# Overall Architecture (DRAFT v5)
 
-v4 re-derives the design from PROJECT.md and all accepted decisions (D-001 to D-024; D-016 → D-022 → D-024 superseded). System 1 is now a **System One decision model** (R-001). Open: Batch 4 (Q-024 to Q-027) on its runtime, placement, scope, and the kNN layer.
+v5 re-derives the design from PROJECT.md and all accepted decisions (D-001 to D-029). D-016 and D-022 are superseded. **No questions are open.** Next comes the detailed design for M0 (D-023).
 
 ## Scope
-**In:** members and roles; Gmail ingest and classification; bills; school, daycare, and teacher linking; calendars (Google, CalDAV, ICS) with event extraction; weather with rules and advisories; tasks (recurring, email-derived, weather and season driven); meal plan, recipes, the living grocery list; dashboard, PWA, TUI (stretch); ntfy notifications.
+**In:** members and roles; Gmail ingest and classification; bills; school, daycare, and teacher linking; calendars (Google, CalDAV, ICS) with event extraction; weather with rules and advisories; tasks; meal plan, recipes, the living grocery list; configurable AI decision pipelines; dashboard, PWA, TUI (stretch); ntfy.
 
-**Out:** deals (D-012), school portal APIs (D-014), budgeting (D-009), grocery exports (D-015), Alexa/voice (D-011), gamification (D-013), dietary preferences (deferred in D-021).
+**Out:** deals (D-012), school portal APIs (D-014), budgeting (D-009), grocery exports (D-015), Alexa (D-011), gamification (D-013), dietary preferences (deferred, D-021).
 
 ## Principles
-1. **It works without AI, and AI makes it better.** The intelligence comes in tiers: **rules → System 1 (System One decision models: typed answers with probabilities) → System 2 (generative LLM for extraction)** (D-001, D-002, D-024). Each tier handles only what the one before it left undecided.
-2. **Members come first, and everything is configured.** Files bootstrap the config, the UI owns it after that, and there is no PII in the repo (D-004, D-018).
-3. **One Rust backend serves thin Vue/ratatui clients** (D-003).
-4. **Local and private.** Access is over Tailscale only (D-010).
-5. **If in doubt, make it a toggle.** Optional and hardware-dependent features have a switch, and the system suggests a sensible default.
+1. **It works without AI, and AI makes it better.** Every decision is a **configurable pipeline** of stages: rules → kNN → System One → LLM → human. Every pipeline ends in a deterministic or human stage (D-002, D-024, D-029).
+2. **Hardware-adaptive.** Models are registered backends on whatever nodes exist. The system probes the hardware and suggests profiles, and nothing is hard-wired to the reference machines (D-026).
+3. **Members come first, and everything is configured.** Files bootstrap the config, the UI owns it after that, and there is no PII in the repo (D-004, D-018).
+4. **Our code is Rust and Vue.** Third-party model servers can be containerised Python sidecars (D-003, D-025).
+5. **Local and private.** Access is over Tailscale only (D-010). If in doubt, make it a toggle.
 
-## Deployment (page "Deployment")
+## Deployment (page "Deployment"): reference hardware
 | Node | Always on | Runs |
 |---|---|---|
-| **Core node**: Ubuntu Server, same LAN as the GPU node | yes | Docker Compose with `fa-server` (api + worker), `postgres:16` + pgvector, `ntfy`, `backup` to NAS, tailscale, **`s1-decider`** (a containerized Python sidecar serving a System One model over `/v1/systemone`, **[Q-024]**/**[Q-025]**), and an optional embedding model for kNN **[Q-027]**. Toggle on; profile suggested by the hardware probe (D-024) |
-| **GPU node**: Linux gaming PC with RTX 3070 8 GB | no | System 2: Ollama with a 7–8B Q4 model, plus possibly a larger System One model **[Q-025]**, plus `fa-gpu-agent`. It is woken by WoL, gives way to games, and auto-suspends (D-020) |
+| **Core node**: Ubuntu Server | yes | Docker Compose with `fa-server` (api + worker, including `fa-sysprobe`), `postgres:16` + pgvector, `ntfy`, `backup` to NAS, tailscale. **Suggested backends:** `s1-small` (System One sidecar, e.g. GLiNER2.5-Decide on CPU) and `embed` (a small embedding model) |
+| **GPU node(s)**: 0 or more. Reference is a Linux gaming PC with RTX 3070 8 GB | no | `fa-gpu-agent` (hardware report, gaming detection, suspend). **Suggested backends:** `s1-large` (e.g. Strands 2B or Kev 4B sidecar) and `llm` (Ollama 7–8B Q4). Woken by WoL (D-020, D-026) |
 | **NAS** | yes | Nightly pg_dump (D-005) |
 | **Echo Show 15** | yes | Silk browser on `/dashboard` with keep-alive (D-011) |
-| **Phones and desktops** | n/a | PWA (login per user) and the ntfy app |
+| **Phones and desktops** | n/a | PWA and the ntfy app |
+
+The final model choices come from `fa-eval` on the household's labelled sample (D-024, D-028).
 
 ## Components (page "Components")
 | Crate | Responsibility |
 |---|---|
-| `fa-api` | Axum REST + SSE, sessions, central RBAC, device sessions with adult PIN step-up (D-006, D-019) |
-| `fa-config` | Versioned TOML schema, import and merge, redacted export (D-018) |
-| `fa-worker` | Scheduler and Postgres `SKIP LOCKED` job runner |
+| `fa-api` | Axum REST + SSE, sessions, RBAC, device sessions with adult PIN step-up (D-006, D-019) |
+| `fa-config` | Versioned TOML import and export. Includes pipelines and backends (D-018, D-029) |
+| `fa-worker` | Scheduler and `SKIP LOCKED` job runner |
 | `fa-connectors` | Gmail, Google Calendar, CalDAV, ICS, Open-Meteo |
-| `fa-pipeline` | Email: normalise → **rules** → (kNN **[Q-027]**) → **System One decisions** (category, time-sensitive, and more **[Q-026]**) → escalate to **System 2** for low confidence and for all extraction → emit events, tasks, and bills. Handles 'Fix category' feedback |
-| `fa-decide` | `DecisionBackend` trait with a `/v1/systemone` HTTP client: `choice`, `score`, and `noul` calls. One question per request, stable option order. Backends are selected by config (D-024) |
-| `fa-eval` | Replays labelled household email against candidate backends and reports accuracy, calibration, and latency. Drives model choice (D-024) |
-| `fa-llm` | System 2 gateway: GPU queue for extraction, routing hints, recipes, and advisories. JSON-schema prompts. Also the embeddings and pgvector kNN if Q-027 keeps them |
-| `fa-sysprobe` | Probes RAM and CPU at start-up and suggests a System 1 profile (e.g. `off`, `small-cpu` such as GLiNER2.5-Decide, or `gpu-only`) (D-024) |
-| `fa-calendar` | Dedupe, confidence gate, routing (explicit, learned, LLM), approval inbox (D-008) |
-| `fa-tasks` | Recurrence, fixed/rotation/pool strategies (with smart later), completion policy and dashboard override, priority (D-013) |
-| `fa-weather` | Snapshots, `WeatherRule`s, advisories and suggested rules (D-017) |
-| `fa-meals` | Recipe import, meal plan horizon, generation into the living list, staples check (D-015, D-021) |
-| `fa-gpu-node` | WoL and agent state (D-020) |
+| `fa-pipeline` | **Decision pipeline engine** (D-029): runs each decision point's stage list with thresholds and `on_unavailable` handling. Also handles versioning and dry-run. Email ingest uses it, followed by S2 extraction → emit events, tasks, and bills |
+| `fa-rules` | Deterministic rulesets (sender and Org maps, headers, keywords, biller templates) and extractors (ICS, dates, PDF) |
+| `fa-decide` | `DecisionBackend` trait with a `/v1/systemone` client (`choice`, `score`, `noul`) and the kNN stage over pgvector (D-024, D-028) |
+| `fa-llm` | System 2 client (Ollama): JSON-schema prompts for extraction, routing hints, recipes, advisories. Uses a queue when the backend is `on_demand` |
+| `fa-backends` | **Backend registry**: availability tracking, preference-list routing, the model catalogue, and the profile suggester from node hardware reports (D-026) |
+| `fa-sysprobe` | Core node hardware probe |
+| `fa-eval` | Replays the labelled sample against backends and pipelines (accuracy, calibration, latency). Powers dry-run (D-028, D-029) |
+| `fa-calendar` | Dedupe, approval inbox, writes. Routing is the `event.calendar_route` pipeline (D-008, D-027) |
+| `fa-tasks` | Recurrence, fixed/rotation/pool strategies (smart later), completion policy, priority (urgency from the `task.urgency` pipeline) (D-013) |
+| `fa-weather` | Snapshots, `WeatherRule`s, S2 advisories and suggested rules (D-017) |
+| `fa-meals` | Recipes, meal plan, the living grocery list with the staples check (D-015, D-021) |
+| `fa-gpu-node` | WoL and agent state for each GPU node (D-020) |
 | `fa-notify` | `Notifier` trait with an ntfy implementation (D-010) |
 | `fa-domain`, `fa-store` | Entities, DTOs (`ts-rs`), SQLx repositories, encrypted secrets |
-| `fa-gpu-agent` | Separate binary on the GPU node |
-| `web` | Vue 3 + TS PWA and the `/dashboard` kiosk route |
+| `fa-gpu-agent` | Separate binary on each GPU node |
+| `web` | Vue 3 + TS PWA: dashboard, labelling view, **Pipeline settings**, **Backends** screens |
 | `fa-tui` | ratatui (stretch) |
 
 ## Domain model (draft, moves to Domain.md in M0)
-- `Household{location, tz, meal_plan_horizon_weeks, dashboard_completion_override, ai_settings{system1{enabled, profile, accept_threshold}, system2{wake_policy}}}` 1—* `Member{role, avatar, birthdate?, grade?, interests[], hobbies[], responsibilities[], notify_prefs, pin_hash?}`
+- `Household{location, tz, meal_plan_horizon_weeks, dashboard_completion_override}` 1—* `Member{role, avatar, birthdate?, grade?, interests[], hobbies[], responsibilities[], notify_prefs, pin_hash?}`
 - `UserAccount`, `Device{kind: dashboard}`, `AuditEntry{actor, device?, action}`
 - `Org{type, domains[], senders[], ics_urls[]}` and `OrgContact{role, members[]}`
 - `MailSource{owners[*], read_only, backfill_days, state}`
-- `Message{category, confidence, decided_by: rule|knn|s1|s2|user, enrichment, embedding?, member_links[], extracted{bill?, events[], tasks[]}}` and `CategoryLabel{message, category, source: rule|s2|user}`, which is the kNN training set
-- `CalendarSource`, `Calendar`, `Event{status, confidence, dedupe_key}`, `RoutingRule{learned}`
-- `TaskList{completion_policy}` 1—* `Task{recurrence?, last_done, strategy, assignees[], due, priority, origin, steps[]}`, and `Bill`
-- `Recipe`, `Ingredient{name, is_staple}`, `MealPlanEntry`, `GroceryList` (one per household) 1—* `GroceryItem{ingredient?, text, qty, source_meals[], manual, checked_at?}`
-- `WeatherSnapshot`, `WeatherRule{status: active|suggested}`, `Advisory`
-- `Decision{subject_ref, question_kind: choice|score|noul, options[], probabilities[], backend, model}`, `LlmJob{kind, status}` (S2 only), `EvalRun{backend, model, accuracy, ece, p50_ms}`, `GpuNodeState`, `SysProbe{ram_total, ram_avail, cores, suggested_profile}`
+- `Message{category, confidence, decided_by_stage, member_links[], embedding?, extracted{bill?, events[], tasks[]}}` and `CategoryLabel{message, decision_point, value, source: rule|s2|user, in_eval_sample}`
+- `CalendarSource`, `Calendar`, `Event{status, confidence, dedupe_key}`
+- `TaskList{completion_policy}` 1—* `Task{recurrence?, last_done, strategy, assignees[], due, priority, urgency?, origin, steps[]}`, and `Bill`
+- `Recipe`, `Ingredient{is_staple}`, `MealPlanEntry`, `GroceryList` 1—* `GroceryItem`
+- `WeatherSnapshot`, `WeatherRule{status}`, `Advisory`
+- **AI:**
+  - `Node{kind: core|gpu, hardware{cpu, ram, vram}, state}`
+  - `Backend{node, kind: system_one|llm|embedding, endpoint, model, dialect, capabilities[], availability}`
+  - `CatalogModel{name, kind, min_ram/vram, license}`
+  - `DecisionPoint{key}` 1—* `PipelineVersion{active, created_by}` 1—* `Stage{order, kind: rules|knn|system_one|llm|human, backend_prefs[], accept_threshold, on_unavailable, enabled}`
+  - `Decision{subject, decision_point, stage, value, probabilities[]}`
+  - `LlmJob`, `EvalRun{target, accuracy, ece, p50_ms}`
 
 ## Key flows
-1. **Email cascade:** poll → rules settle it? If not: (**kNN** if kept, accepted if the neighbours agree) → **System One** `Choice(category)` + `Noul(time_sensitive)`. If the probability is ≥ the threshold, accept (a time-sensitive result sends a notification now). Otherwise **S2 queue**. Separately, extraction-worthy categories (school, bills, events) always queue S2 extraction, while deterministic extractors give an immediate first pass. Corrections and S2 labels go into `CategoryLabel`.
-2. **Event:** dedupe → route → write it or send it to the approval inbox (adult PIN on the dashboard) → learned rules are updated.
-3. **GPU wake:** schedule or queue trigger → WoL → agent reports `available` → drain → auto-suspend. If a game starts: `busy_gaming`, models unloaded, draining pauses.
-4. **Recurring task:** tick → priority (due date, season, weather) → strategy picks who → Now list → notification.
-5. **Dashboard:** member picker → complete (no PIN) or approve (adult PIN) → audit log.
-6. **Weather:** poll → rules → alerts and tasks. Seasonal S2 advisories and suggested rules go to an adult for review.
-7. **Grocery:** pick meals → normalise and merge → non-staples go onto the living list, staples go to the "Staples check" section, and marking a staple 'low' adds it to the list.
-8. **Startup probe:** `fa-sysprobe` → suggested S1 profile → shown in settings.
-9. **Model selection:** `fa-eval` runs the labelled sample against each candidate backend → report → an adult picks the backend and model in settings.
+1. **Decision pipeline (generic):** for each enabled stage in order: is a backend available (preference list)? If not, apply `on_unavailable` (skip, wait, or queue). Run it. If the result is ≥ the threshold, accept and record the `Decision`. Otherwise go to the next stage. The last stage is always deterministic or human.
+2. **Email:** poll → the `email.category`, `email.time_sensitive`, `email.is_bill`, and `email.member_link` pipelines run (a time-sensitive result sends a notification now) → for extraction-worthy categories, S2 extraction is queued while the deterministic extractors give a first pass → emit events, tasks, and bills. Corrections go into `CategoryLabel`.
+3. **Event:** dedupe → `event.calendar_route` pipeline → write it, or send it to the approval inbox (adult PIN on the dashboard).
+4. **Hardware onboarding:** a node reports its hardware → the profile suggester proposes backends from the catalogue and a pipeline preset → an adult accepts it in the Backends screen.
+5. **Pipeline change:** edit in Pipeline settings → dry-run on the eval sample and recent history → compare before and after → save a new version (rollback is possible).
+6. **GPU wake:** schedule or queue → WoL → agent `available` → on-demand backends come up → queued stages drain → auto-suspend. A game starting means `busy_gaming`.
+7. **Recurring task, Dashboard, Weather, Grocery:** as in v4 (see D-013, D-019, D-017, D-021).
 
-## Roadmap (D-023)
+## Roadmap (D-023, adjusted by D-029)
 | Milestone | Content | Arch docs needed first |
 |---|---|---|
 | M0 | Skeleton: workspace, DB, config, auth/RBAC, devices, Vue shell, compose, backups | `Domain.md`, `Platform.md` |
 | M1 | Members, weather, calendar read, dashboard | `Frontend.md` |
 | M2 | Tasks + ntfy | `Tasks.md` |
-| M3 | Email rules pipeline, bills, linking, approvals | `Ingest.md` |
-| M4 | System One tier + eval harness, System 2, GPU agent, WoL, advisories | `AI.md` |
+| M3 | Email ingest, **pipeline engine with the 'Rules only' preset**, bills, linking, approvals, **labelling view** | `Ingest.md` |
+| M4 | Backend registry, System One sidecars, kNN, S2, eval, **Pipeline and Backends settings**, GPU agent, WoL, advisories | `AI.md` |
 | M5 | Recipes, meal plan, grocery | `Meals.md` |
-| M6 | Smart assignment, learned routing, TUI | updates |
+| M6 | Smart assignment, TUI | updates |

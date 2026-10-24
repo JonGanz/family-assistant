@@ -1,12 +1,12 @@
 ---
 id: Q-026
 title: Other decisions System One should make
-status: open
+status: resolved
 batch: 4
 area: domain
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-027]
 research: [R-001]
 ---
 

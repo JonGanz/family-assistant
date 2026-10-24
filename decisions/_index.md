@@ -33,3 +33,8 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-022](D-022-system1-system2-classification.md) | Tiered email classification: rules → System 1 (local, always-on) → System 2 (GPU, batched) | superseded → D-024 | Q-022, Q-023 | arch/Overall.md, arch/Ingest.md (future) |
 | [D-023](D-023-mvp-roadmap.md) | MVP milestones and build order | accepted | Q-023 | arch/Overall.md, all future arch docs |
 | [D-024](D-024-system-one-decision-tier.md) | System 1 tier = System One decision models (pluggable DecisionBackend) | accepted | Q-023 (clarified), R-001 | arch/Overall.md |
+| [D-025](D-025-python-model-sidecars.md) | Exception to D-003: third-party model servers may run as Python containers | accepted | Q-024 | arch/Overall.md |
+| [D-026](D-026-hardware-adaptive-backends.md) | Hardware-adaptive model placement via a backend registry | accepted | Q-025 | arch/Overall.md, arch/AI.md (future) |
+| [D-027](D-027-system-one-scope.md) | System One decision points: category, time-sensitivity, member linking, calendar routing, task urgency, bill detection | accepted | Q-026 | arch/Overall.md |
+| [D-028](D-028-knn-and-eval-sample.md) | Keep the kNN correction-learning stage; build a ~200-email labelled eval sample | accepted | Q-027 | arch/Overall.md |
+| [D-029](D-029-configurable-decision-pipeline.md) | Decision pipelines are data, fully configurable in a settings UI | accepted | Q-027 | arch/Overall.md, arch/AI.md (future), arch/Frontend.md (future) |

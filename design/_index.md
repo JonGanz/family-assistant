@@ -27,13 +27,8 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Batch 4 (2026-10-23), open (System One follow-up, see research/R-001)
-| ID | Title | Area |
-|---|---|---|
-| [Q-024](Q-024-s1-python-sidecar.md) | Python runtime exception for System One models | tech |
-| [Q-025](Q-025-s1-placement.md) | Where System One models run | infra |
-| [Q-026](Q-026-s1-scope.md) | Other decisions System One should make | domain |
-| [Q-027](Q-027-knn-layer.md) | Keep the correction-learning kNN layer? | tech |
+## Open
+_None. The next question number is Q-028._
 
 ## Resolved
 | ID | Title | Decisions |
@@ -61,3 +56,7 @@ decisions: []
 | [Q-021](resolved/Q-021-grocery-model.md) | Grocery list model, pantry & dietary needs | D-021 |
 | [Q-022](resolved/Q-022-core-node-specs.md) | Core node hardware specs | D-022 |
 | [Q-023](resolved/Q-023-mvp-roadmap.md) | MVP scope & build order | D-022, D-023 |
+| [Q-024](resolved/Q-024-s1-python-sidecar.md) | Python runtime exception for System One models | D-025 |
+| [Q-025](resolved/Q-025-s1-placement.md) | Where System One models run | D-026 |
+| [Q-026](resolved/Q-026-s1-scope.md) | Other decisions System One should make | D-027 |
+| [Q-027](resolved/Q-027-knn-layer.md) | Keep the correction-learning kNN layer? | D-028, D-029 |

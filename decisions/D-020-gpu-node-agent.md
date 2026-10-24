@@ -9,6 +9,8 @@ superseded_by:
 affects: [arch/Overall.md]
 ---
 
+> **Generalised by [D-026](D-026-hardware-adaptive-backends.md):** any number of GPU nodes, each agent reports its hardware, and placement goes through the backend registry.
+
 # D-020: GPU node (Linux): Wake-on-LAN, auto-wake by schedule/queue depth, yields to gaming via agent
 
 ## Context

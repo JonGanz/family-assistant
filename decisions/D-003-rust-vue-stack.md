@@ -9,6 +9,8 @@ superseded_by:
 affects: [arch/Overall.md]
 ---
 
+> **Amended by [D-025](D-025-python-model-sidecars.md):** third-party model servers may run as Python containers. Our code stays Rust.
+
 # D-003: Backend in Rust (Axum/Tokio/SQLx); frontend Vue 3 + TypeScript
 
 ## Context

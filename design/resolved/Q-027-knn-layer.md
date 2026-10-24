@@ -1,12 +1,12 @@
 ---
 id: Q-027
 title: Keep the correction-learning kNN layer?
-status: open
+status: resolved
 batch: 4
 area: tech
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-028, D-029]
 research: [R-001]
 ---
 
