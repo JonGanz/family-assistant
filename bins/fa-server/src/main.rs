@@ -12,6 +12,9 @@ use cli::{Cli, Command};
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Development convenience, shell-independent: fill unset variables from `.env.dev` in the
+    // working directory, if there is one. Real environment variables always win.
+    let _ = dotenvy::from_filename(".env.dev");
     let cli = Cli::parse();
     match cli.command {
         Command::GenOpenapi { out } => ops::gen_openapi(&out),

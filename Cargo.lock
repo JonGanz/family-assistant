@@ -1082,6 +1082,7 @@ dependencies = [
  "axum",
  "chrono",
  "clap",
+ "dotenvy",
  "fa-api",
  "fa-auth",
  "fa-calendar",

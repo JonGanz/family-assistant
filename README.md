@@ -52,8 +52,9 @@ links, so it is needed by every `fa-server` command. Local settings live in [`.e
 ### 2. Build the web app and load the settings
 ```bash
 (cd apps/web && corepack pnpm@9 install --frozen-lockfile && corepack pnpm@9 run build)
-set -a; . ./.env.dev; set +a      # `just` does this itself; plain shells need it, once per terminal
 ```
+`fa-server` reads [`.env.dev`](.env.dev) itself when it runs from the repository root (variables
+already set in your environment win), so no shell setup is needed, whichever shell you use.
 
 ### 3. Load the example household and create accounts
 `config/examples/household.example.toml` is a fictional family with a location, so weather works

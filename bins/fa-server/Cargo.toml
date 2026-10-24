@@ -22,6 +22,7 @@ fa-weather.workspace = true
 fa-connectors.workspace = true
 fa-api.workspace = true
 anyhow.workspace = true
+dotenvy.workspace = true
 clap.workspace = true
 tokio.workspace = true
 tokio-util.workspace = true
