@@ -1,12 +1,12 @@
 ---
 id: Q-031
 title: How updates are deployed
-status: open
+status: resolved
 batch: 5
 area: infra
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-033]
 ---
 
 # Q-031: How updates are deployed

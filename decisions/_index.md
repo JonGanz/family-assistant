@@ -38,3 +38,7 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-027](D-027-system-one-scope.md) | System One decision points: category, time-sensitivity, member linking, calendar routing, task urgency, bill detection | accepted | Q-026 | arch/Overall.md |
 | [D-028](D-028-knn-and-eval-sample.md) | Keep the kNN correction-learning stage; build a ~200-email labelled eval sample | accepted | Q-027 | arch/Overall.md |
 | [D-029](D-029-configurable-decision-pipeline.md) | Decision pipelines are data, fully configurable in a settings UI | accepted | Q-027 | arch/Overall.md, arch/AI.md (future), arch/Frontend.md (future) |
+| [D-030](D-030-email-provenance-purge.md) | Email content is transient: purge after full processing, keep provenance links | accepted | Q-028 | arch/Domain.md, arch/Platform.md, arch/Overall.md |
+| [D-031](D-031-child-login.md) | Children sign in with an adult-set username + simple password; long-lived device session | accepted | Q-029 | arch/Platform.md, arch/Domain.md |
+| [D-032](D-032-monorepo-github-actions.md) | Single repo (design + code) on GitHub with GitHub Actions CI | accepted | Q-030 | arch/Platform.md |
+| [D-033](D-033-compose-sample-hoster-deploys.md) | Ship a complete docker-compose sample; deployment/update strategy is the hoster's choice | accepted | Q-031 | arch/Platform.md |

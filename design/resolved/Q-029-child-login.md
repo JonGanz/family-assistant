@@ -1,12 +1,12 @@
 ---
 id: Q-029
 title: How children sign in
-status: open
+status: resolved
 batch: 5
 area: security
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-031]
 ---
 
 # Q-029: How children sign in

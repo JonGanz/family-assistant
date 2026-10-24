@@ -48,5 +48,9 @@ Only answers to questions (and ideas the user puts inside answers) become `D-NNN
 ## Git
 The user commits. Their commit messages use `->` for the user's input and `<-` for Claude's output. Don't commit unless asked. Use `git mv` for moves so history is kept.
 
+## Tooling
+- `tools/drawio.py`: the diagram generator.
+- `tools/fa.py`: design-workflow helpers for questions, decisions, indexes, and asserted edits. Use them instead of ad-hoc scripts.
+
 ## Self-learn
 After each session, look for repeated work or patterns. Turn them into rules in this file or into skills under `.claude/skills/`. Note any such change in the day's log.

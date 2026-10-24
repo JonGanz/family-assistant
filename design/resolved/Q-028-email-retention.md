@@ -1,12 +1,12 @@
 ---
 id: Q-028
 title: Email content retention & privacy
-status: open
+status: resolved
 batch: 5
 area: security
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-030]
 ---
 
 # Q-028: Email content retention & privacy

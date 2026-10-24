@@ -1,12 +1,12 @@
 ---
 id: Q-030
 title: Code repository & CI
-status: open
+status: resolved
 batch: 5
 area: tech
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-032]
 ---
 
 # Q-030: Code repository & CI

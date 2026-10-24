@@ -5,6 +5,8 @@ description: Process answered design questions in design/ into decisions, arch u
 
 # Process Answers
 
+Use the helpers in `tools/fa.py`: `answered`, `new_question`, `new_decision`, `resolve`, `supersede`, `annotate`, `rebuild_design_index`, and `edit`. Start scripts with `import sys; sys.path.insert(0, "tools"); from fa import *`.
+
 1. Find the answered questions with:
    `for f in design/Q-*.md; do a=$(sed -n "/<!-- answer below this line -->/,\$p" "$f" | tail -n +2 | grep -v "^\s*$"); [ -n "$a" ] && { echo "=== $f"; echo "$a"; }; done`
 2. For each answered question:
@@ -13,7 +15,7 @@ description: Process answered design questions in design/ into decisions, arch u
    - `git mv` the question into `design/resolved/`.
 3. Re-derive the affected `arch/*.md` from the requirements and all accepted decisions. Do not just patch the old design. Then update `arch/src/<Name>.py` and regenerate the `.drawio` in the same pass (`python3 arch/src/<Name>.py`). If a decision overturns an earlier one, set the old one to `superseded` and cross-link the two.
 4. Some answers will open new questions. Create the next batch of `Q-NNN` files for them.
-5. Update `design/_index.md` (rebuild the Resolved table from the front-matter of `design/resolved/*.md`, and list only open batches above it), `decisions/_index.md`, and `arch/_index.md`.
+5. Update `design/_index.md` with `rebuild_design_index()`, `decisions/_index.md`, and `arch/_index.md`.
 6. Append to `log/<today>.md`, and add a line for it to `log/_index.md` if the file is new.
 7. If one answer settles another open question, or a question was only partly answered, record both in a single decision and ask about the missing part in the next batch.
 8. Answers sometimes contain the user's own ideas or questions ("would it make sense to..."). Evaluate the idea honestly in a decision. If you adopt it, say why. If it changes an earlier decision, supersede that decision. Answer the question directly in the summary to the user.

@@ -27,13 +27,11 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Batch 5 (2026-10-23), open (raised by Domain.md / Platform.md)
+## Batch 6, open
 | ID | Title | Area |
 |---|---|---|
-| [Q-028](Q-028-email-retention.md) | Email content retention & privacy | security |
-| [Q-029](Q-029-child-login.md) | How children sign in | security |
-| [Q-030](Q-030-code-hosting-ci.md) | Code repository & CI | tech |
-| [Q-031](Q-031-update-mechanism.md) | How updates are deployed | infra |
+| [Q-032](Q-032-email-metadata-kept.md) | What email metadata survives the content purge | security |
+| [Q-033](Q-033-repo-visibility.md) | Repository visibility & license | tech |
 
 ## Resolved
 | ID | Title | Decisions |
@@ -65,3 +63,7 @@ decisions: []
 | [Q-025](resolved/Q-025-s1-placement.md) | Where System One models run | D-026 |
 | [Q-026](resolved/Q-026-s1-scope.md) | Other decisions System One should make | D-027 |
 | [Q-027](resolved/Q-027-knn-layer.md) | Keep the correction-learning kNN layer? | D-028, D-029 |
+| [Q-028](resolved/Q-028-email-retention.md) | Email content retention & privacy | D-030 |
+| [Q-029](resolved/Q-029-child-login.md) | How children sign in | D-031 |
+| [Q-030](resolved/Q-030-code-hosting-ci.md) | Code repository & CI | D-032 |
+| [Q-031](resolved/Q-031-update-mechanism.md) | How updates are deployed | D-033 |

@@ -10,6 +10,8 @@ affects: [arch/Overall.md]
 research: [R-001]
 ---
 
+> **Refined by [D-030](D-030-email-provenance-purge.md):** the eval sample stores labels plus Gmail IDs, and its content is re-fetched from Gmail for each eval run.
+
 # D-028: Keep the kNN correction-learning stage; build a ~200-email labelled eval sample
 
 ## Context

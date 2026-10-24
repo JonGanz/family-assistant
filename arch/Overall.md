@@ -5,13 +5,13 @@ status: draft
 updated: 2026-10-23
 drawio: Overall.drawio
 drawio_src: src/Overall.py
-depends_on: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012, D-013, D-014, D-015, D-017, D-018, D-019, D-020, D-021, D-023, D-024, D-025, D-026, D-027, D-028, D-029]
+depends_on: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012, D-013, D-014, D-015, D-017, D-018, D-019, D-020, D-021, D-023, D-024, D-025, D-026, D-027, D-028, D-029, D-030, D-031, D-032, D-033]
 research: [R-001]
 ---
 
-# Overall Architecture (DRAFT v5)
+# Overall Architecture (DRAFT v6)
 
-v5 re-derives the design from PROJECT.md and all accepted decisions (D-001 to D-029). D-016 and D-022 are superseded. **No questions are open.** Next comes the detailed design for M0 (D-023).
+v6 re-derives the design from PROJECT.md and all accepted decisions (D-001 to D-033). D-016 and D-022 are superseded. Open: Q-032 (email metadata kept), Q-033 (repo visibility).
 
 ## Scope
 **In:** members and roles; Gmail ingest and classification; bills; school, daycare, and teacher linking; calendars (Google, CalDAV, ICS) with event extraction; weather with rules and advisories; tasks; meal plan, recipes, the living grocery list; configurable AI decision pipelines; dashboard, PWA, TUI (stretch); ntfy.
@@ -24,6 +24,8 @@ v5 re-derives the design from PROJECT.md and all accepted decisions (D-001 to D-
 3. **Members come first, and everything is configured.** Files bootstrap the config, the UI owns it after that, and there is no PII in the repo (D-004, D-018).
 4. **Our code is Rust and Vue.** Third-party model servers can be containerised Python sidecars (D-003, D-025).
 5. **Local and private.** Access is over Tailscale only (D-010). If in doubt, make it a toggle.
+6. **Holds as little as possible.** Email content is purged once processed. Every derived item keeps a provenance link back to its source, and Gmail stays the system of record (D-030).
+7. **The hoster deploys.** We ship images and a compose sample with profiles, and don't prescribe how it is run (D-033).
 
 ## Deployment (page "Deployment"): reference hardware
 | Node | Always on | Runs |
@@ -83,7 +85,7 @@ The detailed model is in **[Domain.md](Domain.md)**. Summary:
 
 ## Key flows
 1. **Decision pipeline (generic):** for each enabled stage in order: is a backend available (preference list)? If not, apply `on_unavailable` (skip, wait, or queue). Run it. If the result is ≥ the threshold, accept and record the `Decision`. Otherwise go to the next stage. The last stage is always deterministic or human.
-2. **Email:** poll → the `email.category`, `email.time_sensitive`, `email.is_bill`, and `email.member_link` pipelines run (a time-sensitive result sends a notification now) → for extraction-worthy categories, S2 extraction is queued while the deterministic extractors give a first pass → emit events, tasks, and bills. Corrections go into `CategoryLabel`.
+2. **Email:** poll (content held, `pending`) → the `email.category`, `email.time_sensitive`, `email.is_bill`, and `email.member_link` pipelines run (a time-sensitive result sends a notification now) → for extraction-worthy categories, S2 extraction is queued while the deterministic extractors give a first pass → emit events, tasks, and bills, each with a `SourceRef` (Gmail link) → `processed` → content purged (D-030). Corrections go into `CategoryLabel`. Eval and dry-run re-fetch content from Gmail.
 3. **Event:** dedupe → `event.calendar_route` pipeline → write it, or send it to the approval inbox (adult PIN on the dashboard).
 4. **Hardware onboarding:** a node reports its hardware → the profile suggester proposes backends from the catalogue and a pipeline preset → an adult accepts it in the Backends screen.
 5. **Pipeline change:** edit in Pipeline settings → dry-run on the eval sample and recent history → compare before and after → save a new version (rollback is possible).

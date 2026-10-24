@@ -3,7 +3,7 @@ from drawio import Page, write, NODE, COMP, EXT, ART, FRAME, TITLE
 
 dep = Page("deploy", "Deployment")
 b, e = dep.box, dep.edge
-b("Family Assistant: Deployment (UML 2), reference hardware, DRAFT v5", 20, 10, 800, 30, TITLE)
+b("Family Assistant: Deployment (UML 2), reference hardware, DRAFT v6", 20, 10, 800, 30, TITLE)
 b("«device» Core node: Ubuntu Server (always on)\n«executionEnvironment» Docker Compose", 300, 60, 480, 430, NODE)
 srv = b("«artifact» fa-server (api + worker + sysprobe)", 330, 120, 200, 50, ART)
 pg = b("«artifact» postgres:16 + pgvector", 560, 120, 200, 50, ART)
@@ -31,7 +31,7 @@ e(bk, nas, "SMB/NFS", False); e(srv, ext, "HTTPS", False); e(srv, pg, "SQL", Fal
 
 cmp = Page("comp", "Components")
 b, e = cmp.box, cmp.edge
-b("Family Assistant: Components (UML 2), DRAFT v5", 20, 10, 700, 30, TITLE)
+b("Family Assistant: Components (UML 2), DRAFT v6", 20, 10, 700, 30, TITLE)
 b("«subsystem» fa-server (Rust workspace)", 260, 50, 760, 740, FRAME)
 W, H = 220, 46
 api = b("«component» fa-api (+RBAC, PIN step-up)", 290, 100, W, H, COMP)
