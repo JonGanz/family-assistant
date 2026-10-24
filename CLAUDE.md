@@ -34,6 +34,8 @@ updated: 2026-10-23
 ## Standing technical constraints
 - Everything runs locally. Any AI work uses local LLMs on 32 GB RAM and an 8 GB RTX 3070. Budget for roughly 7–8B models at Q4 and small embedding models.
 - Go deterministic first: rules, headers, parsers, and schema.org data. Use the LLM only for what rules cannot handle, and make it return structured JSON.
+- Optional or hardware-dependent features get a **toggle**, with a suggested default (the user keeps asking for this).
+- Intelligence comes in tiers: rules, then System 1 (core node, always on), then System 2 (GPU node, batched). See D-022.
 - Design around family members. Each member has a role (adult or child) and has interests, hobbies, and responsibilities.
 
 ## Git

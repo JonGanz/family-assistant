@@ -1,12 +1,12 @@
 ---
 id: Q-022
 title: Core node hardware specs
-status: open
+status: resolved
 batch: 3
 area: infra
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-022]
 ---
 
 # Q-022: Core node hardware specs

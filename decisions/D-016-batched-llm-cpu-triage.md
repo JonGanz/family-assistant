@@ -1,13 +1,15 @@
 ---
 id: D-016
 title: LLM work is batched; optional small CPU triage model on the core node
-status: accepted
+status: superseded
 date: 2026-10-23
 source_questions: [Q-015, Q-020]
 supersedes:
-superseded_by:
+superseded_by: D-022
 affects: [arch/Overall.md]
 ---
+
+> **Superseded by [D-022](D-022-system1-system2-classification.md).** Batching still applies, but the CPU tier is now System 1.
 
 # D-016: LLM work is batched; optional small CPU triage model on the core node
 

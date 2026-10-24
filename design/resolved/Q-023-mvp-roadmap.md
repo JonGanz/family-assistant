@@ -1,12 +1,12 @@
 ---
 id: Q-023
 title: MVP scope & build order
-status: open
+status: resolved
 batch: 3
 area: plan
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-022, D-023]
 ---
 
 # Q-023: MVP scope & build order

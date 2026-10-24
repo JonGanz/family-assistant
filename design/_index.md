@@ -27,12 +27,8 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Batch 3 (2026-10-23), open
-| ID | Title | Area |
-|---|---|---|
-| [Q-021](Q-021-grocery-model.md) | Grocery list model, pantry & dietary needs | domain |
-| [Q-022](Q-022-core-node-specs.md) | Core node hardware specs | infra |
-| [Q-023](Q-023-mvp-roadmap.md) | MVP scope & build order | plan |
+## Open
+_None. The next question number is Q-024._
 
 ## Resolved
 | ID | Title | Decisions |
@@ -57,3 +53,6 @@ decisions: []
 | [Q-018](resolved/Q-018-dashboard-identity.md) | Dashboard member selection security | D-019 |
 | [Q-019](resolved/Q-019-gpu-node-availability.md) | GPU node wake / schedule policy | D-020 |
 | [Q-020](resolved/Q-020-core-node-specs.md) | Core node hardware & CPU fallback model | D-016 |
+| [Q-021](resolved/Q-021-grocery-model.md) | Grocery list model, pantry & dietary needs | D-021 |
+| [Q-022](resolved/Q-022-core-node-specs.md) | Core node hardware specs | D-022 |
+| [Q-023](resolved/Q-023-mvp-roadmap.md) | MVP scope & build order | D-022, D-023 |

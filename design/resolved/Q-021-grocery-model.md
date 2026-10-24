@@ -1,12 +1,12 @@
 ---
 id: Q-021
 title: Grocery list model, pantry & dietary needs
-status: open
+status: resolved
 batch: 3
 area: domain
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-021]
 ---
 
 # Q-021: Grocery list model, pantry & dietary needs
