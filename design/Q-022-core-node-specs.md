@@ -16,4 +16,4 @@ Q-020 approved the optional CPU triage model, but we still need the Ubuntu serve
 
 ## Answer
 <!-- answer below this line -->
-
+Same LAN. Either probe for hardware, or just let it be a feature to turn on or off.

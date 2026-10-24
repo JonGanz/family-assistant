@@ -21,4 +21,4 @@ Is there **one living grocery list** that generated meals and manual adds merge 
 
 ## Answer
 <!-- answer below this line -->
-
+One living list. Separate "pantry staples" when creating a list for upcoming meals, so that it can be quickly scanned to ensure they aren't low.

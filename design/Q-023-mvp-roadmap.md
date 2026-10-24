@@ -29,4 +29,4 @@ Do you agree with this order, or should something move earlier (e.g. food or ema
 
 ## Answer
 <!-- answer below this line -->
-
+Option A. Random thought for Email: would it make sense to leverage a System 1 model hosted locally to categorize emails that can't be deterministically categorized first?
