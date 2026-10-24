@@ -20,4 +20,4 @@ What are the specs of the Ubuntu server (CPU, RAM, disk)? If it has around 8 GB 
 
 ## Answer
 <!-- answer below this line -->
-
+Option A. And allow that feature to be turned on or off.

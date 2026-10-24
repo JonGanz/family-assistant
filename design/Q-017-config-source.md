@@ -21,4 +21,4 @@ D-004 makes household data configuration. Should that configuration be **declara
 
 ## Answer
 <!-- answer below this line -->
-
+A.

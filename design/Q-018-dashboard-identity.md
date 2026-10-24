@@ -21,4 +21,4 @@ On the shared dashboard, a person taps their avatar before an action (D-006). Sh
 
 ## Answer
 <!-- answer below this line -->
-
+A.

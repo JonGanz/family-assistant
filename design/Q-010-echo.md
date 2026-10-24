@@ -16,4 +16,4 @@ There are 3 ways to keep the dashboard on the Echo Show 15. (1) Silk browser plu
 
 ## Answer
 <!-- answer below this line -->
-
+Option 1, the keep-alive trick. No Alexa control needed.

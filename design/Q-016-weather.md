@@ -16,4 +16,4 @@ Which location(s) should we track? Is there anything to warn about, beyond the a
 
 ## Answer
 <!-- answer below this line -->
-
+The location should be configurable. An LLM enhancement would be to produce what would be appropriate warnings based on the location.

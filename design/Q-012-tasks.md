@@ -16,4 +16,4 @@ For recurring chores, which strategies do you want at launch: fixed person, rota
 
 ## Answer
 <!-- answer below this line -->
-
+Fixed person, rotation, and open pool would be the first priority, then enhance with smart. For now no points or rewards. Some task lists they should be able to check themselves (like their list of tasks for weekday before school) while others should require the adult to do from their own view. However, for now let's let anyone clear the list items from the dashboard.

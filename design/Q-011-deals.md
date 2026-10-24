@@ -16,4 +16,4 @@ Which kinds of deal matter to you? For example, member hobbies, groceries in the
 
 ## Answer
 <!-- answer below this line -->
-
+I change my mind on the deals of interests -- it feels fragile. Let's remove that from the scope.

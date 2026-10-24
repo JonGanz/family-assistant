@@ -16,4 +16,4 @@ How far ahead do you plan meals (a week? flexible)? Do you need pantry or invent
 
 ## Answer
 <!-- answer below this line -->
-
+Let's say.. plan any number of weeks ahead (configurable) and user can generate a list for any of the upcoming meals. No need to export to other apps at this time. List should be visible in app, and users should be able to add to it from the dashboard.

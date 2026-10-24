@@ -16,4 +16,4 @@ Which schools and daycares are involved, and do they use platforms such as Paren
 
 ## Answer
 <!-- answer below this line -->
-
+This would be too specific to each user. No support for esoteric APIs in this regard. ICS feeds would be worth supporting.

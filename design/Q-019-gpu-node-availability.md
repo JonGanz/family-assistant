@@ -21,4 +21,4 @@ What OS is the gaming PC (Windows, Linux, dual boot)? Can the core node wake it 
 
 ## Answer
 <!-- answer below this line -->
-
+Option A. Linux.
