@@ -1,0 +1,11 @@
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Example Music//e2e fixture//EN
+BEGIN:VEVENT
+UID:music@music.example.com
+DTSTAMP:20260101T000000Z
+DTSTART;TZID=America/New_York:{{d+2}}T150000
+DTEND;TZID=America/New_York:{{d+2}}T160000
+SUMMARY:Toddler Music Class
+END:VEVENT
+END:VCALENDAR

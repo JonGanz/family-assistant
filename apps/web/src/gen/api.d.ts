@@ -4,6 +4,38 @@
  */
 
 export interface paths {
+    "/api/v1/advisories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_advisories"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/advisories/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["dismiss_advisory"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -30,6 +62,118 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["logout"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendar-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_sources"];
+        put?: never;
+        post: operations["create_source"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendar-sources/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["test_source"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendar-sources/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_source"];
+        options?: never;
+        head?: never;
+        patch: operations["patch_source"];
+        trace?: never;
+    };
+    "/api/v1/calendar-sources/{id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["sync_source"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendars": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_calendars"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/calendars/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patch_calendar"];
+        trace?: never;
+    };
+    "/api/v1/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_dashboard"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -75,13 +219,45 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        get: operations["get_device"];
         put?: never;
         post?: never;
         delete: operations["revoke_device"];
         options?: never;
         head?: never;
+        patch: operations["patch_device"];
+        trace?: never;
+    };
+    "/api/v1/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_events"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/household": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_household"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patch_household"];
         trace?: never;
     };
     "/api/v1/me": {
@@ -164,6 +340,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/members/{id}/avatar": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_avatar"];
+        put: operations["put_avatar"];
+        post?: never;
+        delete: operations["delete_avatar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/members/{id}/pin": {
         parameters: {
             query?: never;
@@ -173,6 +365,54 @@ export interface paths {
         };
         get?: never;
         put: operations["set_pin"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_oauth_accounts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/google/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["oauth_callback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/oauth/google/start": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["oauth_start"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -228,6 +468,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_status"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/stream": {
         parameters: {
             query?: never;
@@ -242,6 +498,70 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/weather": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_weather"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/weather-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_rules"];
+        put?: never;
+        post: operations["create_rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/weather-rules/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["validate_rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/weather-rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_rule"];
+        options?: never;
+        head?: never;
+        patch: operations["patch_rule"];
         trace?: never;
     };
     "/healthz": {
@@ -284,7 +604,48 @@ export interface components {
             device?: null | components["schemas"]["DeviceDto"];
             /** @description `user`, `device` or `elevated_device`. */
             kind: string;
-            member?: Record<string, never> | null;
+            member?: null | components["schemas"]["MemberView"];
+        };
+        /** Format: uuid */
+        AdvisoryId: string;
+        /** @enum {string} */
+        AdvisorySource: "rule" | "s2";
+        AdvisoryView: {
+            id: components["schemas"]["AdvisoryId"];
+            severity: components["schemas"]["Severity"];
+            source: components["schemas"]["AdvisorySource"];
+            text: string;
+            /** Format: date-time */
+            valid_from: string;
+            /** Format: date-time */
+            valid_until: string;
+        };
+        /** @enum {string} */
+        AllMarker: "all";
+        BackupStatus: {
+            /** Format: date-time */
+            last_at?: string | null;
+            ok: boolean;
+        };
+        /** Format: uuid */
+        CalendarId: string;
+        CalendarPatch: {
+            color?: string | null;
+            enabled?: boolean | null;
+            members?: components["schemas"]["MemberId"][] | null;
+            name?: string | null;
+        };
+        /** Format: uuid */
+        CalendarSourceId: string;
+        CalendarView: {
+            color?: string | null;
+            enabled: boolean;
+            id: components["schemas"]["CalendarId"];
+            members: components["schemas"]["MemberId"][];
+            name: string;
+            source: components["schemas"]["CalendarSourceId"];
+            /** Format: int32 */
+            version: number;
         };
         CreateAccountReq: {
             password: string;
@@ -302,13 +663,56 @@ export interface components {
             responsibilities?: string[];
             role: string;
         };
+        DashboardHousehold: {
+            location?: null | components["schemas"]["Location"];
+            name: string;
+            tz: string;
+            units: components["schemas"]["Units"];
+        };
+        DashboardSettings: {
+            /** Format: int32 */
+            agenda_days: number;
+            members: components["schemas"]["MemberSelection"];
+            orientation: components["schemas"]["Orientation"];
+            panels: components["schemas"]["Panel"][];
+            theme: components["schemas"]["DashboardTheme"];
+        };
+        /** @enum {string} */
+        DashboardTheme: "auto" | "light" | "dark";
+        DashboardView: {
+            advisories: components["schemas"]["AdvisoryView"][];
+            events: components["schemas"]["EventView"][];
+            household: components["schemas"]["DashboardHousehold"];
+            members: components["schemas"]["MemberPublicDto"][];
+            settings: components["schemas"]["DashboardSettings"];
+            weather?: null | components["schemas"]["WeatherView"];
+        };
         DeviceDto: {
-            /** Format: uuid */
-            id: string;
-            kind: string;
+            id: components["schemas"]["DeviceId"];
+            kind: components["schemas"]["DeviceKind"];
+            /** Format: date-time */
             last_seen?: string | null;
             name: string;
             revoked: boolean;
+        };
+        /** Format: uuid */
+        DeviceId: string;
+        /** @enum {string} */
+        DeviceKind: "dashboard";
+        DevicePatch: {
+            name?: string | null;
+            settings?: null | components["schemas"]["DashboardSettings"];
+        };
+        DeviceView: {
+            id: components["schemas"]["DeviceId"];
+            kind: components["schemas"]["DeviceKind"];
+            /** Format: date-time */
+            last_seen?: string | null;
+            name: string;
+            revoked: boolean;
+            settings: components["schemas"]["DashboardSettings"];
+            /** Format: int32 */
+            version: number;
         };
         ElevateReq: {
             /** Format: uuid */
@@ -319,15 +723,68 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
         };
+        /** Format: uuid */
+        EventId: string;
+        EventView: {
+            all_day: boolean;
+            calendar?: null | components["schemas"]["CalendarId"];
+            color?: string | null;
+            description?: string | null;
+            /** Format: date-time */
+            end_at: string;
+            /** Format: date */
+            end_date?: string | null;
+            external_url?: string | null;
+            id: components["schemas"]["EventId"];
+            location?: string | null;
+            members: components["schemas"]["MemberId"][];
+            /** Format: date-time */
+            start_at: string;
+            /** Format: date */
+            start_date?: string | null;
+            title: string;
+            visibility: components["schemas"]["Visibility"];
+        };
         HouseholdDto: {
             dashboard_completion_override: boolean;
-            /** Format: uuid */
-            id: string;
+            id: components["schemas"]["HouseholdId"];
             location?: null | components["schemas"]["Location"];
             /** Format: int32 */
             meal_plan_horizon_weeks: number;
             name: string;
             tz: string;
+        };
+        /** Format: uuid */
+        HouseholdId: string;
+        HouseholdPatch: {
+            /** Format: int32 */
+            calendar_future_days?: number | null;
+            /** Format: int32 */
+            calendar_past_days?: number | null;
+            location?: null | components["schemas"]["Location"];
+            name?: string | null;
+            private_events_as_busy?: boolean | null;
+            tz?: string | null;
+            units?: null | components["schemas"]["Units"];
+            /** Format: int32 */
+            weather_retention_days?: number | null;
+        };
+        HouseholdView: {
+            /** Format: int32 */
+            calendar_future_days: number;
+            /** Format: int32 */
+            calendar_past_days: number;
+            /** @description Read-only: true when the Google client is configured. */
+            google_oauth_enabled: boolean;
+            location?: null | components["schemas"]["Location"];
+            name: string;
+            private_events_as_busy: boolean;
+            tz: string;
+            units: components["schemas"]["Units"];
+            /** Format: int32 */
+            version: number;
+            /** Format: int32 */
+            weather_retention_days: number;
         };
         Location: {
             label: string;
@@ -351,9 +808,11 @@ export interface components {
             actor: components["schemas"]["ActorView"];
             household: components["schemas"]["HouseholdDto"];
         };
-        /** @description Full member view (adults). `version` is the optimistic-concurrency value for `If-Match`. */
+        /** @description Full member view for adults. Never includes the PIN hash. */
         MemberDto: {
             avatar?: string | null;
+            avatar_url?: string | null;
+            /** Format: date */
             birthdate?: string | null;
             color?: string | null;
             display_name: string;
@@ -361,23 +820,75 @@ export interface components {
             has_account: boolean;
             has_pin: boolean;
             hobbies: string[];
-            /** Format: uuid */
-            id: string;
+            id: components["schemas"]["MemberId"];
             interests: string[];
             responsibilities: string[];
-            role: string;
-            /** Format: int32 */
-            version: number;
+            role: components["schemas"]["Role"];
+            /**
+             * Format: int32
+             * @description Optimistic-concurrency version for `If-Match` (0 when not loaded).
+             */
+            version?: number;
         };
+        /** Format: uuid */
+        MemberId: string;
+        /** @description Public fields, visible to children and devices. */
         MemberPublicDto: {
             avatar?: string | null;
+            /** @description `/api/v1/members/{id}/avatar?v=<sha256 prefix>`; set by the API layer. */
+            avatar_url?: string | null;
             color?: string | null;
             display_name: string;
-            /** Format: uuid */
-            id: string;
-            /** @description `adult` or `child`. */
-            role: string;
+            id: components["schemas"]["MemberId"];
+            role: components["schemas"]["Role"];
         };
+        /** @description `"all"` or a list of member IDs. */
+        MemberSelection: components["schemas"]["AllMarker"] | components["schemas"]["MemberId"][];
+        /** @description Either member view, as returned by the members API (untagged). */
+        MemberView: components["schemas"]["MemberDto"] | components["schemas"]["MemberPublicDto"];
+        /** @description New source. Debug output redacts passwords and URLs. */
+        NewSource: {
+            /** @enum {string} */
+            kind: "google";
+            name: string;
+            oauth_account: components["schemas"]["OAuthAccountId"];
+            owner?: null | components["schemas"]["MemberId"];
+        } | {
+            /** @enum {string} */
+            kind: "caldav";
+            name: string;
+            owner?: null | components["schemas"]["MemberId"];
+            password: string;
+            url: string;
+            username: string;
+        } | {
+            /** @enum {string} */
+            kind: "ics";
+            name: string;
+            owner?: null | components["schemas"]["MemberId"];
+            url: string;
+        };
+        NewWeatherRule: {
+            action: components["schemas"]["RuleAction"];
+            condition: string;
+            message: string;
+            name: string;
+            severity: components["schemas"]["Severity"];
+            status?: null | components["schemas"]["RuleStatus"];
+        };
+        /** Format: uuid */
+        OAuthAccountId: string;
+        OAuthAccountView: {
+            email: string;
+            id: components["schemas"]["OAuthAccountId"];
+            last_error?: string | null;
+            owner_member: components["schemas"]["MemberId"];
+            provider: string;
+            scopes: string[];
+            state: components["schemas"]["SourceState"];
+        };
+        /** @enum {string} */
+        Orientation: "landscape" | "portrait";
         PairDeviceReq: {
             name: string;
         };
@@ -387,6 +898,10 @@ export interface components {
             pair_url: string;
             /** @description Shown once. */
             token: string;
+        };
+        /** @description A panel with a kind and kind-specific options. Unknown kinds and options are kept as they are. */
+        Panel: Record<string, never> & {
+            kind: string;
         };
         PasswordReq: {
             password: string;
@@ -410,13 +925,51 @@ export interface components {
         PinReq: {
             pin: string;
         };
+        /** @description The `application/problem+json` body (RFC 9457). Invalid weather rules add `position` and `message`. */
         Problem: {
             detail: string;
+            /** @description Weather-rule errors only. */
+            message?: string | null;
+            /**
+             * Format: int32
+             * @description Weather-rule errors only: char offset into the condition.
+             */
+            position?: number | null;
             /** Format: int32 */
             status: number;
             title: string;
             type: string;
         };
+        QueueStatus: {
+            /** Format: int64 */
+            dead: number;
+            /** Format: int64 */
+            ready: number;
+            /** Format: int64 */
+            running: number;
+        };
+        RemoteCalendar: {
+            color?: string | null;
+            name: string;
+            remote_id: string;
+        };
+        /** @enum {string} */
+        Role: "adult" | "child";
+        /** @enum {string} */
+        RuleAction: "alert" | "task";
+        RuleError: {
+            message: string;
+            /** Format: int32 */
+            position: number;
+        };
+        RulePreview: {
+            matches: boolean;
+            /** Format: double */
+            value?: number | null;
+            when?: string | null;
+        };
+        /** @enum {string} */
+        RuleStatus: "active" | "suggested" | "disabled";
         SessionView: {
             /** Format: date-time */
             created_at: string;
@@ -428,13 +981,135 @@ export interface components {
             last_seen: string;
             user_agent?: string | null;
         };
+        /** @enum {string} */
+        Severity: "info" | "warning" | "severe";
+        /** @description Source plus its discovered calendars (POST /calendar-sources). */
+        SourceCreated: {
+            calendars: components["schemas"]["CalendarView"][];
+            source: components["schemas"]["SourceView"];
+        };
+        /** @description Replacement credentials; any subset. Debug output is redacted. */
+        SourceCredentials: {
+            password?: string | null;
+            url?: string | null;
+            username?: string | null;
+        };
+        /** @enum {string} */
+        SourceKind: "google" | "caldav" | "ics";
+        SourcePatch: {
+            credentials?: null | components["schemas"]["SourceCredentials"];
+            name?: string | null;
+            /** Format: int32 */
+            poll_minutes?: number | null;
+        };
+        /** @enum {string} */
+        SourceState: "ok" | "needs_reauth" | "error";
+        SourceStatus: {
+            id: components["schemas"]["CalendarSourceId"];
+            kind: components["schemas"]["SourceKind"];
+            last_error?: string | null;
+            /** Format: date-time */
+            last_synced_at?: string | null;
+            name: string;
+            state: components["schemas"]["SourceState"];
+        };
+        /** @description POST /calendar-sources/test. */
+        SourceTestResult: {
+            calendars: components["schemas"]["RemoteCalendar"][];
+            error?: string | null;
+            ok: boolean;
+            /** @description At most 3. */
+            sample_events: components["schemas"]["EventView"][];
+        };
+        SourceView: {
+            id: components["schemas"]["CalendarSourceId"];
+            kind: components["schemas"]["SourceKind"];
+            last_error?: string | null;
+            /** Format: date-time */
+            last_synced_at?: string | null;
+            /** @description `https://host/…`; the full URL is a secret and never returned. */
+            masked_url?: string | null;
+            name: string;
+            owner?: null | components["schemas"]["MemberId"];
+            /** Format: int32 */
+            poll_minutes: number;
+            state: components["schemas"]["SourceState"];
+            username?: string | null;
+            /** Format: int32 */
+            version: number;
+        };
+        StatusView: {
+            backup: components["schemas"]["BackupStatus"];
+            queue: components["schemas"]["QueueStatus"];
+            sources: components["schemas"]["SourceStatus"][];
+            weather: components["schemas"]["WeatherStatus"];
+        };
+        /** @enum {string} */
+        SuggestedBy: "default" | "s2" | "user";
+        /** @enum {string} */
+        Units: "metric" | "imperial";
         UserAccountDto: {
             disabled: boolean;
-            /** Format: uuid */
-            id: string;
-            /** Format: uuid */
-            member_id: string;
+            id: components["schemas"]["UserAccountId"];
+            member_id: components["schemas"]["MemberId"];
             username: string;
+        };
+        /** Format: uuid */
+        UserAccountId: string;
+        ValidateRuleRequest: {
+            condition: string;
+            message?: string | null;
+        };
+        ValidateRuleResponse: {
+            error?: null | components["schemas"]["RuleError"];
+            ok: boolean;
+            preview?: null | components["schemas"]["RulePreview"];
+        };
+        /**
+         * @description D-036: `Busy` hides title, location and description.
+         * @enum {string}
+         */
+        Visibility: "full" | "busy";
+        /** Format: uuid */
+        WeatherRuleId: string;
+        WeatherRulePatch: {
+            action?: null | components["schemas"]["RuleAction"];
+            condition?: string | null;
+            message?: string | null;
+            name?: string | null;
+            severity?: null | components["schemas"]["Severity"];
+            status?: null | components["schemas"]["RuleStatus"];
+        };
+        WeatherRuleView: {
+            action: components["schemas"]["RuleAction"];
+            condition: string;
+            id: components["schemas"]["WeatherRuleId"];
+            message: string;
+            name: string;
+            severity: components["schemas"]["Severity"];
+            status: components["schemas"]["RuleStatus"];
+            suggested_by: components["schemas"]["SuggestedBy"];
+            /** Format: int32 */
+            version: number;
+        };
+        WeatherStatus: {
+            /** Format: date-time */
+            fetched_at?: string | null;
+            ok: boolean;
+        };
+        WeatherView: {
+            /** @description Metric, Open-Meteo field names (arch/Feeds.md §4). */
+            current: unknown;
+            /** @description 7 entries. */
+            daily: unknown;
+            /** Format: date-time */
+            fetched_at: string;
+            /** @description 48 entries. */
+            hourly: unknown;
+            /** Format: date-time */
+            sunrise_today?: string | null;
+            /** Format: date-time */
+            sunset_today?: string | null;
         };
     };
     responses: never;
@@ -445,6 +1120,53 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    list_advisories: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdvisoryView"][];
+                };
+            };
+        };
+    };
+    dismiss_advisory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description advisory id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     login: {
         parameters: {
             query?: never;
@@ -509,6 +1231,379 @@ export interface operations {
                 content?: never;
             };
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_sources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewSource"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceCreated"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            504: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    test_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewSource"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceTestResult"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description source id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_source: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description source id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SourcePatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SourceView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    sync_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description source id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description a sync job is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_calendars: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_calendar: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description calendar id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CalendarPatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CalendarView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_dashboard: {
+        parameters: {
+            query?: {
+                /** @description Days of agenda from today (1 to 14); defaults to the device setting. */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DashboardView"];
+                };
+            };
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -623,6 +1718,44 @@ export interface operations {
             };
         };
     };
+    get_device: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description device id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     revoke_device: {
         parameters: {
             query?: never;
@@ -650,6 +1783,194 @@ export interface operations {
                 };
             };
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_device: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description device id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DevicePatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeviceView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_events: {
+        parameters: {
+            query: {
+                /** @description Inclusive start (RFC 3339). */
+                from: string;
+                /** @description Exclusive end (RFC 3339); at most 400 days after `from`. */
+                to: string;
+                /** @description Only events linked to this member. */
+                member?: components["schemas"]["MemberId"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EventView"][];
+                };
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_household: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdView"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_household: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HouseholdPatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HouseholdView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -701,7 +2022,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MemberDto"][];
+                    "application/json": components["schemas"]["MemberView"][];
                 };
             };
             401: {
@@ -732,7 +2053,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MemberDto"];
+                    "application/json": components["schemas"]["MemberView"];
                 };
             };
             403: {
@@ -777,7 +2098,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["MemberDto"];
+                    "application/json": components["schemas"]["MemberView"];
                 };
             };
             403: {
@@ -912,6 +2233,136 @@ export interface operations {
             };
         };
     };
+    get_avatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description member id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description the image; ETag is its sha256 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/*": unknown;
+                };
+            };
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_avatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description member id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description raw image bytes (png, jpeg or webp), at most 512 KB */
+        requestBody: {
+            content: {
+                "image/png": number[];
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_avatar: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description member id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     set_pin: {
         parameters: {
             query?: never;
@@ -943,6 +2394,118 @@ export interface operations {
                 };
             };
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_oauth_accounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OAuthAccountView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    oauth_callback: {
+        parameters: {
+            query?: {
+                code?: string;
+                state?: string;
+                /** @description Set by Google when the user declined. */
+                error?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description redirect to /oauth/done?account=…&return_to=… or ?error=… */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    oauth_start: {
+        parameters: {
+            query?: {
+                /** @description A path on this site to return to afterwards. */
+                return_to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description redirect to Google's consent page */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Google is not configured */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1039,6 +2602,33 @@ export interface operations {
             };
         };
     };
+    get_status: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StatusView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     stream: {
         parameters: {
             query?: never;
@@ -1048,13 +2638,244 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description `heartbeat` every 15 s and `member.updated`; honours Last-Event-ID */
+            /** @description `heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `resync`), bridged from `fa_change`; honours Last-Event-ID */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "text/event-stream": unknown;
+                };
+            };
+        };
+    };
+    get_weather: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeatherView"];
+                };
+            };
+            /** @description no forecast fetched yet */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_rules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeatherRuleView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewWeatherRule"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeatherRuleView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description invalid condition: `position` and `message` are set */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    validate_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValidateRuleRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidateRuleResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description rule id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_rule: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description rule id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WeatherRulePatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeatherRuleView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };

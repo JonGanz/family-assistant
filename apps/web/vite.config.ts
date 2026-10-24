@@ -21,11 +21,28 @@ export default defineConfig({
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          {
+            src: 'icon-maskable-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'maskable',
+          },
         ],
       },
       workbox: {
         navigateFallbackDenylist: [/^\/api\//, /^\/healthz/, /^\/readyz/],
+        runtimeCaching: [
+          {
+            // Avatars carry a ?v=<hash> cache-buster, so cache-first is safe.
+            urlPattern: ({ url }) => /^\/api\/v1\/members\/[^/]+\/avatar$/.test(url.pathname),
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'fa-avatars',
+              expiration: { maxEntries: 64, maxAgeSeconds: 30 * 24 * 3600 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
+        ],
       },
     }),
   ],

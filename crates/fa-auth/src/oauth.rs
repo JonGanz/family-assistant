@@ -80,20 +80,6 @@ impl OAuthService {
         }
     }
 
-    /// Reads `FA_GOOGLE_CLIENT_ID` / `FA_GOOGLE_CLIENT_SECRET`; unset or empty disables Google.
-    pub fn from_env(
-        store: Store,
-        key: MasterKey,
-        public_url: impl Into<String>,
-        http: Http,
-    ) -> Self {
-        let get = |k: &str| std::env::var(k).ok().filter(|v| !v.trim().is_empty());
-        let google = get("FA_GOOGLE_CLIENT_ID")
-            .zip(get("FA_GOOGLE_CLIENT_SECRET"))
-            .map(|(id, secret)| GoogleOAuth::new(id, secret));
-        Self::new(store, key, google, public_url, http)
-    }
-
     pub fn enabled(&self) -> bool {
         self.google.is_some()
     }

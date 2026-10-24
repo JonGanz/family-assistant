@@ -1,24 +1,28 @@
 //! fa-api: the axum HTTP API (v1), SSE hub, OpenAPI document and static web serving.
 
+mod bridge;
 mod error;
 mod extract;
+mod feeds;
 mod hub;
 mod openapi;
 mod routes;
-mod schemas;
 
 use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
+use axum::extract::DefaultBodyLimit;
 use axum::extract::Request;
 use axum::http::{HeaderName, HeaderValue, Method, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
-use axum::routing::{any, delete, get, post};
-use fa_auth::AuthService;
+use axum::routing::{any, delete, get, patch, post, put};
+use fa_auth::{AuthService, OAuthService};
+use fa_calendar::CalendarService;
 use fa_store::Store;
+use fa_weather::WeatherService;
 use tokio_util::sync::CancellationToken;
 use tower::ServiceBuilder;
 use tower_http::compression::CompressionLayer;
@@ -26,7 +30,8 @@ use tower_http::services::{ServeDir, ServeFile};
 use tower_http::timeout::TimeoutLayer;
 use tower_http::trace::TraceLayer;
 
-pub use error::ApiError;
+pub use bridge::{deliver, run_bridge, run_bridge_signalled};
+pub use error::{ApiError, Problem};
 pub use extract::IpNet;
 pub use extract::{Auth, require};
 pub use hub::{Hub, HubEvent};
@@ -61,10 +66,19 @@ impl Default for ApiConfig {
     }
 }
 
+/// The feature services the M1 routes call, built once by the server from the process config.
+#[derive(Clone)]
+pub struct Services {
+    pub calendar: Arc<CalendarService>,
+    pub weather: WeatherService,
+    pub oauth: OAuthService,
+}
+
 #[derive(Clone)]
 pub struct AppState {
     pub store: Store,
     pub auth: AuthService,
+    pub services: Services,
     pub hub: Hub,
     pub cfg: Arc<ApiConfig>,
     /// Ends SSE streams on graceful shutdown.
@@ -75,12 +89,14 @@ impl AppState {
     pub fn new(
         store: Store,
         auth: AuthService,
+        services: Services,
         cfg: ApiConfig,
         shutdown: CancellationToken,
     ) -> Self {
         Self {
             store,
             auth,
+            services,
             hub: Hub::default(),
             cfg: Arc::new(cfg),
             shutdown,
@@ -100,18 +116,64 @@ pub fn router(state: AppState) -> Router {
             "/members",
             get(routes::list_members).post(routes::create_member),
         )
-        .route("/members/{id}", axum::routing::patch(routes::patch_member))
+        .route("/members/{id}", patch(routes::patch_member))
+        .route(
+            "/members/{id}/avatar",
+            put(feeds::put_avatar)
+                .delete(feeds::delete_avatar)
+                .get(feeds::get_avatar)
+                .layer(DefaultBodyLimit::max(feeds::AVATAR_MAX_BYTES)),
+        )
         .route("/members/{id}/account", post(routes::create_account))
         .route(
             "/members/{id}/account/password",
             post(routes::reset_password),
         )
-        .route("/members/{id}/pin", axum::routing::put(routes::set_pin))
+        .route("/members/{id}/pin", put(routes::set_pin))
         .route(
             "/devices",
             get(routes::list_devices).post(routes::pair_device),
         )
-        .route("/devices/{id}", delete(routes::revoke_device))
+        .route(
+            "/devices/{id}",
+            get(feeds::get_device)
+                .patch(feeds::patch_device)
+                .delete(routes::revoke_device),
+        )
+        .route(
+            "/household",
+            get(feeds::get_household).patch(feeds::patch_household),
+        )
+        .route("/oauth/google/start", get(feeds::oauth_start))
+        .route("/oauth/google/callback", get(feeds::oauth_callback))
+        .route("/oauth/accounts", get(feeds::list_oauth_accounts))
+        .route(
+            "/calendar-sources",
+            get(feeds::list_sources).post(feeds::create_source),
+        )
+        .route("/calendar-sources/test", post(feeds::test_source))
+        .route(
+            "/calendar-sources/{id}",
+            patch(feeds::patch_source).delete(feeds::delete_source),
+        )
+        .route("/calendar-sources/{id}/sync", post(feeds::sync_source))
+        .route("/calendars", get(feeds::list_calendars))
+        .route("/calendars/{id}", patch(feeds::patch_calendar))
+        .route("/events", get(feeds::list_events))
+        .route("/weather", get(feeds::get_weather))
+        .route("/advisories", get(feeds::list_advisories))
+        .route("/advisories/{id}/dismiss", post(feeds::dismiss_advisory))
+        .route(
+            "/weather-rules",
+            get(feeds::list_rules).post(feeds::create_rule),
+        )
+        .route("/weather-rules/validate", post(feeds::validate_rule))
+        .route(
+            "/weather-rules/{id}",
+            patch(feeds::patch_rule).delete(feeds::delete_rule),
+        )
+        .route("/dashboard", get(feeds::get_dashboard))
+        .route("/status", get(feeds::get_status))
         .route("/device/elevate", post(routes::elevate))
         .route("/sessions", get(routes::list_sessions))
         .route("/sessions/{id}", delete(routes::revoke_session))

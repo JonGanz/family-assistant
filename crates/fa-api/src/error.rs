@@ -3,8 +3,26 @@ use axum::http::{HeaderValue, StatusCode, header};
 use axum::response::{IntoResponse, Response};
 use chrono::{DateTime, Utc};
 use fa_auth::AuthError;
+use fa_calendar::CalendarError;
 use fa_domain::Denied;
 use fa_store::StoreError;
+use fa_weather::WeatherError;
+use utoipa::ToSchema;
+
+/// The `application/problem+json` body (RFC 9457). Invalid weather rules add `position` and `message`.
+#[derive(serde::Serialize, ToSchema)]
+pub struct Problem {
+    pub r#type: String,
+    pub title: String,
+    pub status: u16,
+    pub detail: String,
+    /// Weather-rule errors only: char offset into the condition.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub position: Option<u32>,
+    /// Weather-rule errors only.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub message: Option<String>,
+}
 
 /// Every API failure; rendered as `application/problem+json` (RFC 9457).
 #[derive(Debug, thiserror::Error)]
@@ -25,6 +43,17 @@ pub enum ApiError {
     PreconditionRequired(String),
     #[error("{0}")]
     Unprocessable(String),
+    #[error("{0}")]
+    PayloadTooLarge(String),
+    #[error("{0}")]
+    UnsupportedMedia(String),
+    /// An invalid weather-rule condition: 422 with `{position, message}`.
+    #[error("{message}")]
+    RuleInvalid { position: u32, message: String },
+    #[error("{0}")]
+    BadGateway(String),
+    #[error("{0}")]
+    GatewayTimeout(String),
     #[error("locked until {0}")]
     Locked(DateTime<Utc>),
     #[error("too many attempts, slow down")]
@@ -42,7 +71,11 @@ impl ApiError {
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Conflict(_) => StatusCode::CONFLICT,
             Self::PreconditionRequired(_) => StatusCode::PRECONDITION_REQUIRED,
-            Self::Unprocessable(_) => StatusCode::UNPROCESSABLE_ENTITY,
+            Self::Unprocessable(_) | Self::RuleInvalid { .. } => StatusCode::UNPROCESSABLE_ENTITY,
+            Self::PayloadTooLarge(_) => StatusCode::PAYLOAD_TOO_LARGE,
+            Self::UnsupportedMedia(_) => StatusCode::UNSUPPORTED_MEDIA_TYPE,
+            Self::BadGateway(_) => StatusCode::BAD_GATEWAY,
+            Self::GatewayTimeout(_) => StatusCode::GATEWAY_TIMEOUT,
             Self::Locked(_) => StatusCode::LOCKED,
             Self::RateLimited => StatusCode::TOO_MANY_REQUESTS,
             Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -60,13 +93,20 @@ impl IntoResponse for ApiError {
             }
             other => other.to_string(),
         };
-        let body = serde_json::json!({
-            "type": "about:blank",
-            "title": status.canonical_reason().unwrap_or("error"),
-            "status": status.as_u16(),
-            "detail": detail,
-        });
-        let mut res = (status, body.to_string()).into_response();
+        let (position, message) = match &self {
+            Self::RuleInvalid { position, message } => (Some(*position), Some(message.clone())),
+            _ => (None, None),
+        };
+        let body = Problem {
+            r#type: "about:blank".into(),
+            title: status.canonical_reason().unwrap_or("error").into(),
+            status: status.as_u16(),
+            detail,
+            position,
+            message,
+        };
+        let json = serde_json::to_string(&body).unwrap_or_default();
+        let mut res = (status, json).into_response();
         res.headers_mut().insert(
             header::CONTENT_TYPE,
             HeaderValue::from_static("application/problem+json"),
@@ -86,7 +126,8 @@ impl From<AuthError> for ApiError {
             AuthError::Password(e) => Self::Unprocessable(e.to_string()),
             AuthError::Pin(e) => Self::Unprocessable(e.to_string()),
             AuthError::NotFound => Self::NotFound,
-            // Interim mapping; T-09 (M1) turns OAuth errors into /oauth/done redirects.
+            // The browser OAuth routes turn InvalidState/OAuth into /oauth/done redirects before
+            // this mapping is reached; it only serves callers outside those routes.
             AuthError::NotConfigured => Self::NotFound,
             AuthError::NeedsReauth => Self::Conflict("account needs reconnecting".into()),
             AuthError::InvalidState => Self::Unprocessable("invalid or expired OAuth state".into()),
@@ -127,5 +168,29 @@ impl From<QueryRejection> for ApiError {
 impl From<PathRejection> for ApiError {
     fn from(r: PathRejection) -> Self {
         Self::BadRequest(r.body_text())
+    }
+}
+
+impl From<CalendarError> for ApiError {
+    fn from(e: CalendarError) -> Self {
+        match e {
+            CalendarError::Store(s) => s.into(),
+            CalendarError::Unauthorized => {
+                Self::Unprocessable("the credentials were rejected; check them or reconnect".into())
+            }
+            CalendarError::Remote(m) => Self::BadGateway(m),
+            CalendarError::NotFound => Self::NotFound,
+            CalendarError::Invalid(m) => Self::Unprocessable(m),
+            e @ CalendarError::RangeTooLarge(_) => Self::BadRequest(e.to_string()),
+        }
+    }
+}
+
+impl From<WeatherError> for ApiError {
+    fn from(e: WeatherError) -> Self {
+        match e {
+            WeatherError::Store(s) => s.into(),
+            WeatherError::Connector(_) => Self::BadGateway("the weather service failed".into()),
+        }
     }
 }

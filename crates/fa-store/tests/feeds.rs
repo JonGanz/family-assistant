@@ -97,6 +97,7 @@ fn occ(uid: &str, key: &str, title: &str, start: u32, end: u32) -> NewOccurrence
         is_private: false,
         cancelled: false,
         remote_etag: None,
+        external_url: None,
     }
 }
 

@@ -10,6 +10,79 @@
     "version": "1"
   },
   "paths": {
+    "/api/v1/advisories": {
+      "get": {
+        "tags": [
+          "weather"
+        ],
+        "operationId": "list_advisories",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AdvisoryView"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/advisories/{id}/dismiss": {
+      "post": {
+        "tags": [
+          "weather"
+        ],
+        "operationId": "dismiss_advisory",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "advisory id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "tags": [
@@ -94,6 +167,574 @@
         "security": [
           {
             "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/calendar-sources": {
+      "get": {
+        "tags": [
+          "calendar"
+        ],
+        "operationId": "list_sources",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SourceView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "calendar"
+        ],
+        "operationId": "create_source",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewSource"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceCreated"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "504": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/calendar-sources/test": {
+      "post": {
+        "tags": [
+          "calendar"
+        ],
+        "operationId": "test_source",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewSource"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceTestResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/calendar-sources/{id}": {
+      "delete": {
+        "tags": [
+          "calendar"
+        ],
+        "operationId": "delete_source",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "source id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "calendar"
+        ],
+        "operationId": "patch_source",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "source id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SourcePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SourceView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/calendar-sources/{id}/sync": {
+      "post": {
+        "tags": [
+          "calendar"
+        ],
+        "operationId": "sync_source",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "source id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "a sync job is queued"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/calendars": {
+      "get": {
+        "tags": [
+          "calendar"
+        ],
+        "operationId": "list_calendars",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CalendarView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/calendars/{id}": {
+      "patch": {
+        "tags": [
+          "calendar"
+        ],
+        "operationId": "patch_calendar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "calendar id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CalendarPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CalendarView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/dashboard": {
+      "get": {
+        "tags": [
+          "dashboard"
+        ],
+        "operationId": "get_dashboard",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "description": "Days of agenda from today (1 to 14); defaults to the device setting.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
           }
         ]
       }
@@ -251,6 +892,63 @@
       }
     },
     "/api/v1/devices/{id}": {
+      "get": {
+        "tags": [
+          "devices"
+        ],
+        "operationId": "get_device",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "device id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
       "delete": {
         "tags": [
           "devices"
@@ -282,6 +980,315 @@
             }
           },
           "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "devices"
+        ],
+        "operationId": "patch_device",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "device id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DevicePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/events": {
+      "get": {
+        "tags": [
+          "calendar"
+        ],
+        "operationId": "list_events",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "description": "Inclusive start (RFC 3339).",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "Exclusive end (RFC 3339); at most 400 days after `from`.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "member",
+            "in": "query",
+            "description": "Only events linked to this member.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EventView"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/household": {
+      "get": {
+        "tags": [
+          "household"
+        ],
+        "operationId": "get_household",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "household"
+        ],
+        "operationId": "patch_household",
+        "parameters": [
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HouseholdPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HouseholdView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
             "description": "",
             "content": {
               "application/json": {
@@ -354,7 +1361,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/MemberDto"
+                    "$ref": "#/components/schemas/MemberView"
                   }
                 }
               }
@@ -401,7 +1408,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MemberDto"
+                  "$ref": "#/components/schemas/MemberView"
                 }
               }
             }
@@ -482,7 +1489,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/MemberDto"
+                  "$ref": "#/components/schemas/MemberView"
                 }
               }
             }
@@ -689,6 +1696,190 @@
         ]
       }
     },
+    "/api/v1/members/{id}/avatar": {
+      "get": {
+        "tags": [
+          "members"
+        ],
+        "operationId": "get_avatar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "member id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the image; ETag is its sha256",
+            "content": {
+              "image/*": {}
+            }
+          },
+          "304": {
+            "description": ""
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "members"
+        ],
+        "operationId": "put_avatar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "member id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "raw image bytes (png, jpeg or webp), at most 512 KB",
+          "content": {
+            "image/png": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "members"
+        ],
+        "operationId": "delete_avatar",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "member id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/members/{id}/pin": {
       "put": {
         "tags": [
@@ -747,6 +1938,171 @@
           },
           {
             "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/oauth/accounts": {
+      "get": {
+        "tags": [
+          "oauth"
+        ],
+        "operationId": "list_oauth_accounts",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OAuthAccountView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/oauth/google/callback": {
+      "get": {
+        "tags": [
+          "oauth"
+        ],
+        "operationId": "oauth_callback",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "error",
+            "in": "query",
+            "description": "Set by Google when the user declined.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "redirect to /oauth/done?account=…&return_to=… or ?error=…"
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/oauth/google/start": {
+      "get": {
+        "tags": [
+          "oauth"
+        ],
+        "operationId": "oauth_start",
+        "parameters": [
+          {
+            "name": "return_to",
+            "in": "query",
+            "description": "A path on this site to return to afterwards.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "302": {
+            "description": "redirect to Google's consent page"
+          },
+          "400": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Google is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
           }
         ]
       }
@@ -877,6 +2233,44 @@
         ]
       }
     },
+    "/api/v1/status": {
+      "get": {
+        "tags": [
+          "status"
+        ],
+        "operationId": "get_status",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/stream": {
       "get": {
         "tags": [
@@ -885,9 +2279,353 @@
         "operationId": "stream",
         "responses": {
           "200": {
-            "description": "`heartbeat` every 15 s and `member.updated`; honours Last-Event-ID",
+            "description": "`heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `resync`), bridged from `fa_change`; honours Last-Event-ID",
             "content": {
               "text/event-stream": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/weather": {
+      "get": {
+        "tags": [
+          "weather"
+        ],
+        "operationId": "get_weather",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeatherView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "no forecast fetched yet",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/weather-rules": {
+      "get": {
+        "tags": [
+          "weather"
+        ],
+        "operationId": "list_rules",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/WeatherRuleView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "weather"
+        ],
+        "operationId": "create_rule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewWeatherRule"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeatherRuleView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "invalid condition: `position` and `message` are set",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/weather-rules/validate": {
+      "post": {
+        "tags": [
+          "weather"
+        ],
+        "operationId": "validate_rule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateRuleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateRuleResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/weather-rules/{id}": {
+      "delete": {
+        "tags": [
+          "weather"
+        ],
+        "operationId": "delete_rule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "rule id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "weather"
+        ],
+        "operationId": "patch_rule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "rule id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WeatherRulePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WeatherRuleView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
             }
           }
         },
@@ -954,10 +2692,163 @@
             "description": "`user`, `device` or `elevated_device`."
           },
           "member": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MemberView"
+              }
+            ]
+          }
+        }
+      },
+      "AdvisoryId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "AdvisorySource": {
+        "type": "string",
+        "enum": [
+          "rule",
+          "s2"
+        ]
+      },
+      "AdvisoryView": {
+        "type": "object",
+        "required": [
+          "id",
+          "text",
+          "severity",
+          "valid_from",
+          "valid_until",
+          "source"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/AdvisoryId"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "source": {
+            "$ref": "#/components/schemas/AdvisorySource"
+          },
+          "text": {
+            "type": "string"
+          },
+          "valid_from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "valid_until": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "AllMarker": {
+        "type": "string",
+        "enum": [
+          "all"
+        ]
+      },
+      "BackupStatus": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "last_at": {
             "type": [
-              "object",
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CalendarId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "CalendarPatch": {
+        "type": "object",
+        "properties": {
+          "color": {
+            "type": [
+              "string",
               "null"
             ]
+          },
+          "enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "members": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "CalendarSourceId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "CalendarView": {
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "name",
+          "enabled",
+          "members",
+          "version"
+        ],
+        "properties": {
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "$ref": "#/components/schemas/CalendarId"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/CalendarSourceId"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -1034,6 +2925,121 @@
           }
         }
       },
+      "DashboardHousehold": {
+        "type": "object",
+        "required": [
+          "name",
+          "tz",
+          "units"
+        ],
+        "properties": {
+          "location": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Location"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "tz": {
+            "type": "string"
+          },
+          "units": {
+            "$ref": "#/components/schemas/Units"
+          }
+        }
+      },
+      "DashboardSettings": {
+        "type": "object",
+        "required": [
+          "orientation",
+          "theme",
+          "agenda_days",
+          "members",
+          "panels"
+        ],
+        "properties": {
+          "agenda_days": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "members": {
+            "$ref": "#/components/schemas/MemberSelection"
+          },
+          "orientation": {
+            "$ref": "#/components/schemas/Orientation"
+          },
+          "panels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Panel"
+            }
+          },
+          "theme": {
+            "$ref": "#/components/schemas/DashboardTheme"
+          }
+        }
+      },
+      "DashboardTheme": {
+        "type": "string",
+        "enum": [
+          "auto",
+          "light",
+          "dark"
+        ]
+      },
+      "DashboardView": {
+        "type": "object",
+        "required": [
+          "household",
+          "members",
+          "events",
+          "advisories",
+          "settings"
+        ],
+        "properties": {
+          "advisories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AdvisoryView"
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventView"
+            }
+          },
+          "household": {
+            "$ref": "#/components/schemas/DashboardHousehold"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberPublicDto"
+            }
+          },
+          "settings": {
+            "$ref": "#/components/schemas/DashboardSettings"
+          },
+          "weather": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/WeatherView"
+              }
+            ]
+          }
+        }
+      },
       "DeviceDto": {
         "type": "object",
         "required": [
@@ -1044,23 +3050,93 @@
         ],
         "properties": {
           "id": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/DeviceId"
           },
           "kind": {
-            "type": "string"
+            "$ref": "#/components/schemas/DeviceKind"
           },
           "last_seen": {
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "format": "date-time"
           },
           "name": {
             "type": "string"
           },
           "revoked": {
             "type": "boolean"
+          }
+        }
+      },
+      "DeviceId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "DeviceKind": {
+        "type": "string",
+        "enum": [
+          "dashboard"
+        ]
+      },
+      "DevicePatch": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "settings": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DashboardSettings"
+              }
+            ]
+          }
+        }
+      },
+      "DeviceView": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "revoked",
+          "settings",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/DeviceId"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DeviceKind"
+          },
+          "last_seen": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "revoked": {
+            "type": "boolean"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/DashboardSettings"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -1092,6 +3168,98 @@
           }
         }
       },
+      "EventId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "EventView": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "start_at",
+          "end_at",
+          "all_day",
+          "members",
+          "visibility"
+        ],
+        "properties": {
+          "all_day": {
+            "type": "boolean"
+          },
+          "calendar": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarId"
+              }
+            ]
+          },
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "end_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "end_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "external_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "$ref": "#/components/schemas/EventId"
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "start_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "start_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "title": {
+            "type": "string"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/Visibility"
+          }
+        }
+      },
       "HouseholdDto": {
         "type": "object",
         "required": [
@@ -1106,8 +3274,7 @@
             "type": "boolean"
           },
           "id": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/HouseholdId"
           },
           "location": {
             "oneOf": [
@@ -1128,6 +3295,132 @@
           },
           "tz": {
             "type": "string"
+          }
+        }
+      },
+      "HouseholdId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "HouseholdPatch": {
+        "type": "object",
+        "properties": {
+          "calendar_future_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "calendar_past_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "location": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Location"
+              }
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "private_events_as_busy": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "tz": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "units": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Units"
+              }
+            ]
+          },
+          "weather_retention_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "HouseholdView": {
+        "type": "object",
+        "required": [
+          "name",
+          "tz",
+          "units",
+          "calendar_past_days",
+          "calendar_future_days",
+          "weather_retention_days",
+          "private_events_as_busy",
+          "google_oauth_enabled",
+          "version"
+        ],
+        "properties": {
+          "calendar_future_days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "calendar_past_days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "google_oauth_enabled": {
+            "type": "boolean",
+            "description": "Read-only: true when the Google client is configured."
+          },
+          "location": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Location"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "private_events_as_busy": {
+            "type": "boolean"
+          },
+          "tz": {
+            "type": "string"
+          },
+          "units": {
+            "$ref": "#/components/schemas/Units"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "weather_retention_days": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -1205,7 +3498,7 @@
       },
       "MemberDto": {
         "type": "object",
-        "description": "Full member view (adults). `version` is the optimistic-concurrency value for `If-Match`.",
+        "description": "Full member view for adults. Never includes the PIN hash.",
         "required": [
           "id",
           "display_name",
@@ -1214,11 +3507,16 @@
           "hobbies",
           "responsibilities",
           "has_pin",
-          "has_account",
-          "version"
+          "has_account"
         ],
         "properties": {
           "avatar": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "avatar_url": {
             "type": [
               "string",
               "null"
@@ -1228,7 +3526,8 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "format": "date"
           },
           "color": {
             "type": [
@@ -1258,8 +3557,7 @@
             }
           },
           "id": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/MemberId"
           },
           "interests": {
             "type": "array",
@@ -1274,16 +3572,22 @@
             }
           },
           "role": {
-            "type": "string"
+            "$ref": "#/components/schemas/Role"
           },
           "version": {
             "type": "integer",
-            "format": "int32"
+            "format": "int32",
+            "description": "Optimistic-concurrency version for `If-Match` (0 when not loaded)."
           }
         }
       },
+      "MemberId": {
+        "type": "string",
+        "format": "uuid"
+      },
       "MemberPublicDto": {
         "type": "object",
+        "description": "Public fields, visible to children and devices.",
         "required": [
           "id",
           "display_name",
@@ -1296,6 +3600,13 @@
               "null"
             ]
           },
+          "avatar_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`/api/v1/members/{id}/avatar?v=<sha256 prefix>`; set by the API layer."
+          },
           "color": {
             "type": [
               "string",
@@ -1306,14 +3617,235 @@
             "type": "string"
           },
           "id": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/MemberId"
           },
           "role": {
-            "type": "string",
-            "description": "`adult` or `child`."
+            "$ref": "#/components/schemas/Role"
           }
         }
+      },
+      "MemberSelection": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AllMarker"
+          },
+          {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          }
+        ],
+        "description": "`\"all\"` or a list of member IDs."
+      },
+      "MemberView": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/MemberDto"
+          },
+          {
+            "$ref": "#/components/schemas/MemberPublicDto"
+          }
+        ],
+        "description": "Either member view, as returned by the members API (untagged)."
+      },
+      "NewSource": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "oauth_account",
+              "name",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "google"
+                ]
+              },
+              "name": {
+                "type": "string"
+              },
+              "oauth_account": {
+                "$ref": "#/components/schemas/OAuthAccountId"
+              },
+              "owner": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MemberId"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "name",
+              "url",
+              "username",
+              "password",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "caldav"
+                ]
+              },
+              "name": {
+                "type": "string"
+              },
+              "owner": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MemberId"
+                  }
+                ]
+              },
+              "password": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              },
+              "username": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "name",
+              "url",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "ics"
+                ]
+              },
+              "name": {
+                "type": "string"
+              },
+              "owner": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MemberId"
+                  }
+                ]
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "description": "New source. Debug output redacts passwords and URLs."
+      },
+      "NewWeatherRule": {
+        "type": "object",
+        "required": [
+          "name",
+          "condition",
+          "action",
+          "severity",
+          "message"
+        ],
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/RuleAction"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "status": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RuleStatus",
+                "description": "Defaults to `active`."
+              }
+            ]
+          }
+        }
+      },
+      "OAuthAccountId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "OAuthAccountView": {
+        "type": "object",
+        "required": [
+          "id",
+          "provider",
+          "owner_member",
+          "email",
+          "scopes",
+          "state"
+        ],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "$ref": "#/components/schemas/OAuthAccountId"
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "owner_member": {
+            "$ref": "#/components/schemas/MemberId"
+          },
+          "provider": {
+            "type": "string"
+          },
+          "scopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "state": {
+            "$ref": "#/components/schemas/SourceState"
+          }
+        }
+      },
+      "Orientation": {
+        "type": "string",
+        "enum": [
+          "landscape",
+          "portrait"
+        ]
       },
       "PairDeviceReq": {
         "type": "object",
@@ -1346,6 +3878,25 @@
             "description": "Shown once."
           }
         }
+      },
+      "Panel": {
+        "allOf": [
+          {
+            "type": "object"
+          },
+          {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string"
+              }
+            }
+          }
+        ],
+        "description": "A panel with a kind and kind-specific options. Unknown kinds and options are kept as they are."
       },
       "PasswordReq": {
         "type": "object",
@@ -1442,6 +3993,7 @@
       },
       "Problem": {
         "type": "object",
+        "description": "The `application/problem+json` body (RFC 9457). Invalid weather rules add `position` and `message`.",
         "required": [
           "type",
           "title",
@@ -1451,6 +4003,22 @@
         "properties": {
           "detail": {
             "type": "string"
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Weather-rule errors only."
+          },
+          "position": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Weather-rule errors only: char offset into the condition.",
+            "minimum": 0
           },
           "status": {
             "type": "integer",
@@ -1464,6 +4032,112 @@
             "type": "string"
           }
         }
+      },
+      "QueueStatus": {
+        "type": "object",
+        "required": [
+          "ready",
+          "running",
+          "dead"
+        ],
+        "properties": {
+          "dead": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ready": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "running": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "RemoteCalendar": {
+        "type": "object",
+        "required": [
+          "remote_id",
+          "name"
+        ],
+        "properties": {
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "remote_id": {
+            "type": "string"
+          }
+        }
+      },
+      "Role": {
+        "type": "string",
+        "enum": [
+          "adult",
+          "child"
+        ]
+      },
+      "RuleAction": {
+        "type": "string",
+        "enum": [
+          "alert",
+          "task"
+        ]
+      },
+      "RuleError": {
+        "type": "object",
+        "required": [
+          "position",
+          "message"
+        ],
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "position": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "RulePreview": {
+        "type": "object",
+        "required": [
+          "matches"
+        ],
+        "properties": {
+          "matches": {
+            "type": "boolean"
+          },
+          "value": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "when": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "RuleStatus": {
+        "type": "string",
+        "enum": [
+          "active",
+          "suggested",
+          "disabled"
+        ]
       },
       "SessionView": {
         "type": "object",
@@ -1498,6 +4172,280 @@
           }
         }
       },
+      "Severity": {
+        "type": "string",
+        "enum": [
+          "info",
+          "warning",
+          "severe"
+        ]
+      },
+      "SourceCreated": {
+        "type": "object",
+        "description": "Source plus its discovered calendars (POST /calendar-sources).",
+        "required": [
+          "source",
+          "calendars"
+        ],
+        "properties": {
+          "calendars": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalendarView"
+            }
+          },
+          "source": {
+            "$ref": "#/components/schemas/SourceView"
+          }
+        }
+      },
+      "SourceCredentials": {
+        "type": "object",
+        "description": "Replacement credentials; any subset. Debug output is redacted.",
+        "properties": {
+          "password": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "username": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SourceKind": {
+        "type": "string",
+        "enum": [
+          "google",
+          "caldav",
+          "ics"
+        ]
+      },
+      "SourcePatch": {
+        "type": "object",
+        "properties": {
+          "credentials": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SourceCredentials"
+              }
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "poll_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "SourceState": {
+        "type": "string",
+        "enum": [
+          "ok",
+          "needs_reauth",
+          "error"
+        ]
+      },
+      "SourceStatus": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "state"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/CalendarSourceId"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SourceKind"
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_synced_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "name": {
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/SourceState"
+          }
+        }
+      },
+      "SourceTestResult": {
+        "type": "object",
+        "description": "POST /calendar-sources/test.",
+        "required": [
+          "ok",
+          "calendars",
+          "sample_events"
+        ],
+        "properties": {
+          "calendars": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RemoteCalendar"
+            }
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "sample_events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/EventView"
+            },
+            "description": "At most 3."
+          }
+        }
+      },
+      "SourceView": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "state",
+          "poll_minutes",
+          "version"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/CalendarSourceId"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SourceKind"
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_synced_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "masked_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`https://host/…`; the full URL is a secret and never returned."
+          },
+          "name": {
+            "type": "string"
+          },
+          "owner": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MemberId"
+              }
+            ]
+          },
+          "poll_minutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "state": {
+            "$ref": "#/components/schemas/SourceState"
+          },
+          "username": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "StatusView": {
+        "type": "object",
+        "required": [
+          "sources",
+          "weather",
+          "backup",
+          "queue"
+        ],
+        "properties": {
+          "backup": {
+            "$ref": "#/components/schemas/BackupStatus"
+          },
+          "queue": {
+            "$ref": "#/components/schemas/QueueStatus"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceStatus"
+            }
+          },
+          "weather": {
+            "$ref": "#/components/schemas/WeatherStatus"
+          }
+        }
+      },
+      "SuggestedBy": {
+        "type": "string",
+        "enum": [
+          "default",
+          "s2",
+          "user"
+        ]
+      },
+      "Units": {
+        "type": "string",
+        "enum": [
+          "metric",
+          "imperial"
+        ]
+      },
       "UserAccountDto": {
         "type": "object",
         "required": [
@@ -1511,15 +4459,230 @@
             "type": "boolean"
           },
           "id": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/UserAccountId"
           },
           "member_id": {
-            "type": "string",
-            "format": "uuid"
+            "$ref": "#/components/schemas/MemberId"
           },
           "username": {
             "type": "string"
+          }
+        }
+      },
+      "UserAccountId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "ValidateRuleRequest": {
+        "type": "object",
+        "required": [
+          "condition"
+        ],
+        "properties": {
+          "condition": {
+            "type": "string"
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ValidateRuleResponse": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "error": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RuleError"
+              }
+            ]
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "preview": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RulePreview"
+              }
+            ]
+          }
+        }
+      },
+      "Visibility": {
+        "type": "string",
+        "description": "D-036: `Busy` hides title, location and description.",
+        "enum": [
+          "full",
+          "busy"
+        ]
+      },
+      "WeatherRuleId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "WeatherRulePatch": {
+        "type": "object",
+        "properties": {
+          "action": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RuleAction"
+              }
+            ]
+          },
+          "condition": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "message": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "severity": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Severity"
+              }
+            ]
+          },
+          "status": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RuleStatus"
+              }
+            ]
+          }
+        }
+      },
+      "WeatherRuleView": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "condition",
+          "action",
+          "severity",
+          "message",
+          "status",
+          "suggested_by",
+          "version"
+        ],
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/RuleAction"
+          },
+          "condition": {
+            "type": "string"
+          },
+          "id": {
+            "$ref": "#/components/schemas/WeatherRuleId"
+          },
+          "message": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/Severity"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RuleStatus"
+          },
+          "suggested_by": {
+            "$ref": "#/components/schemas/SuggestedBy"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "WeatherStatus": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "fetched_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        }
+      },
+      "WeatherView": {
+        "type": "object",
+        "required": [
+          "fetched_at",
+          "current",
+          "hourly",
+          "daily"
+        ],
+        "properties": {
+          "current": {
+            "description": "Metric, Open-Meteo field names (arch/Feeds.md §4)."
+          },
+          "daily": {
+            "description": "7 entries."
+          },
+          "fetched_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "hourly": {
+            "description": "48 entries."
+          },
+          "sunrise_today": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "sunset_today": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
           }
         }
       }

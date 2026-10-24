@@ -164,6 +164,8 @@ pub struct SourceRef {
 pub enum RefKind {
     Email,
     Ics,
+    /// A synced calendar event with a link back to its provider (e.g. Google `htmlLink`).
+    Calendar,
     Weather,
     Manual,
     System,
@@ -226,6 +228,9 @@ pub struct MemberDto {
     pub responsibilities: Vec<String>,
     pub has_pin: bool,
     pub has_account: bool,
+    /// Optimistic-concurrency version for `If-Match` (0 when not loaded).
+    #[serde(default)]
+    pub version: i32,
 }
 
 impl From<&Member> for MemberPublicDto {
@@ -257,6 +262,7 @@ impl MemberDto {
             responsibilities: m.responsibilities.clone(),
             has_pin: m.pin_hash.is_some(),
             has_account,
+            version: 0,
         }
     }
 }

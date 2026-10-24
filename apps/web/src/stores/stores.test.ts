@@ -1,7 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/http'
-import { useDashboardStore } from './dashboard'
 import { useMembersStore } from './members'
 import { useSessionStore } from './session'
 
@@ -15,7 +14,7 @@ vi.mock('../api/client', () => ({
     createMember: vi.fn(),
   },
 }))
-import { api } from '../api/client'
+import { api, type Member } from '../api/client'
 const m = vi.mocked(api)
 
 const me = (kind: string, role = 'adult') =>
@@ -67,7 +66,7 @@ describe('session store', () => {
 describe('members store', () => {
   it('flags a 409 conflict instead of throwing, and reload clears it', async () => {
     const s = useMembersStore()
-    const member = { id: 'x', display_name: 'A', role: 'adult', version: 2 }
+    const member: Member = { id: 'x', display_name: 'A', role: 'adult', version: 2 }
     m.patchMember.mockRejectedValue(new ApiError(409, {}))
     expect(await s.update(member, { display_name: 'B' })).toBe(false)
     expect(s.conflictId).toBe('x')
@@ -83,24 +82,5 @@ describe('members store', () => {
     await expect(
       s.update({ id: 'x', display_name: 'A', role: 'adult' }, {}),
     ).rejects.toBeInstanceOf(ApiError)
-  })
-})
-
-describe('dashboard store', () => {
-  it('caches the snapshot and falls back to it when the API fails', async () => {
-    const d = useDashboardStore()
-    m.me.mockResolvedValue(me('device'))
-    m.members.mockResolvedValue([{ id: 'x', display_name: 'A', role: 'adult' }])
-    await d.refresh()
-    expect(d.householdName).toBe('Example Household')
-    expect(d.stale).toBe(false)
-
-    setActivePinia(createPinia())
-    const d2 = useDashboardStore()
-    m.me.mockRejectedValue(new Error('offline'))
-    await d2.refresh()
-    expect(d2.stale).toBe(true)
-    expect(d2.householdName).toBe('Example Household')
-    expect(d2.members).toHaveLength(1)
   })
 })

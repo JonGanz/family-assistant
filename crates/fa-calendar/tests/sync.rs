@@ -542,6 +542,7 @@ fn occ(uid: &str, title: &str, private: bool) -> NewOccurrence {
         is_private: private,
         cancelled: false,
         remote_etag: None,
+        external_url: None,
     }
 }
 

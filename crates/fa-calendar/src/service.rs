@@ -546,6 +546,12 @@ impl CalendarService {
                 &flags,
             );
             let e = r.event;
+            let external_url = e
+                .source_ref
+                .as_ref()
+                .and_then(|s| s.get("external_url"))
+                .and_then(|u| u.as_str())
+                .map(str::to_owned);
             out.push(mask(EventView {
                 id: e.id,
                 calendar: e.calendar,
@@ -560,7 +566,7 @@ impl CalendarService {
                 members: ids,
                 color: r.color,
                 visibility,
-                external_url: None,
+                external_url,
             }));
         }
         Ok(out)

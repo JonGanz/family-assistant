@@ -15,6 +15,8 @@ workspace = true
 fa-domain.workspace = true
 fa-store.workspace = true
 fa-auth.workspace = true
+fa-calendar.workspace = true
+fa-weather.workspace = true
 axum.workspace = true
 axum-extra.workspace = true
 tower.workspace = true
@@ -26,6 +28,10 @@ async-stream.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 chrono.workspace = true
+chrono-tz.workspace = true
+sha2.workspace = true
+sqlx.workspace = true
+url.workspace = true
 uuid.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
@@ -33,5 +39,6 @@ utoipa.workspace = true
 utoipa-swagger-ui.workspace = true
 
 [dev-dependencies]
-sqlx.workspace = true
+fa-connectors.workspace = true
+wiremock.workspace = true
 tower = { workspace = true, features = ["util"] }

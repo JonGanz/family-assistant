@@ -5,7 +5,7 @@ milestone: M1
 wave: 5
 depends_on: [T-09, T-03]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/api/**", "apps/web/src/router/**", "apps/web/src/stores/** (except dashboard.ts)", "apps/web/src/views/** (except DashboardView.vue, DevicesView.vue)", "apps/web/src/layouts/AppLayout.vue", "apps/web/src/App.vue"]
 ---
 
@@ -59,6 +59,19 @@ You are a sub-agent implementing one task of the M1 milestone (Dashboard core) o
 - [ ] `corepack pnpm@9 --dir apps/web build` passes
 - [ ] No file under your paths declares an interface or type that duplicates a `gen/` schema (`grep` check described in your report)
 - [ ] Manual: `serve all` with the example household. Log in as an adult, add an ICS source (a local fixture file served by `python3 -m http.server` with `FA_ALLOW_HTTP_FEEDS=true`), enable its calendar, and see the events on `/calendar`
+
+## Wave 4 outcomes (read before starting)
+- `apps/web/src/gen/` was regenerated from the real OpenAPI (37 paths). It's the only source of API types. `MemberDto` now has `avatar_url` and `version`, and `RefKind` has `calendar`.
+- **The web typecheck currently fails** in `src/stores/stores.test.ts` (Member fixtures lack the new required fields). That's yours: fix it as part of moving the stores to the generated types.
+- **API behaviour (T-09):**
+  - The OAuth callback redirects to `/oauth/done?account=<id>&return_to=…` or `?error=<message>`, and you own that route.
+  - `NotConfigured` → 404, which you shouldn't hit: hide Google when `HouseholdView.google_oauth_enabled` is false.
+  - Weather-rule 422 problem+json carries `position` and `message`.
+  - Mutations need `If-Match` (409/428).
+  - Avatars: `PUT /members/{id}/avatar` with a raw body (≤ 512 KB, png/jpeg/webp); the URL is `member.avatar_url`.
+  - Adults see only the sources and calendars D-006 allows.
+  - `EventView.external_url` is set for Google events and is null when an event is busy-masked.
+- After you and T-11 finish, the main session merges T-11's `dashboard/api.ts` into `api/client.ts`.
 
 ## Ground rules (all M1 tasks)
 - Repo: `/home/jon/projects/family-assistant`. **First read** `CLAUDE.md`, `plan/M1.md` (especially *Contracts fixed up front*), and the arch sections listed under *Read first*. The contracts in `plan/M1.md` are the source of truth. If one is wrong or missing, don't invent a new one: report it.

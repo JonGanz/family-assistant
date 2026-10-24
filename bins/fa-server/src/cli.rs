@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand, ValueEnum};
-use fa_domain::{DeviceId, HouseholdId};
+use fa_domain::{CalendarSourceId, DeviceId, HouseholdId};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -56,6 +56,16 @@ pub enum Command {
         #[command(subcommand)]
         action: PinAction,
     },
+    /// Calendar tools.
+    Calendar {
+        #[command(subcommand)]
+        action: CalendarAction,
+    },
+    /// Weather tools.
+    Weather {
+        #[command(subcommand)]
+        action: WeatherAction,
+    },
     /// Write the OpenAPI document.
     GenOpenapi {
         #[arg(long, default_value = "apps/web/src/gen/openapi.json")]
@@ -107,6 +117,18 @@ pub enum DeviceAction {
     Revoke {
         id: DeviceId,
     },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum CalendarAction {
+    /// Sync one source now, in this process, and print what changed.
+    Sync { source: CalendarSourceId },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum WeatherAction {
+    /// Fetch the forecast, evaluate the rules in this process and print the result.
+    Fetch,
 }
 
 #[derive(Debug, Subcommand)]

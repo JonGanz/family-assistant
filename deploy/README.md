@@ -23,6 +23,30 @@ Set `FA_MASTER_KEY_FILE` to that file. It is mounted as the docker secret `/run/
 
 **Back up the master key offline** (password manager or paper), separately from the database backups. It is never in the DB or the dumps. Without it the encrypted secrets (for example OAuth tokens) cannot be recovered. You would have to re-authorise each account.
 
+**Outbound network:** both `api` and `worker` need outbound HTTPS. The worker syncs calendars and fetches the forecast (Open-Meteo, Google, your ICS and CalDAV servers). The api tests and discovers sources when you add them and completes the Google OAuth exchange.
+
+## Feeds and Google settings
+All of these are optional and go in `deploy/.env` (see `.env.example` for the defaults):
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `FA_PUBLIC_URL` | `FA_PUBLIC_BASE_URL` | Base of the Google OAuth redirect: `<FA_PUBLIC_URL>/api/v1/oauth/google/callback`. Must be https |
+| `FA_GOOGLE_CLIENT_ID`, `FA_GOOGLE_CLIENT_SECRET` | unset | The OAuth client below. When unset, Google is hidden in the UI (ICS and CalDAV still work) |
+| `FA_OPEN_METEO_URL` | `https://api.open-meteo.com` | Weather provider base URL |
+| `FA_ALLOW_HTTP_FEEDS` | `false` | Accept plain `http` for feeds (for example a CalDAV server on the LAN) and for the OAuth redirect |
+| `FA_HOST_API_PORT`, `FA_HOST_NTFY_PORT` | `8080`, `8090` | Host ports (on 127.0.0.1) that the compose file publishes |
+
+## Google OAuth client
+This is the one-time setup (human step H-05) that lets the app read Google calendars. Skip it if you only use ICS or CalDAV.
+1. In the [Google Cloud console](https://console.cloud.google.com/), create a project (or reuse one).
+2. Enable the **Google Calendar API** (APIs & Services, Library).
+3. Configure the OAuth consent screen: user type External, publishing status **Testing**, and add every Google account you will connect as a **test user**.
+4. Create credentials, **OAuth client ID**, application type **Web application**. Under *Authorised redirect URIs* add exactly `https://<host>.<tailnet>.ts.net/api/v1/oauth/google/callback` (your `FA_PUBLIC_URL`, plus that path).
+5. Put the client ID and secret in `deploy/.env` as `FA_GOOGLE_CLIENT_ID` and `FA_GOOGLE_CLIENT_SECRET`, set `FA_PUBLIC_URL` if it differs from `FA_PUBLIC_BASE_URL`, and restart: `docker compose --env-file deploy/.env -f deploy/compose.example.yaml up -d`.
+6. In the app, open Settings, Calendars, **Connect a Google account**.
+
+The app asks only for the read-only calendar scope. While the consent screen is in **Testing** mode, Google expires the refresh token after **7 days**. The source then shows *needs reauth*: use Reconnect. Moving the consent screen to *In production* avoids this (Google may require verification for sensitive scopes), and so does adding the calendar through its secret iCal address as an ICS source (slower to refresh, no OAuth).
+
 ## Layouts
 **Single machine:** run everything on one host: `docker compose --env-file deploy/.env -f deploy/compose.example.yaml --profile gpu up -d` (omit `--profile gpu` if there is no GPU).
 
@@ -52,6 +76,8 @@ fa user add --member <member-key> --username <name>   # prompts for the password
 fa device pair --name kitchen-display                 # prints the token and pairing URL
 ```
 Check `https://<host>.<tailnet>.ts.net/readyz`.
+
+Then open the app, set the household location (Settings, Household) and add calendars (Settings, Calendars). To show the dashboard on a screen, pair it: Settings, Devices, then open the pairing link on the screen (an Echo Show uses its browser), or run `fa device pair --name echo-show` and open the printed URL.
 
 ## Updates
 Your choice (D-033): manual `docker compose pull && up -d`, Watchtower, or anything else. Pin `FA_VERSION` to a release tag and read the release notes first. Migrations run when the api starts.

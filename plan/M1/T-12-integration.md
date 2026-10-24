@@ -5,7 +5,7 @@ milestone: M1
 wave: 6
 depends_on: [T-10, T-11]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["e2e/**", "apps/web/e2e/**", "scripts/**", "deploy/**", ".github/workflows/**", "README.md", "justfile", ".env.dev"]
 ---
 
@@ -61,6 +61,10 @@ You are a sub-agent implementing one task of the M1 milestone (Dashboard core) o
    - the repository layout (new crates);
    - Roadmap: M1 → "code-complete" (once everything here passes).
 
+   **The user's explicit requirement:** when M1 is done, the README must have two clear, complete, top-level sections:
+   - **"Run it locally"**: a copy-pasteable path from a fresh clone to a working app with the example household, a weather fetch (live Open-Meteo, or the stub), an ICS calendar showing on the dashboard, and the dashboard opened in a browser. Include the separate-processes mode (`serve api` + `serve worker`).
+   - **"Deploying"**: guidelines covering the compose example and its profiles, the env vars, the master key and its offline backup, `tailscale serve` (HTTPS on the tailnet), the Google OAuth client (H-05), backups to the NAS and restore, updating to a new version, and pairing the Echo Show. Keep the details in `deploy/README.md` and the runbooks, and link to them from the README.
+
    **Run every step you document**, on a clean checkout state (fresh dev DB, dev key, example import, serve, pair, see the dashboard), and fix the docs where reality differs.
 6. Add `just e2e` and `just serve-split` (api + worker as separate processes) recipes, as thin wrappers.
 
@@ -71,6 +75,41 @@ You are a sub-agent implementing one task of the M1 milestone (Dashboard core) o
 - [ ] `actionlint` passes (if `ci.yml` changed)
 - [ ] `scripts/check-example-data.sh` passes (fixtures are fictional, on `example.com`)
 - [ ] Every README command was run, and the report lists them with pass or fail
+
+## Waves 3–5 outcomes: README and e2e inputs (read before starting)
+**State:** `scripts/ci-local.sh` is green on a fresh Postgres: Rust 208 passed, web 91 passed. The web app is complete: Today, Calendar, Members with avatars, Settings (household, calendars, weather, devices with the layout editor, status), `/oauth/done`, and the dashboard.
+
+**README items the tasks reported:**
+- **New CLI:**
+  - `fa-server calendar sync <source-id>`.
+  - `fa-server weather fetch`.
+  - `config import` now validates weather-rule conditions (it names the rule and position on error) and seeds the 8 default rules.
+  - `user add`/`reset-password` and `device pair` are unchanged in use.
+- **Processes:**
+  - `serve api` needs the master key and runs the `fa_change` LISTEN bridge.
+  - `serve worker` runs the jobs.
+  - Both can run as separate processes (that's how compose runs them). `serve all` is both in one.
+- **Env vars:**
+  - `FA_GOOGLE_CLIENT_ID`/`FA_GOOGLE_CLIENT_SECRET` (when unset, Google is hidden in the UI).
+  - `FA_PUBLIC_URL` (required with Google: https, the OAuth redirect `${FA_PUBLIC_URL}/api/v1/oauth/google/callback`).
+  - `FA_OPEN_METEO_URL` (default `https://api.open-meteo.com`).
+  - `FA_ALLOW_HTTP_FEEDS` (default false; needed for LAN CalDAV over http and for the e2e fixtures).
+- **Household TOML:**
+  - `[household]` gains `units`, `calendar_past_days`, `calendar_future_days`, `weather_retention_days`, and `private_events_as_busy`.
+  - New sections `[[calendar_sources]]` (`[[calendar_sources.calendars]]`) and `[[weather_rules]]`.
+  - Secrets are never exported; imported sources come in disabled with `needs_reauth`.
+- **UI routes:** `/calendar`, `/settings/{household,calendars,weather,devices,status}`, `/oauth/done`, and `/dashboard`. The dashboard layout is edited under Settings → Devices → Edit layout.
+- **Visibility (D-036):** adults' private events show as Busy on the dashboard and to children. The household toggle is in Settings → Household.
+
+**Known limitations to note in the README:**
+- A saved household location can't be cleared from the UI (a null `location` in the PATCH means "unchanged").
+- The Google Testing-mode refresh token expires after 7 days.
+
+**e2e notes:**
+- The dashboard e2e test expects `data-testid="household"`, which sits inside the clock panel.
+- Avatars on the kiosk load as blob URLs fetched with the device token.
+- `GET /api/v1/dashboard` is device-only.
+- Don't use the dev DB, and don't kill pid 2679601 (an unrelated, older `serve all`).
 
 ## Ground rules (all M1 tasks)
 - Repo: `/home/jon/projects/family-assistant`. **First read** `CLAUDE.md`, `plan/M1.md` (especially *Contracts fixed up front*), and the arch sections listed under *Read first*. The contracts in `plan/M1.md` are the source of truth. If one is wrong or missing, don't invent a new one: report it.

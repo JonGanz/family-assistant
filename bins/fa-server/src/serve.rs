@@ -9,11 +9,12 @@ use fa_config::{LogFormat, ProcessConfig};
 use fa_jobs::{
     BackupVerify, JobContext, JobHandler, Scheduler, SessionCleanup, Worker, WorkerConfig,
 };
-use fa_store::{MasterKey, Store};
+use fa_store::Store;
 use tokio_util::sync::CancellationToken;
 use tracing_subscriber::EnvFilter;
 
 use crate::cli::ServeMode;
+use crate::wiring;
 
 pub fn init_logging(cfg: &ProcessConfig) {
     let filter = EnvFilter::try_new(&cfg.log_level).unwrap_or_else(|_| EnvFilter::new("info"));
@@ -65,8 +66,8 @@ fn docs_enabled() -> bool {
 
 pub async fn run(cfg: ProcessConfig, store: Store, mode: ServeMode) -> Result<()> {
     // Fail fast on a missing or malformed master key.
-    MasterKey::from_file(&cfg.master_key_path)
-        .with_context(|| format!("master key at {}", cfg.master_key_path.display()))?;
+    wiring::load_key(&cfg)?;
+    let services = wiring::build_services(&cfg, &store)?;
 
     let cancel = CancellationToken::new();
     spawn_signal_handler(cancel.clone());
@@ -80,11 +81,15 @@ pub async fn run(cfg: ProcessConfig, store: Store, mode: ServeMode) -> Result<()
         wait_for_migrations(&store, &cancel).await?;
     }
 
+    wiring::seed_default_rules(&store).await?;
+
     let mut tasks = tokio::task::JoinSet::new();
     if run_worker {
         fa_jobs::ensure_default_schedules(&store).await?;
-        let handlers: Vec<Arc<dyn JobHandler>> =
+        wiring::ensure_feature_schedules(&store).await?;
+        let mut handlers: Vec<Arc<dyn JobHandler>> =
             vec![Arc::new(SessionCleanup), Arc::new(BackupVerify)];
+        handlers.extend(wiring::feature_handlers(&cfg, &services)?);
         let ctx = JobContext {
             store: store.clone(),
             backup_dir: cfg.backup_dir.clone(),
@@ -113,6 +118,7 @@ pub async fn run(cfg: ProcessConfig, store: Store, mode: ServeMode) -> Result<()
         let state = AppState::new(
             store.clone(),
             auth,
+            services,
             ApiConfig {
                 cookie_secure: cfg.cookie_secure,
                 web_dist_dir: web_dist,
@@ -122,6 +128,12 @@ pub async fn run(cfg: ProcessConfig, store: Store, mode: ServeMode) -> Result<()
             },
             cancel.clone(),
         );
+        // The worker (possibly another process) announces changes via NOTIFY; this turns them into SSE.
+        tasks.spawn(fa_api::run_bridge(
+            store.clone(),
+            state.hub.clone(),
+            cancel.clone(),
+        ));
         let app = fa_api::router(state);
         let listener = tokio::net::TcpListener::bind(&cfg.bind_addr)
             .await

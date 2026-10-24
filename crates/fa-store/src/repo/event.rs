@@ -25,6 +25,8 @@ pub struct NewOccurrence {
     pub is_private: bool,
     pub cancelled: bool,
     pub remote_etag: Option<String>,
+    /// Link back to the event at its provider; stored as `source_ref {kind: calendar, external_url}`.
+    pub external_url: Option<String>,
 }
 
 /// An event with what `fa_domain::calendar::view` and `EventView` need, loaded in one query.
@@ -60,22 +62,26 @@ impl EventRepo {
             changed += sqlx::query!(
                 "INSERT INTO event (id, household_id, calendar_id, remote_uid, instance_key, title,
                                     description, location, start_at, end_at, all_day, start_date, end_date,
-                                    source_tz, is_private, cancelled, origin, dedupe_key, remote_etag)
-                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'synced', $17, $18)
+                                    source_tz, is_private, cancelled, origin, dedupe_key, remote_etag, source_ref)
+                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'synced', $17, $18,
+                         CASE WHEN $19::text IS NULL THEN NULL
+                              ELSE jsonb_build_object('kind', 'calendar', 'external_url', $19::text) END)
                  ON CONFLICT (calendar_id, remote_uid, instance_key) DO UPDATE SET
                      title = EXCLUDED.title, description = EXCLUDED.description, location = EXCLUDED.location,
                      start_at = EXCLUDED.start_at, end_at = EXCLUDED.end_at, all_day = EXCLUDED.all_day,
                      start_date = EXCLUDED.start_date, end_date = EXCLUDED.end_date,
                      source_tz = EXCLUDED.source_tz, is_private = EXCLUDED.is_private,
                      cancelled = EXCLUDED.cancelled, remote_etag = EXCLUDED.remote_etag,
+                     source_ref = EXCLUDED.source_ref,
                      version = event.version + 1
                  WHERE (event.title, event.description, event.location, event.start_at, event.end_at,
                         event.all_day, event.start_date, event.end_date, event.source_tz,
-                        event.is_private, event.cancelled, event.remote_etag)
+                        event.is_private, event.cancelled, event.remote_etag, event.source_ref)
                        IS DISTINCT FROM
                        (EXCLUDED.title, EXCLUDED.description, EXCLUDED.location, EXCLUDED.start_at,
                         EXCLUDED.end_at, EXCLUDED.all_day, EXCLUDED.start_date, EXCLUDED.end_date,
-                        EXCLUDED.source_tz, EXCLUDED.is_private, EXCLUDED.cancelled, EXCLUDED.remote_etag)",
+                        EXCLUDED.source_tz, EXCLUDED.is_private, EXCLUDED.cancelled, EXCLUDED.remote_etag,
+                        EXCLUDED.source_ref)",
                 EventId::new().as_uuid(),
                 household,
                 calendar.as_uuid(),
@@ -93,7 +99,8 @@ impl EventRepo {
                 o.is_private,
                 o.cancelled,
                 dedupe_key,
-                o.remote_etag
+                o.remote_etag,
+                o.external_url
             )
             .execute(&mut *conn)
             .await?

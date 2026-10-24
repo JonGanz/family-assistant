@@ -16,9 +16,16 @@ async function logout() {
     <header class="app-header">
       <strong>Family Assistant</strong>
       <nav v-if="session.isUser">
-        <RouterLink to="/">Home</RouterLink>
+        <RouterLink to="/">Today</RouterLink>
+        <RouterLink to="/calendar">Calendar</RouterLink>
         <RouterLink to="/members">Members</RouterLink>
-        <RouterLink v-if="session.isAdult" to="/settings/devices">Devices</RouterLink>
+        <template v-if="session.isAdult">
+          <RouterLink to="/settings/household">Household</RouterLink>
+          <RouterLink to="/settings/calendars">Calendars</RouterLink>
+          <RouterLink to="/settings/weather">Weather</RouterLink>
+          <RouterLink to="/settings/devices">Devices</RouterLink>
+          <RouterLink to="/settings/status">Status</RouterLink>
+        </template>
       </nav>
       <button v-if="session.isUser" class="logout" @click="logout">Log out</button>
     </header>
@@ -36,6 +43,7 @@ async function logout() {
 }
 .app-header nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 1rem;
 }
 .logout {
@@ -43,7 +51,7 @@ async function logout() {
 }
 .app-main {
   padding: 1rem;
-  max-width: 60rem;
+  max-width: 64rem;
   margin: 0 auto;
 }
 </style>

@@ -360,5 +360,6 @@ pub fn google_occurrence(ev: RemoteEvent, tz: Tz) -> NewOccurrence {
         is_private: ev.private,
         cancelled: false,
         remote_etag: ev.etag,
+        external_url: ev.external_url,
     }
 }

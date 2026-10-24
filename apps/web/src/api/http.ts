@@ -21,11 +21,18 @@ export class ApiError extends Error {
   }
 }
 
+/** True for a 409 (stale `If-Match`) or 428 (missing precondition) response. */
+export function isConflict(e: unknown): e is ApiError {
+  return e instanceof ApiError && (e.status === 409 || e.status === 428)
+}
+
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
 
 export interface RequestOptions {
   method?: string
   body?: unknown
+  /** Raw payload sent with its own Content-Type (avatar upload); wins over `body`. */
+  raw?: Blob
   headers?: Record<string, string>
   signal?: AbortSignal
   /** Send the stored device token (default true). User-session calls pass false. */
@@ -38,8 +45,11 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   if (!SAFE_METHODS.has(method)) headers['X-FA-Request'] = '1'
   const token = opts.bearer === false ? null : getDeviceToken()
   if (token) headers['Authorization'] = `Bearer ${token}`
-  let body: string | undefined
-  if (opts.body !== undefined) {
+  let body: string | Blob | undefined
+  if (opts.raw) {
+    headers['Content-Type'] = opts.raw.type || 'application/octet-stream'
+    body = opts.raw
+  } else if (opts.body !== undefined) {
     headers['Content-Type'] = 'application/json'
     body = JSON.stringify(opts.body)
   }

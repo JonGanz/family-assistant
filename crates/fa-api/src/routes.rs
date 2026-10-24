@@ -9,24 +9,26 @@ use axum::response::{IntoResponse, Response};
 use chrono::{DateTime, NaiveDate, Utc};
 use fa_domain::{
     Action, Actor, AuditEntry, AuditEntryId, DeviceDto, DeviceId, HouseholdDto, HouseholdId,
-    Member, MemberDto, MemberId, MemberPublicDto, Resource, Role, UserAccount, UserAccountDto,
-    UserAccountId, validate_password,
+    Member, MemberDto, MemberId, MemberPublicDto, MemberView, Resource, Role, UserAccount,
+    UserAccountDto, UserAccountId, validate_password,
 };
 use fa_store::{
-    AuditRepo, DeviceRepo, HouseholdRepo, MemberRepo, SessionRepo, Tx, UserAccountRepo,
+    AuditRepo, ChangeBus, DeviceRepo, HouseholdRepo, MemberAvatarRepo, MemberRepo, SessionRepo, Tx,
+    UserAccountRepo,
 };
 use futures::Stream;
 use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::broadcast::error::RecvError;
 use utoipa::ToSchema;
 
+use crate::error::Problem;
 use crate::extract::{ApiJson, ApiPath, ApiQuery, ClientIp};
 use crate::hub::HubEvent;
-use crate::{ApiError, AppState, Auth, SESSION_COOKIE, require, schemas};
+use crate::{ApiError, AppState, Auth, SESSION_COOKIE, require};
 
-type ApiResult<T> = Result<T, ApiError>;
+pub(crate) type ApiResult<T> = Result<T, ApiError>;
 
-fn household(actor: &Actor) -> ApiResult<HouseholdId> {
+pub(crate) fn household(actor: &Actor) -> ApiResult<HouseholdId> {
     match actor {
         Actor::User { household_id, .. }
         | Actor::Device { household_id, .. }
@@ -36,7 +38,7 @@ fn household(actor: &Actor) -> ApiResult<HouseholdId> {
 }
 
 /// The acting member (the adult behind an elevated device) and device, for the audit trail.
-fn audit_ids(actor: &Actor) -> (Option<MemberId>, Option<DeviceId>) {
+pub(crate) fn audit_ids(actor: &Actor) -> (Option<MemberId>, Option<DeviceId>) {
     match actor {
         Actor::User { member_id, .. } => (Some(*member_id), None),
         Actor::ElevatedDevice {
@@ -47,7 +49,7 @@ fn audit_ids(actor: &Actor) -> (Option<MemberId>, Option<DeviceId>) {
     }
 }
 
-async fn audit(
+pub(crate) async fn audit(
     tx: &mut Tx,
     actor: &Actor,
     action: &str,
@@ -75,12 +77,32 @@ async fn audit(
     Ok(())
 }
 
-fn member_view(m: &Member, version: i32, has_account: bool) -> serde_json::Value {
-    let mut v = serde_json::to_value(MemberDto::from_member(m, has_account)).unwrap_or_default();
-    if let Some(o) = v.as_object_mut() {
-        o.insert("version".into(), version.into());
-    }
-    v
+/// `/api/v1/members/{id}/avatar?v=<sha256 prefix>`, the cache-busting URL clients render.
+pub(crate) fn avatar_url(id: MemberId, sha256: &str) -> String {
+    let v: String = sha256.chars().take(12).collect();
+    format!("/api/v1/members/{id}/avatar?v={v}")
+}
+
+pub(crate) async fn avatar_urls(
+    tx: &mut Tx,
+) -> ApiResult<std::collections::HashMap<MemberId, String>> {
+    Ok(MemberAvatarRepo::hashes(tx)
+        .await?
+        .into_iter()
+        .map(|(m, sha)| (m, avatar_url(m, &sha)))
+        .collect())
+}
+
+fn member_view(
+    m: &Member,
+    version: i32,
+    has_account: bool,
+    avatar_url: Option<String>,
+) -> serde_json::Value {
+    let mut dto = MemberDto::from_member(m, has_account);
+    dto.avatar_url = avatar_url;
+    dto.version = version;
+    serde_json::to_value(dto).unwrap_or_default()
 }
 
 async fn hash_blocking(secret: String) -> ApiResult<String> {
@@ -90,7 +112,7 @@ async fn hash_blocking(secret: String) -> ApiResult<String> {
         .map_err(Into::into)
 }
 
-fn parse_version(headers: &HeaderMap, body: Option<i32>) -> ApiResult<i32> {
+pub(crate) fn parse_version(headers: &HeaderMap, body: Option<i32>) -> ApiResult<i32> {
     if let Some(h) = headers.get(IF_MATCH) {
         let raw = h.to_str().unwrap_or_default().trim();
         let raw = raw.strip_prefix("W/").unwrap_or(raw).trim_matches('"');
@@ -146,8 +168,8 @@ pub struct LoginResp {
 
 #[utoipa::path(post, path = "/api/v1/auth/login", tag = "auth", request_body = LoginReq,
     responses((status = 200, body = LoginResp, description = "sets the fa_session cookie"),
-              (status = 401, body = schemas::Problem), (status = 423, body = schemas::Problem),
-              (status = 429, body = schemas::Problem)))]
+              (status = 401, body = Problem), (status = 423, body = Problem),
+              (status = 429, body = Problem)))]
 pub async fn login(
     State(s): State<AppState>,
     ClientIp(ip): ClientIp,
@@ -178,7 +200,7 @@ fn set_cookie(res: &mut Response, value: &str, max_age: u64, secure: bool) {
 }
 
 #[utoipa::path(post, path = "/api/v1/auth/logout", tag = "auth",
-    security(("cookie" = [])), responses((status = 204), (status = 401, body = schemas::Problem)))]
+    security(("cookie" = [])), responses((status = 204), (status = 401, body = Problem)))]
 pub async fn logout(State(s): State<AppState>, auth: Auth) -> ApiResult<Response> {
     if matches!(auth.actor, Actor::User { .. })
         && let Some(id) = &auth.session_id
@@ -194,21 +216,21 @@ pub async fn logout(State(s): State<AppState>, auth: Auth) -> ApiResult<Response
 pub struct ActorView {
     /// `user`, `device` or `elevated_device`.
     pub kind: &'static str,
-    #[schema(value_type = Option<Object>)]
+    #[schema(value_type = Option<MemberView>)]
     pub member: Option<serde_json::Value>,
-    #[schema(value_type = Option<schemas::DeviceDto>)]
+    #[schema(value_type = Option<DeviceDto>)]
     pub device: Option<DeviceDto>,
 }
 
 #[derive(Serialize, ToSchema)]
 pub struct MeResponse {
     pub actor: ActorView,
-    #[schema(value_type = schemas::HouseholdDto)]
+    #[schema(value_type = HouseholdDto)]
     pub household: HouseholdDto,
 }
 
 #[utoipa::path(get, path = "/api/v1/me", tag = "auth", security(("cookie" = []), ("bearer" = [])),
-    responses((status = 200, body = MeResponse), (status = 401, body = schemas::Problem)))]
+    responses((status = 200, body = MeResponse), (status = 401, body = Problem)))]
 pub async fn me(State(s): State<AppState>, auth: Auth) -> ApiResult<Json<MeResponse>> {
     let hid = household(&auth.actor)?;
     let mut tx = s.store.tx_for(hid).await?;
@@ -223,9 +245,11 @@ pub async fn me(State(s): State<AppState>, auth: Auth) -> ApiResult<Json<MeRespo
             let has_account = UserAccountRepo::get_by_member(&mut tx, *member_id)
                 .await?
                 .is_some();
+            let mut dto = MemberDto::from_member(&m.value, has_account);
+            dto.avatar_url = avatar_urls(&mut tx).await?.remove(member_id);
             ActorView {
                 kind: "user",
-                member: serde_json::to_value(MemberDto::from_member(&m.value, has_account)).ok(),
+                member: serde_json::to_value(dto).ok(),
                 device: None,
             }
         }
@@ -236,9 +260,14 @@ pub async fn me(State(s): State<AppState>, auth: Auth) -> ApiResult<Json<MeRespo
             let (kind, member) = match &auth.actor {
                 Actor::ElevatedDevice { adult, .. } => {
                     let m = MemberRepo::get(&mut tx, *adult).await?;
+                    let mut urls = avatar_urls(&mut tx).await?;
                     (
                         "elevated_device",
-                        m.and_then(|m| serde_json::to_value(MemberPublicDto::from(&m.value)).ok()),
+                        m.and_then(|m| {
+                            let mut dto = MemberPublicDto::from(&m.value);
+                            dto.avatar_url = urls.remove(&m.value.id);
+                            serde_json::to_value(dto).ok()
+                        }),
                     )
                 }
                 _ => ("device", None),
@@ -263,8 +292,8 @@ pub async fn me(State(s): State<AppState>, auth: Auth) -> ApiResult<Json<MeRespo
 #[utoipa::path(get, path = "/api/v1/members", tag = "members",
     security(("cookie" = []), ("bearer" = [])),
     responses((status = 200, description = "adults: full members; children and devices: public fields",
-                body = Vec<schemas::MemberDto>),
-              (status = 401, body = schemas::Problem)))]
+                body = Vec<MemberView>),
+              (status = 401, body = Problem)))]
 pub async fn list_members(
     State(s): State<AppState>,
     auth: Auth,
@@ -273,6 +302,7 @@ pub async fn list_members(
     let full = require(&auth.actor, Action::ReadMemberFull, &Resource::Household).is_ok();
     let mut tx = s.store.tx_for(hid).await?;
     let members = MemberRepo::list(&mut tx, false).await?;
+    let urls = avatar_urls(&mut tx).await?;
     let out = if full {
         let accounts: std::collections::HashSet<MemberId> = UserAccountRepo::list(&mut tx)
             .await?
@@ -281,12 +311,23 @@ pub async fn list_members(
             .collect();
         members
             .iter()
-            .map(|m| member_view(&m.value, m.version, accounts.contains(&m.value.id)))
+            .map(|m| {
+                member_view(
+                    &m.value,
+                    m.version,
+                    accounts.contains(&m.value.id),
+                    urls.get(&m.value.id).cloned(),
+                )
+            })
             .collect::<Vec<_>>()
     } else {
         members
             .iter()
-            .filter_map(|m| serde_json::to_value(MemberPublicDto::from(&m.value)).ok())
+            .filter_map(|m| {
+                let mut dto = MemberPublicDto::from(&m.value);
+                dto.avatar_url = urls.get(&m.value.id).cloned();
+                serde_json::to_value(dto).ok()
+            })
             .collect()
     };
     tx.rollback().await?;
@@ -323,8 +364,8 @@ fn clean_name(name: &str) -> ApiResult<String> {
 
 #[utoipa::path(post, path = "/api/v1/members", tag = "members", request_body = CreateMemberReq,
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 201, body = schemas::MemberDto), (status = 403, body = schemas::Problem),
-              (status = 422, body = schemas::Problem)))]
+    responses((status = 201, body = MemberView), (status = 403, body = Problem),
+              (status = 422, body = Problem)))]
 pub async fn create_member(
     State(s): State<AppState>,
     auth: Auth,
@@ -362,10 +403,15 @@ pub async fn create_member(
         None,
     )
     .await?;
+    ChangeBus::publish(
+        &mut tx,
+        hid,
+        "member.updated",
+        &serde_json::json!({ "id": m.id }),
+    )
+    .await?;
     tx.commit().await?;
-    s.hub
-        .publish(hid, "member.updated", serde_json::json!({ "id": m.id }));
-    let body = member_view(&stored.value, stored.version, false);
+    let body = member_view(&stored.value, stored.version, false, None);
     Ok((
         StatusCode::CREATED,
         [(ETAG, etag(stored.version))],
@@ -374,12 +420,12 @@ pub async fn create_member(
         .into_response())
 }
 
-fn etag(version: i32) -> HeaderValue {
+pub(crate) fn etag(version: i32) -> HeaderValue {
     HeaderValue::from_str(&format!("\"{version}\"")).unwrap_or(HeaderValue::from_static("\"0\""))
 }
 
 /// Distinguishes an absent field from an explicit `null` (which clears the value).
-fn double_option<'de, D, T>(d: D) -> Result<Option<Option<T>>, D::Error>
+pub(crate) fn double_option<'de, D, T>(d: D) -> Result<Option<Option<T>>, D::Error>
 where
     D: Deserializer<'de>,
     T: Deserialize<'de>,
@@ -413,9 +459,9 @@ pub struct PatchMemberReq {
     params(("id" = String, Path, description = "member id"),
            ("If-Match" = Option<String>, Header, description = "record version")),
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 200, body = schemas::MemberDto), (status = 403, body = schemas::Problem),
-              (status = 404, body = schemas::Problem), (status = 409, body = schemas::Problem),
-              (status = 428, body = schemas::Problem)))]
+    responses((status = 200, body = MemberView), (status = 403, body = Problem),
+              (status = 404, body = Problem), (status = 409, body = Problem),
+              (status = 428, body = Problem)))]
 pub async fn patch_member(
     State(s): State<AppState>,
     auth: Auth,
@@ -470,12 +516,18 @@ pub async fn patch_member(
     )
     .await?;
     let has_account = UserAccountRepo::get_by_member(&mut tx, id).await?.is_some();
+    let url = avatar_urls(&mut tx).await?.remove(&id);
+    ChangeBus::publish(
+        &mut tx,
+        hid,
+        "member.updated",
+        &serde_json::json!({ "id": id }),
+    )
+    .await?;
     tx.commit().await?;
-    s.hub
-        .publish(hid, "member.updated", serde_json::json!({ "id": id }));
     Ok((
         [(ETAG, etag(version))],
-        Json(member_view(&m, version, has_account)),
+        Json(member_view(&m, version, has_account, url)),
     )
         .into_response())
 }
@@ -489,8 +541,8 @@ pub struct CreateAccountReq {
 #[utoipa::path(post, path = "/api/v1/members/{id}/account", tag = "members",
     request_body = CreateAccountReq, params(("id" = String, Path, description = "member id")),
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 201, body = schemas::UserAccountDto), (status = 403, body = schemas::Problem),
-              (status = 409, body = schemas::Problem), (status = 422, body = schemas::Problem)))]
+    responses((status = 201, body = UserAccountDto), (status = 403, body = Problem),
+              (status = 409, body = Problem), (status = 422, body = Problem)))]
 pub async fn create_account(
     State(s): State<AppState>,
     auth: Auth,
@@ -537,9 +589,14 @@ pub async fn create_account(
         None,
     )
     .await?;
+    ChangeBus::publish(
+        &mut tx,
+        hid,
+        "member.updated",
+        &serde_json::json!({ "id": id }),
+    )
+    .await?;
     tx.commit().await?;
-    s.hub
-        .publish(hid, "member.updated", serde_json::json!({ "id": id }));
     Ok((
         StatusCode::CREATED,
         Json(UserAccountDto::from(&stored.value)),
@@ -555,8 +612,8 @@ pub struct PasswordReq {
 #[utoipa::path(post, path = "/api/v1/members/{id}/account/password", tag = "members",
     request_body = PasswordReq, params(("id" = String, Path, description = "member id")),
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 204), (status = 403, body = schemas::Problem), (status = 404, body = schemas::Problem),
-              (status = 422, body = schemas::Problem)))]
+    responses((status = 204), (status = 403, body = Problem), (status = 404, body = Problem),
+              (status = 422, body = Problem)))]
 pub async fn reset_password(
     State(s): State<AppState>,
     auth: Auth,
@@ -608,7 +665,7 @@ pub struct PinReq {
 #[utoipa::path(put, path = "/api/v1/members/{id}/pin", tag = "members", request_body = PinReq,
     params(("id" = String, Path, description = "member id")),
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 204), (status = 403, body = schemas::Problem), (status = 422, body = schemas::Problem)))]
+    responses((status = 204), (status = 403, body = Problem), (status = 422, body = Problem)))]
 pub async fn set_pin(
     State(s): State<AppState>,
     auth: Auth,
@@ -622,7 +679,7 @@ pub async fn set_pin(
 // ---- devices ----
 
 #[utoipa::path(get, path = "/api/v1/devices", tag = "devices", security(("cookie" = []), ("bearer" = [])),
-    responses((status = 200, body = Vec<schemas::DeviceDto>), (status = 403, body = schemas::Problem)))]
+    responses((status = 200, body = Vec<DeviceDto>), (status = 403, body = Problem)))]
 pub async fn list_devices(
     State(s): State<AppState>,
     auth: Auth,
@@ -652,7 +709,7 @@ pub struct PairDeviceResp {
 
 #[utoipa::path(post, path = "/api/v1/devices", tag = "devices", request_body = PairDeviceReq,
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 201, body = PairDeviceResp), (status = 403, body = schemas::Problem)))]
+    responses((status = 201, body = PairDeviceResp), (status = 403, body = Problem)))]
 pub async fn pair_device(
     State(s): State<AppState>,
     auth: Auth,
@@ -678,7 +735,7 @@ pub async fn pair_device(
 #[utoipa::path(delete, path = "/api/v1/devices/{id}", tag = "devices",
     params(("id" = String, Path, description = "device id")),
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 204), (status = 403, body = schemas::Problem), (status = 404, body = schemas::Problem)))]
+    responses((status = 204), (status = 403, body = Problem), (status = 404, body = Problem)))]
 pub async fn revoke_device(
     State(s): State<AppState>,
     auth: Auth,
@@ -702,8 +759,8 @@ pub struct ElevateResp {
 
 #[utoipa::path(post, path = "/api/v1/device/elevate", tag = "devices", request_body = ElevateReq,
     security(("bearer" = [])),
-    responses((status = 200, body = ElevateResp), (status = 401, body = schemas::Problem),
-              (status = 403, body = schemas::Problem), (status = 423, body = schemas::Problem)))]
+    responses((status = 200, body = ElevateResp), (status = 401, body = Problem),
+              (status = 403, body = Problem), (status = 423, body = Problem)))]
 pub async fn elevate(
     State(s): State<AppState>,
     auth: Auth,
@@ -763,7 +820,7 @@ fn session_owner(actor: &Actor, q: Option<MemberId>) -> ApiResult<MemberId> {
 #[utoipa::path(get, path = "/api/v1/sessions", tag = "sessions",
     params(("member" = Option<String>, Query, description = "member id; defaults to yourself")),
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 200, body = Vec<SessionView>), (status = 403, body = schemas::Problem)))]
+    responses((status = 200, body = Vec<SessionView>), (status = 403, body = Problem)))]
 pub async fn list_sessions(
     State(s): State<AppState>,
     auth: Auth,
@@ -788,7 +845,7 @@ pub async fn list_sessions(
     params(("id" = String, Path, description = "session handle"),
            ("member" = Option<String>, Query, description = "owner member id; defaults to yourself")),
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 204), (status = 403, body = schemas::Problem), (status = 404, body = schemas::Problem)))]
+    responses((status = 204), (status = 403, body = Problem), (status = 404, body = Problem)))]
 pub async fn revoke_session(
     State(s): State<AppState>,
     auth: Auth,
@@ -811,7 +868,7 @@ fn to_event(e: &HubEvent) -> Event {
 
 #[utoipa::path(get, path = "/api/v1/stream", tag = "stream", security(("cookie" = []), ("bearer" = [])),
     responses((status = 200, content_type = "text/event-stream",
-               description = "`heartbeat` every 15 s and `member.updated`; honours Last-Event-ID")))]
+               description = "`heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `resync`), bridged from `fa_change`; honours Last-Event-ID")))]
 pub async fn stream(
     State(s): State<AppState>,
     auth: Auth,

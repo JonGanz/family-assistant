@@ -23,6 +23,12 @@ x-fa-server: &fa-server
     FA_LOG_LEVEL: ${FA_LOG_LEVEL:-info}
     FA_LOG_FORMAT: ${FA_LOG_FORMAT:-json}
     FA_BACKUP_DIR: /backups
+    # Feeds and Google (M1). The api and the worker both need outbound HTTPS.
+    FA_PUBLIC_URL: ${FA_PUBLIC_URL:-${FA_PUBLIC_BASE_URL}}
+    FA_GOOGLE_CLIENT_ID: ${FA_GOOGLE_CLIENT_ID:-}
+    FA_GOOGLE_CLIENT_SECRET: ${FA_GOOGLE_CLIENT_SECRET:-}
+    FA_OPEN_METEO_URL: ${FA_OPEN_METEO_URL:-https://api.open-meteo.com}
+    FA_ALLOW_HTTP_FEEDS: ${FA_ALLOW_HTTP_FEEDS:-false}
   volumes:
     - ${BACKUP_DIR:?set BACKUP_DIR}:/backups:ro
 
@@ -47,7 +53,7 @@ services:
     <<: *fa-server
     command: ["serve", "api"]
     ports:
-      - "127.0.0.1:8080:8080"   # for `tailscale serve`
+      - "127.0.0.1:${FA_HOST_API_PORT:-8080}:8080"   # for `tailscale serve`
     depends_on:
       postgres:
         condition: service_healthy
@@ -77,7 +83,7 @@ services:
       NTFY_BASE_URL: ${NTFY_BASE_URL:-http://localhost:8090}
       NTFY_CACHE_FILE: /var/cache/ntfy/cache.db
     ports:
-      - "127.0.0.1:8090:80"   # for `tailscale serve`
+      - "127.0.0.1:${FA_HOST_NTFY_PORT:-8090}:80"   # for `tailscale serve`
     volumes:
       - ntfy-cache:/var/cache/ntfy
 

@@ -4,22 +4,22 @@ use std::io::{BufRead, IsTerminal, Write};
 use std::path::Path;
 
 use anyhow::{Context, Result, anyhow, bail};
-use base64::Engine;
-use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use chrono::Utc;
-use fa_config::{HouseholdConfig, ImportMode};
+use fa_auth::{AccountService, DeviceService};
+use fa_config::{HouseholdConfig, ImportMode, ProcessConfig};
+use fa_domain::calendar::{HouseholdFlags, Viewer};
 use fa_domain::{
-    AuditEntry, AuditEntryId, Device, DeviceId, DeviceKind, HouseholdId, Member, Role, UserAccount,
-    UserAccountId, validate_password, validate_pin,
+    Actor, AuditEntry, AuditEntryId, CalendarSourceId, HouseholdId, Member, Role, validate_pin,
 };
 use fa_store::{
-    AuditRepo, DeviceElevationRepo, DeviceRepo, HouseholdRepo, MemberRepo, SessionRepo, Store, Tx,
-    UserAccountRepo,
+    AdvisoryRepo, AuditRepo, CalendarSourceRepo, DeviceElevationRepo, DeviceRepo, HouseholdRepo,
+    MemberRepo, Store, Tx, UserAccountRepo,
 };
-use rand::RngCore;
-use sha2::{Digest, Sha256};
 
-use crate::cli::{ConfigAction, DeviceAction, PinAction, UserAction};
+use crate::cli::{
+    CalendarAction, ConfigAction, DeviceAction, PinAction, UserAction, WeatherAction,
+};
+use crate::wiring;
 
 pub fn gen_openapi(out: &Path) -> Result<()> {
     let json = serde_json::to_string_pretty(&fa_api::openapi())?;
@@ -55,6 +55,21 @@ async fn require_household(store: &Store, given: Option<HouseholdId>) -> Result<
         .ok_or_else(|| anyhow!("no household yet; run `fa-server config import <file>` first"))
 }
 
+/// Every weather-rule condition must parse before anything is written.
+fn check_weather_rules(cfg: &HouseholdConfig) -> Result<()> {
+    for r in &cfg.weather_rules {
+        if let Err(e) = fa_weather::parse(&r.condition) {
+            bail!(
+                "weather rule '{}': invalid condition at position {}: {}",
+                r.name,
+                e.position,
+                e.message
+            );
+        }
+    }
+    Ok(())
+}
+
 pub async fn config(
     store: &Store,
     household: Option<HouseholdId>,
@@ -65,6 +80,7 @@ pub async fn config(
             let text = std::fs::read_to_string(&file)
                 .with_context(|| format!("reading {}", file.display()))?;
             let cfg = HouseholdConfig::from_toml(&text)?;
+            check_weather_rules(&cfg)?;
             let mode = if replace {
                 ImportMode::Replace
             } else {
@@ -72,7 +88,13 @@ pub async fn config(
             };
             let hid = resolve_household(store, household).await?;
             let report = fa_config::import(store, hid, &cfg, mode).await?;
+            let mut tx = store.tx_for(report.household_id).await?;
+            let seeded = fa_weather::ensure_default_rules(&mut tx).await?;
+            tx.commit().await?;
             println!("{}", serde_json::to_string_pretty(&report)?);
+            if seeded > 0 {
+                println!("default weather rules added: {seeded}");
+            }
         }
         ConfigAction::Export { out } => {
             let hid = require_household(store, household).await?;
@@ -155,6 +177,7 @@ async fn member_by_key(tx: &mut Tx, hid: HouseholdId, key: &str) -> Result<Membe
 }
 
 pub async fn user(store: &Store, household: Option<HouseholdId>, action: UserAction) -> Result<()> {
+    let accounts = AccountService::new(store.clone());
     match action {
         UserAction::Add {
             member,
@@ -173,34 +196,14 @@ pub async fn user(store: &Store, household: Option<HouseholdId>, action: UserAct
             {
                 bail!("member '{member}' already has an account (use reset-password)");
             }
-            let username = username.trim().to_owned();
-            if username.is_empty() {
-                bail!("username must not be empty");
-            }
+            tx.rollback().await?;
             let password = read_secret("Password: ", password_stdin)?;
-            validate_password(m.role, &password)?;
-            let account = UserAccount {
-                id: UserAccountId::new(),
-                household_id: hid,
-                member_id: m.id,
-                username: username.clone(),
-                password_hash: fa_auth::hash_password(&password)?,
-                disabled_at: None,
-                created_at: Utc::now(),
-            };
-            UserAccountRepo::insert(&mut tx, &account).await?;
-            audit(
-                &mut tx,
-                hid,
-                "user.add",
-                "user_account",
-                account.id.to_string(),
-            )
-            .await?;
-            tx.commit().await?;
+            let account = accounts
+                .create_account(&Actor::System, hid, m.id, &username, &password)
+                .await?;
             println!(
-                "created account '{username}' for {} ({:?})",
-                m.display_name, m.role
+                "created account '{}' for {} ({:?})",
+                account.username, m.display_name, m.role
             );
         }
         UserAction::ResetPassword {
@@ -211,37 +214,19 @@ pub async fn user(store: &Store, household: Option<HouseholdId>, action: UserAct
             let found = UserAccountRepo::find_by_username(&mut sys, household, &username).await?;
             sys.rollback().await?;
             let found = found.ok_or_else(|| anyhow!("no account '{username}'"))?;
-            let hid = found.value.household_id;
-            let mut tx = store.tx_for(hid).await?;
-            let m = MemberRepo::get(&mut tx, found.value.member_id)
-                .await?
-                .ok_or_else(|| anyhow!("account has no member"))?
-                .value;
             let password = read_secret("New password: ", password_stdin)?;
-            validate_password(m.role, &password)?;
-            let hash = fa_auth::hash_password(&password)?;
-            UserAccountRepo::update_password(&mut tx, found.value.id, &hash, found.version).await?;
-            SessionRepo::delete_for_member(&mut tx, m.id).await?;
-            audit(
-                &mut tx,
-                hid,
-                "user.reset_password",
-                "user_account",
-                found.value.id.to_string(),
-            )
-            .await?;
-            tx.commit().await?;
+            accounts
+                .reset_password(
+                    &Actor::System,
+                    found.value.household_id,
+                    &username,
+                    &password,
+                )
+                .await?;
             println!("password reset for '{username}'; existing sessions ended");
         }
     }
     Ok(())
-}
-
-fn token_hash(token: &str) -> String {
-    Sha256::digest(token.as_bytes())
-        .iter()
-        .map(|b| format!("{b:02x}"))
-        .collect()
 }
 
 pub async fn device(
@@ -252,13 +237,13 @@ pub async fn device(
 ) -> Result<()> {
     match action {
         DeviceAction::Pair { name } => {
-            let (token, id) = pair_device(store, household, &name).await?;
-            println!("device id: {id}");
-            println!("token:     {token}");
-            println!(
-                "pair url:  {}/dashboard?device={token}",
-                public_base_url.trim_end_matches('/')
-            );
+            let hid = require_household(store, household).await?;
+            let paired = DeviceService::new(store.clone(), public_base_url)
+                .pair_system(hid, &name)
+                .await?;
+            println!("device id: {}", paired.device.id);
+            println!("token:     {}", paired.token);
+            println!("pair url:  {}", paired.pair_url);
             println!("The token is shown once.");
         }
         DeviceAction::Revoke { id } => {
@@ -284,30 +269,125 @@ pub async fn device(
     Ok(())
 }
 
-async fn pair_device(
+pub async fn calendar(
+    cfg: &ProcessConfig,
     store: &Store,
     household: Option<HouseholdId>,
-    name: &str,
-) -> Result<(String, DeviceId)> {
-    let hid = require_household(store, household).await?;
-    let mut bytes = [0u8; 32];
-    rand::rng().fill_bytes(&mut bytes);
-    let token = URL_SAFE_NO_PAD.encode(bytes);
-    let device = Device {
-        id: DeviceId::new(),
-        household_id: hid,
-        kind: DeviceKind::Dashboard,
-        name: name.trim().to_owned(),
-        token_hash: token_hash(&token),
-        last_seen: None,
-        revoked_at: None,
-        created_at: Utc::now(),
-    };
+    action: CalendarAction,
+) -> Result<()> {
+    let CalendarAction::Sync { source } = action;
+    let services = wiring::build_services(cfg, store)?;
+    let (hid, name) = source_household(store, household, source).await?;
+    let before = window_event_count(&services, store, hid).await?;
+    services
+        .calendar
+        .sync_source(hid, source)
+        .await
+        .with_context(|| format!("syncing '{name}'"))?;
+    let after = window_event_count(&services, store, hid).await?;
     let mut tx = store.tx_for(hid).await?;
-    DeviceRepo::insert(&mut tx, &device, None).await?;
-    audit(&mut tx, hid, "device.pair", "device", device.id.to_string()).await?;
-    tx.commit().await?;
-    Ok((token, device.id))
+    let src = CalendarSourceRepo::get(&mut tx, source)
+        .await?
+        .ok_or_else(|| anyhow!("source {source} vanished"))?
+        .value;
+    let calendars = fa_store::CalendarRepo::list(&mut tx, Some(source)).await?;
+    tx.rollback().await?;
+    let enabled = calendars.iter().filter(|c| c.value.enabled).count();
+    println!("source '{name}': state {:?}", src.state);
+    println!("calendars: {} ({enabled} enabled)", calendars.len());
+    println!(
+        "events in the window: {before} before, {after} after ({:+})",
+        after as i64 - before as i64
+    );
+    if let Some(e) = src.last_error {
+        println!("note: {e}");
+    }
+    Ok(())
+}
+
+async fn source_household(
+    store: &Store,
+    given: Option<HouseholdId>,
+    source: CalendarSourceId,
+) -> Result<(HouseholdId, String)> {
+    let mut tx = store.tx_system().await?;
+    let found = CalendarSourceRepo::get(&mut tx, source).await?;
+    tx.rollback().await?;
+    let src = found
+        .filter(|s| s.value.archived_at.is_none())
+        .ok_or_else(|| anyhow!("no calendar source {source}"))?
+        .value;
+    if given.is_some_and(|g| g != src.household_id) {
+        bail!("source {source} belongs to another household");
+    }
+    Ok((src.household_id, src.name))
+}
+
+/// Events an adult sees in the household's sync window; the sync's effect shows as the delta.
+async fn window_event_count(
+    services: &fa_api::Services,
+    store: &Store,
+    hid: HouseholdId,
+) -> Result<usize> {
+    let mut tx = store.tx_for(hid).await?;
+    let h = HouseholdRepo::get(&mut tx, hid)
+        .await?
+        .ok_or_else(|| anyhow!("household vanished"))?
+        .value;
+    tx.rollback().await?;
+    let now = Utc::now();
+    let w = fa_calendar::window_of(&h, now);
+    let from = w
+        .from
+        .max(now - chrono::Duration::days(fa_calendar::MAX_RANGE_DAYS / 2));
+    let to =
+        w.to.min(from + chrono::Duration::days(fa_calendar::MAX_RANGE_DAYS));
+    let events = services
+        .calendar
+        .events(
+            hid,
+            Viewer::AdultUser,
+            HouseholdFlags {
+                private_events_as_busy: h.private_events_as_busy,
+            },
+            from,
+            to,
+            None,
+        )
+        .await?;
+    Ok(events.len())
+}
+
+pub async fn weather(
+    cfg: &ProcessConfig,
+    store: &Store,
+    household: Option<HouseholdId>,
+    action: WeatherAction,
+) -> Result<()> {
+    let WeatherAction::Fetch = action;
+    let hid = require_household(store, household).await?;
+    let svc = fa_weather::WeatherService::new(store.clone(), wiring::weather_config(cfg))?;
+    svc.fetch(hid).await.context("fetching the forecast")?;
+    svc.evaluate(hid)
+        .await
+        .context("evaluating the weather rules")?;
+    match svc.latest_view(hid).await? {
+        Some(v) => {
+            println!("fetched at {}", v.fetched_at.to_rfc3339());
+            println!("current: {}", serde_json::to_string(&v.current)?);
+        }
+        None => println!("no forecast stored (does the household have a location?)"),
+    }
+    let mut tx = store.tx_for(hid).await?;
+    let active = AdvisoryRepo::active(&mut tx, Utc::now()).await?;
+    tx.rollback().await?;
+    if active.is_empty() {
+        println!("advisories: none");
+    }
+    for a in active {
+        println!("advisory [{:?}]: {}", a.severity, a.text);
+    }
+    Ok(())
 }
 
 pub async fn pin(store: &Store, household: Option<HouseholdId>, action: PinAction) -> Result<()> {
@@ -351,11 +431,32 @@ mod tests {
         let report = fa_config::import(&store, None, &cfg, ImportMode::Merge)
             .await
             .unwrap();
-        let (token, id) = pair_device(&store, Some(report.household_id), "Kitchen")
+        let paired = DeviceService::new(store.clone(), "http://localhost:8080")
+            .pair_system(report.household_id, "Kitchen")
             .await
             .unwrap();
         let auth = AuthService::new(store.clone(), AuthConfig::default());
-        let device = auth.authenticate_bearer(&token).await.unwrap();
-        assert_eq!(device.id, id);
+        let device = auth.authenticate_bearer(&paired.token).await.unwrap();
+        assert_eq!(device.id, paired.device.id);
+    }
+
+    #[test]
+    fn config_import_rejects_a_bad_rule_with_its_name_and_position() {
+        let toml = include_str!("../../../config/examples/household.example.toml");
+        let mut cfg = HouseholdConfig::from_toml(toml).unwrap();
+        check_weather_rules(&cfg).unwrap();
+        cfg.weather_rules.push(fa_config::WeatherRuleConfig {
+            name: "Broken".into(),
+            condition: "temperature >>> 3".into(),
+            action: fa_domain::RuleAction::Alert,
+            severity: fa_domain::Severity::Info,
+            message: "x".into(),
+            status: fa_domain::RuleStatus::Active,
+        });
+        let err = check_weather_rules(&cfg).unwrap_err().to_string();
+        assert!(
+            err.contains("'Broken'") && err.contains("position"),
+            "{err}"
+        );
     }
 }

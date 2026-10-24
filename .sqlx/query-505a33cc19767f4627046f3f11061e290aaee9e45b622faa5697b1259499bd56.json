@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO event (id, household_id, calendar_id, remote_uid, instance_key, title,\n                                    description, location, start_at, end_at, all_day, start_date, end_date,\n                                    source_tz, is_private, cancelled, origin, dedupe_key, remote_etag, source_ref)\n                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, 'synced', $17, $18,\n                         CASE WHEN $19::text IS NULL THEN NULL\n                              ELSE jsonb_build_object('kind', 'calendar', 'external_url', $19::text) END)\n                 ON CONFLICT (calendar_id, remote_uid, instance_key) DO UPDATE SET\n                     title = EXCLUDED.title, description = EXCLUDED.description, location = EXCLUDED.location,\n                     start_at = EXCLUDED.start_at, end_at = EXCLUDED.end_at, all_day = EXCLUDED.all_day,\n                     start_date = EXCLUDED.start_date, end_date = EXCLUDED.end_date,\n                     source_tz = EXCLUDED.source_tz, is_private = EXCLUDED.is_private,\n                     cancelled = EXCLUDED.cancelled, remote_etag = EXCLUDED.remote_etag,\n                     source_ref = EXCLUDED.source_ref,\n                     version = event.version + 1\n                 WHERE (event.title, event.description, event.location, event.start_at, event.end_at,\n                        event.all_day, event.start_date, event.end_date, event.source_tz,\n                        event.is_private, event.cancelled, event.remote_etag, event.source_ref)\n                       IS DISTINCT FROM\n                       (EXCLUDED.title, EXCLUDED.description, EXCLUDED.location, EXCLUDED.start_at,\n                        EXCLUDED.end_at, EXCLUDED.all_day, EXCLUDED.start_date, EXCLUDED.end_date,\n                        EXCLUDED.source_tz, EXCLUDED.is_private, EXCLUDED.cancelled, EXCLUDED.remote_etag,\n                        EXCLUDED.source_ref)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Bool",
+        "Date",
+        "Date",
+        "Text",
+        "Bool",
+        "Bool",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "505a33cc19767f4627046f3f11061e290aaee9e45b622faa5697b1259499bd56"
+}

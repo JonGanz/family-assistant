@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { api, type CreateMemberReq, type Member, type PatchMemberReq } from '../api/client'
-import { ApiError } from '../api/http'
+import { isConflict } from '../api/http'
+import type { LiveEventKind } from '../composables/useLiveStream'
 
 export const useMembersStore = defineStore('members', () => {
   const items = ref<Member[]>([])
@@ -36,7 +37,7 @@ export const useMembersStore = defineStore('members', () => {
       await load()
       return true
     } catch (e) {
-      if (e instanceof ApiError && e.status === 409) {
+      if (isConflict(e)) {
         conflictId.value = m.id
         return false
       }
@@ -44,5 +45,42 @@ export const useMembersStore = defineStore('members', () => {
     }
   }
 
-  return { items, loading, error, conflictId, load, create, update }
+  const AVATAR_MAX = 512 * 1024
+  const AVATAR_TYPES = ['image/png', 'image/jpeg', 'image/webp']
+
+  /** Client-side pre-check; the server re-validates (413 / 415). Returns a message or null. */
+  function checkAvatar(file: Blob): string | null {
+    if (file.size > AVATAR_MAX) return 'That picture is larger than 512 KB. Pick a smaller one.'
+    if (!AVATAR_TYPES.includes(file.type)) return 'Use a PNG, JPEG or WebP picture.'
+    return null
+  }
+
+  async function uploadAvatar(id: string, file: Blob): Promise<void> {
+    await api.putAvatar(id, file)
+    await load()
+  }
+
+  async function removeAvatar(id: string): Promise<void> {
+    await api.deleteAvatar(id)
+    await load()
+  }
+
+  async function invalidate(kind: LiveEventKind): Promise<void> {
+    if (items.value.length === 0 && !loading.value) return
+    if (kind === 'member.updated' || kind === 'resync') await load()
+  }
+
+  return {
+    items,
+    loading,
+    error,
+    conflictId,
+    load,
+    create,
+    update,
+    checkAvatar,
+    uploadAvatar,
+    removeAvatar,
+    invalidate,
+  }
 })

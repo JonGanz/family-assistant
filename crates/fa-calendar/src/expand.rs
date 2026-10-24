@@ -334,6 +334,7 @@ impl Built<'_> {
             }),
             cancelled: false,
             remote_etag: None,
+            external_url: None,
         }
     }
 }

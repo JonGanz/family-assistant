@@ -41,10 +41,21 @@ gen:
     cargo run -q -p fa-server -- gen-openapi --out apps/web/src/gen/openapi.json
     cd apps/web && corepack pnpm@9 run gen
 
+# Build the web app and run `serve api` and `serve worker` as two separate processes
+serve-split: dev-db dev-key
+    #!/usr/bin/env bash
+    set -euo pipefail
+    (cd apps/web && corepack pnpm@9 install && corepack pnpm@9 run build)
+    cargo build -p fa-server
+    trap 'kill 0' EXIT
+    target/debug/fa-server serve api &
+    target/debug/fa-server serve worker &
+    wait
+
 # Same checks as CI, against a fresh throwaway Postgres
 ci:
     scripts/ci-local.sh
 
-# Browser smoke tests (throwaway Postgres + serve all + Playwright)
+# End-to-end tests (throwaway Postgres, api + worker, fixture feeds, Radicale, Playwright)
 e2e:
     scripts/e2e.sh

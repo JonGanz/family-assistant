@@ -1,11 +1,32 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppLayout from './layouts/AppLayout.vue'
 import KioskLayout from './layouts/KioskLayout.vue'
+import { useHouseholdStore } from './stores/household'
+import { useLiveStore } from './stores/live'
+import { useSessionStore } from './stores/session'
 
 const route = useRoute()
 const layout = computed(() => (route.meta.layout === 'kiosk' ? KioskLayout : AppLayout))
+
+const session = useSessionStore()
+const household = useHouseholdStore()
+const live = useLiveStore()
+
+// One app-level subscription while a user is signed in; stores refetch on events.
+watch(
+  () => session.isUser,
+  (signedIn) => {
+    if (signedIn) {
+      void household.load()
+      live.start()
+    } else {
+      live.stop()
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>

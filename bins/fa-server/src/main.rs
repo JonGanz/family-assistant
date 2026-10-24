@@ -3,6 +3,7 @@
 mod cli;
 mod ops;
 mod serve;
+mod wiring;
 
 use anyhow::Result;
 use clap::Parser;
@@ -31,6 +32,12 @@ async fn main() -> Result<()> {
                     ops::device(&store, &cfg.public_base_url, cli.household, action).await
                 }
                 Command::Pin { action } => ops::pin(&store, cli.household, action).await,
+                Command::Calendar { action } => {
+                    ops::calendar(&cfg, &store, cli.household, action).await
+                }
+                Command::Weather { action } => {
+                    ops::weather(&cfg, &store, cli.household, action).await
+                }
                 Command::GenOpenapi { .. } => unreachable!("handled above"),
             }
         }

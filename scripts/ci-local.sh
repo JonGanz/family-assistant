@@ -6,7 +6,7 @@ cd "$(dirname "$0")/.."
 
 PORT=55496
 NAME=fa-ci-local-$$
-cleanup() { docker rm -f "$NAME" >/dev/null 2>&1 || true; }
+cleanup() { docker rm -f -v "$NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT
 
 echo "== fresh postgres on :$PORT"

@@ -5,7 +5,7 @@ milestone: M1
 wave: 5
 depends_on: [T-09, T-03]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/dashboard/** (except dashboard/layout/**)", "apps/web/src/kiosk/**", "apps/web/src/layouts/KioskLayout.vue", "apps/web/src/stores/dashboard.ts", "apps/web/src/views/DashboardView.vue", "apps/web/src/views/DevicesView.vue", "apps/web/vite.config.ts"]
 ---
 
@@ -66,6 +66,16 @@ Import API calls from `api/client.ts` (owned by T-10). If you need a call that T
 
 ## Wave 3 outcomes (read before starting)
 - `WeatherView.hourly` and `daily` are **column-oriented** objects keyed by Open-Meteo field names (`{time: [...], temperature_2m: [...], ...}`), trimmed to 48 h and 7 days, all metric. Convert them with T-03's `lib/units.ts`.
+
+## Wave 4 outcomes (read before starting)
+- `apps/web/src/gen/` was regenerated (`DashboardView`, `DashboardSettings`, `EventView`, `WeatherView`, `AdvisoryView`, ...). It's the only source of API types; keep your calls in `dashboard/api.ts`.
+- **API behaviour (T-09):**
+  - `GET /api/v1/dashboard?days=N` is device-only, returns **all** members, and does **not** filter events by `settings.members`: the client filters.
+  - `DashboardSettings.members` is the string `"all"` or an ID array.
+  - `PATCH /api/v1/devices/{id}` (adult, `If-Match`) validates settings and publishes `device.updated{id}`.
+  - SSE kinds: `calendar.updated{from,to}`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated{id}`, `member.updated`, `source.updated`, `resync`.
+  - `POST /advisories/{id}/dismiss` works with the device token, with no PIN.
+- T-10 is fixing `src/stores/stores.test.ts` (it currently fails typecheck); don't touch it.
 
 ## Ground rules (all M1 tasks)
 - Repo: `/home/jon/projects/family-assistant`. **First read** `CLAUDE.md`, `plan/M1.md` (especially *Contracts fixed up front*), and the arch sections listed under *Read first*. The contracts in `plan/M1.md` are the source of truth. If one is wrong or missing, don't invent a new one: report it.

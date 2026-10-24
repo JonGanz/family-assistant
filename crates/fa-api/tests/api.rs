@@ -4,7 +4,7 @@ use axum::Router;
 use axum::body::Body;
 use axum::http::{HeaderMap, Method, Request, StatusCode};
 use chrono::Utc;
-use fa_api::{ApiConfig, AppState, router};
+use fa_api::{ApiConfig, AppState, Services, router, run_bridge_signalled};
 use fa_auth::{AuthConfig, AuthService, hash_password};
 use fa_domain::*;
 use fa_store::*;
@@ -96,15 +96,51 @@ async fn seed(pool: PgPool) -> Fx {
     }
     tx.commit().await.unwrap();
     let auth = AuthService::new(store.clone(), AuthConfig::default());
+    let oauth = fa_auth::OAuthService::new(
+        store.clone(),
+        MasterKey::from_bytes(&[7u8; 32], 1).unwrap(),
+        None,
+        "https://fa.example.com",
+        fa_connectors::Http::new(false).unwrap(),
+    );
+    let services = Services {
+        calendar: std::sync::Arc::new(
+            fa_calendar::CalendarService::new(
+                store.clone(),
+                MasterKey::from_bytes(&[7u8; 32], 1).unwrap(),
+                fa_calendar::ConnectorConfig::default(),
+                std::sync::Arc::new(oauth.clone()),
+            )
+            .unwrap(),
+        ),
+        weather: fa_weather::WeatherService::new(
+            store.clone(),
+            fa_weather::WeatherConfig::default(),
+        )
+        .unwrap(),
+        oauth,
+    };
     let state = AppState::new(
-        store,
+        store.clone(),
         auth,
+        services,
         ApiConfig {
             cookie_secure: false,
             ..ApiConfig::default()
         },
         CancellationToken::new(),
     );
+    // Writers publish through NOTIFY; the bridge turns that into SSE events.
+    let ready = std::sync::Arc::new(tokio::sync::Notify::new());
+    tokio::spawn(run_bridge_signalled(
+        store,
+        state.hub.clone(),
+        CancellationToken::new(),
+        Some(ready.clone()),
+    ));
+    tokio::time::timeout(Duration::from_secs(5), ready.notified())
+        .await
+        .expect("the bridge starts listening");
     Fx {
         app: router(state),
         adult: adult.id,

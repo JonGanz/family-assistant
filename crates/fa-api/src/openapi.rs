@@ -1,8 +1,10 @@
 use utoipa::openapi::security::{ApiKey, ApiKeyValue, HttpAuthScheme, HttpBuilder, SecurityScheme};
 use utoipa::{Modify, OpenApi};
 
+use crate::error::Problem;
+use crate::feeds;
 use crate::routes::{self, *};
-use crate::schemas::*;
+use fa_domain::*;
 
 struct Security;
 
@@ -33,9 +35,18 @@ impl Modify for Security {
         routes::create_account, routes::reset_password, routes::set_pin,
         routes::list_devices, routes::pair_device, routes::revoke_device, routes::elevate,
         routes::list_sessions, routes::revoke_session, routes::stream, routes::openapi_json,
+        feeds::get_household, feeds::patch_household,
+        feeds::put_avatar, feeds::delete_avatar, feeds::get_avatar,
+        feeds::oauth_start, feeds::oauth_callback, feeds::list_oauth_accounts,
+        feeds::list_sources, feeds::create_source, feeds::test_source, feeds::patch_source,
+        feeds::delete_source, feeds::sync_source, feeds::list_calendars, feeds::patch_calendar,
+        feeds::list_events, feeds::get_weather, feeds::list_advisories, feeds::dismiss_advisory,
+        feeds::list_rules, feeds::create_rule, feeds::patch_rule, feeds::delete_rule,
+        feeds::validate_rule, feeds::get_device, feeds::patch_device, feeds::get_dashboard,
+        feeds::get_status,
     ),
     components(schemas(
-        Problem, Location, HouseholdDto, MemberPublicDto, MemberDto, DeviceDto, UserAccountDto,
+        Problem, MemberView, MemberPublic, MemberFull, DashboardSettings,
         LoginReq, LoginResp, MeResponse, ActorView, CreateMemberReq, PatchMemberReq,
         CreateAccountReq, PasswordReq, PinReq, PairDeviceReq, PairDeviceResp, ElevateReq,
         ElevateResp, SessionView,
