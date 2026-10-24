@@ -5,17 +5,18 @@ status: draft
 updated: 2026-10-23
 drawio: Platform.drawio
 drawio_src: src/Platform.py
-depends_on: [D-002, D-003, D-004, D-005, D-006, D-010, D-018, D-019, D-020, D-023, D-025, D-026, D-030, D-031, D-032, D-033]
+depends_on: [D-002, D-003, D-004, D-005, D-006, D-010, D-018, D-019, D-020, D-023, D-025, D-026, D-031, D-032, D-033, D-034, D-035]
 milestone: M0
 ---
 
-# Platform (DRAFT v2)
+# Platform (DRAFT v3)
 
 The platform that M0 builds and every later milestone depends on. Items marked **[Q-0xx]** depend on an open question.
 
 ## 1. Repository & workspace layout (page "Packages")
 ```
-/                      this repo: design + code (D-032). GitHub; visibility and license are [Q-033]
+/                      this repo: design + code (D-032). Public on GitHub, AGPL-3.0-or-later (D-035)
+├─ LICENSE             AGPL-3.0 text
 ├─ arch/ design/ decisions/ log/ research/ tools/   design system (unchanged)
 ├─ .github/workflows/  ci.yml, release.yml
 ├─ Cargo.toml          workspace
@@ -88,7 +89,8 @@ The platform that M0 builds and every later milestone depends on. Items marked *
 | Secrets | **Envelope encryption.** A 256-bit master key comes from a file (`/run/secrets/fa_master_key`, a docker secret, mode 0400). Each secret gets its own random DEK, and the DEK is wrapped by the master key (AES-256-GCM). `key_version` supports rotation (runbook `rotate-key.md`). The master key is **never** in the DB, git, or DB backups |
 | OAuth (Google) | The client ID and secret are in process config (`.env`, not in git). The redirect URI is on the tailnet HTTPS hostname, which Google accepts because it is real HTTPS. Testing-mode re-auth every 7 days (D-007) |
 | GPU agent | A per-node token is issued at pairing time. The agent connects outbound to the core API only |
-| Supply chain | `cargo deny` (licenses and advisories), `pnpm audit`. Sidecar images are pinned by digest (D-025) |
+| Supply chain | `cargo deny` checks advisories and an AGPL-compatible licence allowlist. `pnpm audit` and license-checker do the same for the web app. Sidecar images are pinned by digest. We don't redistribute model weights, and their licences are recorded in the catalogue (D-025, D-035) |
+| Public-repo hygiene | A `gitleaks` scan in CI. A check rejects real-looking email domains in `config/examples/` and fixtures. Docs and logs must never contain household specifics (D-004, D-035) |
 
 ## 6. Configuration layers
 1. **Process config** (`.env` / `fa.toml`, owned by whoever administers the server): DB URL, bind address, master key path, OAuth client, tailnet hostname, log level, NAS path.
@@ -98,7 +100,7 @@ The platform that M0 builds and every later milestone depends on. Items marked *
 - `job` table: `kind, payload jsonb, run_at, priority, attempts, max_attempts, locked_by, locked_until, idempotency_key UNIQUE`. Workers claim jobs with `FOR UPDATE SKIP LOCKED` and retry with exponential backoff. Jobs that keep failing are marked `dead` and shown on the status page.
 - `schedule` table: cron expression, job kind, enabled. The worker ticks every 30 s and enqueues due jobs (deduplicated by idempotency key).
 - **M0 jobs:** session cleanup and a `backup.verify` check that reads the backup container's status file.
-- **M3 adds** `mail.purge_content`, which purges content from processed messages and expires stuck pending ones (D-030), and `mail.refetch`, which loads content from Gmail on demand for eval, dry-run, and re-processing. It is rate-limited to the Gmail quota and keeps content in memory only.
+- **M3 adds** `mail.retention` (daily), which applies the configurable content policy, marks learning examples, and expires stuck pending messages (D-034). It also adds `mail.refetch`, which loads purged content from Gmail on demand for eval, dry-run, and re-processing. That job is rate-limited to the Gmail quota and keeps content in memory only.
 
 ## 8. Deployment (page "Deployment")
 We ship `deploy/compose.example.yaml`, which has every service. **How it is deployed and updated is up to the hoster** (D-033). We provide versioned images, migrations that run on start and are backward compatible within a minor version, and release notes.
@@ -119,7 +121,7 @@ We ship `deploy/compose.example.yaml`, which has every service. **How it is depl
 
 ## 9. Backups & restore
 - The DB is backed up nightly as described above. A `status.json` beside the dumps lets the worker raise an alert if the last backup is older than 26 hours.
-- Email bodies are **not** in backups once they have been processed (D-030).
+- Backups contain whatever email content the retention policy keeps. Under `keep_for_learning` that is the bounded set of learning examples. Email bodies are not encrypted at rest, and the backup location is trusted (D-034).
 - **The master key must be backed up separately and offline**, for example in a password manager or printed. Without it, the encrypted secrets (OAuth tokens) are unrecoverable, although that only means re-authorising each account.
 - `deploy/runbooks/restore.md`: stop api and worker → `pg_restore` into a fresh DB → put the master key back → start → `/readyz`. **It is rehearsed once during M0**.
 
@@ -128,8 +130,8 @@ We ship `deploy/compose.example.yaml`, which has every service. **How it is depl
 - `just test` runs nextest and vitest. `just e2e` runs Playwright against compose. `just gen` regenerates the TS types and OpenAPI client.
 - Seed data comes from `config/examples/household.example.toml` (a fictional family). No real data goes in fixtures (D-004).
 - **CI (GitHub Actions, D-032):**
-  - `ci.yml`: fmt, clippy `-D warnings`, nextest with a Postgres service, cargo deny, sqlx offline check, and web lint, typecheck, vitest, and build.
-  - `release.yml` (on `v*` tags): multi-arch `fa-server` image to GHCR, plus the `fa-gpu-agent` binary as a release asset.
+  - `ci.yml`: fmt, clippy `-D warnings`, nextest with a Postgres service, cargo deny (advisories and licences), gitleaks, the example-data check, sqlx offline check, and web lint, typecheck, vitest, and build.
+  - `release.yml` (on `v*` tags): multi-arch `fa-server` image to **public** GHCR, plus the `fa-gpu-agent` binary as a release asset.
 
 ## 11. M0 definition of done
 1. The workspace builds, and GitHub Actions `ci.yml` is green: fmt, clippy, tests, cargo deny, and the web checks.

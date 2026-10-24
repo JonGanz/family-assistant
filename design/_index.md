@@ -27,11 +27,8 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Batch 6, open
-| ID | Title | Area |
-|---|---|---|
-| [Q-032](Q-032-email-metadata-kept.md) | What email metadata survives the content purge | security |
-| [Q-033](Q-033-repo-visibility.md) | Repository visibility & license | tech |
+## Open
+_None. The next question number is Q-034._
 
 ## Resolved
 | ID | Title | Decisions |
@@ -67,3 +64,5 @@ decisions: []
 | [Q-029](resolved/Q-029-child-login.md) | How children sign in | D-031 |
 | [Q-030](resolved/Q-030-code-hosting-ci.md) | Code repository & CI | D-032 |
 | [Q-031](resolved/Q-031-update-mechanism.md) | How updates are deployed | D-033 |
+| [Q-032](resolved/Q-032-email-metadata-kept.md) | What email metadata survives the content purge | D-034 |
+| [Q-033](resolved/Q-033-repo-visibility.md) | Repository visibility & license | D-035 |

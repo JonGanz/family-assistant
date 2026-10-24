@@ -5,11 +5,11 @@ status: draft
 updated: 2026-10-23
 drawio: Domain.drawio
 drawio_src: src/Domain.py
-depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-030, D-031]
+depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034]
 milestone: M0
 ---
 
-# Domain Model (DRAFT v2)
+# Domain Model (DRAFT v3)
 
 This is the full UML class model, split into packages (bounded contexts). Each package below matches a page in `Domain.drawio`. The model covers every milestone, but **M0 only implements Identity and Audit**. The other packages appear in migrations when their milestone arrives. Items marked **[Q-0xx]** depend on an open question.
 
@@ -22,8 +22,8 @@ This is the full UML class model, split into packages (bounded contexts). Each p
 | Enums | `text` + `CHECK` in SQL, mapped to Rust enums via `sqlx::Type`. This makes migrations easier than native PG enums |
 | Flexible data | `jsonb` only for opaque external payloads (Gmail headers, weather blobs, stage config). Never for data we query relationally |
 | Audit columns | `created_at`, `updated_at`, and `created_by` (MemberId, nullable for system) on mutable tables |
-| Deletion | Config entities (members, lists, rules, sources) are soft-deleted with `archived_at`. **Email content is transient** and is purged once processing finishes (D-030). Weather snapshots are hard-deleted by a retention job |
-| Provenance | Every derived entity has a `SourceRef{kind: email\|ics\|weather\|manual\|system, message_id?, external_url?}`, which the UI shows as a 'from ↗' link (D-030) |
+| Deletion | Config entities (members, lists, rules, sources) are soft-deleted with `archived_at`. **Email content** follows the configurable retention policy (D-034). Weather snapshots are hard-deleted by a retention job |
+| Provenance | Every derived entity has a `SourceRef{kind: email\|ics\|weather\|manual\|system, message_id?, external_url?}`, which the UI shows as a 'from ↗' link (D-030 → D-034) |
 | Secrets | Never stored in an entity column. They go through `Secret` (envelope-encrypted, see Platform.md) |
 | Versioning | Optimistic concurrency with a `version int` on entities edited from several clients (tasks, grocery items, pipelines) |
 
@@ -58,12 +58,19 @@ This is the full UML class model, split into packages (bounded contexts). Each p
 | `OrgContact` | org, name, email, role: `teacher\|coach\|admin\|other` |
 | `Enrollment` | member ↔ org, grade?, class?, contacts[] (OrgContact). This is how a teacher's email gets linked to a child |
 | `MailSource` | provider: `gmail`, address, owners: Member[1..*], read_only=true, backfill_days, history_id, state: `ok\|needs_reauth\|error` (D-007) |
-| `Message` | source, gmail_id, thread_id, external_url, received_at, gmail_labels[], from, subject, embedding? (whether these three are kept after the purge is **[Q-032]**), **transient:** body_text?, snippet?, headers jsonb?, processing_state: `pending\|processed\|expired`, content_purged_at? (D-030) |
+| `Message` | source, gmail_id, thread_id, external_url, received_at, gmail_labels[], from, subject (**metadata, always kept**), embedding? (kept while kNN is enabled), **policy-governed content:** body_text?, snippet?, headers jsonb?, is_learning_example, processing_state: `pending\|processed\|expired`, content_purged_at? (D-034) |
 | `Attachment` | message, filename, mime, size, text_extract? (**transient**, purged with the message's content) |
 | `Bill` | source_ref, payee, amount, currency, due_on, account_hint?, status: `open\|paid`, task (D-009) |
-| `CategoryLabel` | message (Gmail IDs), decision_point, value, source: `rule\|s2\|user`, in_eval_sample. Eval content is re-fetched from Gmail for each run (D-028, D-030) |
+| `CategoryLabel` | message, decision_point, value, source: `rule\|s2\|user`, in_eval_sample. A message with a user label or `in_eval_sample` is a learning example (D-028, D-034) |
 
-**Message lifecycle (D-030):** `pending` (content held) → all decision points are final and S2 extraction is done → `processed`, and the purge job removes the transient fields. If it's still pending after `retention.max_pending_days` **[Q-032]**, it becomes `expired`, pending stages are marked skipped, and the content is purged. Re-processing, eval, and dry-run re-fetch the content from Gmail for that run only.
+**Message lifecycle (D-034):** `pending` (content held) → all decision points are final and S2 extraction is done → `processed`. The daily `mail.retention` job then applies `retention.mail.content_policy`:
+- `purge_after_processing`: purge all content.
+- `keep_for_learning` (the default while kNN or eval is enabled): keep content for learning examples (user-corrected messages, the eval sample, and the newest N rule/S2-labelled messages per category), and purge the rest.
+- `keep_all`.
+
+A message still pending after `retention.mail.max_pending_days` (default 14) becomes `expired`, its pending stages are skipped, and then the policy applies. Purged content is re-fetched from Gmail when needed. Embeddings are dropped when kNN is disabled.
+
+`Household.settings.retention.mail{content_policy, examples_per_category=200, max_pending_days=14}`
 
 The decision results for a message (category, time_sensitive, member links, is_bill) are **`Decision` rows** in the AI package. A message keeps denormalised `category` and `time_sensitive` columns for fast queries, and the pipeline keeps them updated.
 
@@ -124,4 +131,4 @@ The decision results for a message (category, time_sensitive, member links, is_b
 `Notification{member, kind, subject, title, body, priority, sent_at, channel, status}` is written before it is sent, so failures can be retried and audited.
 
 ## Open
-- **[Q-032]** Which email metadata survives the purge, and the maximum pending time.
+_None._

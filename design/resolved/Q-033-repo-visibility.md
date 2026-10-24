@@ -1,12 +1,12 @@
 ---
 id: Q-033
 title: Repository visibility & license
-status: open
+status: resolved
 batch: 6
 area: tech
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-035]
 ---
 
 # Q-033: Repository visibility & license

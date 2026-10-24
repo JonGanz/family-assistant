@@ -12,6 +12,8 @@ research: [R-001]
 
 > **Refined by [D-030](D-030-email-provenance-purge.md):** the eval sample stores labels plus Gmail IDs, and its content is re-fetched from Gmail for each eval run.
 
+> **Refined by [D-034](D-034-configurable-mail-retention.md):** with `keep_for_learning`, eval-sample content is kept locally, and re-fetching is only the fallback.
+
 # D-028: Keep the kNN correction-learning stage; build a ~200-email labelled eval sample
 
 ## Context

@@ -4,7 +4,7 @@ from drawio import Page, write, NODE, COMP, EXT, ART, TITLE, PKG, NOTE, assoc
 # Page 1: Packages (crate dependency view)
 pk = Page("packages", "Packages", 1400, 800)
 b = pk.box
-b("Platform: Workspace packages (UML 2 package diagram), DRAFT v2", 20, 10, 900, 30, TITLE)
+b("Platform: Workspace packages (UML 2 package diagram), DRAFT v3", 20, 10, 900, 30, TITLE)
 P = lambda name, x, y, w=170: b(name, x, y, w, 60, PKG)
 dom = P("fa-domain", 600, 620)
 store = P("fa-store", 380, 500); cfg = P("fa-config", 600, 500); auth = P("fa-auth", 820, 500); jobs = P("fa-jobs", 1040, 500)
@@ -22,7 +22,7 @@ b("M0 builds: fa-domain, fa-store, fa-config, fa-auth, fa-jobs, fa-api, fa-serve
 # Page 2: Deployment (detailed)
 dp = Page("deploy", "Deployment", 1400, 900)
 b, e = dp.box, dp.edge
-b("Platform: Deployment (UML 2): compose.example.yaml profiles, DRAFT v2", 20, 10, 700, 30, TITLE)
+b("Platform: Deployment (UML 2): compose.example.yaml profiles, DRAFT v3", 20, 10, 700, 30, TITLE)
 b("«device» Core node: Ubuntu Server", 300, 60, 600, 520, NODE)
 ts = b("«executionEnvironment» host: tailscaled\n(tailscale serve HTTPS → 127.0.0.1)", 320, 100, 260, 60, ART)
 mnt = b("«artifact» /mnt/nas/family-assistant (NFS/SMB)", 620, 100, 260, 50, ART)
@@ -48,7 +48,7 @@ e(wrk, g, "HTTPS", False)
 # Page 3: Security — auth contexts
 sc = Page("security", "Security", 1400, 700)
 b, e = sc.box, sc.edge
-b("Platform: Security contexts (UML 2 component), DRAFT v2", 20, 10, 800, 30, TITLE)
+b("Platform: Security contexts (UML 2 component), DRAFT v3", 20, 10, 800, 30, TITLE)
 u = b("«actor context» User session\n(cookie; adult 30d, child 180d)", 20, 80, 220, 60, COMP)
 d = b("«actor context» Dashboard device\n(bearer token, hashed)", 20, 180, 220, 60, COMP)
 de = b("«actor context» Device + adult elevation\n(PIN → 5 min)", 20, 280, 220, 60, COMP)

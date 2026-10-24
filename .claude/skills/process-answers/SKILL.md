@@ -14,7 +14,8 @@ Use the helpers in `tools/fa.py`: `answered`, `new_question`, `new_decision`, `r
    - Fill in `decisions: [D-NNN]` on the question and set `status: resolved` and `resolved: <date>`.
    - `git mv` the question into `design/resolved/`.
 3. Re-derive the affected `arch/*.md` from the requirements and all accepted decisions. Do not just patch the old design. Then update `arch/src/<Name>.py` and regenerate the `.drawio` in the same pass (`python3 arch/src/<Name>.py`). If a decision overturns an earlier one, set the old one to `superseded` and cross-link the two.
-4. Some answers will open new questions. Create the next batch of `Q-NNN` files for them.
+4. Some answers will open new questions. Create the next batch of `Q-NNN` files for them. When writing options, include a "configurable with default X" option whenever the behaviour could vary.
+   Don't read a user's "we don't need X" as "we must not have X". If the wording is ambiguous, choose the permissive and configurable reading, or ask.
 5. Update `design/_index.md` with `rebuild_design_index()`, `decisions/_index.md`, and `arch/_index.md`.
 6. Append to `log/<today>.md`, and add a line for it to `log/_index.md` if the file is new.
 7. If one answer settles another open question, or a question was only partly answered, record both in a single decision and ask about the missing part in the next batch.

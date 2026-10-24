@@ -1,12 +1,12 @@
 ---
 id: Q-032
 title: What email metadata survives the content purge
-status: open
+status: resolved
 batch: 6
 area: security
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-034]
 ---
 
 # Q-032: What email metadata survives the content purge

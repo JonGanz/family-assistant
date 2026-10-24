@@ -1,13 +1,15 @@
 ---
 id: D-030
 title: Email content is transient: purge after full processing, keep provenance links
-status: accepted
+status: superseded
 date: 2026-10-23
 source_questions: [Q-028]
 supersedes:
-superseded_by:
+superseded_by: D-034
 affects: [arch/Domain.md, arch/Platform.md, arch/Overall.md]
 ---
+
+> **Superseded by [D-034](D-034-configurable-mail-retention.md).** The provenance rules carry over. Content retention is now a configurable policy that defaults to keeping learning examples.
 
 # D-030: Email content is transient: purge after full processing, keep provenance links
 

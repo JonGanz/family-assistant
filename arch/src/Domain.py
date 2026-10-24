@@ -3,7 +3,7 @@ from drawio import Page, write, TITLE, PKG, ENUM, cls, assoc
 
 # Page 1: Identity, Orgs, Mail, Calendar
 p1 = Page("id-mail", "Identity · Mail · Calendar", 1500, 1100)
-p1.box("Domain: Identity, Orgs & Mail, Calendar (UML 2 class), DRAFT v2", 20, 10, 900, 30, TITLE)
+p1.box("Domain: Identity, Orgs & Mail, Calendar (UML 2 class), DRAFT v3", 20, 10, 900, 30, TITLE)
 p1.box("Identity & Access (M0)", 20, 50, 700, 470, PKG)
 hh = cls(p1, "Household", ["name", "tz", "location", "meal_plan_horizon_weeks", "dashboard_completion_override"], 40, 90)
 mem = cls(p1, "Member", ["display_name", "role: Role", "birthdate?", "grade?", "interests[] / hobbies[]", "responsibilities[]", "pin_hash? (adult)"], 280, 90)
@@ -25,7 +25,7 @@ org = cls(p1, "Org", ["type", "domains[]", "senders[]", "ics_urls[]"], 760, 90)
 oc = cls(p1, "OrgContact", ["name, email", "role"], 1000, 90)
 enr = cls(p1, "Enrollment", ["grade?", "class?"], 760, 230)
 ms = cls(p1, "MailSource", ["address", "read_only = true", "backfill_days", "history_id", "state"], 1000, 210)
-msg = cls(p1, "Message", ["gmail_id, thread_id, external_url", "from?, subject?, embedding? [Q-032]", "processing_state", "content_purged_at?", "«transient» body_text?, snippet?", "category, time_sensitive"], 1240, 90, 220)
+msg = cls(p1, "Message", ["gmail_id, thread_id, external_url", "from, subject (always kept)", "embedding? (while kNN on)", "processing_state", "is_learning_example", "«policy» body_text?, snippet?", "content_purged_at?", "category, time_sensitive"], 1240, 90, 220)
 att = cls(p1, "Attachment", ["filename, mime", "text_extract?"], 1240, 300, 220)
 bill = cls(p1, "Bill", ["source_ref", "payee, amount", "due_on", "status"], 1000, 380)
 lab = cls(p1, "CategoryLabel", ["decision_point", "value", "source", "in_eval_sample"], 1240, 400, 220)
