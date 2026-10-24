@@ -21,3 +21,4 @@ PostgreSQL+pgvector (more robust, one extra container) or SQLite+sqlite-vec (one
 
 ## Answer
 <!-- answer below this line -->
+A. Backups would end up on a NAS.

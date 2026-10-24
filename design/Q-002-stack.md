@@ -21,3 +21,4 @@ Do you prefer a particular language or framework? The proposal is Python/FastAPI
 
 ## Answer
 <!-- answer below this line -->
+I would prefer not Python. I'd be okay with either a Typescript or Rust setup. I'm familiar with JS, and want to learn Rust. I'd prefer Vue over React.

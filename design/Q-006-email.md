@@ -16,3 +16,6 @@ How many Gmail accounts are there, and whose are they? Should the system ever **
 
 ## Answer
 <!-- answer below this line -->
+There would be multiple accounts, which should be configurable as associating specifically to one or more users (like a shared account between adults). A config flag should lock to read-only mode (default with that on). Being able to archive, mark read, etc, would be useful features.
+
+I am okay with a testing mode OAuth setup for now despite the 7 days limit.

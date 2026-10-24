@@ -21,3 +21,4 @@ List the calendars (Google, iCloud/CalDAV, school ICS feeds, sports apps such as
 
 ## Answer
 <!-- answer below this line -->
+Option C. All of those sources of calendars would be valid. The system should not necessarily always send to a specific calendar. That could be configured, either manually or via learned rules. For example, a shared email between parents would likely result in events being created in any of the calendars, depending on LLM results.

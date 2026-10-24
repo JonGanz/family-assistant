@@ -16,3 +16,4 @@ Should the system be reachable away from home? Options: Tailscale (recommended),
 
 ## Answer
 <!-- answer below this line -->
+Tailscale for remote access. Android notifications would be a nice to have for new or priority tasks and time sensitive critical emails surfaced.

@@ -21,3 +21,4 @@ Is the 32GB/RTX 3070 machine also the always-on server, or is it a gaming/workst
 
 ## Answer
 <!-- answer below this line -->
+I think I'd be fine with B. The RTX 3070 is in fact a gaming machine that is not currently running 24/7. So hosting the majority of the application on a separate Ubuntu Server host while waking or queueing LLM work is totally fine by me. It's probably best to think of the system as functional on it's own, enhanced by LLMs.

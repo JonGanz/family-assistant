@@ -16,3 +16,4 @@ Who is in the household? List the members with their role (adult or child), plus
 
 ## Answer
 <!-- answer below this line -->
+That private information should stay out of the application; it should be configured. This should work for other families as well.

@@ -16,3 +16,4 @@ For bills, is it enough to itemise them (payee, amount, due date, then a 'pay' t
 
 ## Answer
 <!-- answer below this line -->
+Just the itemise + tasks. No need for budgeting and fancy reports.
