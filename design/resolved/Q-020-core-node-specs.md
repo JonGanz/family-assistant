@@ -1,12 +1,12 @@
 ---
 id: Q-020
 title: Core node hardware & CPU fallback model
-status: open
+status: resolved
 batch: 2
 area: infra
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-016]
 ---
 
 # Q-020: Core node hardware & CPU fallback model

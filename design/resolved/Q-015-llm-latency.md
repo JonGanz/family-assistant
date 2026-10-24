@@ -1,12 +1,12 @@
 ---
 id: Q-015
 title: Acceptable LLM latency & batching
-status: open
+status: resolved
 batch: 1
 area: tech
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-016]
 ---
 
 # Q-015: Acceptable LLM latency & batching

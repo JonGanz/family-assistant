@@ -11,8 +11,9 @@ description: Process answered design questions in design/ into decisions, arch u
    - Write one or more `decisions/D-NNN-slug.md` files using the next free number. Include the front-matter from CLAUDE.md, and add the sections Context, Decision, Consequences, and Alternatives considered.
    - Fill in `decisions: [D-NNN]` on the question and set `status: resolved` and `resolved: <date>`.
    - `git mv` the question into `design/resolved/`.
-3. Re-derive the affected `arch/*.md` from the requirements and all accepted decisions. Do not just patch the old design. Then update the matching `.drawio` in the same pass. If a decision overturns an earlier one, set the old one to `superseded` and cross-link the two.
+3. Re-derive the affected `arch/*.md` from the requirements and all accepted decisions. Do not just patch the old design. Then update `arch/src/<Name>.py` and regenerate the `.drawio` in the same pass (`python3 arch/src/<Name>.py`). If a decision overturns an earlier one, set the old one to `superseded` and cross-link the two.
 4. Some answers will open new questions. Create the next batch of `Q-NNN` files for them.
-5. Update `design/_index.md`, `decisions/_index.md`, and `arch/_index.md`.
+5. Update `design/_index.md` (rebuild the Resolved table from the front-matter of `design/resolved/*.md`, and list only open batches above it), `decisions/_index.md`, and `arch/_index.md`.
 6. Append to `log/<today>.md`, and add a line for it to `log/_index.md` if the file is new.
-7. Self-learn: if this run uncovered a repeated pattern, update CLAUDE.md or this skill.
+7. If one answer settles another open question, or a question was only partly answered, record both in a single decision and ask about the missing part in the next batch.
+8. Self-learn: if this run uncovered a repeated pattern, update CLAUDE.md or this skill.

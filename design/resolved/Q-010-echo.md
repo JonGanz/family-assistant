@@ -1,12 +1,12 @@
 ---
 id: Q-010
 title: Echo Show 15 kiosk approach
-status: open
+status: resolved
 batch: 1
 area: frontend
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-011]
 ---
 
 # Q-010: Echo Show 15 kiosk approach

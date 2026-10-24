@@ -1,12 +1,12 @@
 ---
 id: Q-017
 title: Configuration source of truth
-status: open
+status: resolved
 batch: 2
 area: domain
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-018]
 ---
 
 # Q-017: Configuration source of truth

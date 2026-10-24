@@ -1,12 +1,12 @@
 ---
 id: Q-012
 title: Task assignment & accountability
-status: open
+status: resolved
 batch: 1
 area: domain
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-013]
 ---
 
 # Q-012: Task assignment & accountability

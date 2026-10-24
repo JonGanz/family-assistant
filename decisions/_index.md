@@ -19,3 +19,13 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-008](D-008-calendar-sources-routing.md) | Multiple calendar sources; confidence-gated auto-add; configurable + learned target routing | accepted | Q-007 | arch/Overall.md, arch/Ingest.md (future) |
 | [D-009](D-009-bills-itemise-only.md) | Bills: itemise + create pay task only | accepted | Q-008 | arch/Overall.md |
 | [D-010](D-010-tailscale-ntfy.md) | Remote access via Tailscale; Android notifications via self-hosted ntfy | accepted | Q-009 | arch/Overall.md |
+| [D-011](D-011-echo-show-silk-dashboard.md) | Echo Show 15 dashboard via Silk browser with keep-alive; touch-enabled, no Alexa integration | accepted | Q-010 | arch/Overall.md, arch/Frontend.md (future) |
+| [D-012](D-012-deals-out-of-scope.md) | Deals of interest removed from scope | accepted | Q-011 | arch/Overall.md |
+| [D-013](D-013-task-assignment-completion.md) | Task assignment strategies and per-list completion policy | accepted | Q-012 | arch/Overall.md, arch/Tasks.md (future) |
+| [D-014](D-014-no-school-portal-apis.md) | No school/daycare portal integrations; ICS feeds + email only | accepted | Q-013 | arch/Overall.md |
+| [D-015](D-015-meal-plan-grocery.md) | Configurable meal-plan horizon; grocery lists generated from selected meals; dashboard can add items | accepted | Q-014 | arch/Overall.md |
+| [D-016](D-016-batched-llm-cpu-triage.md) | LLM work is batched; optional small CPU triage model on the core node | accepted | Q-015, Q-020 | arch/Overall.md |
+| [D-017](D-017-weather-rules-advisories.md) | Weather: configurable location, deterministic threshold rules, LLM-suggested advisories | accepted | Q-016 | arch/Overall.md |
+| [D-018](D-018-hybrid-config.md) | Hybrid configuration: file bootstrap/import-export, UI is source of truth thereafter | accepted | Q-017 | arch/Overall.md |
+| [D-019](D-019-dashboard-pin-policy.md) | Dashboard PIN policy | accepted | Q-018 | arch/Overall.md |
+| [D-020](D-020-gpu-node-agent.md) | GPU node (Linux): Wake-on-LAN, auto-wake by schedule/queue depth, yields to gaming via agent | accepted | Q-019 | arch/Overall.md |

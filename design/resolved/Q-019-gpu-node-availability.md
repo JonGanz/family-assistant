@@ -1,12 +1,12 @@
 ---
 id: Q-019
 title: GPU node wake / schedule policy
-status: open
+status: resolved
 batch: 2
 area: infra
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-020]
 ---
 
 # Q-019: GPU node wake / schedule policy

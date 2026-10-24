@@ -1,12 +1,12 @@
 ---
 id: Q-013
 title: School / daycare portals
-status: open
+status: resolved
 batch: 1
 area: ingest
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-014]
 ---
 
 # Q-013: School / daycare portals

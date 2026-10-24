@@ -1,12 +1,12 @@
 ---
 id: Q-018
 title: Dashboard member selection security
-status: open
+status: resolved
 batch: 2
 area: security
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-019]
 ---
 
 # Q-018: Dashboard member selection security

@@ -1,12 +1,12 @@
 ---
 id: Q-011
 title: Deals of interest from spam/promotions
-status: open
+status: resolved
 batch: 1
 area: domain
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-012]
 ---
 
 # Q-011: Deals of interest from spam/promotions

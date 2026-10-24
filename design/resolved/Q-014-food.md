@@ -1,12 +1,12 @@
 ---
 id: Q-014
 title: Meal planning & grocery details
-status: open
+status: resolved
 batch: 1
 area: domain
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-015]
 ---
 
 # Q-014: Meal planning & grocery details
