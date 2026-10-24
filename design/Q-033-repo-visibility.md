@@ -21,4 +21,4 @@ Will the GitHub repo and GHCR images be **public** (other families can self-host
 
 ## Answer
 <!-- answer below this line -->
-
+Option B. I have been specific to avoid any personal information. Closest thing is my hardware.

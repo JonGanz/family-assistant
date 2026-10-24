@@ -22,4 +22,4 @@ Also: how long can an **unprocessed** email keep its content while waiting for A
 
 ## Answer
 <!-- answer below this line -->
-
+C. If emails are needed in order to train the kNN, then that's fine. We can keep them longer. I only wished to state that we don't need to keep them. Whatever will help train a local model can stay as long as it's helpful. Sounding like a broken record, but maybe this should be configurable, especially if the kNN layer is disabled. 
