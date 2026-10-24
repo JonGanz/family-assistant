@@ -23,6 +23,7 @@ updated: 2026-10-23
 - Questions: `id, title, status (open|answered|resolved), batch, area, created, resolved, decisions: []`
 - Decisions: `id, title, status (accepted|superseded), date, source_questions: [], supersedes, superseded_by, affects: [arch files]`
 - Arch: `title, scope, status (draft|accepted), updated, drawio, depends_on: []`
+- Arch docs may also carry `milestone:` and `drawio_src:`.
 - Logs: `date, topics: []`
 - Research: `id, title, date, method, verified, informs: []`
 
@@ -30,7 +31,7 @@ updated: 2026-10-23
 1. **Asking questions:** create a `design/Q-NNN-*.md` from the template in `design/_index.md`. Group them into batches (`batch: N`). Number them in sequence and never reuse a number. Add each one to the index.
 2. **Processing answers** (when told to): run the `process-answers` skill (`.claude/skills/process-answers/SKILL.md`). In short: read any question that has text under `## Answer`, write `D-NNN` decision(s), update the arch md and drawio together, `git mv` the question to `design/resolved/` with `status: resolved`, update all the indexes, and write a log entry.
 3. **Re-evaluate freshly.** When answers come in, re-derive the affected architecture from the requirements and *all* decisions. Do not just patch the previous design, because earlier paths must not anchor new choices. Mark replaced decisions `superseded`. Do not delete them.
-4. **Arch md ⇄ drawio parity.** If you change one, change the other in the same step. Draw diagrams in UML 2 notation (component, deployment, sequence, class). Diagrams are generated: edit `arch/src/<Name>.py`, which uses the helpers in `tools/drawio.py`, then run `python3 arch/src/<Name>.py`. Never hand-edit the .drawio file.
+4. **Arch md ⇄ drawio parity.** If you change one, change the other in the same step. Draw diagrams in UML 2 notation (component, deployment, sequence, class). Diagrams are generated: edit `arch/src/<Name>.py`, which uses the helpers in `tools/drawio.py`, then run `python3 arch/src/<Name>.py`. Never hand-edit the .drawio file. The helpers include `Page.box/edge` (components, nodes) and `cls`/`assoc` (UML class: kinds assoc, composition, aggregation, generalization, dependency).
 5. **Log daily.** Append to `log/YYYY-MM-DD.md`. Record what you did, what was discussed, and what is still open.
 
 ## Standing technical constraints
@@ -40,6 +41,9 @@ updated: 2026-10-23
 - Intelligence comes in tiers: rules, then System 1, then System 2. **"System 1" means System One decision models** (https://systemonemodels.org/, see R-001 and D-024), not a small generative LLM. System 2 is the generative LLM on the GPU node.
 - **If the user names an unfamiliar term, product, or site, research it (a sub-agent writes up an `R-NNN`) before designing around it. Don't guess.**
 - Design around family members. Each member has a role (adult or child) and has interests, hobbies, and responsibilities.
+
+## Decisions vs design choices
+Only answers to questions (and ideas the user puts inside answers) become `D-NNN` records. Technical choices made inside an arch doc, such as library picks, live in that doc. If the user challenges one, it becomes a question.
 
 ## Git
 The user commits. Their commit messages use `->` for the user's input and `<-` for Claude's output. Don't commit unless asked. Use `git mv` for moves so history is kept.

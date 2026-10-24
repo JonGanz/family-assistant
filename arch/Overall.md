@@ -41,7 +41,8 @@ The final model choices come from `fa-eval` on the household's labelled sample (
 |---|---|
 | `fa-api` | Axum REST + SSE, sessions, RBAC, device sessions with adult PIN step-up (D-006, D-019) |
 | `fa-config` | Versioned TOML import and export. Includes pipelines and backends (D-018, D-029) |
-| `fa-worker` | Scheduler and `SKIP LOCKED` job runner |
+| `fa-auth` | Passwords, sessions, devices, PIN step-up, `Policy::authorize` (see Platform.md §5) |
+| `fa-jobs` | Postgres job queue and cron schedule (see Platform.md §7) |
 | `fa-connectors` | Gmail, Google Calendar, CalDAV, ICS, Open-Meteo |
 | `fa-pipeline` | **Decision pipeline engine** (D-029): runs each decision point's stage list with thresholds and `on_unavailable` handling. Also handles versioning and dry-run. Email ingest uses it, followed by S2 extraction → emit events, tasks, and bills |
 | `fa-rules` | Deterministic rulesets (sender and Org maps, headers, keywords, biller templates) and extractors (ICS, dates, PDF) |
@@ -61,7 +62,8 @@ The final model choices come from `fa-eval` on the household's labelled sample (
 | `web` | Vue 3 + TS PWA: dashboard, labelling view, **Pipeline settings**, **Backends** screens |
 | `fa-tui` | ratatui (stretch) |
 
-## Domain model (draft, moves to Domain.md in M0)
+## Domain model
+The detailed model is in **[Domain.md](Domain.md)**. Summary:
 - `Household{location, tz, meal_plan_horizon_weeks, dashboard_completion_override}` 1—* `Member{role, avatar, birthdate?, grade?, interests[], hobbies[], responsibilities[], notify_prefs, pin_hash?}`
 - `UserAccount`, `Device{kind: dashboard}`, `AuditEntry{actor, device?, action}`
 - `Org{type, domains[], senders[], ics_urls[]}` and `OrgContact{role, members[]}`
@@ -87,6 +89,8 @@ The final model choices come from `fa-eval` on the household's labelled sample (
 5. **Pipeline change:** edit in Pipeline settings → dry-run on the eval sample and recent history → compare before and after → save a new version (rollback is possible).
 6. **GPU wake:** schedule or queue → WoL → agent `available` → on-demand backends come up → queued stages drain → auto-suspend. A game starting means `busy_gaming`.
 7. **Recurring task, Dashboard, Weather, Grocery:** as in v4 (see D-013, D-019, D-017, D-021).
+
+Platform details (layout, security, deployment, backups) are in **[Platform.md](Platform.md)**.
 
 ## Roadmap (D-023, adjusted by D-029)
 | Milestone | Content | Arch docs needed first |

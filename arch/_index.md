@@ -9,6 +9,8 @@ Each design is a pair: `X.md` and `X.drawio` (UML 2). The diagram is **generated
 
 | Design | Scope | Status | Diagram |
 |---|---|---|---|
-| [Overall](Overall.md) | Whole system: scope, deployment, components, domain draft, roadmap (D-001 to D-029) | draft v5 | [Overall.drawio](Overall.drawio) |
+| [Overall](Overall.md) | Whole system: scope, deployment, components, roadmap (D-001 to D-029) | draft v5 | [Overall.drawio](Overall.drawio) |
+| [Domain](Domain.md) | UML class model by package, persistence conventions, RBAC matrix | draft v1 (M0) | [Domain.drawio](Domain.drawio): 3 pages |
+| [Platform](Platform.md) | Workspace layout, libs, API, security, jobs, deployment, backups, dev, M0 DoD | draft v1 (M0) | [Platform.drawio](Platform.drawio): Packages, Deployment, Security |
 
-Planned next, in roadmap order (D-023): M0 → `Domain.md` (UML class) + `Platform.md` (workspace, security, deployment); M1 → `Frontend.md`; M2 → `Tasks.md`; M3 → `Ingest.md`; M4 → `AI.md` (registry, pipelines, eval); M5 → `Meals.md`.
+Planned next, in roadmap order (D-023): M1 → `Frontend.md`; M2 → `Tasks.md`; M3 → `Ingest.md`; M4 → `AI.md` (registry, pipelines, eval); M5 → `Meals.md`.

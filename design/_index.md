@@ -27,8 +27,13 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Open
-_None. The next question number is Q-028._
+## Batch 5 (2026-10-23), open (raised by Domain.md / Platform.md)
+| ID | Title | Area |
+|---|---|---|
+| [Q-028](Q-028-email-retention.md) | Email content retention & privacy | security |
+| [Q-029](Q-029-child-login.md) | How children sign in | security |
+| [Q-030](Q-030-code-hosting-ci.md) | Code repository & CI | tech |
+| [Q-031](Q-031-update-mechanism.md) | How updates are deployed | infra |
 
 ## Resolved
 | ID | Title | Decisions |

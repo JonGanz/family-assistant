@@ -36,7 +36,7 @@ b("«subsystem» fa-server (Rust workspace)", 260, 50, 760, 740, FRAME)
 W, H = 220, 46
 api = b("«component» fa-api (+RBAC, PIN step-up)", 290, 100, W, H, COMP)
 cfg = b("«component» fa-config (import/export)", 530, 100, W, H, COMP)
-wrk = b("«component» fa-worker", 770, 100, W, H, COMP)
+wrk = b("«component» fa-jobs (+ fa-auth in fa-api)", 770, 100, W, H, COMP)
 pip = b("«component» fa-pipeline (decision engine)", 530, 190, W, H, COMP)
 con = b("«component» fa-connectors", 770, 190, W, H, COMP)
 rul = b("«component» fa-rules", 290, 190, W, H, COMP)
