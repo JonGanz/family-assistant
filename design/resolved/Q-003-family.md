@@ -1,12 +1,12 @@
 ---
 id: Q-003
 title: Family composition
-status: open
+status: resolved
 batch: 1
 area: domain
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-004]
 ---
 
 # Q-003: Family composition

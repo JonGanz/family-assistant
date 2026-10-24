@@ -5,7 +5,8 @@ description: Process answered design questions in design/ into decisions, arch u
 
 # Process Answers
 
-1. Use `grep -L` or a read to find the `design/Q-*.md` files where `## Answer` has non-placeholder text. Skip any that are still blank.
+1. Find the answered questions with:
+   `for f in design/Q-*.md; do a=$(sed -n "/<!-- answer below this line -->/,\$p" "$f" | tail -n +2 | grep -v "^\s*$"); [ -n "$a" ] && { echo "=== $f"; echo "$a"; }; done`
 2. For each answered question:
    - Write one or more `decisions/D-NNN-slug.md` files using the next free number. Include the front-matter from CLAUDE.md, and add the sections Context, Decision, Consequences, and Alternatives considered.
    - Fill in `decisions: [D-NNN]` on the question and set `status: resolved` and `resolved: <date>`.

@@ -9,6 +9,6 @@ Each design is a pair: `X.md` and `X.drawio` (UML 2). Keep the two in step.
 
 | Design | Scope | Status | Diagram |
 |---|---|---|---|
-| [Overall](Overall.md) | Whole system: components, deployment, core domain | draft v0 | [Overall.drawio](Overall.drawio) |
+| [Overall](Overall.md) | Whole system: deployment, components, core domain (D-001 to D-010) | draft v1 | [Overall.drawio](Overall.drawio) |
 
-Planned once Batch 1 is answered: `Ingest.md` (email/calendar pipeline), `Domain.md` (UML class model), `Tasks.md`, `Frontend.md`.
+Planned next: `Ingest.md` (email and calendar pipeline, D-007/D-008), `Domain.md` (UML class model), `Security.md` (D-006 RBAC), `Tasks.md` (after Q-012), `Frontend.md` (after Q-010/Q-018).

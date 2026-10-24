@@ -1,12 +1,12 @@
 ---
 id: Q-005
 title: Users, login & privacy between members
-status: open
+status: resolved
 batch: 1
 area: security
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-006]
 ---
 
 # Q-005: Users, login & privacy between members

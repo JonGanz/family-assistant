@@ -1,12 +1,12 @@
 ---
 id: Q-002
 title: Language / framework preferences
-status: open
+status: resolved
 batch: 1
 area: tech
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-003]
 ---
 
 # Q-002: Language / framework preferences

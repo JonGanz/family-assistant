@@ -1,12 +1,12 @@
 ---
 id: Q-004
 title: Datastore & backups
-status: open
+status: resolved
 batch: 1
 area: tech
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-005]
 ---
 
 # Q-004: Datastore & backups

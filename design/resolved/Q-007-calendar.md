@@ -1,12 +1,12 @@
 ---
 id: Q-007
 title: Calendar sources & write-back target
-status: open
+status: resolved
 batch: 1
 area: ingest
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-008]
 ---
 
 # Q-007: Calendar sources & write-back target

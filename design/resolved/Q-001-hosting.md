@@ -1,12 +1,12 @@
 ---
 id: Q-001
 title: Host machine & uptime
-status: open
+status: resolved
 batch: 1
 area: infra
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-002]
 ---
 
 # Q-001: Host machine & uptime

@@ -1,12 +1,12 @@
 ---
 id: Q-006
 title: Email accounts & processing scope
-status: open
+status: resolved
 batch: 1
 area: ingest
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-007]
 ---
 
 # Q-006: Email accounts & processing scope

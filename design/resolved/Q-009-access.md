@@ -1,12 +1,12 @@
 ---
 id: Q-009
 title: Remote access & notifications
-status: open
+status: resolved
 batch: 1
 area: infra
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-010]
 ---
 
 # Q-009: Remote access & notifications

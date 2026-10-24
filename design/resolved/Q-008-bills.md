@@ -1,12 +1,12 @@
 ---
 id: Q-008
 title: Bill handling depth
-status: open
+status: resolved
 batch: 1
 area: domain
 created: 2026-10-23
-resolved:
-decisions: []
+resolved: 2026-10-23
+decisions: [D-009]
 ---
 
 # Q-008: Bill handling depth
