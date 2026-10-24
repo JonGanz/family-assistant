@@ -16,7 +16,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.88"
 license = "AGPL-3.0-or-later"
-repository = "https://github.com/OWNER/family-assistant" # set after H-01 (repo creation)
+repository = "https://github.com/JonGanz/family-assistant"
 publish = false
 
 [workspace.lints.rust]
