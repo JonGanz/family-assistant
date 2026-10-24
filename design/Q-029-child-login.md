@@ -21,4 +21,4 @@ Kids see their own calendar and tasks (D-006). How do they sign in on a phone or
 
 ## Answer
 <!-- answer below this line -->
-
+Option A

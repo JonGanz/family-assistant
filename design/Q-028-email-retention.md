@@ -24,4 +24,4 @@ The system copies email from Gmail. How much should it keep, and for how long?
 
 ## Answer
 <!-- answer below this line -->
-
+Any elements that were created as email as a source should log where they came from so that we can tell where a task or calendar item was sourced from. Other than that, the actual contents we no longer need to store once they've been fully processed as long as we can point to the email of source when something was created. 

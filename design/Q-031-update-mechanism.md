@@ -21,4 +21,4 @@ How should new versions reach the core node?
 
 ## Answer
 <!-- answer below this line -->
-
+The actual deployment strategy would be up to the hoster. Let's provide a docker-compose sample with all necessary services.
