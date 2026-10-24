@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO schedule (id, name, cron, job_kind, payload, enabled) VALUES ($1, $2, $3, $4, $5, $6)\n             ON CONFLICT (name) DO UPDATE SET cron = EXCLUDED.cron, job_kind = EXCLUDED.job_kind,\n                 payload = EXCLUDED.payload, enabled = EXCLUDED.enabled",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Jsonb",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "190f58117bd90bea7942d26da93c1379e2dcdc48452077015f4d87978b3c9e55"
+}

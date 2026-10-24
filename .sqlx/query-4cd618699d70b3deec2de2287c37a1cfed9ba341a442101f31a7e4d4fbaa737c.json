@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE user_account SET disabled_at = COALESCE(disabled_at, now()), version = version + 1\n             WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4cd618699d70b3deec2de2287c37a1cfed9ba341a442101f31a7e4d4fbaa737c"
+}

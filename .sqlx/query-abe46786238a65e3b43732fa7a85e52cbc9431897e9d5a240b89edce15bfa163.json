@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO job (id, household_id, kind, payload, run_at, priority, max_attempts, idempotency_key)\n             VALUES ($1, $2, $3, $4, COALESCE($5, now()), $6, $7, $8)\n             ON CONFLICT (idempotency_key) DO NOTHING\n             RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Jsonb",
+        "Timestamptz",
+        "Int4",
+        "Int4",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "abe46786238a65e3b43732fa7a85e52cbc9431897e9d5a240b89edce15bfa163"
+}

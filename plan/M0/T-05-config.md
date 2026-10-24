@@ -5,7 +5,7 @@ milestone: M0
 wave: 4
 depends_on: [T-04]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-config/**"]
 ---
 
@@ -23,7 +23,8 @@ You are a sub-agent implementing one task of the M0 milestone of the Family Assi
 - `crates/fa-config/**`
 
 ## Work
-1. **Process config** (`ProcessConfig`) via figment: defaults, then an optional `fa.toml`, then `FA_`-prefixed env vars (with `DATABASE_URL` accepted as is). Fields: database_url, bind_addr (default `127.0.0.1:8080`), master_key_path (default `/run/secrets/fa_master_key`), public_base_url, cookie_secure (bool, default true), log_format (`pretty|json`), log_level, web_dist_dir (default `/srv/web`), backup_status_path (optional). Include validation with clear error messages.
+1. **Process config** (`ProcessConfig`) via figment: defaults, then an optional `fa.toml`, then `FA_`-prefixed env vars (with `DATABASE_URL` accepted as is). Fields: database_url, bind_addr (default `127.0.0.1:8080`), master_key_path (default `/run/secrets/fa_master_key`), public_base_url, cookie_secure (bool, default true), log_format (`pretty|json`), log_level, web_dist_dir (default `/srv/web`), backup_dir (optional).
+   **The env var names are fixed by `deploy/compose.example.yaml` (T-12)** and must match exactly: `DATABASE_URL`, `FA_BIND_ADDR`, `FA_MASTER_KEY_PATH`, `FA_PUBLIC_BASE_URL`, `FA_COOKIE_SECURE`, `FA_LOG_LEVEL`, `FA_LOG_FORMAT`, `FA_WEB_DIST_DIR`, `FA_BACKUP_DIR`. Include validation with clear error messages.
 2. **Household config schema** (`HouseholdConfig`, serde): `schema_version = 1`, `[household]`, `[[members]]` (a `key` slug used as the stable identity across imports), with room for later sections (the TOML deserialiser should **reject unknown top-level sections**, with a helpful error that lists the supported ones).
 3. **Import** (`import(store, household_id?, cfg, mode: Merge|Replace) -> ImportReport`):
    - Creates the household if it's missing.

@@ -1,0 +1,87 @@
+[workspace]
+resolver = "3"
+members = [
+    "crates/fa-domain",
+    "crates/fa-store",
+    "crates/fa-config",
+    "crates/fa-auth",
+    "crates/fa-jobs",
+    "crates/fa-api",
+    "bins/fa-server",
+    "bins/fa-gpu-agent",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.88"
+license = "AGPL-3.0-or-later"
+repository = "https://github.com/OWNER/family-assistant" # set after H-01 (repo creation)
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.lints.clippy]
+dbg_macro = "warn"
+todo = "warn"
+
+[workspace.dependencies]
+async-trait = "0.1.89"
+# internal
+fa-domain = { path = "crates/fa-domain" }
+fa-store = { path = "crates/fa-store" }
+fa-config = { path = "crates/fa-config" }
+fa-auth = { path = "crates/fa-auth" }
+fa-jobs = { path = "crates/fa-jobs" }
+fa-api = { path = "crates/fa-api" }
+
+# async and HTTP
+tokio = { version = "1.54.1", features = ["full"] }
+axum = "0.8.9"
+axum-extra = { version = "0.12.6", features = ["cookie", "typed-header"] }
+tower = "0.5.3"
+tower-http = { version = "0.6.11", features = ["trace", "compression-gzip", "fs", "timeout", "cors"] }
+tower-sessions = "0.14.0"
+tower-sessions-sqlx-store = { version = "0.15.0", features = ["postgres"] }
+
+# DB
+sqlx = { version = "0.8.6", default-features = false, features = ["runtime-tokio", "tls-rustls", "postgres", "uuid", "chrono", "json", "migrate", "macros"] }
+
+# core
+uuid = { version = "1.26.1", features = ["v7", "serde"] }
+chrono = { version = "0.4.45", features = ["serde"] }
+chrono-tz = "0.10.4"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+toml = "0.9.12"
+figment = { version = "0.10.19", features = ["env", "toml"] }
+thiserror = "2.0.21"
+anyhow = "1.0.104"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.23", features = ["env-filter", "json"] }
+clap = { version = "4.6.7", features = ["derive", "env"] }
+
+# crypto
+argon2 = "0.5.3"
+rand = "0.9.5"
+aes-gcm = "0.10.3"
+sha2 = "0.10.9"
+base64 = "0.22.1"
+hex = "0.4.3"
+subtle = "2.6.1"
+
+# API and types
+utoipa = { version = "5.5.0", features = ["axum_extras", "uuid", "chrono"] }
+utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
+ts-rs = { version = "11.1.0", features = ["uuid-impl", "chrono-impl", "serde-compat"] }
+futures = "0.3.34"
+async-stream = "0.3.6"
+
+# jobs
+croner = "3.0.1"
+tokio-util = { version = "0.7.20", features = ["rt"] }
+
+# dev-only
+insta = "1.49.0"
+tempfile = "3.27.0"

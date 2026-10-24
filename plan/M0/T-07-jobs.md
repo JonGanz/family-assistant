@@ -5,7 +5,7 @@ milestone: M0
 wave: 4
 depends_on: [T-04]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-jobs/**"]
 ---
 
@@ -30,7 +30,7 @@ You are a sub-agent implementing one task of the M0 milestone of the Family Assi
 2. **Scheduler:** every 30 s it reads the enabled `schedule` rows (cron expressions, using `croner` (pre-declared in the workspace by T-01)), and enqueues due jobs with the idempotency key `schedule:{id}:{fire_time}`.
 3. **M0 handlers:**
    - `session.cleanup` deletes expired sessions.
-   - `backup.verify` reads the JSON status file at `backup_status_path` (written by the backup container: test what `prodrigestivill/postgres-backup-local` actually provides, or define our own small wrapper format and say so). It upserts `system_status['backup']` and logs a warning if the last backup is older than 26 hours. If the path isn't configured, it logs info and returns ok.
+   - `backup.verify` finds the **newest dump file** under `backup_dir` (recursively; `prodrigestivill/postgres-backup-local` writes `daily/`, `weekly/`, `monthly/`, and `last/`, and no status file). It upserts `system_status['backup'] = {newest_file, mtime, age_hours, ok}` and logs a warning if the newest file is older than 26 hours. If `backup_dir` isn't configured, it logs info and returns ok.
 4. Seed the default schedules through an idempotent `ensure_default_schedules()`.
 5. **Tests:** concurrent workers never double-process, retry and backoff go to dead, lease reclaim, idempotency, and the scheduler enqueues exactly once per fire time.
 

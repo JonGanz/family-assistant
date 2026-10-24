@@ -1,0 +1,89 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO household (id, name, tz, location_lat, location_lon, location_label,\n                                    meal_plan_horizon_weeks, dashboard_completion_override)\n             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)\n             RETURNING id, name, tz, location_lat, location_lon, location_label,\n                       meal_plan_horizon_weeks, dashboard_completion_override, version,\n                       created_at, updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "tz",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "location_lat",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "location_lon",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "location_label",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "meal_plan_horizon_weeks",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "dashboard_completion_override",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Float8",
+        "Float8",
+        "Text",
+        "Int4",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f205adf9efc6b3fee420e52b9d08ab14b52318ad7d7dfb652d5916cbd7443e5f"
+}

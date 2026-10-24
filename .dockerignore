@@ -1,0 +1,17 @@
+.git
+target
+**/node_modules
+apps/web/dist
+plan
+arch
+design
+decisions
+research
+log
+tools
+deploy
+!deploy/compose.example.yaml
+**/*.drawio
+.env
+*.md
+!LICENSE

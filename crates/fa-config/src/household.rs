@@ -1,0 +1,429 @@
+use std::collections::HashSet;
+
+use chrono::{NaiveDate, Utc};
+use fa_domain::{
+    AuditEntry, AuditEntryId, Household, HouseholdId, Location, Member, MemberId, Role,
+};
+use fa_store::{AuditRepo, HouseholdRepo, MemberRepo, Store, StoreError};
+use serde::{Deserialize, Serialize};
+
+pub const SCHEMA_VERSION: u32 = 1;
+pub const SUPPORTED_SECTIONS: &[&str] = &["schema_version", "household", "members"];
+
+fn default_schema_version() -> u32 {
+    SCHEMA_VERSION
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HouseholdConfig {
+    #[serde(default = "default_schema_version")]
+    pub schema_version: u32,
+    pub household: HouseholdSection,
+    #[serde(default)]
+    pub members: Vec<MemberConfig>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct HouseholdSection {
+    pub name: String,
+    pub tz: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub location: Option<LocationConfig>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct LocationConfig {
+    pub label: String,
+    pub lat: f64,
+    pub lon: f64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct MemberConfig {
+    /// Stable slug identifying the member across imports.
+    pub key: String,
+    pub display_name: String,
+    pub role: Role,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub avatar: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub birthdate: Option<NaiveDate>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub grade: Option<String>,
+    #[serde(default)]
+    pub interests: Vec<String>,
+    #[serde(default)]
+    pub hobbies: Vec<String>,
+    #[serde(default)]
+    pub responsibilities: Vec<String>,
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum HouseholdTomlError {
+    #[error("invalid household TOML: {0}")]
+    Parse(#[from] toml::de::Error),
+    #[error("unsupported top-level section(s) {found:?}; supported sections: {supported}")]
+    UnknownSections {
+        found: Vec<String>,
+        supported: String,
+    },
+    #[error("unsupported schema_version {0}; this build supports {SCHEMA_VERSION}")]
+    SchemaVersion(u32),
+    #[error("invalid household config:\n  - {}", .0.join("\n  - "))]
+    Invalid(Vec<String>),
+    #[error("could not serialize household TOML: {0}")]
+    Serialize(#[from] toml::ser::Error),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ImportError {
+    #[error(transparent)]
+    Config(#[from] HouseholdTomlError),
+    #[error(transparent)]
+    Store(#[from] StoreError),
+    #[error("household {0} not found")]
+    HouseholdNotFound(HouseholdId),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ImportMode {
+    /// Upsert what the file lists; leave other members alone.
+    Merge,
+    /// Like merge, and archive keyed members the file no longer lists.
+    Replace,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ImportReport {
+    pub household_id: HouseholdId,
+    pub household_created: bool,
+    pub household_updated: bool,
+    pub members_created: Vec<String>,
+    pub members_updated: Vec<String>,
+    pub members_unchanged: Vec<String>,
+    pub members_archived: Vec<String>,
+}
+
+impl HouseholdConfig {
+    pub fn from_toml(s: &str) -> Result<Self, HouseholdTomlError> {
+        let table: toml::Table = s.parse()?;
+        let unknown: Vec<String> = table
+            .keys()
+            .filter(|k| !SUPPORTED_SECTIONS.contains(&k.as_str()))
+            .cloned()
+            .collect();
+        if !unknown.is_empty() {
+            return Err(HouseholdTomlError::UnknownSections {
+                found: unknown,
+                supported: SUPPORTED_SECTIONS.join(", "),
+            });
+        }
+        let cfg: Self = toml::from_str(s)?;
+        cfg.validate()?;
+        Ok(cfg)
+    }
+
+    pub fn to_toml(&self) -> Result<String, HouseholdTomlError> {
+        Ok(toml::to_string_pretty(self)?)
+    }
+
+    pub fn validate(&self) -> Result<(), HouseholdTomlError> {
+        if self.schema_version != SCHEMA_VERSION {
+            return Err(HouseholdTomlError::SchemaVersion(self.schema_version));
+        }
+        let mut errs = Vec::new();
+        if self.household.name.trim().is_empty() {
+            errs.push("household.name must not be empty".to_string());
+        }
+        if self.household.tz.parse::<chrono_tz::Tz>().is_err() {
+            errs.push(format!(
+                "household.tz '{}' is not a valid IANA time zone",
+                self.household.tz
+            ));
+        }
+        if let Some(l) = &self.household.location
+            && !((-90.0..=90.0).contains(&l.lat) && (-180.0..=180.0).contains(&l.lon))
+        {
+            errs.push("household.location lat/lon out of range".to_string());
+        }
+        let mut seen = HashSet::new();
+        for m in &self.members {
+            let ok = !m.key.is_empty()
+                && m.key.len() <= 64
+                && m.key
+                    .chars()
+                    .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-' || c == '_');
+            if !ok {
+                errs.push(format!(
+                    "member key '{}' must be a slug of a-z, 0-9, '-' or '_' (max 64)",
+                    m.key
+                ));
+            }
+            if !seen.insert(m.key.as_str()) {
+                errs.push(format!("duplicate member key '{}'", m.key));
+            }
+            if m.display_name.trim().is_empty() {
+                errs.push(format!(
+                    "member '{}': display_name must not be empty",
+                    m.key
+                ));
+            }
+        }
+        if errs.is_empty() {
+            Ok(())
+        } else {
+            Err(HouseholdTomlError::Invalid(errs))
+        }
+    }
+}
+
+fn apply(m: &mut Member, c: &MemberConfig) -> bool {
+    let before = (
+        m.display_name.clone(),
+        m.role,
+        m.avatar.clone(),
+        m.color.clone(),
+        m.birthdate,
+        m.grade.clone(),
+        m.interests.clone(),
+        m.hobbies.clone(),
+        m.responsibilities.clone(),
+    );
+    m.display_name = c.display_name.clone();
+    m.role = c.role;
+    m.avatar = c.avatar.clone();
+    m.color = c.color.clone();
+    m.birthdate = c.birthdate;
+    m.grade = c.grade.clone();
+    m.interests = c.interests.clone();
+    m.hobbies = c.hobbies.clone();
+    m.responsibilities = c.responsibilities.clone();
+    before
+        != (
+            m.display_name.clone(),
+            m.role,
+            m.avatar.clone(),
+            m.color.clone(),
+            m.birthdate,
+            m.grade.clone(),
+            m.interests.clone(),
+            m.hobbies.clone(),
+            m.responsibilities.clone(),
+        )
+}
+
+/// Imports `cfg` into the store. Creates the household when missing (with `household_id` if
+/// given, else a fresh id). Never touches accounts, PINs or secrets.
+pub async fn import(
+    store: &Store,
+    household_id: Option<HouseholdId>,
+    cfg: &HouseholdConfig,
+    mode: ImportMode,
+) -> Result<ImportReport, ImportError> {
+    cfg.validate()?;
+    let hid = household_id.unwrap_or_default();
+    let location = cfg.household.location.as_ref().map(|l| Location {
+        lat: l.lat,
+        lon: l.lon,
+        label: l.label.clone(),
+    });
+    let mut tx = store.tx_system().await?;
+    let mut report = ImportReport {
+        household_id: hid,
+        household_created: false,
+        household_updated: false,
+        members_created: vec![],
+        members_updated: vec![],
+        members_unchanged: vec![],
+        members_archived: vec![],
+    };
+
+    match HouseholdRepo::get(&mut tx, hid).await? {
+        None => {
+            let now = Utc::now();
+            HouseholdRepo::insert(
+                &mut tx,
+                &Household {
+                    id: hid,
+                    name: cfg.household.name.clone(),
+                    tz: cfg.household.tz.clone(),
+                    location,
+                    meal_plan_horizon_weeks: 2,
+                    dashboard_completion_override: false,
+                    created_at: now,
+                    updated_at: now,
+                },
+            )
+            .await?;
+            report.household_created = true;
+        }
+        Some(v) => {
+            let mut h = v.value;
+            let changed =
+                h.name != cfg.household.name || h.tz != cfg.household.tz || h.location != location;
+            if changed {
+                h.name = cfg.household.name.clone();
+                h.tz = cfg.household.tz.clone();
+                h.location = location;
+                HouseholdRepo::update(&mut tx, &h, v.version).await?;
+                report.household_updated = true;
+            }
+        }
+    }
+
+    for c in &cfg.members {
+        match MemberRepo::get_by_config_key(&mut tx, hid, &c.key).await? {
+            Some(v) => {
+                let mut m = v.value;
+                if apply(&mut m, c) {
+                    MemberRepo::update(&mut tx, &m, v.version).await?;
+                    report.members_updated.push(c.key.clone());
+                } else {
+                    report.members_unchanged.push(c.key.clone());
+                }
+            }
+            None => {
+                let now = Utc::now();
+                let m = Member {
+                    id: MemberId::new(),
+                    household_id: hid,
+                    display_name: c.display_name.clone(),
+                    role: c.role,
+                    avatar: c.avatar.clone(),
+                    color: c.color.clone(),
+                    birthdate: c.birthdate,
+                    grade: c.grade.clone(),
+                    interests: c.interests.clone(),
+                    hobbies: c.hobbies.clone(),
+                    responsibilities: c.responsibilities.clone(),
+                    pin_hash: None,
+                    archived_at: None,
+                    created_at: now,
+                    updated_at: now,
+                };
+                MemberRepo::insert(&mut tx, &m, Some(&c.key), None).await?;
+                report.members_created.push(c.key.clone());
+            }
+        }
+    }
+
+    if mode == ImportMode::Replace {
+        let listed: HashSet<&str> = cfg.members.iter().map(|m| m.key.as_str()).collect();
+        for v in MemberRepo::list(&mut tx, false).await? {
+            let m = v.value;
+            if m.household_id != hid {
+                continue;
+            }
+            if let Some(key) = MemberRepo::config_key(&mut tx, m.id).await?
+                && !listed.contains(key.as_str())
+            {
+                MemberRepo::archive(&mut tx, m.id).await?;
+                report.members_archived.push(key);
+            }
+        }
+    }
+
+    AuditRepo::insert(
+        &mut tx,
+        &AuditEntry {
+            id: AuditEntryId::new(),
+            household_id: hid,
+            actor_member: None,
+            device: None,
+            action: "config.import".into(),
+            subject_type: "household".into(),
+            subject_id: Some(hid.to_string()),
+            before: None,
+            after: serde_json::to_value(&report).ok().map(|mut v| {
+                v["mode"] = format!("{mode:?}").to_lowercase().into();
+                v
+            }),
+            at: Utc::now(),
+        },
+    )
+    .await?;
+    tx.commit().await?;
+    tracing::info!(household = %hid, ?mode, "household config imported");
+    Ok(report)
+}
+
+fn slug(s: &str) -> String {
+    let mut out: String = s
+        .to_lowercase()
+        .chars()
+        .map(|c| if c.is_ascii_alphanumeric() { c } else { '-' })
+        .collect();
+    out = out.trim_matches('-').to_string();
+    if out.is_empty() { "member".into() } else { out }
+}
+
+/// Redacted export: profile data only, no hashes, tokens, accounts or secrets. Members created
+/// outside a config file get a key derived from their display name.
+pub async fn export(
+    store: &Store,
+    household_id: HouseholdId,
+) -> Result<HouseholdConfig, ImportError> {
+    let mut tx = store.tx_for(household_id).await?;
+    let h = HouseholdRepo::get(&mut tx, household_id)
+        .await?
+        .ok_or(ImportError::HouseholdNotFound(household_id))?
+        .value;
+    let mut used = HashSet::new();
+    let mut members = Vec::new();
+    let mut keyless = Vec::new();
+    for v in MemberRepo::list(&mut tx, false).await? {
+        let m = v.value;
+        match MemberRepo::config_key(&mut tx, m.id).await? {
+            Some(k) => {
+                used.insert(k.clone());
+                members.push((k, m));
+            }
+            None => keyless.push(m),
+        }
+    }
+    for m in keyless {
+        let base = slug(&m.display_name);
+        let mut key = base.clone();
+        let mut n = 2;
+        while !used.insert(key.clone()) {
+            key = format!("{base}-{n}");
+            n += 1;
+        }
+        members.push((key, m));
+    }
+    tx.rollback().await?;
+
+    Ok(HouseholdConfig {
+        schema_version: SCHEMA_VERSION,
+        household: HouseholdSection {
+            name: h.name,
+            tz: h.tz,
+            location: h.location.map(|l| LocationConfig {
+                label: l.label,
+                lat: l.lat,
+                lon: l.lon,
+            }),
+        },
+        members: members
+            .into_iter()
+            .map(|(key, m)| MemberConfig {
+                key,
+                display_name: m.display_name,
+                role: m.role,
+                avatar: m.avatar,
+                color: m.color,
+                birthdate: m.birthdate,
+                grade: m.grade,
+                interests: m.interests,
+                hobbies: m.hobbies,
+                responsibilities: m.responsibilities,
+            })
+            .collect(),
+    })
+}

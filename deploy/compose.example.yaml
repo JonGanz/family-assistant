@@ -1,0 +1,142 @@
+# Family Assistant: example compose file (D-033). How you deploy and update is your choice.
+#
+#   Core node (default profile):  docker compose --env-file deploy/.env -f deploy/compose.example.yaml up -d
+#   CPU sidecars (M4):            ... --profile ai-cpu up -d
+#   GPU node or single machine:   ... --profile gpu up -d
+#
+# Every fa-server service has a published image and a build fallback.
+# Run from the repository root, or copy this file next to .env and adjust `build:`.
+
+x-fa-server: &fa-server
+  image: ghcr.io/${FA_IMAGE_OWNER:-owner}/fa-server:${FA_VERSION:-latest}
+  build:
+    context: ..
+    dockerfile: Dockerfile
+  restart: unless-stopped
+  secrets:
+    - fa_master_key
+  environment: &fa-env
+    DATABASE_URL: postgres://${POSTGRES_USER:-fa}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-fa}
+    FA_MASTER_KEY_PATH: /run/secrets/fa_master_key
+    FA_PUBLIC_BASE_URL: ${FA_PUBLIC_BASE_URL:?set FA_PUBLIC_BASE_URL}
+    FA_COOKIE_SECURE: ${FA_COOKIE_SECURE:-true}
+    FA_LOG_LEVEL: ${FA_LOG_LEVEL:-info}
+    FA_LOG_FORMAT: ${FA_LOG_FORMAT:-json}
+    FA_BACKUP_DIR: /backups
+  volumes:
+    - ${BACKUP_DIR:?set BACKUP_DIR}:/backups:ro
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-fa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-fa}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    # Not published to the host on purpose.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    <<: *fa-server
+    command: ["serve", "api"]
+    ports:
+      - "127.0.0.1:8080:8080"   # for `tailscale serve`
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/readyz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  worker:
+    <<: *fa-server
+    command: ["serve", "worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      api:
+        condition: service_healthy   # api runs the migrations
+    healthcheck:
+      disable: true   # the image healthcheck targets the api port
+
+  ntfy:
+    image: binwiederhier/ntfy
+    restart: unless-stopped
+    command: ["serve"]
+    environment:
+      NTFY_BASE_URL: ${NTFY_BASE_URL:-http://localhost:8090}
+      NTFY_CACHE_FILE: /var/cache/ntfy/cache.db
+    ports:
+      - "127.0.0.1:8090:80"   # for `tailscale serve`
+    volumes:
+      - ntfy-cache:/var/cache/ntfy
+
+  backup:
+    image: prodrigestivill/postgres-backup-local:16
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB:-fa}
+      POSTGRES_USER: ${POSTGRES_USER:-fa}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_EXTRA_OPTS: "-Fc"
+      SCHEDULE: "@daily"
+      BACKUP_KEEP_DAYS: 7
+      BACKUP_KEEP_WEEKS: 4
+      BACKUP_KEEP_MONTHS: 6
+      HEALTHCHECK_PORT: 8080
+    volumes:
+      - ${BACKUP_DIR:?set BACKUP_DIR}:/backups
+
+  # ---- profile ai-cpu (M4): placeholders, not functional yet --------------------
+  # s1-small:
+  #   profiles: ["ai-cpu"]
+  #   image: <pinned System One sidecar image@sha256:...>   # D-025, D-026
+  #   restart: unless-stopped
+  # embed:
+  #   profiles: ["ai-cpu"]
+  #   image: <pinned embedding server image@sha256:...>
+  #   restart: unless-stopped
+
+  # ---- profile gpu: GPU node, or a single machine that runs everything ---------
+  ollama:
+    profiles: ["gpu"]
+    image: ollama/ollama:latest   # pin a version or digest for production
+    restart: unless-stopped
+    ports:
+      - "${OLLAMA_BIND:-127.0.0.1}:11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+  # s1-large (M4 placeholder):
+  #   profiles: ["gpu"]
+  #   image: <pinned System One sidecar image@sha256:...>
+  #   deploy: { resources: { reservations: { devices: [{ driver: nvidia, count: all, capabilities: [gpu] }] } } }
+
+secrets:
+  fa_master_key:
+    file: ${FA_MASTER_KEY_FILE:?set FA_MASTER_KEY_FILE}
+
+volumes:
+  pgdata:
+  ntfy-cache:
+  ollama-models:

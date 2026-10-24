@@ -1,0 +1,13 @@
+title = "family-assistant gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Lockfiles and build output"
+paths = [
+  '''pnpm-lock\.yaml$''',
+  '''Cargo\.lock$''',
+  '''(^|/)target/''',
+  '''(^|/)node_modules/''',
+]

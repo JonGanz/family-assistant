@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE device SET revoked_at = COALESCE(revoked_at, now()), version = version + 1 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "17d2005f0e0300c057ce696b6e340dc0d7e92baccf477b12dec96a5cb4ee2e88"
+}

@@ -1,0 +1,8 @@
+{
+  "name": "family-assistant-e2e",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "scripts": { "test": "playwright test" },
+  "devDependencies": { "@playwright/test": "1.49.1", "@types/node": "^22.10.0" }
+}

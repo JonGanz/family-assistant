@@ -1,0 +1,69 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO notify_pref (id, household_id, member_id, channel, topic, triggers)\n             VALUES ($1, $2, $3, $4, $5, $6)\n             RETURNING id, household_id, member_id, channel, topic, triggers, archived_at, version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "household_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "member_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "channel",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "topic",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "triggers",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 6,
+        "name": "archived_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "version",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "3f568ea873253af4234304e84e223aed6ea99488d27a3e9a91603ecf5025f036"
+}

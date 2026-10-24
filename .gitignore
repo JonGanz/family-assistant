@@ -1,2 +1,20 @@
 __pycache__/
 *.pyc
+
+# Rust
+target/
+
+# Node
+node_modules/
+apps/web/dist
+
+# Env (keep examples and dev defaults)
+.env
+!.env.example
+!.env.dev
+
+# Playwright
+playwright-report/
+test-results/
+blob-report/
+apps/web/playwright/.cache/

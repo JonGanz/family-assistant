@@ -1,0 +1,45 @@
+# Fictional household for development and tests. No real data, no secrets.
+# Accounts are created separately with `fa-server user add`
+# (e.g. alex@example.com, sam@example.com).
+
+[household]
+name = "The Example Family"
+tz = "America/New_York"
+location = { label = "Springfield (fictional)", lat = 40.0, lon = -75.0 }
+
+[[members]]
+key = "alex"
+display_name = "Alex"
+role = "adult"
+birthdate = "1985-04-12"
+interests = ["cycling", "board games"]
+hobbies = ["woodworking"]
+responsibilities = ["finances", "school pickups on Mondays"]
+
+[[members]]
+key = "sam"
+display_name = "Sam"
+role = "adult"
+birthdate = "1987-09-30"
+interests = ["gardening", "podcasts"]
+hobbies = ["pottery"]
+responsibilities = ["meal planning", "medical appointments"]
+
+[[members]]
+key = "riley"
+display_name = "Riley"
+role = "child"
+birthdate = "2016-06-03"
+grade = "3"
+interests = ["dinosaurs", "soccer"]
+hobbies = ["drawing"]
+responsibilities = ["feed the cat", "pack school bag"]
+
+[[members]]
+key = "jordan"
+display_name = "Jordan"
+role = "child"
+birthdate = "2022-02-18"
+interests = ["trucks", "music"]
+hobbies = []
+responsibilities = ["tidy toys"]

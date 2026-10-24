@@ -5,7 +5,7 @@ milestone: M0
 wave: 4
 depends_on: [T-04]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-auth/**"]
 ---
 

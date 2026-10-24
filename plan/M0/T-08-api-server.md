@@ -5,7 +5,7 @@ milestone: M0
 wave: 5
 depends_on: [T-05, T-06, T-07]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-api/**", "bins/fa-server/**"]
 ---
 
@@ -26,6 +26,7 @@ You are a sub-agent implementing one task of the M0 milestone of the Family Assi
    - An axum `Router` with every route in the contract table.
    - An `Actor` extractor (cookie through tower-sessions, or a bearer token) that calls `fa_auth::resolve_actor`.
    - A `require(action, resource)` helper that calls the domain policy.
+   - Policy mapping (fa-domain `authorize`): `POST /members` uses `ManageMember` on `Resource::Household`, so any adult can add a member, including another adult. `PATCH /members/{id}` uses `ManageMember` on `Resource::Member(id, role)`, so an adult can edit themself or a child, but never another adult.
    - CSRF: mutating methods need `X-FA-Request: 1`, otherwise 403 problem+json.
    - An error type that maps to `application/problem+json`.
    - The `version`/`If-Match` pattern on `PATCH /members/{id}` (conflict → 409).
@@ -63,6 +64,7 @@ You are a sub-agent implementing one task of the M0 milestone of the Family Assi
 ## Ground rules (all M0 tasks)
 - Repo: `/home/jon/projects/family-assistant`. **First read** `CLAUDE.md`, `plan/M0.md` (especially the contracts), and the arch sections listed under *Read first*.
 - **Edit only the paths you own** (listed below). If you need a change somewhere else, don't make it: say so in your report.
+- Run `cargo fmt` before reporting (CI enforces `cargo fmt --check`).
 - Code style: idiomatic Rust 2024 edition, with `thiserror` in libraries, `anyhow` only in bins, no `unwrap()` outside tests, and `tracing` for logs. Keep comments sparse and useful.
 - Public AGPL repo (D-035): no real personal data. Fixtures use `example.com`.
 - Tools: pnpm is `corepack pnpm@9`. `just` and `psql` aren't installed (use `docker compose -f deploy/compose.dev.yaml exec postgres psql -U fa`). Dev DB: `postgres://fa:fa@127.0.0.1:55432/fa`.

@@ -1,0 +1,18 @@
+# Template for the GPU node agent (D-020). Install to /etc/systemd/system/fa-gpu-agent.service.
+# NOTE: the fa-gpu-agent binary is a stub until M4; this unit does nothing useful yet.
+# The agent runs natively (not in a container): it needs nvidia-smi, process visibility and `systemctl suspend`.
+[Unit]
+Description=Family Assistant GPU node agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Adjust to where you installed the release binary and the per-node token (issued at pairing).
+ExecStart=/usr/local/bin/fa-gpu-agent
+EnvironmentFile=-/etc/fa-gpu-agent.env
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

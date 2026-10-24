@@ -1,0 +1,26 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE notify_pref SET channel = $2, topic = $3, triggers = $4, version = version + 1\n             WHERE id = $1 AND version = $5 RETURNING version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "TextArray",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "f6da176afbb6ffad9fd53a631da97a2051faa7f5573f79045f0b0ade4fe20005"
+}

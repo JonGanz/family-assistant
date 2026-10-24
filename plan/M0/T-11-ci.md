@@ -5,7 +5,7 @@ milestone: M0
 wave: 2
 depends_on: [T-01, T-02]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: [".github/**", "scripts/check-example-data.sh", ".gitleaks.toml"]
 ---
 

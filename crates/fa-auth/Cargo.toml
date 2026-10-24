@@ -1,0 +1,32 @@
+[package]
+name = "fa-auth"
+description = "Family Assistant: auth"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+fa-domain.workspace = true
+fa-store.workspace = true
+argon2.workspace = true
+rand.workspace = true
+sha2.workspace = true
+base64.workspace = true
+subtle.workspace = true
+chrono.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+tokio.workspace = true
+tower-sessions.workspace = true
+async-trait.workspace = true
+
+[dev-dependencies]
+sqlx.workspace = true

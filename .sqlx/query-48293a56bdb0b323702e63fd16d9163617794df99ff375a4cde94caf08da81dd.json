@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE member SET pin_failed_attempts = 0, pin_locked_until = NULL WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "48293a56bdb0b323702e63fd16d9163617794df99ff375a4cde94caf08da81dd"
+}

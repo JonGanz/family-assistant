@@ -5,7 +5,7 @@ milestone: M0
 wave: 1
 depends_on: []
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/**"]
 ---
 

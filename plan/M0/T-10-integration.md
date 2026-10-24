@@ -5,7 +5,7 @@ milestone: M0
 wave: 6
 depends_on: [T-08, T-12]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["e2e/**", "scripts/**", "deploy/runbooks/restore.md (update only)"]
 ---
 
@@ -47,6 +47,7 @@ You are a sub-agent implementing one task of the M0 milestone of the Family Assi
 ## Ground rules (all M0 tasks)
 - Repo: `/home/jon/projects/family-assistant`. **First read** `CLAUDE.md`, `plan/M0.md` (especially the contracts), and the arch sections listed under *Read first*.
 - **Edit only the paths you own** (listed below). If you need a change somewhere else, don't make it: say so in your report.
+- Run `cargo fmt` before reporting (CI enforces `cargo fmt --check`).
 - Code style: idiomatic Rust 2024 edition, with `thiserror` in libraries, `anyhow` only in bins, no `unwrap()` outside tests, and `tracing` for logs. Keep comments sparse and useful.
 - Public AGPL repo (D-035): no real personal data. Fixtures use `example.com`.
 - Tools: pnpm is `corepack pnpm@9`. `just` and `psql` aren't installed (use `docker compose -f deploy/compose.dev.yaml exec postgres psql -U fa`). Dev DB: `postgres://fa:fa@127.0.0.1:55432/fa`.

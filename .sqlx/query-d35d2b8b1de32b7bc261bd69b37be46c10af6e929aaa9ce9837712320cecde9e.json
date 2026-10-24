@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE member SET archived_at = COALESCE(archived_at, now()), version = version + 1\n             WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d35d2b8b1de32b7bc261bd69b37be46c10af6e929aaa9ce9837712320cecde9e"
+}

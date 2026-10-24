@@ -5,7 +5,7 @@ milestone: M0
 wave: 3
 depends_on: [T-03]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-store/**", ".sqlx/ (root, sqlx offline data)"]
 ---
 

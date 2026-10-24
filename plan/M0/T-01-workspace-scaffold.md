@@ -5,7 +5,7 @@ milestone: M0
 wave: 1
 depends_on: []
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["Cargo.toml (root)", "rust-toolchain.toml", "deny.toml", ".cargo/", "justfile", ".gitignore", "crates/*/Cargo.toml + crates/*/src/lib.rs (stubs only)", "bins/*/ (stubs)", "deploy/compose.dev.yaml", ".env.dev", "config/examples/household.example.toml", ".editorconfig", "rustfmt.toml", "clippy.toml"]
 ---
 
@@ -53,7 +53,7 @@ You are a sub-agent implementing one task of the M0 milestone of the Family Assi
 ## Acceptance
 - [ ] `cargo check --workspace` and `cargo clippy --workspace -- -D warnings` pass
 - [ ] `cargo fmt --check` passes
-- [ ] `docker compose -f deploy/compose.dev.yaml up -d` brings up a healthy Postgres, and `SELECT extname FROM pg_available_extensions WHERE name='vector'` returns a row
+- [ ] `docker compose -f deploy/compose.dev.yaml up -d` brings up a healthy Postgres, and `SELECT name FROM pg_available_extensions WHERE name='vector'` returns a row
 - [ ] If `cargo-deny` is installable (`cargo install cargo-deny --locked`), `cargo deny check` passes; otherwise say so
 
 ## Ground rules (all M0 tasks)

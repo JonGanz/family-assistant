@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE notify_pref SET archived_at = COALESCE(archived_at, now()), version = version + 1 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "ddf7938be375118326280c0d4ce983c24494b46ed454bed07b6bbe65abdedc08"
+}

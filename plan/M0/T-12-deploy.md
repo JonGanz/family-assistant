@@ -5,7 +5,7 @@ milestone: M0
 wave: 2
 depends_on: [T-01, T-02]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["Dockerfile", ".dockerignore", "deploy/compose.example.yaml", "deploy/.env.example", "deploy/README.md", "deploy/systemd/**", "deploy/runbooks/**"]
 ---
 
@@ -34,7 +34,7 @@ You are a sub-agent implementing one task of the M0 milestone of the Family Assi
 
    Add a `.dockerignore`.
 2. **deploy/compose.example.yaml** with profiles, as in Platform.md §8:
-   - default: `postgres`, `api` (`serve api`, `127.0.0.1:8080:8080`), `worker` (`serve worker`), `ntfy` (`binwiper/ntfy`, `127.0.0.1:8090:80`, a cache volume), and `backup` (`prodrigestivill/postgres-backup-local`: daily schedule, `BACKUP_KEEP_DAYS=7`, `BACKUP_KEEP_WEEKS=4`, `BACKUP_KEEP_MONTHS=6`, `${BACKUP_DIR}` mounted);
+   - default: `postgres`, `api` (`serve api`, `127.0.0.1:8080:8080`), `worker` (`serve worker`), `ntfy` (`binwiederhier/ntfy`, `127.0.0.1:8090:80`, a cache volume), and `backup` (`prodrigestivill/postgres-backup-local`: daily schedule, `BACKUP_KEEP_DAYS=7`, `BACKUP_KEEP_WEEKS=4`, `BACKUP_KEEP_MONTHS=6`, `${BACKUP_DIR}` mounted);
    - `ai-cpu`: `s1-small` and `embed` as **commented, clearly marked placeholders** (M4);
    - `gpu`: `ollama` with the NVIDIA device reservation, and an `s1-large` placeholder.
 
