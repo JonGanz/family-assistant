@@ -19,7 +19,7 @@ test('login, members, pair a device, dashboard shows the heartbeat', async ({ pa
   await page.getByRole('button', { name: 'Pair a device' }).click()
   await expect(page.getByAltText('QR code for the pair URL')).toBeVisible()
   const pairUrl = (await page.getByTestId('pair-url').textContent())?.trim()
-  expect(pairUrl).toContain('/dashboard#device=')
+  expect(pairUrl).toContain('/dashboard?device=')
 
   // A separate browser context stands in for the kiosk screen (no user session).
   const kiosk = await browser.newContext()

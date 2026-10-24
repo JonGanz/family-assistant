@@ -7,11 +7,11 @@ describe('captureDeviceToken', () => {
     history.replaceState(null, '', '/dashboard')
   })
 
-  it('moves the token from the hash into localStorage and clears the hash', () => {
-    history.replaceState(null, '', '/dashboard#device=abc123')
+  it('moves the token from the query string into localStorage and strips it from the URL', () => {
+    history.replaceState(null, '', '/dashboard?device=abc123&x=1')
     expect(captureDeviceToken()).toBe('abc123')
     expect(localStorage.getItem('fa.deviceToken')).toBe('abc123')
-    expect(location.hash).toBe('')
+    expect(location.search).toBe('?x=1')
     expect(location.pathname).toBe('/dashboard')
     expect(getDeviceToken()).toBe('abc123')
   })
@@ -22,7 +22,7 @@ describe('captureDeviceToken', () => {
   })
 
   it('survives unavailable storage', () => {
-    history.replaceState(null, '', '/dashboard#device=zzz')
+    history.replaceState(null, '', '/dashboard?device=zzz')
     const orig = Storage.prototype.setItem
     Storage.prototype.setItem = () => {
       throw new Error('denied')

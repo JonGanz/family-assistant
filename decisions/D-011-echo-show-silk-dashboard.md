@@ -9,6 +9,8 @@ superseded_by:
 affects: [arch/Overall.md, arch/Frontend.md (future)]
 ---
 
+> **Amended 2026-10-24 (user feedback):** the pairing link uses a query parameter (`/dashboard?device=…`) instead of the URL fragment. To compensate: the token is stripped from the URL on load, logs record only the path, and `Referrer-Policy: no-referrer` is sent. The dashboard also shows the mouse cursor (needed for non-touch screens).
+
 # D-011: Echo Show 15 dashboard via Silk browser with keep-alive; touch-enabled, no Alexa integration
 
 ## Context

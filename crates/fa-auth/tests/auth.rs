@@ -282,7 +282,7 @@ async fn device_pair_authenticate_revoke(pool: PgPool) {
         .unwrap();
     assert_eq!(
         paired.pair_url,
-        format!("https://home.example.com/dashboard#device={}", paired.token)
+        format!("https://home.example.com/dashboard?device={}", paired.token)
     );
     assert_eq!(paired.token.len(), 43); // 32 bytes, base64url, no padding
     assert_ne!(paired.device.token_hash, paired.token);

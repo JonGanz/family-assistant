@@ -256,7 +256,7 @@ pub async fn device(
             println!("device id: {id}");
             println!("token:     {token}");
             println!(
-                "pair url:  {}/dashboard#device={token}",
+                "pair url:  {}/dashboard?device={token}",
                 public_base_url.trim_end_matches('/')
             );
             println!("The token is shown once.");

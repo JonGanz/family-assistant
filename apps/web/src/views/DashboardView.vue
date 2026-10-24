@@ -92,7 +92,7 @@ const mmss = computed(
 <template>
   <section v-if="!hasToken" class="pair">
     <h1>Pair this screen</h1>
-    <p>Ask an adult to open Settings → Devices.</p>
+    <p>Ask an adult to open <strong>Devices</strong> and pair this screen.</p>
   </section>
 
   <section v-else class="dashboard">

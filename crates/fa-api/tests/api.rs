@@ -462,7 +462,7 @@ async fn device_pairing_and_pin_lockout(pool: PgPool) {
         paired.json()["pair_url"]
             .as_str()
             .unwrap()
-            .contains("#device=")
+            .contains("/dashboard?device=")
     );
     let bearer = format!("Bearer {token}");
     let dev = [("authorization", bearer.as_str())];

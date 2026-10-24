@@ -8,6 +8,5 @@
   height: 100vh;
   overflow: hidden;
   font-size: var(--kiosk-font-base);
-  cursor: none;
 }
 </style>

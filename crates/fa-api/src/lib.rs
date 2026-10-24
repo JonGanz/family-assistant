@@ -183,6 +183,11 @@ async fn request_id(mut req: Request, next: Next) -> Response {
     };
     let mut res = next.run(req).await;
     res.headers_mut().insert(name, value);
+    // The dashboard pairing URL carries a device token in its query string; never leak URLs.
+    res.headers_mut().insert(
+        axum::http::header::REFERRER_POLICY,
+        HeaderValue::from_static("no-referrer"),
+    );
     res
 }
 

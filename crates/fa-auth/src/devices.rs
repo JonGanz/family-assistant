@@ -62,7 +62,7 @@ impl AuthService {
         tx.commit().await?;
         let base = self.cfg.public_base_url.trim_end_matches('/');
         Ok(PairedDevice {
-            pair_url: format!("{base}/dashboard#device={token}"),
+            pair_url: format!("{base}/dashboard?device={token}"),
             device: stored,
             token,
         })

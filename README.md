@@ -62,8 +62,8 @@ cargo run -p fa-server -- serve all
 ```
 Open <http://localhost:8080> and log in.
 
-To try the **dashboard**, go to *Settings → Devices*, pair a device, and open the pairing link (or
-scan the QR code). It opens `/dashboard#device=…`. *Try elevation* there exercises the adult-PIN
+To try the **dashboard**, open *Devices*, pair a device, and open the pairing link (or scan the QR
+code). It opens `/dashboard?device=…`. The page saves the token and removes it from the address bar. *Try elevation* there exercises the adult-PIN
 flow.
 
 ## Day-to-day development
