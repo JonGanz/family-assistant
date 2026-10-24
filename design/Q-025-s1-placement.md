@@ -27,4 +27,4 @@ The eval harness (D-024) will measure this on your email. Which shape should we 
 
 ## Answer
 <!-- answer below this line -->
-
+Make it flexible based on what is available to the user. Initial hardware is defined, but could be upgraded or someone else may have better.

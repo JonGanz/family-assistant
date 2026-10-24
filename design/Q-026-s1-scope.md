@@ -29,4 +29,4 @@ Which should we include? Deterministic rules still run first for each one.
 
 ## Answer
 <!-- answer below this line -->
-
+Option A

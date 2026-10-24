@@ -22,4 +22,4 @@ System One models don't learn from your corrections unless they are fine-tuned, 
 
 ## Answer
 <!-- answer below this line -->
-
+option A, and we should consider being able to fully configure the pipeline of decision making via a settings UI.
