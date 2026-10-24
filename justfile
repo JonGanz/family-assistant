@@ -8,7 +8,7 @@ dev-db:
     {{compose}} up -d --wait postgres
 
 # Dev DB, api/worker with auto-reload, and the Vite dev server
-dev: dev-db
+dev: dev-db dev-key
     #!/usr/bin/env bash
     set -euo pipefail
     trap 'kill 0' EXIT
@@ -26,9 +26,25 @@ lint:
     cargo deny check
     cd apps/web && corepack pnpm@9 lint
 
-# Regenerate TS types (ts-rs) and the OpenAPI client
-gen:
-    @echo "TODO: wired up by the api and web tasks"
+# Create the local dev master key (.dev/master.key)
+dev-key:
+    scripts/dev-key.sh
 
+# Build the web app and run api + worker on http://localhost:8080
+serve: dev-db dev-key
+    cd apps/web && corepack pnpm@9 install && corepack pnpm@9 run build
+    cargo run -p fa-server -- serve all
+
+# Regenerate TS types (ts-rs), the OpenAPI document and the typed web client
+gen:
+    cargo test -q -p fa-domain
+    cargo run -q -p fa-server -- gen-openapi --out apps/web/src/gen/openapi.json
+    cd apps/web && corepack pnpm@9 run gen
+
+# Same checks as CI, against a fresh throwaway Postgres
+ci:
+    scripts/ci-local.sh
+
+# Browser smoke tests (throwaway Postgres + serve all + Playwright)
 e2e:
-    @echo "TODO: Playwright against compose, wired up later in M0"
+    scripts/e2e.sh

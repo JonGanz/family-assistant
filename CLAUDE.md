@@ -63,6 +63,17 @@ Only answers to questions (and ideas the user puts inside answers) become `D-NNN
 ## Git
 The user commits. Their commit messages use `->` for the user's input and `<-` for Claude's output. Don't commit unless asked. Use `git mv` for moves so history is kept.
 
+## README (user-facing, keep current)
+`README.md` is the entry point for people using or contributing to the project. **Update it in the same change** whenever any of these change:
+- setup steps or prerequisites;
+- commands (CLI, scripts, `justfile` recipes);
+- environment variables or ports;
+- the repository layout;
+- the deployment story;
+- milestone status (the Roadmap table).
+
+Every milestone's definition of done includes "README updated and its steps verified by actually running them". Sub-agent briefs that add commands or setup must either update the README (if they own it) or report the README changes needed.
+
 ## Tooling
 - `tools/drawio.py`: the diagram generator.
 - `tools/fa.py`: design-workflow helpers for questions, decisions, indexes, and asserted edits. Use them instead of ad-hoc scripts.
