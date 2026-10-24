@@ -26,4 +26,4 @@ Today's rules (D-006) say a child sees only their own items and the dashboard sh
 
 ## Answer
 <!-- answer below this line -->
-
+For now let's show everything but show private for adults as busy.
