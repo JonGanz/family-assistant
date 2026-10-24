@@ -6,6 +6,7 @@
 name = "The Example Family"
 tz = "America/New_York"
 location = { label = "Springfield (fictional)", lat = 40.0, lon = -75.0 }
+units = "metric"
 
 [[members]]
 key = "alex"
@@ -43,3 +44,29 @@ birthdate = "2022-02-18"
 interests = ["trucks", "music"]
 hobbies = []
 responsibilities = ["tidy toys"]
+
+# Secrets are never stored in this file. A source imported from here starts disabled with
+# state "needs_reauth"; add the ICS URL (e.g. https://calendar.example.com/school.ics),
+# CalDAV password or Google account in Settings, then enable it.
+[[calendar_sources]]
+key = "school"
+kind = "ics"
+name = "School calendar"
+owner = "alex"
+poll_minutes = 60
+enabled = false
+
+[[calendar_sources.calendars]]
+remote_id = "ics"
+name = "School"
+enabled = false
+color = "#4c8bf5"
+members = ["riley"]
+
+[[weather_rules]]
+name = "Cold morning coats"
+condition = "min(temp_c, tonight) < 2"
+action = "alert"
+severity = "info"
+message = "Frosty start: coats and hats for school."
+status = "active"

@@ -15,6 +15,7 @@ workspace = true
 fa-domain.workspace = true
 fa-store.workspace = true
 figment.workspace = true
+sqlx.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 toml.workspace = true
@@ -23,8 +24,8 @@ chrono-tz.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 uuid.workspace = true
+url = { workspace = true, features = ["serde"] }
 
 [dev-dependencies]
 tokio.workspace = true
-sqlx.workspace = true
 insta = { workspace = true, features = ["toml"] }

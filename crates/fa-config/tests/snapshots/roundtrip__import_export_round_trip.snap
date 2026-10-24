@@ -1,12 +1,17 @@
 ---
 source: crates/fa-config/tests/roundtrip.rs
-expression: out.to_toml().unwrap()
+expression: first
 ---
 schema_version = 1
 
 [household]
 name = "The Example Family"
 tz = "America/New_York"
+units = "metric"
+calendar_past_days = 30
+calendar_future_days = 400
+weather_retention_days = 7
+private_events_as_busy = true
 
 [household.location]
 label = "Springfield (fictional)"
@@ -70,3 +75,27 @@ interests = [
 ]
 hobbies = []
 responsibilities = ["tidy toys"]
+
+# ICS URL is not exported: paste it again in Settings.
+[[calendar_sources]]
+key = "school-calendar"
+kind = "ics"
+name = "School calendar"
+owner = "alex"
+poll_minutes = 60
+enabled = false
+
+[[calendar_sources.calendars]]
+remote_id = "ics"
+name = "School"
+enabled = false
+color = "#4c8bf5"
+members = ["riley"]
+
+[[weather_rules]]
+name = "Cold morning coats"
+condition = "min(temp_c, tonight) < 2"
+action = "alert"
+severity = "info"
+message = "Frosty start: coats and hats for school."
+status = "active"

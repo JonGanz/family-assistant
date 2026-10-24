@@ -5,7 +5,7 @@ milestone: M1
 wave: 1
 depends_on: []
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-connectors/**"]
 ---
 
@@ -31,7 +31,7 @@ This is a **leaf crate**: no `fa-*` dependencies and no DB. It returns neutral D
 
    Errors are a `ConnectorError` enum: `Unauthorized` (401, or Google `invalid_grant`), `Gone` (410), `NotModified`, `TooLarge`, `Http(status)`, `Parse`, `Network`, `InsecureUrl`. Logs never contain query strings or credentials, only the host.
 2. **`google`:**
-   - **`oauth`:** `authorize_url(client, redirect, scopes, state, pkce_challenge)` (S256, `access_type=offline`, `prompt=consent`), `exchange_code(...) -> TokenSet{access, refresh, expires_at, scopes, id_token_email}`, `refresh(refresh_token) -> TokenSet`. Use the `oauth2` crate. Token and auth endpoints are configurable (defaults `https://oauth2.googleapis.com/token`, `https://accounts.google.com/o/oauth2/v2/auth`).
+   - **`oauth`:** `authorize_url(client, redirect, scopes, state, pkce_challenge)` (S256, `access_type=offline`, `prompt=consent`), `exchange_code(...) -> TokenSet{access, refresh, expires_at, scopes, id_token_email}`, `refresh(refresh_token) -> TokenSet`. Use the `oauth2` crate, which is pre-declared with `default-features = false` so it doesn't pull in a second reqwest. Drive its HTTP through our `reqwest 0.13` client (implement its async HTTP client hook), or hand-roll the two form POSTs with reqwest if that is simpler. Token and auth endpoints are configurable (defaults `https://oauth2.googleapis.com/token`, `https://accounts.google.com/o/oauth2/v2/auth`).
    - **`calendar`:**
      - `list_calendars(access) -> Vec<RemoteCalendar{remote_id, name, color?}>` (`GET /calendar/v3/users/me/calendarList`, paginated).
      - `list_events(access, cal_id, Window | SyncToken) -> EventPage{items, next_sync_token}`, with `singleEvents=true`, `timeMin`/`timeMax` on a full sync, and `syncToken` on an incremental one. Follow `pageToken`.

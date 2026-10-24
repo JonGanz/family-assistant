@@ -5,7 +5,7 @@ milestone: M1
 wave: 3
 depends_on: [T-02, T-04]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-weather/**"]
 ---
 
@@ -75,6 +75,17 @@ You are a sub-agent implementing one task of the M1 milestone of the Family Assi
 - [ ] `cargo clippy -p fa-weather --all-targets -- -D warnings` passes
 - [ ] `cargo fmt --check` is clean
 - [ ] New store queries needed → listed in your report (no SQL in this crate)
+
+## Wave 1 outcomes (read before starting)
+- **fa-connectors (T-02):** `openmeteo::forecast(...)` returns a `Forecast` with the raw `current`/`hourly`/`daily` JSON (store these), plus `timezone` and `utc_offset_seconds`. Accessors: `current_f64`, `hourly_series(field)` (UTC datetimes), `daily_series(field)` (`NaiveDate`), and `daily_times("sunrise"|"sunset")`. The request pins 48 hourly hours, 7 days, and metric units.
+- fa-domain (T-01) is done. Read its weather enums and DTOs in `crates/fa-domain/src` (`feeds.rs`, `api.rs`).
+
+## Wave 2 outcomes (fa-store, read before starting)
+- Read the real signatures in `crates/fa-store/src/repo/*.rs` and `src/change.rs`. Don't assume them from the brief.
+- **Transactions:** `WeatherSnapshotRepo::insert`, `WeatherRuleRepo::ensure_default`, and `AdvisoryRepo::upsert_by_dedupe` take the household from the transaction, so they must run in `tx_for`. `CalendarSourceRepo::due()` returns `(HouseholdId, CalendarSourceId)` pairs and must run in `tx_system`.
+- `ChangeBus::publish` rejects payloads over 1 KB (`StoreError::PayloadTooLarge`). Exports: `fa_store::{CHANNEL, ChangeMessage}`.
+- **If a repo method you need is missing:** add it in a **new file** `crates/fa-store/src/repo/ext_<your task id>.rs` (plus a one-line `mod`/`pub use` in `repo/mod.rs`), using the dev DB (migrated) for the sqlx macros. **Don't run `cargo sqlx prepare`**; the main session does that after the wave. List every such addition in your report. Don't edit other fa-store files.
+- `AdvisoryRepo::active` orders by severity. `WeatherRuleRepo::update(conn, &WeatherRule, version)` takes the whole rule.
 
 ## Ground rules (all M1 tasks)
 - Repo: `/home/jon/projects/family-assistant`. **First read** `CLAUDE.md`, `plan/M1.md` (especially *Contracts fixed up front*), and the arch sections listed under *Read first*. The contracts in `plan/M1.md` are the source of truth. If one is wrong or missing, don't invent a new one: work around it minimally and report it.

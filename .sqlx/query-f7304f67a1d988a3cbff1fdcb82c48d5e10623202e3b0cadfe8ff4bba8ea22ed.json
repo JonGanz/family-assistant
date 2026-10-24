@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE calendar_source SET state = $2, last_error = $3,\n                    last_synced_at = COALESCE($4, last_synced_at), version = version + 1\n             WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f7304f67a1d988a3cbff1fdcb82c48d5e10623202e3b0cadfe8ff4bba8ea22ed"
+}

@@ -1,0 +1,19 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO weather_rule (id, household_id, name, condition, action, severity, message,\n                                       status, suggested_by)\n             SELECT $1, app_household(), $2, $3, $4, $5, $6, 'active', 'default'\n             WHERE app_household() IS NOT NULL\n               AND NOT EXISTS (SELECT 1 FROM weather_rule WHERE name = $2 AND suggested_by = 'default')",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "014dc8293c11311c2906594969b0f5c130e1b590bea91383125be0279f131cee"
+}

@@ -200,6 +200,28 @@ impl MemberRepo {
         }
     }
 
+    /// Reverses [`Self::archive`]. Idempotent.
+    pub async fn unarchive(conn: &mut PgConnection, id: MemberId) -> Result<()> {
+        let n = sqlx::query!(
+            "UPDATE member SET archived_at = NULL, version = version + 1 WHERE id = $1",
+            id.as_uuid()
+        )
+        .execute(conn)
+        .await?
+        .rows_affected();
+        if n == 0 {
+            Err(StoreError::NotFound)
+        } else {
+            Ok(())
+        }
+    }
+
+    pub async fn list_including_archived(
+        conn: &mut PgConnection,
+    ) -> Result<Vec<Versioned<Member>>> {
+        Self::list(conn, true).await
+    }
+
     /// Sets (or clears) the PIN hash and resets the lockout counters.
     pub async fn set_pin_hash(
         conn: &mut PgConnection,

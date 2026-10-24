@@ -1,0 +1,30 @@
+[package]
+name = "fa-weather"
+description = "Family Assistant: weather and rules"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+fa-domain.workspace = true
+fa-store.workspace = true
+fa-jobs.workspace = true
+fa-connectors.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sqlx.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true
+wiremock.workspace = true

@@ -71,6 +71,41 @@ You are a sub-agent implementing one task of the M1 milestone (Dashboard core) o
 - [ ] Manual check: run `serve api` and `serve worker` as **separate processes** against the dev DB. `fa-server weather fetch` (with `FA_OPEN_METEO_URL` pointing at a local stub or the real API) leads to a `weather.updated` event on `curl -N /api/v1/stream` with a device token
 - [ ] `scripts/ci-local.sh` passes
 
+## Wave 1 outcomes (read before starting)
+- fa-domain DTOs derive `ToSchema`. The M0 DTOs keep their `*Dto` names, with `MemberPublic`/`MemberFull` as aliases and `MemberView` untagged. Replace `crates/fa-api/src/schemas.rs` with the real types. `From<&Member>` leaves `avatar_url: None`, and you fill it in.
+
+## Wave 2 outcomes (fa-store, read before starting)
+- Read the real signatures in `crates/fa-store/src/repo/*.rs` and `src/change.rs`. Don't assume them from the brief.
+- **Transactions:** `WeatherSnapshotRepo::insert`, `WeatherRuleRepo::ensure_default`, and `AdvisoryRepo::upsert_by_dedupe` take the household from the transaction, so they must run in `tx_for`. `CalendarSourceRepo::due()` returns `(HouseholdId, CalendarSourceId)` pairs and must run in `tx_system`.
+- `ChangeBus::publish` rejects payloads over 1 KB (`StoreError::PayloadTooLarge`). Exports: `fa_store::{CHANNEL, ChangeMessage}`.
+- **If a repo method you need is missing:** add it in a **new file** `crates/fa-store/src/repo/ext_<your task id>.rs` (plus a one-line `mod`/`pub use` in `repo/mod.rs`), using the dev DB (migrated) for the sqlx macros. **Don't run `cargo sqlx prepare`**; the main session does that after the wave. List every such addition in your report. Don't edit other fa-store files.
+- `JobRepo::counts` → `JobCounts{ready, running, dead}` for `StatusView`. `DeviceRepo::get_settings` and `set_settings`, `MemberAvatarRepo::{put, get, hashes, delete}` (`hashes` fills `avatar_url`).
+
+## Wave 3 outcomes (read before starting)
+- **fa-auth (T-07):**
+  - Build `OAuthService::new(store, MasterKey, Option<GoogleOAuth>, public_url, Http)` from **fa-config process config**. Don't use `OAuthService::from_env`, which reads env vars directly against the injection rule. Delete it if nothing else uses it.
+  - `enabled()` feeds `HouseholdView.google_oauth_enabled`.
+  - `start(actor, session_id, return_to)` and `callback(actor, session_id, code, state) -> (OAuthAccountId, Option<return_to>)` need the **session id from the cookie**. Map `AuthError::InvalidState`/`OAuth` to a redirect to `/oauth/done?error=…`, `NotConfigured` to 404, and `NeedsReauth` to 409.
+  - Register `fa_auth::handlers()` (a free fn) and `fa_auth::default_schedules()`.
+  - **fa-server `ops.rs`:** replace the CLI's own device-pairing, token-hash, and account create/reset code with `DeviceService::new(store, public_base_url).pair_system(...)` and `AccountService::new(store).{create_account, reset_password}` (which accept `Actor::System`). Drop the duplicated password validation.
+
+- **fa-config (T-08):**
+  - The process config has `google_client_id`, `google_client_secret` (`SecretString`), `public_url`, `open_meteo_url`, and `allow_http_feeds`, already validated.
+  - `config import` must validate `[[weather_rules]]` conditions with fa-weather's parser **before** calling fa-config's import, then call `ensure_default_rules`. Print the new `ImportReport` `sources_*`/`rules_*` lists.
+  - Imported sources come in disabled with `needs_reauth`, and an ICS calendar has `remote_id = "ics"`.
+
+- **fa-weather (T-06):**
+  - `WeatherService::new(store, WeatherConfig{open_meteo_url, allow_http})`. `handlers(WeatherConfig)` returns a `Result`. `default_schedules()` and `ensure_default_rules(&mut conn)` run in `tx_for`.
+  - `validate(household, condition, message?)` returns `Validation{ok, error?: ParseError{position, message}, preview?}`: map it to the `/weather-rules/validate` response, and to 422 on create or update.
+  - `latest_view(household)` gives `WeatherView` with **column-oriented** `hourly`/`daily` (Open-Meteo field names, 48 h / 7 days).
+
+- **fa-calendar (T-05):**
+  - `CalendarService::new(...)`, where the service methods take `household` first: `test_source` (never errors, returns `SourceTestResult`), `create_source`, `update_source`, `archive_source`, `enqueue_sync`, `update_calendar`, `list_sources`, `list_calendars`, and `events(household, viewer, flags, from, to, member)`.
+  - Map `CalendarError::Unauthorized` to 422, with a "credentials rejected" message.
+  - Register `fa_calendar::handlers(Arc<CalendarService>)` and `default_schedules()`. The `calendar.sync` payload is `{household, source}`.
+  - `EventView.external_url` is always `None` for now (main-session follow-up).
+- **`AuthError` mapping:** the main session added an interim mapping in `crates/fa-api/src/error.rs` (`NotConfigured`→404, `NeedsReauth`→409, `InvalidState`/`OAuth`→422). Replace it with the redirect behaviour above.
+
 ## Ground rules (all M1 tasks)
 - Repo: `/home/jon/projects/family-assistant`. **First read** `CLAUDE.md`, `plan/M1.md` (especially *Contracts fixed up front*), and the arch sections listed under *Read first*. The contracts in `plan/M1.md` are the source of truth. If one is wrong or missing, don't invent a new one: report it.
 - **Edit only the paths you own.** If you need a change somewhere else, don't make it: say so in your report.

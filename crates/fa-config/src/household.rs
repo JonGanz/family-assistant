@@ -1,14 +1,28 @@
 use std::collections::HashSet;
 
 use chrono::{NaiveDate, Utc};
+use fa_domain::Role;
 use fa_domain::{
-    AuditEntry, AuditEntryId, Household, HouseholdId, Location, Member, MemberId, Role,
+    AuditEntry, AuditEntryId, Household, HouseholdId, Location, Member, MemberId, RuleAction,
+    RuleStatus, Severity, SourceKind, Units,
 };
 use fa_store::{AuditRepo, HouseholdRepo, MemberRepo, Store, StoreError};
 use serde::{Deserialize, Serialize};
 
 pub const SCHEMA_VERSION: u32 = 1;
-pub const SUPPORTED_SECTIONS: &[&str] = &["schema_version", "household", "members"];
+pub const SUPPORTED_SECTIONS: &[&str] = &[
+    "schema_version",
+    "household",
+    "members",
+    "calendar_sources",
+    "weather_rules",
+];
+
+pub const DEFAULT_UNITS: Units = Units::Metric;
+pub const DEFAULT_CALENDAR_PAST_DAYS: i32 = 30;
+pub const DEFAULT_CALENDAR_FUTURE_DAYS: i32 = 400;
+pub const DEFAULT_WEATHER_RETENTION_DAYS: i32 = 7;
+pub const DEFAULT_PRIVATE_EVENTS_AS_BUSY: bool = true;
 
 fn default_schema_version() -> u32 {
     SCHEMA_VERSION
@@ -22,6 +36,10 @@ pub struct HouseholdConfig {
     pub household: HouseholdSection,
     #[serde(default)]
     pub members: Vec<MemberConfig>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub calendar_sources: Vec<CalendarSourceConfig>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub weather_rules: Vec<WeatherRuleConfig>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -31,6 +49,16 @@ pub struct HouseholdSection {
     pub tz: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub location: Option<LocationConfig>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub units: Option<Units>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub calendar_past_days: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub calendar_future_days: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub weather_retention_days: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub private_events_as_busy: Option<bool>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -62,6 +90,63 @@ pub struct MemberConfig {
     pub hobbies: Vec<String>,
     #[serde(default)]
     pub responsibilities: Vec<String>,
+}
+
+/// A calendar account. Secrets are never part of the file: Google needs reconnecting, a CalDAV
+/// password and an ICS URL must be entered again in the UI.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CalendarSourceConfig {
+    /// File-local identifier (used in error messages). Sources are matched by `kind` and `name`.
+    pub key: String,
+    pub kind: SourceKind,
+    pub name: String,
+    /// Member key; absent means a household source.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub owner: Option<String>,
+    /// CalDAV base URL. Accepted but ignored for ICS (the URL is a secret, enter it in the UI).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub url: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub username: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub poll_minutes: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub calendars: Vec<CalendarConfig>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct CalendarConfig {
+    pub remote_id: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    #[serde(default)]
+    pub enabled: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color: Option<String>,
+    /// Member keys. Empty means a household calendar.
+    #[serde(default)]
+    pub members: Vec<String>,
+}
+
+fn default_rule_status() -> RuleStatus {
+    RuleStatus::Active
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct WeatherRuleConfig {
+    pub name: String,
+    /// Weather-rule DSL; validated by `fa-server config import`, stored as given.
+    pub condition: String,
+    pub action: RuleAction,
+    pub severity: Severity,
+    pub message: String,
+    #[serde(default = "default_rule_status")]
+    pub status: RuleStatus,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -108,6 +193,12 @@ pub struct ImportReport {
     pub members_updated: Vec<String>,
     pub members_unchanged: Vec<String>,
     pub members_archived: Vec<String>,
+    pub sources_created: Vec<String>,
+    pub sources_updated: Vec<String>,
+    pub sources_unchanged: Vec<String>,
+    pub rules_created: Vec<String>,
+    pub rules_updated: Vec<String>,
+    pub rules_unchanged: Vec<String>,
 }
 
 impl HouseholdConfig {
@@ -125,15 +216,21 @@ impl HouseholdConfig {
             });
         }
         let cfg: Self = toml::from_str(s)?;
-        cfg.validate()?;
+        cfg.validate_with_source(Some(s))?;
         Ok(cfg)
     }
 
     pub fn to_toml(&self) -> Result<String, HouseholdTomlError> {
-        Ok(toml::to_string_pretty(self)?)
+        let out = toml::to_string_pretty(self)?;
+        Ok(crate::feeds::annotate_sources(&out, &self.calendar_sources))
     }
 
     pub fn validate(&self) -> Result<(), HouseholdTomlError> {
+        self.validate_with_source(None)
+    }
+
+    /// With the file text, unknown member keys are reported with their line number.
+    fn validate_with_source(&self, src: Option<&str>) -> Result<(), HouseholdTomlError> {
         if self.schema_version != SCHEMA_VERSION {
             return Err(HouseholdTomlError::SchemaVersion(self.schema_version));
         }
@@ -151,6 +248,22 @@ impl HouseholdConfig {
             && !((-90.0..=90.0).contains(&l.lat) && (-180.0..=180.0).contains(&l.lon))
         {
             errs.push("household.location lat/lon out of range".to_string());
+        }
+        let h = &self.household;
+        if let Some(d) = h.calendar_past_days
+            && !(0..=3650).contains(&d)
+        {
+            errs.push("household.calendar_past_days must be 0-3650".to_string());
+        }
+        if let Some(d) = h.calendar_future_days
+            && !(1..=3650).contains(&d)
+        {
+            errs.push("household.calendar_future_days must be 1-3650".to_string());
+        }
+        if let Some(d) = h.weather_retention_days
+            && !(1..=365).contains(&d)
+        {
+            errs.push("household.weather_retention_days must be 1-365".to_string());
         }
         let mut seen = HashSet::new();
         for m in &self.members {
@@ -175,6 +288,7 @@ impl HouseholdConfig {
                 ));
             }
         }
+        crate::feeds::validate_feeds(self, src, &mut errs);
         if errs.is_empty() {
             Ok(())
         } else {
@@ -228,6 +342,7 @@ pub async fn import(
 ) -> Result<ImportReport, ImportError> {
     cfg.validate()?;
     let hid = household_id.unwrap_or_default();
+    let sec = &cfg.household;
     let location = cfg.household.location.as_ref().map(|l| Location {
         lat: l.lat,
         lon: l.lon,
@@ -242,6 +357,12 @@ pub async fn import(
         members_updated: vec![],
         members_unchanged: vec![],
         members_archived: vec![],
+        sources_created: vec![],
+        sources_updated: vec![],
+        sources_unchanged: vec![],
+        rules_created: vec![],
+        rules_updated: vec![],
+        rules_unchanged: vec![],
     };
 
     match HouseholdRepo::get(&mut tx, hid).await? {
@@ -256,6 +377,19 @@ pub async fn import(
                     location,
                     meal_plan_horizon_weeks: 2,
                     dashboard_completion_override: false,
+                    units: sec.units.unwrap_or(DEFAULT_UNITS),
+                    calendar_past_days: sec
+                        .calendar_past_days
+                        .unwrap_or(DEFAULT_CALENDAR_PAST_DAYS),
+                    calendar_future_days: sec
+                        .calendar_future_days
+                        .unwrap_or(DEFAULT_CALENDAR_FUTURE_DAYS),
+                    weather_retention_days: sec
+                        .weather_retention_days
+                        .unwrap_or(DEFAULT_WEATHER_RETENTION_DAYS),
+                    private_events_as_busy: sec
+                        .private_events_as_busy
+                        .unwrap_or(DEFAULT_PRIVATE_EVENTS_AS_BUSY),
                     created_at: now,
                     updated_at: now,
                 },
@@ -265,12 +399,34 @@ pub async fn import(
         }
         Some(v) => {
             let mut h = v.value;
-            let changed =
-                h.name != cfg.household.name || h.tz != cfg.household.tz || h.location != location;
+            let before = h.clone();
+            h.name = sec.name.clone();
+            h.tz = sec.tz.clone();
+            h.location = location;
+            if let Some(u) = sec.units {
+                h.units = u;
+            }
+            if let Some(d) = sec.calendar_past_days {
+                h.calendar_past_days = d;
+            }
+            if let Some(d) = sec.calendar_future_days {
+                h.calendar_future_days = d;
+            }
+            if let Some(d) = sec.weather_retention_days {
+                h.weather_retention_days = d;
+            }
+            if let Some(b) = sec.private_events_as_busy {
+                h.private_events_as_busy = b;
+            }
+            let changed = h.name != before.name
+                || h.tz != before.tz
+                || h.location != before.location
+                || h.units != before.units
+                || h.calendar_past_days != before.calendar_past_days
+                || h.calendar_future_days != before.calendar_future_days
+                || h.weather_retention_days != before.weather_retention_days
+                || h.private_events_as_busy != before.private_events_as_busy;
             if changed {
-                h.name = cfg.household.name.clone();
-                h.tz = cfg.household.tz.clone();
-                h.location = location;
                 HouseholdRepo::update(&mut tx, &h, v.version).await?;
                 report.household_updated = true;
             }
@@ -281,8 +437,19 @@ pub async fn import(
         match MemberRepo::get_by_config_key(&mut tx, hid, &c.key).await? {
             Some(v) => {
                 let mut m = v.value;
+                let was_archived = m.archived_at.is_some();
+                if was_archived {
+                    MemberRepo::unarchive(&mut tx, m.id).await?;
+                }
+                let v_version = if was_archived {
+                    v.version + 1
+                } else {
+                    v.version
+                };
                 if apply(&mut m, c) {
-                    MemberRepo::update(&mut tx, &m, v.version).await?;
+                    MemberRepo::update(&mut tx, &m, v_version).await?;
+                    report.members_updated.push(c.key.clone());
+                } else if was_archived {
                     report.members_updated.push(c.key.clone());
                 } else {
                     report.members_unchanged.push(c.key.clone());
@@ -328,6 +495,8 @@ pub async fn import(
             }
         }
     }
+
+    crate::feeds::import_feeds(&mut tx, hid, cfg, &mut report).await?;
 
     AuditRepo::insert(
         &mut tx,
@@ -397,6 +566,9 @@ pub async fn export(
         }
         members.push((key, m));
     }
+    let id_to_key: std::collections::HashMap<MemberId, String> =
+        members.iter().map(|(k, m)| (m.id, k.clone())).collect();
+    let (calendar_sources, weather_rules) = crate::feeds::export_feeds(&mut tx, &id_to_key).await?;
     tx.rollback().await?;
 
     Ok(HouseholdConfig {
@@ -409,6 +581,11 @@ pub async fn export(
                 lat: l.lat,
                 lon: l.lon,
             }),
+            units: Some(h.units),
+            calendar_past_days: Some(h.calendar_past_days),
+            calendar_future_days: Some(h.calendar_future_days),
+            weather_retention_days: Some(h.weather_retention_days),
+            private_events_as_busy: Some(h.private_events_as_busy),
         },
         members: members
             .into_iter()
@@ -425,5 +602,7 @@ pub async fn export(
                 responsibilities: m.responsibilities,
             })
             .collect(),
+        calendar_sources,
+        weather_rules,
     })
 }

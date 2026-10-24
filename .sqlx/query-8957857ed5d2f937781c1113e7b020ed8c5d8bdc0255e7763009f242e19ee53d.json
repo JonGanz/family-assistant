@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM event e\n             WHERE e.calendar_id = $1 AND e.origin = 'synced'\n               AND e.start_at < $3 AND e.end_at >= $2\n               AND NOT EXISTS (SELECT 1 FROM unnest($4::text[], $5::text[]) AS s(uid, ik)\n                               WHERE s.uid = e.remote_uid AND s.ik = e.instance_key)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz",
+        "TextArray",
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8957857ed5d2f937781c1113e7b020ed8c5d8bdc0255e7763009f242e19ee53d"
+}

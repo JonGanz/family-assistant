@@ -1,0 +1,56 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, household_id, fetched_at, provider, \"current\", hourly, daily\n               FROM weather_snapshot ORDER BY fetched_at DESC, id DESC LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "household_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "fetched_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 3,
+        "name": "provider",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "current",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 5,
+        "name": "hourly",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 6,
+        "name": "daily",
+        "type_info": "Jsonb"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "df17bfbcef3af5b8c93b71aab13c2c4f9981c098d595ade131daf73cefbdff71"
+}

@@ -24,6 +24,14 @@ pub enum AuthError {
     NotFound,
     #[error("storage error: {0}")]
     Store(#[from] StoreError),
+    #[error("Google sign-in is not configured")]
+    NotConfigured,
+    #[error("the account needs to be re-connected")]
+    NeedsReauth,
+    #[error("invalid or expired OAuth state")]
+    InvalidState,
+    #[error("oauth error: {0}")]
+    OAuth(String),
     #[error("internal error: {0}")]
     Internal(String),
 }

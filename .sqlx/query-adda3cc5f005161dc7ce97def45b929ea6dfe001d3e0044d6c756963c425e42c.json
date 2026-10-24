@@ -1,0 +1,94 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO oauth_account (id, household_id, provider, owner_member, email, scopes, secret_id)\n             VALUES ($1, $2, $3, $4, $5, $6, $7)\n             ON CONFLICT (household_id, provider, email) DO UPDATE SET\n                 owner_member = EXCLUDED.owner_member, scopes = EXCLUDED.scopes,\n                 secret_id = COALESCE(EXCLUDED.secret_id, oauth_account.secret_id),\n                 state = 'ok', last_error = NULL, version = oauth_account.version + 1\n             RETURNING id, household_id, provider, owner_member, email, scopes, secret_id, state,\n                       last_error, version, created_at, updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "household_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "provider",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "owner_member",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "email",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "scopes",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 6,
+        "name": "secret_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "state",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "last_error",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 11,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Uuid",
+        "Text",
+        "TextArray",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "adda3cc5f005161dc7ce97def45b929ea6dfe001d3e0044d6c756963c425e42c"
+}

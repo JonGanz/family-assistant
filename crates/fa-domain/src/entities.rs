@@ -7,7 +7,7 @@ use crate::ids::*;
 macro_rules! text_enum {
     ($(#[$m:meta])* $name:ident { $($var:ident),+ $(,)? }) => {
         $(#[$m])*
-        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type, TS)]
+        #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, sqlx::Type, TS, utoipa::ToSchema)]
         #[serde(rename_all = "snake_case")]
         #[sqlx(type_name = "text", rename_all = "snake_case")]
         #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
@@ -18,8 +18,47 @@ macro_rules! text_enum {
 text_enum!(Role { Adult, Child });
 text_enum!(DeviceKind { Dashboard });
 text_enum!(SecretKind { OauthToken, Other });
+text_enum!(Units { Metric, Imperial });
+text_enum!(SourceKind {
+    Google,
+    Caldav,
+    Ics
+});
+text_enum!(SourceState {
+    Ok,
+    NeedsReauth,
+    Error
+});
+text_enum!(
+    /// D-036: `Busy` hides title, location and description.
+    Visibility { Full, Busy }
+);
+text_enum!(EventOrigin {
+    Synced,
+    Extracted,
+    Manual
+});
+text_enum!(EventStatus {
+    Proposed,
+    Approved,
+    Written,
+    Rejected
+});
+text_enum!(RuleAction { Alert, Task });
+text_enum!(Severity {
+    Info,
+    Warning,
+    Severe
+});
+text_enum!(RuleStatus {
+    Active,
+    Suggested,
+    Disabled
+});
+text_enum!(SuggestedBy { Default, S2, User });
+text_enum!(AdvisorySource { Rule, S2 });
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, utoipa::ToSchema)]
 #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
 pub struct Location {
     pub lat: f64,
@@ -37,6 +76,11 @@ pub struct Household {
     pub location: Option<Location>,
     pub meal_plan_horizon_weeks: i32,
     pub dashboard_completion_override: bool,
+    pub units: Units,
+    pub calendar_past_days: i32,
+    pub calendar_future_days: i32,
+    pub weather_retention_days: i32,
+    pub private_events_as_busy: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -106,18 +150,18 @@ pub struct AuditEntry {
 }
 
 /// Provenance of a derived entity (shown as a "from" link in the UI).
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, utoipa::ToSchema)]
 #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
 pub struct SourceRef {
-    pub kind: SourceKind,
+    pub kind: RefKind,
     pub message_id: Option<String>,
     pub external_url: Option<String>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS, utoipa::ToSchema)]
 #[serde(rename_all = "snake_case")]
 #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
-pub enum SourceKind {
+pub enum RefKind {
     Email,
     Ics,
     Weather,
@@ -127,7 +171,7 @@ pub enum SourceKind {
 
 // ---- API DTOs (exported to TypeScript) ----
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, utoipa::ToSchema)]
 #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
 pub struct HouseholdDto {
     pub id: HouseholdId,
@@ -152,24 +196,27 @@ impl From<&Household> for HouseholdDto {
 }
 
 /// Public fields, visible to children and devices.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, utoipa::ToSchema)]
 #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
 pub struct MemberPublicDto {
     pub id: MemberId,
     pub display_name: String,
     pub role: Role,
     pub avatar: Option<String>,
+    /// `/api/v1/members/{id}/avatar?v=<sha256 prefix>`; set by the API layer.
+    pub avatar_url: Option<String>,
     pub color: Option<String>,
 }
 
 /// Full member view for adults. Never includes the PIN hash.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, utoipa::ToSchema)]
 #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
 pub struct MemberDto {
     pub id: MemberId,
     pub display_name: String,
     pub role: Role,
     pub avatar: Option<String>,
+    pub avatar_url: Option<String>,
     pub color: Option<String>,
     #[ts(type = "string | null")]
     pub birthdate: Option<NaiveDate>,
@@ -188,6 +235,7 @@ impl From<&Member> for MemberPublicDto {
             display_name: m.display_name.clone(),
             role: m.role,
             avatar: m.avatar.clone(),
+            avatar_url: None,
             color: m.color.clone(),
         }
     }
@@ -200,6 +248,7 @@ impl MemberDto {
             display_name: m.display_name.clone(),
             role: m.role,
             avatar: m.avatar.clone(),
+            avatar_url: None,
             color: m.color.clone(),
             birthdate: m.birthdate,
             grade: m.grade.clone(),
@@ -212,7 +261,7 @@ impl MemberDto {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, utoipa::ToSchema)]
 #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
 pub struct UserAccountDto {
     pub id: UserAccountId,
@@ -232,7 +281,7 @@ impl From<&UserAccount> for UserAccountDto {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, utoipa::ToSchema)]
 #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
 pub struct DeviceDto {
     pub id: DeviceId,
@@ -254,7 +303,7 @@ impl From<&Device> for DeviceDto {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, utoipa::ToSchema)]
 #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
 pub struct DeviceElevationDto {
     pub device_id: DeviceId,
@@ -272,7 +321,7 @@ impl From<&DeviceElevation> for DeviceElevationDto {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, utoipa::ToSchema)]
 #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
 pub struct AuditEntryDto {
     pub id: AuditEntryId,
@@ -297,3 +346,14 @@ impl From<&AuditEntry> for AuditEntryDto {
         }
     }
 }
+
+/// Either member view, as returned by the members API (untagged).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(untagged)]
+pub enum MemberView {
+    Full(MemberFull),
+    Public(MemberPublic),
+}
+
+pub type MemberPublic = MemberPublicDto;
+pub type MemberFull = MemberDto;

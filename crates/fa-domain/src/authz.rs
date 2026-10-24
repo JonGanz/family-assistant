@@ -46,10 +46,16 @@ pub enum Action {
     AddGroceryItem,
     ApproveEvent,
     GmailAction,
+    // M1
+    ManageCalendarSource,
+    ReadCalendar,
+    ManageWeatherRules,
+    DismissAdvisory,
+    ManageDeviceSettings,
 }
 
 impl Action {
-    pub const ALL: [Action; 17] = [
+    pub const ALL: [Action; 22] = [
         Action::ReadMemberPublic,
         Action::ReadMemberFull,
         Action::ManageMember,
@@ -67,6 +73,11 @@ impl Action {
         Action::AddGroceryItem,
         Action::ApproveEvent,
         Action::GmailAction,
+        Action::ManageCalendarSource,
+        Action::ReadCalendar,
+        Action::ManageWeatherRules,
+        Action::DismissAdvisory,
+        Action::ManageDeviceSettings,
     ];
 }
 
@@ -75,14 +86,28 @@ pub enum Resource {
     Member(MemberId, Role),
     Household,
     Device(DeviceId),
-    Session { owner: MemberId, owner_role: Role },
-    Task { assignee: Option<MemberId> },
+    Session {
+        owner: MemberId,
+        owner_role: Role,
+    },
+    Task {
+        assignee: Option<MemberId>,
+    },
     GroceryItem,
     Event,
-    MailSource { owner: MemberId },
+    MailSource {
+        owner: MemberId,
+    },
+    /// A calendar source. `owner: None` is a household source; `owner_role` is the owner's role.
+    Source {
+        owner: Option<MemberId>,
+        owner_role: Option<Role>,
+    },
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS, utoipa::ToSchema,
+)]
 #[serde(rename_all = "snake_case")]
 #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
 pub enum ListCompletionPolicy {
@@ -213,6 +238,18 @@ pub fn authorize(
             Resource::MailSource { owner } => allow(adult_member == Some(*owner)),
             _ => allow(adult_member.is_some()),
         },
+        Action::ManageCalendarSource => match (adult_user, resource) {
+            // Household sources, own and children's; never another adult's (D-006).
+            (Some(me), Resource::Source { owner, owner_role }) => match owner {
+                None => Ok(()),
+                Some(o) if *o == me => Ok(()),
+                Some(_) => allow(*owner_role == Some(Role::Child)),
+            },
+            _ => Err(Denied),
+        },
+        Action::ReadCalendar | Action::DismissAdvisory => allow(true),
+        // D-019: no settings on the dashboard, not even elevated.
+        Action::ManageWeatherRules | Action::ManageDeviceSettings => allow(adult_user.is_some()),
     }
 }
 
@@ -748,6 +785,69 @@ mod tests {
             ],
         );
 
+        let src = |owner, owner_role| Resource::Source { owner, owner_role };
+        let adult_only = [
+            (Adult, ALLOW),
+            (Child, DENY),
+            (Device, DENY),
+            (Elevated, DENY),
+            (System, ALLOW),
+        ];
+        t(Action::ManageCalendarSource, src(None, None), c, adult_only);
+        t(
+            Action::ManageCalendarSource,
+            src(Some(f.adult), Some(Role::Adult)),
+            c,
+            adult_only,
+        );
+        t(
+            Action::ManageCalendarSource,
+            src(Some(f.child), Some(Role::Child)),
+            c,
+            adult_only,
+        );
+        t(
+            Action::ManageCalendarSource,
+            src(Some(f.adult2), Some(Role::Adult)),
+            c,
+            [
+                (Adult, DENY),
+                (Child, DENY),
+                (Device, DENY),
+                (Elevated, DENY),
+                (System, ALLOW),
+            ],
+        );
+        t(
+            Action::ManageCalendarSource,
+            src(Some(f.adult2), None),
+            c,
+            [
+                (Adult, DENY),
+                (Child, DENY),
+                (Device, DENY),
+                (Elevated, DENY),
+                (System, ALLOW),
+            ],
+        );
+        for action in [Action::ReadCalendar, Action::DismissAdvisory] {
+            t(
+                action,
+                Resource::Household,
+                c,
+                [
+                    (Adult, ALLOW),
+                    (Child, ALLOW),
+                    (Device, ALLOW),
+                    (Elevated, ALLOW),
+                    (System, ALLOW),
+                ],
+            );
+        }
+        for action in [Action::ManageWeatherRules, Action::ManageDeviceSettings] {
+            t(action, Resource::Household, c, adult_only);
+        }
+
         let all: HashSet<Action> = Action::ALL.into_iter().collect();
         assert_eq!(covered, all, "every Action variant needs a policy test");
     }
@@ -773,9 +873,14 @@ mod tests {
                 | Action::CompleteTask
                 | Action::AddGroceryItem
                 | Action::ApproveEvent
-                | Action::GmailAction => {}
+                | Action::GmailAction
+                | Action::ManageCalendarSource
+                | Action::ReadCalendar
+                | Action::ManageWeatherRules
+                | Action::DismissAdvisory
+                | Action::ManageDeviceSettings => {}
             }
         }
-        assert_eq!(Action::ALL.iter().collect::<HashSet<_>>().len(), 17);
+        assert_eq!(Action::ALL.iter().collect::<HashSet<_>>().len(), 22);
     }
 }

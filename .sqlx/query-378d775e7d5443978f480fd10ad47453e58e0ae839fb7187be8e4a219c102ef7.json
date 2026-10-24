@@ -1,0 +1,27 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE calendar_source SET\n                    name = COALESCE($2, name), poll_minutes = COALESCE($3, poll_minutes),\n                    url = CASE WHEN kind = 'caldav' THEN COALESCE($4, url) ELSE url END,\n                    username = CASE WHEN kind = 'caldav' THEN COALESCE($5, username) ELSE username END,\n                    version = version + 1\n             WHERE id = $1 AND version = $6\n             RETURNING version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Int4",
+        "Text",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "378d775e7d5443978f480fd10ad47453e58e0ae839fb7187be8e4a219c102ef7"
+}

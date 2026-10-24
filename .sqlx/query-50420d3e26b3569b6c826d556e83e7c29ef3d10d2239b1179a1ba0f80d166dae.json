@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM event WHERE calendar_id = $1 AND origin = 'synced'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "50420d3e26b3569b6c826d556e83e7c29ef3d10d2239b1179a1ba0f80d166dae"
+}

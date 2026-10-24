@@ -3,11 +3,13 @@
 //! All data access goes through a [`Tx`] from [`Store::tx_for`] (household-scoped, RLS enforced)
 //! or [`Store::tx_system`] (cross-household paths: login lookup, device token, workers).
 
+mod change;
 mod error;
 pub mod repo;
 pub mod secret;
 mod store;
 
+pub use change::{CHANNEL, ChangeBus, ChangeMessage};
 pub use error::{Result, StoreError};
 pub use repo::*;
 pub use secret::{MasterKey, SealedSecret};

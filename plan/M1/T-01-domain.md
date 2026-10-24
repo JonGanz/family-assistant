@@ -5,7 +5,7 @@ milestone: M1
 wave: 1
 depends_on: []
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-domain/**"]
 ---
 

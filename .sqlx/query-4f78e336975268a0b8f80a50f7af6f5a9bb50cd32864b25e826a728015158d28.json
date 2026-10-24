@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE calendar_source SET archived_at = COALESCE(archived_at, now()), version = version + 1\n             WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4f78e336975268a0b8f80a50f7af6f5a9bb50cd32864b25e826a728015158d28"
+}

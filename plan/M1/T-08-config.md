@@ -5,7 +5,7 @@ milestone: M1
 wave: 3
 depends_on: [T-04]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-config/**", "config/examples/**"]
 ---
 
@@ -58,6 +58,17 @@ You are a sub-agent implementing one task of the M1 milestone (Dashboard core) o
 - [ ] `cargo clippy -p fa-config -- -D warnings` passes
 - [ ] `cargo fmt --check` passes
 - [ ] `scripts/check-example-data.sh` passes
+
+## Wave 1 outcomes (read before starting)
+- The main session put **interim defaults** for the new `Household` fields in `crates/fa-config/src/household.rs` (the import path). Replace them with values read from the TOML.
+- The M0 provenance enum was renamed `SourceKind` → `RefKind`.
+
+## Wave 2 outcomes (fa-store, read before starting)
+- Read the real signatures in `crates/fa-store/src/repo/*.rs` and `src/change.rs`. Don't assume them from the brief.
+- **Transactions:** `WeatherSnapshotRepo::insert`, `WeatherRuleRepo::ensure_default`, and `AdvisoryRepo::upsert_by_dedupe` take the household from the transaction, so they must run in `tx_for`. `CalendarSourceRepo::due()` returns `(HouseholdId, CalendarSourceId)` pairs and must run in `tx_system`.
+- `ChangeBus::publish` rejects payloads over 1 KB (`StoreError::PayloadTooLarge`). Exports: `fa_store::{CHANNEL, ChangeMessage}`.
+- **If a repo method you need is missing:** add it in a **new file** `crates/fa-store/src/repo/ext_<your task id>.rs` (plus a one-line `mod`/`pub use` in `repo/mod.rs`), using the dev DB (migrated) for the sqlx macros. **Don't run `cargo sqlx prepare`**; the main session does that after the wave. List every such addition in your report. Don't edit other fa-store files.
+- `HouseholdRepo` has the real M1 columns plus `update_settings`. `MemberRepo::unarchive` and `list_including_archived` exist. `CalendarSourceRepo::set_enabled` exists, which you need for importing sources as disabled with `needs_reauth`.
 
 ## Ground rules (all M1 tasks)
 - Repo: `/home/jon/projects/family-assistant`. **First read** `CLAUDE.md`, `plan/M1.md` (especially *Contracts fixed up front*), and the arch sections listed under *Read first*. The contracts in `plan/M1.md` are the source of truth. If one is wrong or missing, don't invent a new one: report it.

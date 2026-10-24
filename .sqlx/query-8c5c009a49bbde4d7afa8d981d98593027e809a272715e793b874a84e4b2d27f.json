@@ -1,0 +1,92 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "WITH src AS (SELECT household_id FROM calendar_source WHERE id = $2)\n               INSERT INTO calendar (id, household_id, source_id, remote_id, name, color)\n               SELECT $1, household_id, $2, $3, $4, $5 FROM src\n               ON CONFLICT (source_id, remote_id) DO UPDATE SET\n                   name = EXCLUDED.name, color = COALESCE(calendar.color, EXCLUDED.color),\n                   archived_at = NULL,\n                   version = CASE WHEN calendar.name IS DISTINCT FROM EXCLUDED.name\n                                    OR calendar.archived_at IS NOT NULL\n                                  THEN calendar.version + 1 ELSE calendar.version END\n               RETURNING id, household_id, source_id, remote_id, name, color, enabled, is_default_target,\n                         sync_state, last_full_sync_at, version, (xmax = 0) AS \"created!\"",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "household_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "source_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "remote_id",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "enabled",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "is_default_target",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "sync_state",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "last_full_sync_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "created!",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      null
+    ]
+  },
+  "hash": "8c5c009a49bbde4d7afa8d981d98593027e809a272715e793b874a84e4b2d27f"
+}

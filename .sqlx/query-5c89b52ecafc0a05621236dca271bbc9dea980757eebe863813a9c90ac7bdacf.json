@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM event WHERE origin = 'synced' AND end_at < $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "5c89b52ecafc0a05621236dca271bbc9dea980757eebe863813a9c90ac7bdacf"
+}

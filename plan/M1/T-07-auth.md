@@ -5,7 +5,7 @@ milestone: M1
 wave: 3
 depends_on: [T-02, T-04]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-auth/**"]
 ---
 
@@ -57,6 +57,17 @@ You are a sub-agent implementing one task of the M1 milestone (Dashboard core) o
 - [ ] `cargo test -p fa-auth` passes
 - [ ] `cargo clippy -p fa-auth -- -D warnings` passes
 - [ ] `cargo fmt --check` passes
+
+## Wave 1 outcomes (read before starting)
+- **Don't use the `oauth2` crate** (it was removed). T-02 built `fa_connectors::google::oauth::GoogleOAuth{client_id, client_secret, auth_url, token_url}` with `authorize_url(redirect, scopes, state, pkce_challenge)`, `exchange_code(http, code, redirect, verifier)`, and `refresh(http, token)`. `TokenSet.refresh` is an `Option` (refresh responses omit it, so keep the stored one), and `id_token_email` is decoded without a signature check.
+- fa-domain: `AccessTokenProvider`/`TokenError` are in `fa_domain::oauth`, and the resource is `Resource::Source{owner, owner_role}`.
+
+## Wave 2 outcomes (fa-store, read before starting)
+- Read the real signatures in `crates/fa-store/src/repo/*.rs` and `src/change.rs`. Don't assume them from the brief.
+- **Transactions:** `WeatherSnapshotRepo::insert`, `WeatherRuleRepo::ensure_default`, and `AdvisoryRepo::upsert_by_dedupe` take the household from the transaction, so they must run in `tx_for`. `CalendarSourceRepo::due()` returns `(HouseholdId, CalendarSourceId)` pairs and must run in `tx_system`.
+- `ChangeBus::publish` rejects payloads over 1 KB (`StoreError::PayloadTooLarge`). Exports: `fa_store::{CHANNEL, ChangeMessage}`.
+- **If a repo method you need is missing:** add it in a **new file** `crates/fa-store/src/repo/ext_<your task id>.rs` (plus a one-line `mod`/`pub use` in `repo/mod.rs`), using the dev DB (migrated) for the sqlx macros. **Don't run `cargo sqlx prepare`**; the main session does that after the wave. List every such addition in your report. Don't edit other fa-store files.
+- `OAuthAccountRepo::upsert` resets the state to `ok` on reconnect. `OAuthPendingRepo::insert` derives the household from the member row. `OAuthPendingRepo::take` also returns expired rows, so **check `expires_at`** yourself.
 
 ## Ground rules (all M1 tasks)
 - Repo: `/home/jon/projects/family-assistant`. **First read** `CLAUDE.md`, `plan/M1.md` (especially *Contracts fixed up front*), and the arch sections listed under *Read first*. The contracts in `plan/M1.md` are the source of truth. If one is wrong or missing, don't invent a new one: report it.

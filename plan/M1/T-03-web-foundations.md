@@ -5,7 +5,7 @@ milestone: M1
 wave: 1
 depends_on: []
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/styles/**", "apps/web/src/components/**", "apps/web/src/composables/**", "apps/web/src/lib/**", "apps/web/src/dashboard/layout/**", "apps/web/public/**"]
 ---
 

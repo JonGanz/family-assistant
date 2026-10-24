@@ -1,0 +1,34 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT mime, bytes, sha256 FROM member_avatar WHERE member_id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "mime",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 1,
+        "name": "bytes",
+        "type_info": "Bytea"
+      },
+      {
+        "ordinal": 2,
+        "name": "sha256",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "5d9a836fa62ff66b5fb381389456db91e2922b92db1e7677e09066e341e17173"
+}

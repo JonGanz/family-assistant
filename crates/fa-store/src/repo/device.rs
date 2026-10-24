@@ -126,6 +126,35 @@ impl DeviceRepo {
         }
     }
 
+    pub async fn get_settings(conn: &mut PgConnection, id: DeviceId) -> Result<serde_json::Value> {
+        Ok(
+            sqlx::query_scalar!("SELECT settings FROM device WHERE id = $1", id.as_uuid())
+                .fetch_one(conn)
+                .await?,
+        )
+    }
+
+    /// Replaces the opaque settings blob. Returns the new version.
+    pub async fn set_settings(
+        conn: &mut PgConnection,
+        id: DeviceId,
+        value: &serde_json::Value,
+        expected_version: i32,
+    ) -> Result<i32> {
+        let v = sqlx::query_scalar!(
+            "UPDATE device SET settings = $2, version = version + 1 WHERE id = $1 AND version = $3 RETURNING version",
+            id.as_uuid(),
+            value,
+            expected_version
+        )
+        .fetch_optional(&mut *conn)
+        .await?;
+        match v {
+            Some(v) => Ok(v),
+            None => Err(super::conflict_or_missing(conn, "device", id.as_uuid()).await),
+        }
+    }
+
     pub async fn touch(conn: &mut PgConnection, id: DeviceId) -> Result<()> {
         sqlx::query!(
             "UPDATE device SET last_seen = now() WHERE id = $1",

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE weather_rule SET archived_at = COALESCE(archived_at, now()), version = version + 1\n             WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "be93c80e1ffd482bf175c6248df81370c00cd58b668bfd3eb1e07315c293ffa8"
+}

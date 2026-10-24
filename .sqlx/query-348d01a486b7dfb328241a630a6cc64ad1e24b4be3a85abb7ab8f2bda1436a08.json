@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, name, tz, location_lat, location_lon, location_label,\n                    meal_plan_horizon_weeks, dashboard_completion_override, version,\n                    created_at, updated_at\n             FROM household ORDER BY created_at, id",
+  "query": "SELECT id, name, tz, location_lat, location_lon, location_label,\n                    meal_plan_horizon_weeks, dashboard_completion_override, units,\n                       calendar_past_days, calendar_future_days, weather_retention_days,\n                       private_events_as_busy, version,\n                    created_at, updated_at\n             FROM household ORDER BY created_at, id",
   "describe": {
     "columns": [
       {
@@ -45,16 +45,41 @@
       },
       {
         "ordinal": 8,
+        "name": "units",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "calendar_past_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "calendar_future_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "weather_retention_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 12,
+        "name": "private_events_as_busy",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 13,
         "name": "version",
         "type_info": "Int4"
       },
       {
-        "ordinal": 9,
+        "ordinal": 14,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 10,
+        "ordinal": 15,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -73,8 +98,13 @@
       false,
       false,
       false,
+      false,
+      false,
+      false,
+      false,
+      false,
       false
     ]
   },
-  "hash": "ba0f846a8c061b8233c84923e382a0e4cc5fcfcc0317cc94b8fab03810a66bc9"
+  "hash": "348d01a486b7dfb328241a630a6cc64ad1e24b4be3a85abb7ab8f2bda1436a08"
 }

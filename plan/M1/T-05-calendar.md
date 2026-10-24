@@ -5,7 +5,7 @@ milestone: M1
 wave: 3
 depends_on: [T-02, T-04]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-calendar/**"]
 ---
 
@@ -75,6 +75,26 @@ You are a sub-agent implementing one task of the M1 milestone of the Family Assi
 - [ ] `cargo clippy -p fa-calendar --all-targets -- -D warnings` passes
 - [ ] `cargo fmt --check` is clean
 - [ ] If you needed new store queries: list them in your report (T-04 owns `fa-store`; don't put SQL in this crate)
+
+## Wave 1 outcomes (read before starting)
+- **fa-connectors API (T-02):**
+  - Every function takes `&fa_connectors::Http` and a base URL.
+  - Google: `google::calendar::{list_calendars, list_events}` with `EventQuery::{Window, SyncToken}`.
+  - CalDAV: `CaldavClient::new(http, base, user, pass)` with `.discover()`, `.ctag(&cal)`, and `.fetch(&cal, &Window)`.
+  - ICS: `ics::fetch` → `IcsFetch::{Fetched, NotModified}`, and `ics::parse` gives raw `IcsTime{value, tzid, is_date}` plus the raw RRULE, EXDATE, and RDATE strings. You do the TZID resolution and expansion.
+- **Google mapping:** `RemoteEvent.uid` = `recurringEventId` or `id`, and `instance_key` = `originalStartTime` as UTC ISO (`…Z`) or `YYYY-MM-DD` for all-day. Cancelled stubs have `cancelled=true` and an epoch placeholder time, so delete them by `(uid, instance_key)`.
+- **Use the same instance-key format** for ICS and CalDAV `RECURRENCE-ID`s: UTC ISO with a `Z` suffix, or `YYYY-MM-DD` for all-day, with `''` for non-recurring events.
+- fa-domain: `calendar::{view, mask, EventMeta, CalendarMeta, Viewer, HouseholdFlags}` and `AccessTokenProvider` / `TokenError` exist. Read the actual signatures in `crates/fa-domain/src`.
+
+## Wave 2 outcomes (fa-store, read before starting)
+- Read the real signatures in `crates/fa-store/src/repo/*.rs` and `src/change.rs`. Don't assume them from the brief.
+- **Transactions:** `WeatherSnapshotRepo::insert`, `WeatherRuleRepo::ensure_default`, and `AdvisoryRepo::upsert_by_dedupe` take the household from the transaction, so they must run in `tx_for`. `CalendarSourceRepo::due()` returns `(HouseholdId, CalendarSourceId)` pairs and must run in `tx_system`.
+- `ChangeBus::publish` rejects payloads over 1 KB (`StoreError::PayloadTooLarge`). Exports: `fa_store::{CHANNEL, ChangeMessage}`.
+- **If a repo method you need is missing:** add it in a **new file** `crates/fa-store/src/repo/ext_<your task id>.rs` (plus a one-line `mod`/`pub use` in `repo/mod.rs`), using the dev DB (migrated) for the sqlx macros. **Don't run `cargo sqlx prepare`**; the main session does that after the wave. List every such addition in your report. Don't edit other fa-store files.
+- **Extra columns** beyond Feeds.md: `calendar_source.enabled` and `version`; `calendar.archived_at` and `version`.
+- `EventRepo::upsert_synced` returns the number of rows inserted or changed (0 when nothing changed, and the version is not bumped), so publish `calendar.updated` only when the delete or upsert count is above 0. `delete_unseen_in_window` deletes only synced rows of that calendar overlapping `[from, to)` that aren't in `seen`.
+- `EventRepo::range` returns `EventRow{event, color, members: Vec<(MemberId, Role)>, owner_role}`, and already excludes cancelled, proposed, and rejected events, plus disabled or archived calendars and sources. **You** apply the viewer scope and `view()`.
+- `CalendarRepo::archive_missing` returns the archived ids, and `set_members`/`members` handle linking. Secrets are set with `SecretRepo`, then `CalendarSourceRepo::set_secret`.
 
 ## Ground rules (all M1 tasks)
 - Repo: `/home/jon/projects/family-assistant`. **First read** `CLAUDE.md`, `plan/M1.md` (especially *Contracts fixed up front*), and the arch sections listed under *Read first*. The contracts in `plan/M1.md` are the source of truth. If one is wrong or missing, don't invent a new one: work around it minimally and report it.

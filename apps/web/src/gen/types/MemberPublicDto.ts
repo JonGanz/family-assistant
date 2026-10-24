@@ -5,4 +5,8 @@ import type { Role } from "./Role";
 /**
  * Public fields, visible to children and devices.
  */
-export type MemberPublicDto = { id: MemberId, display_name: string, role: Role, avatar: string | null, color: string | null, };
+export type MemberPublicDto = { id: MemberId, display_name: string, role: Role, avatar: string | null, 
+/**
+ * `/api/v1/members/{id}/avatar?v=<sha256 prefix>`; set by the API layer.
+ */
+avatar_url: string | null, color: string | null, };

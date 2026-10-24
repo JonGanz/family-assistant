@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM advisory WHERE valid_until < $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "d3d61642f0f316c8bdfa27d5f3cd3cd7b802f06ce21eb21f6d80ba7022dca83c"
+}

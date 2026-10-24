@@ -1,0 +1,24 @@
+<?xml version='1.0' encoding='utf-8'?>
+<multistatus xmlns="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
+<response><href>/alex/family/dentist.ics</href><propstat><prop><getetag>"abc"</getetag><C:calendar-data>BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Example//EN
+BEGIN:VEVENT
+UID:dentist-1@example.com
+DTSTART;TZID=Europe/Berlin:20261105T150000
+DTEND;TZID=Europe/Berlin:20261105T160000
+SUMMARY:Dentist &amp; checkup
+END:VEVENT
+END:VCALENDAR
+</C:calendar-data></prop><status>HTTP/1.1 200 OK</status></propstat></response>
+<response><href>/alex/family/trip.ics</href><propstat><prop><getetag>"def"</getetag><C:calendar-data><![CDATA[BEGIN:VCALENDAR
+VERSION:2.0
+BEGIN:VEVENT
+UID:trip-1@example.com
+DTSTART;VALUE=DATE:20261110
+DTEND;VALUE=DATE:20261112
+SUMMARY:School trip
+END:VEVENT
+END:VCALENDAR
+]]></C:calendar-data></prop><status>HTTP/1.1 200 OK</status></propstat></response>
+</multistatus>

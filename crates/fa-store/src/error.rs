@@ -10,6 +10,8 @@ pub enum StoreError {
     /// A unique constraint was violated.
     #[error("already exists")]
     AlreadyExists,
+    #[error("change payload of {0} bytes is too large")]
+    PayloadTooLarge(usize),
     #[error("database error: {0}")]
     Db(sqlx::Error),
     #[error("migration error: {0}")]

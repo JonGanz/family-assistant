@@ -49,7 +49,7 @@ Import API calls from `api/client.ts` (owned by T-10). If you need a call that T
    - a **live scaled preview** that renders the real panels with the current household data (fetched through the user-session endpoints, not the device token) under the edited settings.
 
    Save via `PATCH /devices/{id}` with `If-Match`.
-5. Service worker: make sure avatars and the app shell are cached (vite-plugin-pwa runtime caching for `/api/v1/members/*/avatar`). You own `vite.config.ts` for this.
+5. Service worker: make sure avatars and the app shell are cached (vite-plugin-pwa runtime caching for `/api/v1/members/*/avatar`). You own `vite.config.ts` for this. Also point the maskable PWA icon at `icon-maskable-512.png` (added by T-03). Kiosk panels must sit under the `.kiosk` class to get the 28 px base. Put user-visible strings in `dashboard/strings.ts`.
 6. **Tests** (vitest):
    - the store applies each SSE kind correctly (range overlap, own device only);
    - cache read and write, and the stale badge;
@@ -63,6 +63,9 @@ Import API calls from `api/client.ts` (owned by T-10). If you need a call that T
 - [ ] `corepack pnpm@9 --dir apps/web test` passes
 - [ ] `corepack pnpm@9 --dir apps/web build` passes
 - [ ] Manual: `serve api` and `serve worker` run as separate processes. Pair a browser at 1920×1080. The dashboard shows weather, the agenda, and advisories. Change the layout in Settings → Devices in a second browser, and the dashboard updates without a reload. Stop the api, and the cached snapshot and stale badge show
+
+## Wave 3 outcomes (read before starting)
+- `WeatherView.hourly` and `daily` are **column-oriented** objects keyed by Open-Meteo field names (`{time: [...], temperature_2m: [...], ...}`), trimmed to 48 h and 7 days, all metric. Convert them with T-03's `lib/units.ts`.
 
 ## Ground rules (all M1 tasks)
 - Repo: `/home/jon/projects/family-assistant`. **First read** `CLAUDE.md`, `plan/M1.md` (especially *Contracts fixed up front*), and the arch sections listed under *Read first*. The contracts in `plan/M1.md` are the source of truth. If one is wrong or missing, don't invent a new one: report it.

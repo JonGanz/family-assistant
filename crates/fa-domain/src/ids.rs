@@ -17,6 +17,7 @@ macro_rules! id_type {
             Deserialize,
             sqlx::Type,
             TS,
+            utoipa::ToSchema,
         )]
         #[sqlx(transparent)]
         #[ts(
@@ -71,6 +72,12 @@ id_type!(DeviceId);
 id_type!(AuditEntryId);
 id_type!(SecretId);
 id_type!(JobId);
+id_type!(OAuthAccountId);
+id_type!(CalendarSourceId);
+id_type!(CalendarId);
+id_type!(EventId);
+id_type!(WeatherRuleId);
+id_type!(AdvisoryId);
 
 #[cfg(test)]
 mod tests {

@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO calendar_member (calendar_id, member_id, household_id)\n             SELECT $1, m.id, m.household_id FROM member m WHERE m.id = ANY($2)\n             ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7c8b325f5cfd2a5156f0072bc5c8944551dae81c56ec7946d31fe6b3e948429e"
+}

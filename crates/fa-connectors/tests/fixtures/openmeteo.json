@@ -1,0 +1,7 @@
+{"latitude":52.52,"longitude":13.419998,"generationtime_ms":0.2,"utc_offset_seconds":7200,"timezone":"Europe/Berlin","timezone_abbreviation":"GMT+2","elevation":38.0,
+"current_units":{"time":"iso8601","temperature_2m":"°C"},
+"current":{"time":"2026-10-24T14:15","interval":900,"temperature_2m":12.4,"apparent_temperature":10.1,"weather_code":3,"wind_speed_10m":14.2,"wind_gusts_10m":30.6,"precipitation":0.0,"is_day":1},
+"hourly_units":{"time":"iso8601"},
+"hourly":{"time":["2026-10-24T14:00","2026-10-24T15:00","2026-10-24T16:00"],"temperature_2m":[12.4,12.9,null],"apparent_temperature":[10.1,10.5,10.0],"precipitation_probability":[5,10,20],"precipitation":[0.0,0.0,0.3],"snowfall":[0.0,0.0,0.0],"wind_speed_10m":[14.2,15.0,16.1],"wind_gusts_10m":[30.6,31.0,33.2],"uv_index":[1.5,1.0,0.4],"weather_code":[3,3,61]},
+"daily_units":{"time":"iso8601"},
+"daily":{"time":["2026-10-24","2026-10-25"],"weather_code":[61,3],"temperature_2m_max":[13.1,11.0],"temperature_2m_min":[6.2,4.9],"precipitation_probability_max":[40,10],"precipitation_sum":[1.2,0.0],"sunrise":["2026-10-24T07:18","2026-10-25T07:20"],"sunset":["2026-10-24T17:39","2026-10-25T17:37"],"uv_index_max":[2.1,2.4]}}

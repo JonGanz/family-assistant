@@ -5,4 +5,4 @@ import type { Role } from "./Role";
 /**
  * Full member view for adults. Never includes the PIN hash.
  */
-export type MemberDto = { id: MemberId, display_name: string, role: Role, avatar: string | null, color: string | null, birthdate: string | null, grade: string | null, interests: Array<string>, hobbies: Array<string>, responsibilities: Array<string>, has_pin: boolean, has_account: boolean, };
+export type MemberDto = { id: MemberId, display_name: string, role: Role, avatar: string | null, avatar_url: string | null, color: string | null, birthdate: string | null, grade: string | null, interests: Array<string>, hobbies: Array<string>, responsibilities: Array<string>, has_pin: boolean, has_account: boolean, };

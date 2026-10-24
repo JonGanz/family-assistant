@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM weather_snapshot WHERE fetched_at < $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "4d8bcad838ae87490060d92c4bebcb4178ed00da5f47ff3e6b7c502cb06de52c"
+}

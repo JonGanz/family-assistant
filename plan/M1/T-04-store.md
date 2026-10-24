@@ -5,7 +5,7 @@ milestone: M1
 wave: 2
 depends_on: [T-01]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-store/**", ".sqlx/**"]
 ---
 
@@ -91,6 +91,12 @@ You are a sub-agent implementing one task of the M1 milestone of the Family Assi
 - [ ] `SQLX_OFFLINE=true cargo build --workspace` passes
 - [ ] `cargo clippy -p fa-store --all-targets -- -D warnings` passes
 - [ ] `cargo fmt --check` is clean
+
+## Wave 1 outcomes (read before starting)
+- fa-domain (T-01) is done. `Household` has `units`, `calendar_past_days`, `calendar_future_days`, `weather_retention_days`, and `private_events_as_busy`. The main session put **interim defaults** in `crates/fa-store/src/repo/household.rs` and in the fixtures `crates/fa-store/tests/store.rs`, `crates/fa-auth/tests/auth.rs`, and `crates/fa-api/tests/api.rs`. Replace the fa-store ones with the real columns; the fixtures in other crates may stay.
+- The M0 provenance enum was renamed `SourceKind` → `RefKind`. `SourceKind` is now `google|caldav|ics`.
+- The authz resource is `Resource::Source{owner: Option<MemberId>, owner_role: Option<Role>}`, so source repos should make the owner's role easy to load.
+- Event instance keys from fa-connectors (T-02): UTC ISO `2026-10-26T15:00:00Z` for timed events and `YYYY-MM-DD` for all-day, with `''` for non-recurring events.
 
 ## Ground rules (all M1 tasks)
 - Repo: `/home/jon/projects/family-assistant`. **First read** `CLAUDE.md`, `plan/M1.md` (especially *Contracts fixed up front*), and the arch sections listed under *Read first*. The contracts in `plan/M1.md` are the source of truth. If one is wrong or missing, don't invent a new one: work around it minimally and report it.

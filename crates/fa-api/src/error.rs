@@ -86,6 +86,11 @@ impl From<AuthError> for ApiError {
             AuthError::Password(e) => Self::Unprocessable(e.to_string()),
             AuthError::Pin(e) => Self::Unprocessable(e.to_string()),
             AuthError::NotFound => Self::NotFound,
+            // Interim mapping; T-09 (M1) turns OAuth errors into /oauth/done redirects.
+            AuthError::NotConfigured => Self::NotFound,
+            AuthError::NeedsReauth => Self::Conflict("account needs reconnecting".into()),
+            AuthError::InvalidState => Self::Unprocessable("invalid or expired OAuth state".into()),
+            AuthError::OAuth(m) => Self::Unprocessable(m),
             AuthError::Store(e) => e.into(),
             AuthError::Internal(m) => Self::Internal(m),
         }

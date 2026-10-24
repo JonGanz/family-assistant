@@ -3,7 +3,7 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel 2>/dev/null || dirname "$0"/..)"
 
-allowed='^(example\.(com|org|net)|[a-z0-9.-]+\.(test|invalid))$'
+allowed='^(([a-z0-9-]+\.)*example\.(com|org|net)|[a-z0-9.-]+\.(test|invalid))$'
 status=0
 
 while IFS= read -r -d '' f; do

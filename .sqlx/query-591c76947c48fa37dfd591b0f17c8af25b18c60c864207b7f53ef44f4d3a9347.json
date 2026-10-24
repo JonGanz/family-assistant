@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM calendar_member WHERE calendar_id = $1 AND NOT (member_id = ANY($2))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "591c76947c48fa37dfd591b0f17c8af25b18c60c864207b7f53ef44f4d3a9347"
+}

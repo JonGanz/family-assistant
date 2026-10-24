@@ -24,7 +24,7 @@ This doc covers the backend half of M1: pulling calendars and weather in, storin
 
 `fa-calendar` and `fa-weather` are feature crates. They depend on `fa-connectors` (a leaf client crate), never on each other.
 
-**External crates** (checked on crates.io on 2026-10-24): `reqwest 0.13` (rustls), `oauth2 5`, `icalendar 0.17` (parser), `rrule 0.14`, `quick-xml 0.42`, and `wiremock 0.6` for tests.
+**External crates** (checked on crates.io on 2026-10-24): `reqwest 0.13` (rustls; the Google token exchange is two hand-rolled form POSTs), `icalendar 0.17` (parser), `rrule 0.14`, `quick-xml 0.42`, and `wiremock 0.6` for tests.
 
 ## 2. Data model (page "Model")
 This refines the Calendar and Weather packages of [Domain.md](Domain.md). All tables are household-scoped with RLS, and follow the persistence conventions there.
@@ -70,6 +70,8 @@ This refines the Calendar and Weather packages of [Domain.md](Domain.md). All ta
 3. **Expand locally** (CalDAV and ICS) with `rrule`, in the event's own TZID. Apply `EXDATE`, and let overriding `RECURRENCE-ID` components replace the matching occurrence. Each occurrence is a row with `instance_key` = its RECURRENCE-ID.
 4. **Upsert** the occurrences by `(calendar, remote_uid, instance_key)`, then delete rows for this calendar inside the window that this run didn't see. For Google incremental syncs, `status=cancelled` deletes the row.
 5. Commit, then publish `calendar.updated{from, to}` on the ChangeBus (§6).
+
+**Freshness:** every source also does a full (non-incremental) fetch when `last_full_sync_at` is missing or older than 24 h. A `304`, an unchanged ctag, or a Google `syncToken` (which only covers its original `timeMin`/`timeMax`) would otherwise let the rolling window go stale. Recurrences expand on wall-clock time in the event's zone, so local times stay fixed across DST. Unknown TZIDs go through a Windows→IANA table, and otherwise fall back to the household tz, with a warning in `last_error` (the state stays `ok`).
 
 **Errors:** a `401`/`invalid_grant` sets the source (and its `oauth_account`) to `needs_reauth`. Other errors set `error` with `last_error`, and the job retries with backoff. The System status page shows each source's state.
 

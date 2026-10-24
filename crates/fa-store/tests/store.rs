@@ -11,6 +11,11 @@ fn household(name: &str) -> Household {
         location: None,
         meal_plan_horizon_weeks: 2,
         dashboard_completion_override: false,
+        units: fa_domain::Units::Metric,
+        calendar_past_days: 30,
+        calendar_future_days: 400,
+        weather_retention_days: 7,
+        private_events_as_busy: true,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     }

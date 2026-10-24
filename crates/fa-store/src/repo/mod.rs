@@ -7,26 +7,45 @@ use uuid::Uuid;
 use crate::{Result, StoreError};
 
 mod account;
+mod advisory;
 mod audit;
+mod avatar;
+mod calendar;
+mod calendar_source;
 mod device;
+mod event;
+mod ext_t06;
+mod ext_t08;
 mod household;
 mod jobs;
 mod member;
 mod notify;
+mod oauth;
 mod secrets;
 mod session;
 mod status;
+mod weather;
+mod weather_rule;
 
 pub use account::{AccountLockout, UserAccountRepo};
+pub use advisory::AdvisoryRepo;
 pub use audit::AuditRepo;
+pub use avatar::MemberAvatarRepo;
+pub use calendar::CalendarRepo;
+pub use calendar_source::CalendarSourceRepo;
 pub use device::{DeviceElevationRepo, DeviceRepo};
+pub use event::{EventRepo, EventRow, NewOccurrence};
+pub use ext_t08::ConfigExtRepo;
 pub use household::HouseholdRepo;
-pub use jobs::{Job, JobRepo, NewJob, Schedule, ScheduleRepo};
+pub use jobs::{Job, JobCounts, JobRepo, NewJob, Schedule, ScheduleRepo};
 pub use member::{MemberLockout, MemberRepo};
 pub use notify::{NotifyPref, NotifyPrefRepo};
+pub use oauth::{OAuthAccountRepo, OAuthPending, OAuthPendingRepo};
 pub use secrets::SecretRepo;
 pub use session::{SessionRecord, SessionRepo};
 pub use status::SystemStatusRepo;
+pub use weather::WeatherSnapshotRepo;
+pub use weather_rule::WeatherRuleRepo;
 
 pub(crate) fn role_str(r: Role) -> &'static str {
     match r {
@@ -79,4 +98,16 @@ pub(crate) async fn conflict_or_missing(
         Ok(false) => StoreError::NotFound,
         Err(e) => e.into(),
     }
+}
+
+pub(crate) fn enum_str<T: serde::Serialize>(v: &T) -> String {
+    match serde_json::to_value(v) {
+        Ok(serde_json::Value::String(s)) => s,
+        _ => String::new(),
+    }
+}
+
+pub(crate) fn parse_enum<T: serde::de::DeserializeOwned>(s: &str) -> Result<T> {
+    serde_json::from_value(serde_json::Value::String(s.to_string()))
+        .map_err(|_| StoreError::Corrupt(format!("enum value {s}")))
 }

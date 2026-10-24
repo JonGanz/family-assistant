@@ -34,6 +34,14 @@ impl NewJob {
     }
 }
 
+/// Queue depth for the status page.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct JobCounts {
+    pub ready: i64,
+    pub running: i64,
+    pub dead: i64,
+}
+
 #[derive(Debug, Clone)]
 pub struct Job {
     pub id: JobId,
@@ -172,6 +180,23 @@ impl JobRepo {
         .execute(conn)
         .await?;
         Ok(())
+    }
+
+    pub async fn counts(conn: &mut PgConnection) -> Result<JobCounts> {
+        let r = sqlx::query!(
+            r#"SELECT
+                 count(*) FILTER (WHERE status = 'queued' AND run_at <= now()) AS "ready!",
+                 count(*) FILTER (WHERE status = 'running') AS "running!",
+                 count(*) FILTER (WHERE status = 'dead') AS "dead!"
+               FROM job"#
+        )
+        .fetch_one(conn)
+        .await?;
+        Ok(JobCounts {
+            ready: r.ready,
+            running: r.running,
+            dead: r.dead,
+        })
     }
 
     pub async fn list_dead(conn: &mut PgConnection) -> Result<Vec<Job>> {
