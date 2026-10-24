@@ -16,6 +16,7 @@ updated: 2026-10-23
 | `decisions/` | Decision records (`D-NNN-slug.md`) taken from the answers | `decisions/_index.md` |
 | `log/` | Daily logs (`YYYY-MM-DD.md`) | `log/_index.md` |
 | `research/` | External research notes (`R-NNN-slug.md`) that decisions cite | `research/_index.md` |
+| `plan/` | Milestone plans (`M<n>.md`) and sub-agent task briefs (`M<n>/T-NN-slug.md`) | `plan/_index.md` |
 
 **Start each session by reading the `_index.md` files, not the whole tree.** Open individual files only when you need them.
 
@@ -26,6 +27,7 @@ updated: 2026-10-23
 - Arch docs may also carry `milestone:` and `drawio_src:`.
 - Logs: `date, topics: []`
 - Research: `id, title, date, method, verified, informs: []`
+- Plans: `title, milestone, status, updated, arch, decisions`. Tasks: `id, title, milestone, wave, depends_on, agent, status (todo|running|done|blocked), owns`
 
 ## Workflows
 1. **Asking questions:** create a `design/Q-NNN-*.md` from the template in `design/_index.md`. Group them into batches (`batch: N`). Number them in sequence and never reuse a number. Add each one to the index.
@@ -43,6 +45,12 @@ updated: 2026-10-23
 - Intelligence comes in tiers: rules, then System 1, then System 2. **"System 1" means System One decision models** (https://systemonemodels.org/, see R-001 and D-024), not a small generative LLM. System 2 is the generative LLM on the GPU node.
 - **If the user names an unfamiliar term, product, or site, research it (a sub-agent writes up an `R-NNN`) before designing around it. Don't guess.**
 - Design around family members. Each member has a role (adult or child) and has interests, hobbies, and responsibilities.
+
+## Implementation via sub-agents
+- Each milestone plan fixes the **contracts** (crates, migrations ownership, API table) up front, so tasks in the same wave can run in parallel.
+- Launch each task as a sub-agent (Sonnet 5.5, medium effort unless the plan says otherwise), with the brief file as its prompt. Run the tasks of a wave in parallel, and don't start a wave before its dependencies are done.
+- Ownership is strict: an agent edits only its `owns` paths. Between waves, the main session integrates (build, test), fixes small issues, updates task `status`, and logs the result.
+- Cross-check briefs before launching: every column, table, or dependency a task needs must be owned and created by an earlier or same-wave task.
 
 ## Decisions vs design choices
 Only answers to questions (and ideas the user puts inside answers) become `D-NNN` records. Technical choices made inside an arch doc, such as library picks, live in that doc. If the user challenges one, it becomes a question.
