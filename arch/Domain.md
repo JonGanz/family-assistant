@@ -2,7 +2,7 @@
 title: Domain Model
 scope: domain (all bounded contexts, persistence conventions)
 status: draft
-updated: 2026-10-23
+updated: 2026-10-24
 drawio: Domain.drawio
 drawio_src: src/Domain.py
 depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034]
@@ -77,9 +77,12 @@ The decision results for a message (category, time_sensitive, member links, is_b
 ## Package: Calendar (M1 read, M3 write)
 | Class | Key attributes |
 |---|---|
-| `CalendarSource` | kind: `google\|caldav\|ics`, url/account, owner Member?, writable, secret?, sync_token |
-| `Calendar` | source, remote_id, name, color, members[] (M:N), is_default_target |
-| `Event` | calendar?, remote_uid?, title, start, end, all_day, location?, rrule?, members[] (M:N), origin: `synced\|extracted\|manual`, status: `proposed\|approved\|written\|rejected`, confidence?, source_ref, dedupe_key |
+| `OAuthAccount` | provider: `google`, owner Member, email, scopes[], secret, state (shared with Gmail in M3) |
+| `CalendarSource` | kind: `google\|caldav\|ics`, owner Member?, oauth_account? / url, username? / secret? (CalDAV password or the ICS URL), writable, poll_minutes, state |
+| `Calendar` | source, remote_id, name, color, enabled, members[] (M:N), dashboard_visibility **[Q-034]**, sync_state, is_default_target |
+| `Event` | calendar?, remote_uid?, instance_key, title, start_at, end_at, all_day (+ start_date/end_date), location?, is_private, cancelled, members[] (M:N, M3), origin: `synced\|extracted\|manual`, status? (`null` when synced; `proposed\|approved\|written\|rejected`), confidence?, source_ref, dedupe_key |
+
+Synced events are stored **one row per occurrence** (recurrences are expanded in the sync window). Full table detail, sync, and visibility rules are in [Feeds.md](Feeds.md) §2–3.
 
 ## Package: Tasks (M2)
 | Class | Key attributes | Notes |
@@ -108,9 +111,11 @@ The decision results for a message (category, time_sensitive, member links, is_b
 ## Package: Weather (M1)
 | Class | Key attributes |
 |---|---|
-| `WeatherSnapshot` | fetched_at, current jsonb, hourly jsonb, daily jsonb |
+| `WeatherSnapshot` | fetched_at, provider, current jsonb, hourly jsonb, daily jsonb (always metric) |
 | `WeatherRule` | name, condition (a small DSL such as `min(temp_c, next 12h) <= 0`), action: `alert\|task`, task_definition?, status: `active\|suggested\|disabled`, suggested_by: `default\|s2` (D-017) |
-| `Advisory` | text, severity, valid_from/until, source: `rule\|s2` |
+| `Advisory` | rule?, text, severity, valid_from/until, source: `rule\|s2`, dedupe_key, dismissed_at? |
+
+The rule DSL, default rules, and evaluation are in [Feeds.md](Feeds.md) §4. M1 also adds `Household{units, calendar_past_days, calendar_future_days, weather_retention_days, private_events_as_busy}`, `MemberAvatar`, and `Device.settings` (dashboard layout, [Frontend.md](Frontend.md) §4).
 
 ## Package: AI & Pipelines (M4. M3 has rules-only)
 | Class | Key attributes |

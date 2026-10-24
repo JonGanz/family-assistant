@@ -17,7 +17,7 @@ for s, t in [(store, dom), (cfg, dom), (auth, dom), (auth, store), (jobs, store)
              (api, feats), (api, auth), (api, cfg), (srv, api), (srv, jobs), (agt, dom)]:
     assoc(pk, s, t, label="«import»", kind="dependency")
 assoc(pk, web, api, label="generated TS client / ts-rs types", kind="dependency")
-b("M0 builds: fa-domain, fa-store, fa-config, fa-auth, fa-jobs, fa-api, fa-server, apps/web shell", 20, 620, 400, 60, NOTE)
+b("M0 builds: fa-domain, fa-store, fa-config, fa-auth, fa-jobs, fa-api, fa-server, apps/web shell\nM1 adds: fa-connectors, fa-calendar, fa-weather (see Feeds.md)", 20, 620, 400, 70, NOTE)
 
 # Page 2: Deployment (detailed)
 dp = Page("deploy", "Deployment", 1400, 900)

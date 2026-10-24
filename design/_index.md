@@ -27,8 +27,10 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Open
-_None. The next question number is Q-034._
+## Batch 13, open
+| ID | Title | Area |
+|---|---|---|
+| [Q-034](Q-034-event-visibility.md) | Who sees which calendar events (dashboard, children) | frontend |
 
 ## Resolved
 | ID | Title | Decisions |

@@ -148,7 +148,7 @@ repository**. Examples use `example.com`.
 | Milestone | Scope | Status |
 |---|---|---|
 | M0 | Skeleton: workspace, DB with RLS, config, auth and RBAC, devices and PIN, jobs, Vue shell, compose, backups, CI | ✅ code-complete |
-| M1 | Members, weather, calendar read (Google, CalDAV, ICS), real dashboard | next |
+| M1 | Members, weather, calendar read (Google, CalDAV, ICS), real dashboard | planned ([plan](plan/M1.md)) |
 | M2 | Tasks and chores (rotation, pools), ntfy notifications | |
 | M3 | Gmail ingest, rules pipeline, bills, school and teacher linking, event approvals | |
 | M4 | AI: System One decision models, local LLM, GPU node wake, eval harness | |

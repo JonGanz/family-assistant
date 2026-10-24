@@ -2,7 +2,7 @@
 title: Platform
 scope: code layout, runtime, security, deployment, backups, dev workflow
 status: draft
-updated: 2026-10-23
+updated: 2026-10-24
 drawio: Platform.drawio
 drawio_src: src/Platform.py
 depends_on: [D-002, D-003, D-004, D-005, D-006, D-010, D-018, D-019, D-020, D-023, D-025, D-026, D-031, D-032, D-033, D-034, D-035]
@@ -75,6 +75,8 @@ The platform that M0 builds and every later milestone depends on. Items marked *
 ## 4. API conventions
 - REST + JSON under `/api/v1`. OpenAPI is generated, and the TS client is generated from it.
 - **SSE** at `/api/v1/stream` pushes typed change events (`task.updated`, `event.proposed`, `weather.updated`, ...). The dashboard and PWA use it to stay live, sending `Last-Event-ID` when they reconnect.
+- **Cross-process events (from M1):** writers call `fa_store::ChangeBus::publish` inside their transaction (`pg_notify('fa_change', …)`), and the api's `PgListener` feeds the in-process `Hub`. This way worker-side changes reach SSE clients, and `serve all` uses the same path. See [Feeds.md](Feeds.md) §6.
+- **API types:** DTOs derive `utoipa::ToSchema` (from M1), so `openapi.json` is exact and the web client's types are generated from it only.
 - Pagination is keyset (cursor), using UUIDv7 ordering. Mutable resources carry a `version` and require `If-Match`, so a conflict returns 409.
 
 ## 5. Security (page "Security")
@@ -102,6 +104,7 @@ The platform that M0 builds and every later milestone depends on. Items marked *
 - `job` table: `kind, payload jsonb, run_at, priority, attempts, max_attempts, locked_by, locked_until, idempotency_key UNIQUE`. Workers claim jobs with `FOR UPDATE SKIP LOCKED` and retry with exponential backoff. Jobs that keep failing are marked `dead` and shown on the status page.
 - `schedule` table: cron expression, job kind, enabled. The worker ticks every 30 s and enqueues due jobs (deduplicated by idempotency key).
 - **M0 jobs:** session cleanup and a `backup.verify` check that looks at the age of the newest dump file in `backup_dir` (mounted read-only into the worker).
+- **M1 adds** `calendar.sync_due` (every minute), `calendar.sync{source}`, `calendar.prune` (daily), `weather.fetch` (`*/30`), `weather.evaluate` (after each fetch), and `weather.retention` (daily). See [Feeds.md](Feeds.md).
 - **M3 adds** `mail.retention` (daily), which applies the configurable content policy, marks learning examples, and expires stuck pending messages (D-034). It also adds `mail.refetch`, which loads purged content from Gmail on demand for eval, dry-run, and re-processing. That job is rate-limited to the Gmail quota and keeps content in memory only.
 
 ## 8. Deployment (page "Deployment")

@@ -99,7 +99,7 @@ Platform details (layout, security, deployment, backups) are in **[Platform.md](
 | Milestone | Content | Arch docs needed first |
 |---|---|---|
 | M0 | Skeleton: workspace, DB, config, auth/RBAC, devices, Vue shell, compose, backups | `Domain.md`, `Platform.md` |
-| M1 | Members, weather, calendar read, dashboard | `Frontend.md` |
+| M1 | Members, weather, calendar read, dashboard | `Frontend.md`, `Feeds.md` |
 | M2 | Tasks + ntfy | `Tasks.md` |
 | M3 | Email ingest, **pipeline engine with the 'Rules only' preset**, bills, linking, approvals, **labelling view** | `Ingest.md` |
 | M4 | Backend registry, System One sidecars, kNN, S2, eval, **Pipeline and Backends settings**, GPU agent, WoL, advisories | `AI.md` |

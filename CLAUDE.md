@@ -55,6 +55,7 @@ updated: 2026-10-23
 - **Once a migration has been deployed anywhere, never edit it.** Add a new migration instead. (Before release, an edit is OK if every DB's `_sqlx_migrations` checksum is updated.)
 - **Never quote aggregate numbers (test counts and the like) without computing them from the output.**
 - Briefs must require `cargo fmt` and enough disk space. Check `df -h /` before launching build-heavy waves.
+- When agents (forks included) work in parallel in one directory, any glob or bulk edit must name its own files explicitly. A `T-0*.md` loop once rewrote another fork's briefs.
 - Cross-check briefs before launching: every column, table, or dependency a task needs must be owned and created by an earlier or same-wave task.
 
 ## Decisions vs design choices
