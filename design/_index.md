@@ -27,8 +27,13 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Open
-_None. The next question number is Q-024._
+## Batch 4 (2026-10-23), open (System One follow-up, see research/R-001)
+| ID | Title | Area |
+|---|---|---|
+| [Q-024](Q-024-s1-python-sidecar.md) | Python runtime exception for System One models | tech |
+| [Q-025](Q-025-s1-placement.md) | Where System One models run | infra |
+| [Q-026](Q-026-s1-scope.md) | Other decisions System One should make | domain |
+| [Q-027](Q-027-knn-layer.md) | Keep the correction-learning kNN layer? | tech |
 
 ## Resolved
 | ID | Title | Decisions |

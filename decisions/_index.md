@@ -30,5 +30,6 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-019](D-019-dashboard-pin-policy.md) | Dashboard PIN policy | accepted | Q-018 | arch/Overall.md |
 | [D-020](D-020-gpu-node-agent.md) | GPU node (Linux): Wake-on-LAN, auto-wake by schedule/queue depth, yields to gaming via agent | accepted | Q-019 | arch/Overall.md |
 | [D-021](D-021-living-grocery-list.md) | One living grocery list with a pantry-staples check section | accepted | Q-021 | arch/Overall.md |
-| [D-022](D-022-system1-system2-classification.md) | Tiered email classification: rules → System 1 (local, always-on) → System 2 (GPU, batched) | accepted | Q-022, Q-023 | arch/Overall.md, arch/Ingest.md (future) |
+| [D-022](D-022-system1-system2-classification.md) | Tiered email classification: rules → System 1 (local, always-on) → System 2 (GPU, batched) | superseded → D-024 | Q-022, Q-023 | arch/Overall.md, arch/Ingest.md (future) |
 | [D-023](D-023-mvp-roadmap.md) | MVP milestones and build order | accepted | Q-023 | arch/Overall.md, all future arch docs |
+| [D-024](D-024-system-one-decision-tier.md) | System 1 tier = System One decision models (pluggable DecisionBackend) | accepted | Q-023 (clarified), R-001 | arch/Overall.md |

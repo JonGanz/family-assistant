@@ -15,6 +15,7 @@ updated: 2026-10-23
 | `design/resolved/` | Questions that are answered and processed | same index |
 | `decisions/` | Decision records (`D-NNN-slug.md`) taken from the answers | `decisions/_index.md` |
 | `log/` | Daily logs (`YYYY-MM-DD.md`) | `log/_index.md` |
+| `research/` | External research notes (`R-NNN-slug.md`) that decisions cite | `research/_index.md` |
 
 **Start each session by reading the `_index.md` files, not the whole tree.** Open individual files only when you need them.
 
@@ -23,6 +24,7 @@ updated: 2026-10-23
 - Decisions: `id, title, status (accepted|superseded), date, source_questions: [], supersedes, superseded_by, affects: [arch files]`
 - Arch: `title, scope, status (draft|accepted), updated, drawio, depends_on: []`
 - Logs: `date, topics: []`
+- Research: `id, title, date, method, verified, informs: []`
 
 ## Workflows
 1. **Asking questions:** create a `design/Q-NNN-*.md` from the template in `design/_index.md`. Group them into batches (`batch: N`). Number them in sequence and never reuse a number. Add each one to the index.
@@ -35,7 +37,8 @@ updated: 2026-10-23
 - Everything runs locally. Any AI work uses local LLMs on 32 GB RAM and an 8 GB RTX 3070. Budget for roughly 7–8B models at Q4 and small embedding models.
 - Go deterministic first: rules, headers, parsers, and schema.org data. Use the LLM only for what rules cannot handle, and make it return structured JSON.
 - Optional or hardware-dependent features get a **toggle**, with a suggested default (the user keeps asking for this).
-- Intelligence comes in tiers: rules, then System 1 (core node, always on), then System 2 (GPU node, batched). See D-022.
+- Intelligence comes in tiers: rules, then System 1, then System 2. **"System 1" means System One decision models** (https://systemonemodels.org/, see R-001 and D-024), not a small generative LLM. System 2 is the generative LLM on the GPU node.
+- **If the user names an unfamiliar term, product, or site, research it (a sub-agent writes up an `R-NNN`) before designing around it. Don't guess.**
 - Design around family members. Each member has a role (adult or child) and has interests, hobbies, and responsibilities.
 
 ## Git

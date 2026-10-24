@@ -1,13 +1,15 @@
 ---
 id: D-022
 title: Tiered email classification: rules → System 1 (local, always-on) → System 2 (GPU, batched)
-status: accepted
+status: superseded
 date: 2026-10-23
 source_questions: [Q-022, Q-023]
 supersedes: D-016
-superseded_by:
+superseded_by: D-024
 affects: [arch/Overall.md, arch/Ingest.md (future)]
 ---
+
+> **Superseded by [D-024](D-024-system-one-decision-tier.md).** "System 1" meant System One decision models (R-001), not a small generative LLM. The tiering, escalation, corrections, and probe/toggle carry over.
 
 # D-022: Tiered email classification: rules → System 1 (local, always-on) → System 2 (GPU, batched)
 
