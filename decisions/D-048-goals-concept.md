@@ -9,6 +9,8 @@ superseded_by:
 affects: [arch/Overall.md, arch/Tasks.md]
 ---
 
+> **Refined by** [D-050](D-050-roadmap-goals.md) (goals are M7) and [D-051](D-051-goals-model.md) (goal model).
+
 # D-048: Goals with progress are a separate concept from tasks (scope pending)
 
 ## Context

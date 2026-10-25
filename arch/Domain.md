@@ -5,7 +5,7 @@ status: draft
 updated: 2026-10-25
 drawio: Domain.drawio
 drawio_src: src/Domain.py
-depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-037, D-038, D-039, D-040, D-041, D-044, D-045, D-046, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034, D-036]
+depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-037, D-038, D-039, D-040, D-041, D-044, D-045, D-046, D-050, D-051, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034, D-036]
 milestone: M0
 ---
 
@@ -102,6 +102,14 @@ Full tables, scheduling, strategies, and notifications are in [Tasks.md](Tasks.m
 - A `rotation` definition advances `rotation_cursor` only on completion or skip, as `advance_on` and `skip_advances` allow (D-039).
 - A `fixed` definition has exactly one candidate.
 - Completing a task stamps `last_done_at` on its definition. For `after_done` schedules the next occurrence is due `interval` after that date; `rrule` schedules follow the calendar (D-037).
+
+## Package: Goals (M7)
+| Class | Key attributes | Notes |
+|---|---|---|
+| `Goal` | member, title, measure: `count\|quantity`, unit?, target, cadence: `once\|recurring`, period (default `week`), reset_on (weekday or date), starts_on, ends_on?, created_by (adult), show_on_dashboard | D-051. Only adults create and edit |
+| `GoalProgress` | goal, period_start, amount, recorded_by, recorded_at, note? | Progress for a period is the sum of entries since the last reset |
+
+Progress sources beyond manual entry, and the privacy of adults' goals, are settled before M7 (`Goals.md`).
 
 ## Package: Meals (M5)
 | Class | Key attributes |

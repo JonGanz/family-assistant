@@ -1,12 +1,12 @@
 ---
 id: Q-046
 title: Default for missed schedule-anchored tasks
-status: open
+status: resolved
 batch: 15
 area: domain
 created: 2026-10-25
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-049]
 ---
 
 # Q-046: Default for missed schedule-anchored tasks

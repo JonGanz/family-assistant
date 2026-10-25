@@ -5,23 +5,21 @@ status: draft
 updated: 2026-10-25
 drawio: Tasks.drawio
 drawio_src: src/Tasks.py
-depends_on: [D-006, D-010, D-013, D-017, D-018, D-019, D-023, D-027, D-029, D-031, D-035, D-036, D-037, D-038, D-039, D-040, D-041, D-042, D-043, D-044, D-045, D-046, D-047, D-048]
+depends_on: [D-006, D-010, D-013, D-017, D-018, D-019, D-023, D-027, D-029, D-031, D-035, D-036, D-037, D-038, D-039, D-040, D-041, D-042, D-043, D-044, D-045, D-046, D-047, D-048, D-049, D-050]
 milestone: M2
 ---
 
 # Tasks: lists, recurrence, assignment, routines, notifications (DRAFT v1)
 
-This doc covers M2 (D-023): task lists, recurring work, the fixed/rotation/pool strategies, routines, the Now list, completion from phones and the dashboard, and ntfy notifications. v1 is derived from the requirements and D-013 and D-037 to D-048. It replaces the preliminary v0.
+This doc covers M2 (D-023): task lists, recurring work, the fixed/rotation/pool strategies, routines, the Now list, completion from phones and the dashboard, and ntfy notifications. v1 is derived from the requirements and D-013 and D-037 to D-050. It replaces the preliminary v0.
 
-**Not in M2:** tasks extracted from email and "respond to email" tasks (M3, `Ingest.md`), the System One urgency term (M4, D-027), smart assignment (M6), starter templates (D-047), and **goals** (D-048: a separate concept, with scope and timing open in Q-047 and Q-048).
-
-**Still open:** the default `on_missed` for schedule-anchored definitions (Q-046). The design treats it as a setting, so the answer only changes a default value.
+**Not in M2:** tasks extracted from email and "respond to email" tasks (M3, `Ingest.md`), the System One urgency term (M4, D-027), smart assignment (M6), starter templates (D-047), and **goals** (D-048, D-051: a separate concept built in M7, D-050).
 
 ## 1. Concepts
 | Concept | What it is | Decided by |
 |---|---|---|
 | **List** | A named group of tasks with a completion policy, a calendar display default, and flags for who can add to it | D-013, D-045, D-046 |
-| **Definition** | A template for recurring work: schedule, strategy, candidates, missed handling, season window | D-013, D-037 to D-039, D-043 |
+| **Definition** | A template for recurring work: schedule, strategy, candidates, missed handling, season window | D-013, D-037 to D-039, D-043, D-049 |
 | **Task** | One occurrence (from a definition, a weather rule, or added by hand), with optional steps | D-013 |
 | **Routine** | A per-member, ordered, timed checklist that runs on qualifying days, with a progress bar | D-041 |
 | **Absence** | A member is away for a date range. Every strategy skips them | D-039 |
@@ -50,7 +48,7 @@ This refines the Tasks package of [Domain.md](Domain.md). All tables are househo
 |---|---|---|
 | `household` (+cols) | `now_list_size` (7), `now_weights jsonb` (§4.4), `quiet_from` (21:00), `quiet_until` (07:00) | Editable in Settings → Household. Quiet hours are a household default that a member can override |
 | `task_list` | name, kind: `chores\|homework\|general` (+ `email` in M3), completion_policy: `assignee\|adult_only` (D-013), `child_can_add: own\|none`, `dashboard_add`, `calendar_default: hidden\|until_done\|always`, `claim_ttl` (default: end of day), visible_on_dashboard, color?, sort, version | Defaults by kind in §3.2 |
-| `task_definition` | list, title, notes?, steps_template text[], `schedule_kind: rrule\|after_done`, rrule?, interval?, dtstart, lead_time, `on_missed: roll_over\|auto_skip\|pile_up`, strategy: `fixed\|rotation\|pool` (`smart` reserved for M6), `advance_on: any_completion\|assignee_completion`, `skip_advances`, rotation_cursor, priority_flag: `normal\|high`, season_from?/season_until? (month-day), season_condition? (rule DSL), last_done_at?, next_due_at, paused, version | D-037 to D-039, D-043. `rrule` and `interval` are exclusive (CHECK) |
+| `task_definition` | list, title, notes?, steps_template text[], `schedule_kind: rrule\|after_done`, rrule?, interval?, dtstart, lead_time, `on_missed: roll_over\|auto_skip\|pile_up` (default `roll_over` for `after_done`, `auto_skip` for `rrule`, D-038, D-049), strategy: `fixed\|rotation\|pool` (`smart` reserved for M6), `advance_on: any_completion\|assignee_completion`, `skip_advances`, rotation_cursor, priority_flag: `normal\|high`, season_from?/season_until? (month-day), season_condition? (rule DSL), last_done_at?, next_due_at, paused, version | D-037 to D-039, D-043. `rrule` and `interval` are exclusive (CHECK) |
 | `task_definition_candidate` | definition, member, ord | Ordered. `fixed` has exactly one |
 | `task` | list, definition?, weather_rule?, title, notes?, due_at?, visible_from?, status: `open\|done\|skipped\|suggested`, origin: `manual\|system\|weather` (+ `email` in M3), source_ref?, priority_flag, calendar_display: `hidden\|until_done\|always`, created_by?, completed_at?, completed_by?, completed_via_device?, skipped_by? (`null` = system), claimed_by?, claimed_until?, version | One occurrence. The score is computed at read time. `suggested` is a weather task waiting for an adult (D-043) |
 | `task_assignee` | task ↔ member | Set by the strategy when the occurrence is created |
@@ -97,7 +95,7 @@ All of these are editable per list (D-045, D-046). A task can change its own `ca
 | `rotation` | The candidate at `rotation_cursor`, skipping members who are away on the due date | `any_completion`: move on after any completion. `assignee_completion`: move on only when the assignee completes. A skip moves on only if `skip_advances` |
 | `pool` | All candidates who are not away. Anyone in the pool can complete it. A member can claim it (`claimed_by`, `claimed_until = now + list.claim_ttl`), and the claim can be released | — |
 
-`smart` (M6) slots in behind the same trait and reads absences and the calendar.
+`smart` (M6, D-050) slots in behind the same trait and reads absences and the calendar.
 
 ### 4.3 Completion, skip, undo
 - **Policy (D-013):** `assignee` allows the assignee (or any pool member) and any adult. `adult_only` requires an adult's own session.

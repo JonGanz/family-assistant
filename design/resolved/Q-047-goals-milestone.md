@@ -1,12 +1,12 @@
 ---
 id: Q-047
 title: When to build goals
-status: open
+status: resolved
 batch: 15
 area: domain
 created: 2026-10-25
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-050]
 ---
 
 # Q-047: When to build goals

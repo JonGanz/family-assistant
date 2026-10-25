@@ -16,4 +16,4 @@ Each design is a pair: `X.md` and `X.drawio` (UML 2). The diagram is **generated
 | [Tasks](Tasks.md) | Task lists, recurrence, fixed/rotation/pool, absences, completion, Now list, routines, weather tasks, calendar display, ntfy | draft v1 (M2, D-037 to D-048) | [Tasks.drawio](Tasks.drawio): Components, Model, Complete sequence |
 | [Frontend](Frontend.md) | Vue PWA structure, routes, dashboard layout model, settings screens, live data flow | draft v1 (M1) | [Frontend.drawio](Frontend.drawio): Components, Clients, Live update |
 
-Planned next, in roadmap order (D-023): M3 → `Ingest.md`; M4 → `AI.md` (registry, pipelines, eval); M5 → `Meals.md`.
+Planned next, in roadmap order (D-023): M3 → `Ingest.md`; M4 → `AI.md` (registry, pipelines, eval); M5 → `Meals.md`; M7 → `Goals.md` (D-050).

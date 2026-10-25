@@ -1,12 +1,12 @@
 ---
 id: Q-048
 title: What a goal looks like
-status: open
+status: resolved
 batch: 15
 area: domain
 created: 2026-10-25
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-051]
 ---
 
 # Q-048: What a goal looks like

@@ -322,7 +322,9 @@ repository**. Examples use `example.com`.
 | M3 | Gmail ingest, rules pipeline, bills, school and teacher linking, event approvals | |
 | M4 | AI: System One decision models, local LLM, GPU node wake, eval harness | |
 | M5 | Recipes, meal plan, grocery list | |
-| M6 | Smart assignment, TUI | |
+| M6 | Smart assignment, learned calendar routing | |
+| M7 | Goals with progress (count or quantity, weekly cadence) | |
+| M8 | TUI (stretch) | |
 
 ## License
 [AGPL-3.0-or-later](LICENSE).

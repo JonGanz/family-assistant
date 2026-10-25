@@ -11,6 +11,8 @@ affects: [arch/Overall.md, arch/Tasks.md (future)]
 
 > **Refined by** D-039 (rotation), D-040 (pool claiming), D-045 (permissions).
 
+> **Note** ([D-051](D-051-goals-model.md)): points and rewards stay deferred, not ruled out.
+
 # D-013: Task assignment strategies and per-list completion policy
 
 ## Context

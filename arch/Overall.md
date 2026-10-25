@@ -14,7 +14,7 @@ research: [R-001]
 v7 re-derives the design from PROJECT.md and all accepted decisions (D-001 to D-035). D-016, D-022, and D-030 are superseded. **No questions are open. The M0 design is complete.**
 
 ## Scope
-**In:** members and roles; Gmail ingest and classification; bills; school, daycare, and teacher linking; calendars (Google, CalDAV, ICS) with event extraction; weather with rules and advisories; tasks; meal plan, recipes, the living grocery list; configurable AI decision pipelines; dashboard, PWA, TUI (stretch); ntfy.
+**In:** members and roles; Gmail ingest and classification; bills; school, daycare, and teacher linking; calendars (Google, CalDAV, ICS) with event extraction; weather with rules and advisories; tasks and routines; goals with progress; meal plan, recipes, the living grocery list; configurable AI decision pipelines; dashboard, PWA, TUI (stretch); ntfy.
 
 **Out:** deals (D-012), school portal APIs (D-014), budgeting (D-009), grocery exports (D-015), Alexa (D-011), gamification (D-013), dietary preferences (deferred, D-021).
 
@@ -95,7 +95,7 @@ The detailed model is in **[Domain.md](Domain.md)**. Summary:
 
 Platform details (layout, security, deployment, backups) are in **[Platform.md](Platform.md)**.
 
-## Roadmap (D-023, adjusted by D-029)
+## Roadmap (D-023, adjusted by D-029 and D-050)
 | Milestone | Content | Arch docs needed first |
 |---|---|---|
 | M0 | Skeleton: workspace, DB, config, auth/RBAC, devices, Vue shell, compose, backups | `Domain.md`, `Platform.md` |
@@ -104,6 +104,8 @@ Platform details (layout, security, deployment, backups) are in **[Platform.md](
 | M3 | Email ingest, **pipeline engine with the 'Rules only' preset**, bills, linking, approvals, **labelling view** | `Ingest.md` |
 | M4 | Backend registry, System One sidecars, kNN, S2, eval, **Pipeline and Backends settings**, GPU agent, WoL, advisories | `AI.md` |
 | M5 | Recipes, meal plan, grocery | `Meals.md` |
-| M6 | Smart assignment, TUI | updates |
+| M6 | Smart assignment, learned calendar routing | updates |
+| M7 | Goals: count or quantity targets, weekly cadence with reset, progress bars (D-048, D-051) | `Goals.md` |
+| M8 | TUI (stretch) | updates |
 
-**Goals** (D-048) are a separate concept from tasks. Their milestone and shape are open (Q-047, Q-048).
+The M6 to M8 split is D-050.

@@ -47,8 +47,8 @@ assoc(p1, ms, mem, "*", "1..* owners")
 assoc(p1, ev, msg, "*", "0..1 source")
 
 # Page 2: Tasks, Meals, Weather, Notifications
-p2 = Page("tasks-meals", "Tasks · Meals · Weather", 1500, 900)
-p2.box("Domain: Tasks, Meals, Weather, Notifications (UML 2 class), DRAFT v1", 20, 10, 900, 30, TITLE)
+p2 = Page("tasks-meals", "Tasks · Meals · Weather · Goals", 1500, 960)
+p2.box("Domain: Tasks, Meals, Weather, Notifications, Goals (UML 2 class), DRAFT v4", 20, 10, 900, 30, TITLE)
 p2.box("Tasks (M2, detail in Tasks.md)", 20, 50, 720, 420, PKG)
 tl = cls(p2, "TaskList", ["name, kind", "completion_policy", "child_can_add, dashboard_add", "calendar_default"], 40, 90)
 td = cls(p2, "TaskDefinition", ["schedule: rrule | after_done", "on_missed, lead_time", "strategy: Strategy", "candidates[] (ordered)", "rotation_cursor, advance_on", "season window?", "last_done_at, next_due_at"], 280, 90, 210)
@@ -83,6 +83,10 @@ nt = cls(p2, "Notification", ["member, trigger, dedupe_key", "title, body, not_b
 np = cls(p2, "NotifyPref", ["topic, token (Secret)", "triggers, quiet hours", "copy_to_member?"], 1240, 540)
 assoc(p2, np, nt, "1", "*")
 assoc(p2, wr, td, "*", "0..1 task_definition", kind="dependency")
+p2.box("Goals (M7)", 20, 770, 720, 150, PKG)
+gl7 = cls(p2, "Goal", ["member, title", "measure: count|quantity, unit?, target", "cadence: once|recurring, period, reset_on", "created_by (adult)"], 40, 810, 260)
+gp7 = cls(p2, "GoalProgress", ["period_start, amount", "recorded_by, recorded_at"], 360, 810, 220)
+assoc(p2, gl7, gp7, "1", "*", kind="composition")
 
 # Page 3: AI & Pipelines
 p3 = Page("ai", "AI & Pipelines", 1500, 800)

@@ -57,3 +57,6 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-046](D-046-tasks-in-calendar.md) | Tasks in calendar views: per-task display mode; the agenda is reserved for key dates | accepted | Q-044 | arch/Tasks.md, arch/Frontend.md |
 | [D-047](D-047-no-starter-templates.md) | No starter task templates for now | accepted | Q-045 | arch/Tasks.md |
 | [D-048](D-048-goals-concept.md) | Goals with progress are a separate concept from tasks (scope pending) | accepted | Q-036 | arch/Overall.md, arch/Tasks.md |
+| [D-049](D-049-missed-schedule-default.md) | Missed schedule-anchored tasks auto-skip by default | accepted | Q-046 | arch/Tasks.md |
+| [D-050](D-050-roadmap-goals.md) | Roadmap: M6 smart assignment, M7 goals, M8 TUI | accepted | Q-047 | arch/Overall.md, README.md |
+| [D-051](D-051-goals-model.md) | Goals: count or quantity measures, weekly cadence with reset, set by adults, progress bars | accepted | Q-048 | arch/Domain.md, arch/Overall.md, arch/Goals.md (future) |

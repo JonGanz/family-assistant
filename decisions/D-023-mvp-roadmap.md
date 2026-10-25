@@ -9,6 +9,8 @@ superseded_by:
 affects: [arch/Overall.md, all future arch docs]
 ---
 
+> **Amended by** [D-050](D-050-roadmap-goals.md): M6 smart assignment, M7 goals, M8 TUI.
+
 # D-023: MVP milestones and build order
 
 ## Context

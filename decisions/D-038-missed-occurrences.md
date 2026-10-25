@@ -9,6 +9,8 @@ superseded_by:
 affects: [arch/Tasks.md]
 ---
 
+> **Refined by** [D-049](D-049-missed-schedule-default.md): schedule-anchored definitions default to `auto_skip`.
+
 # D-038: Missed occurrences: configurable on_missed, roll-over by default for after-done tasks
 
 ## Context

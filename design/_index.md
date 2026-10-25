@@ -27,12 +27,8 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Batch 15, open
-| ID | Title | Area |
-|---|---|---|
-| [Q-046](Q-046-missed-schedule-default.md) | Default for missed schedule-anchored tasks | domain |
-| [Q-047](Q-047-goals-milestone.md) | When to build goals | domain |
-| [Q-048](Q-048-goals-model.md) | What a goal looks like | domain |
+## Open
+_None. The next question number is Q-049._
 
 ## Resolved
 | ID | Title | Decisions |
@@ -82,3 +78,6 @@ decisions: []
 | [Q-043](resolved/Q-043-task-permissions.md) | Who can create and edit tasks and lists | D-045 |
 | [Q-044](resolved/Q-044-tasks-in-calendar.md) | Do tasks appear in the calendar and agenda | D-046 |
 | [Q-045](resolved/Q-045-starter-templates.md) | Starter chores and routines | D-047 |
+| [Q-046](resolved/Q-046-missed-schedule-default.md) | Default for missed schedule-anchored tasks | D-049 |
+| [Q-047](resolved/Q-047-goals-milestone.md) | When to build goals | D-050 |
+| [Q-048](resolved/Q-048-goals-model.md) | What a goal looks like | D-051 |
