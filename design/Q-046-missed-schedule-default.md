@@ -26,4 +26,4 @@ If the bins weren't taken out on Tuesday, keeping that occurrence open after col
 
 ## Answer
 <!-- answer below this line -->
-
+Option C. 

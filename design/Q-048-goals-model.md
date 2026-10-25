@@ -31,4 +31,4 @@ Before goals are designed, their shape needs settling. Candidate features:
 
 ## Answer
 <!-- answer below this line -->
-
+Option D. We should include the measures such as a basic quantity or count. We should include some level of cadence where a goal can be scheduled as a weekly goal and resets every week on a certain date. We will allow the goals to be set for anyone configured by adults for now. Definitely show the progress bars; I think they're awesome. And let's not rule out entirely that we may add streaks and points or rewards later, but we're not going to include that at this point in time. 
