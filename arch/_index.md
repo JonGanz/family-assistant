@@ -13,6 +13,7 @@ Each design is a pair: `X.md` and `X.drawio` (UML 2). The diagram is **generated
 | [Domain](Domain.md) | UML class model by package, persistence conventions, RBAC matrix | draft v3 (M0) | [Domain.drawio](Domain.drawio): 3 pages |
 | [Platform](Platform.md) | Workspace layout, libs, API, security, jobs, deployment, backups, dev, M0 DoD | draft v3 (M0) | [Platform.drawio](Platform.drawio): Packages, Deployment, Security |
 | [Feeds](Feeds.md) | Calendar read (Google, CalDAV, ICS), OAuth accounts, weather, rule DSL, advisories, ChangeBus | draft v1 (M1) | [Feeds.drawio](Feeds.drawio): Components, Model, Sync sequence |
+| [Tasks](Tasks.md) | Task lists, recurrence, fixed/rotation/pool, completion, priority, routines, weather tasks, ntfy | draft v0 (M2, pending Q-035 to Q-045) | [Tasks.drawio](Tasks.drawio): Components, Model, Complete sequence |
 | [Frontend](Frontend.md) | Vue PWA structure, routes, dashboard layout model, settings screens, live data flow | draft v1 (M1) | [Frontend.drawio](Frontend.drawio): Components, Clients, Live update |
 
-Planned next, in roadmap order (D-023): M2 → `Tasks.md`; M3 → `Ingest.md`; M4 → `AI.md` (registry, pipelines, eval); M5 → `Meals.md`.
+Planned next, in roadmap order (D-023): M3 → `Ingest.md`; M4 → `AI.md` (registry, pipelines, eval); M5 → `Meals.md`.

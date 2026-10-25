@@ -27,8 +27,20 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Open
-_None. The next question number is Q-035._
+## Batch 14, open
+| ID | Title | Area |
+|---|---|---|
+| [Q-035](Q-035-recurrence-anchor.md) | When the next occurrence of a recurring task is due | domain |
+| [Q-036](Q-036-missed-occurrences.md) | What happens to recurring tasks that aren't done in time | domain |
+| [Q-037](Q-037-rotation-rules.md) | Rotation details: who did it, skips, absences | domain |
+| [Q-038](Q-038-pool-claiming.md) | Pool tasks: claim first, or just do it | domain |
+| [Q-039](Q-039-routines.md) | Children's morning (and other) routines | domain |
+| [Q-040](Q-040-now-list-priority.md) | The "now important" list: what goes on it and in what order | domain |
+| [Q-041](Q-041-seasonal-weather-tasks.md) | Seasonal and weather-triggered tasks | domain |
+| [Q-042](Q-042-notifications.md) | Which task events send phone notifications (ntfy) | domain |
+| [Q-043](Q-043-task-permissions.md) | Who can create and edit tasks and lists | security |
+| [Q-044](Q-044-tasks-in-calendar.md) | Do tasks appear in the calendar and agenda | frontend |
+| [Q-045](Q-045-starter-templates.md) | Starter chores and routines | frontend |
 
 ## Resolved
 | ID | Title | Decisions |
