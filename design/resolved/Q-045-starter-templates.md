@@ -1,12 +1,12 @@
 ---
 id: Q-045
 title: Starter chores and routines
-status: open
+status: resolved
 batch: 14
 area: frontend
 created: 2026-10-24
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-047]
 ---
 
 # Q-045: Starter chores and routines

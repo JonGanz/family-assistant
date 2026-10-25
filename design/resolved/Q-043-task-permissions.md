@@ -1,12 +1,12 @@
 ---
 id: Q-043
 title: Who can create and edit tasks and lists
-status: open
+status: resolved
 batch: 14
 area: security
 created: 2026-10-24
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-045]
 ---
 
 # Q-043: Who can create and edit tasks and lists

@@ -41,7 +41,7 @@ assoc(pm, calc, ev, "1", "*", kind="composition"); assoc(pm, calc, mem, "*", "*"
 assoc(pm, ev, mem, "*", "*", "event_member (M3)"); assoc(pm, src, mem, "*", "0..1 owner")
 pm.box("Weather (M1)", 940, 50, 540, 480, PKG)
 snap = cls(pm, "WeatherSnapshot", ["fetched_at", "provider: open-meteo", "current/hourly/daily jsonb"], 960, 90, 220)
-rule = cls(pm, "WeatherRule", ["name, condition (DSL)", "action: alert|task", "severity", "status, suggested_by"], 1220, 90, 230)
+rule = cls(pm, "WeatherRule", ["name, condition (DSL)", "action: alert|task", "task_mode (M2)", "severity", "status, suggested_by"], 1220, 90, 230)
 adv = cls(pm, "Advisory", ["text, severity", "valid_from/until", "source: rule|s2", "dedupe_key", "dismissed_at?"], 1220, 300, 230)
 assoc(pm, rule, adv, "0..1", "*", "fires"); assoc(pm, adv, snap, "*", "1", "evaluated on", kind="dependency")
 pm.box("Platform additions", 20, 550, 900, 160, PKG)

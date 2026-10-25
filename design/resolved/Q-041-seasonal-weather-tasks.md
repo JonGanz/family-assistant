@@ -1,12 +1,12 @@
 ---
 id: Q-041
 title: Seasonal and weather-triggered tasks
-status: open
+status: resolved
 batch: 14
 area: domain
 created: 2026-10-24
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-043]
 ---
 
 # Q-041: Seasonal and weather-triggered tasks

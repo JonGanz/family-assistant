@@ -1,12 +1,12 @@
 ---
 id: Q-039
 title: Children's morning (and other) routines
-status: open
+status: resolved
 batch: 14
 area: domain
 created: 2026-10-24
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-041]
 ---
 
 # Q-039: Children's morning (and other) routines

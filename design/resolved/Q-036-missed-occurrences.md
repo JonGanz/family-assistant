@@ -1,12 +1,12 @@
 ---
 id: Q-036
 title: What happens to recurring tasks that aren't done in time
-status: open
+status: resolved
 batch: 14
 area: domain
 created: 2026-10-24
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-038, D-048]
 ---
 
 # Q-036: What happens to recurring tasks that aren't done in time

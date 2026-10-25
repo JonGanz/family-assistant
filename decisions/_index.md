@@ -1,6 +1,6 @@
 ---
 title: Decisions Index
-updated: 2026-10-23
+updated: 2026-10-25
 ---
 
 # Decisions
@@ -45,4 +45,15 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-034](D-034-configurable-mail-retention.md) | Email retention is a configurable policy; content kept while it helps local learning; provenance always | accepted | Q-032 | arch/Domain.md, arch/Platform.md, arch/Overall.md |
 | [D-035](D-035-agpl-public.md) | Public repository and images under AGPL-3.0-or-later | accepted | Q-033 | arch/Platform.md |
 | [D-036](D-036-event-visibility.md) | Show all events; adults' private events appear as Busy | accepted | Q-034 | arch/Feeds.md, arch/Frontend.md, arch/Domain.md |
-| [D-036](D-036-event-visibility.md) | Show all events; adults' private events appear as Busy | accepted | Q-034 | ['arch/Feeds.md', 'arch/Frontend.md', 'arch/Domain.md'] |
+| [D-037](D-037-recurrence-anchor.md) | Recurrence is per definition: schedule (RRULE) or after-done interval, default after-done | accepted | Q-035 | arch/Tasks.md, arch/Domain.md |
+| [D-038](D-038-missed-occurrences.md) | Missed occurrences: configurable on_missed, roll-over by default for after-done tasks | accepted | Q-036 | arch/Tasks.md |
+| [D-039](D-039-rotation-rules.md) | Rotation: configurable advancing and skips; member absences as a household feature | accepted | Q-037 | arch/Tasks.md, arch/Domain.md |
+| [D-040](D-040-pool-claiming.md) | Pool tasks: check off without claiming; optional claim that expires | accepted | Q-038 | arch/Tasks.md |
+| [D-041](D-041-routines.md) | Routines: per-member timed checklists with day filters and a dashboard progress panel | accepted | Q-039 | arch/Tasks.md, arch/Domain.md, arch/Frontend.md |
+| [D-042](D-042-now-list.md) | The Now list: deterministic score with configurable weights and size | accepted | Q-040 | arch/Tasks.md, arch/Frontend.md |
+| [D-043](D-043-seasonal-weather-tasks.md) | Season windows and weather-triggered tasks: create by default, suggest configurable | accepted | Q-041 | arch/Tasks.md, arch/Feeds.md |
+| [D-044](D-044-task-notifications.md) | Task notifications: per-member triggers, quiet hours, children's copies, batching | accepted | Q-042 | arch/Tasks.md, arch/Domain.md |
+| [D-045](D-045-task-permissions.md) | Task permissions: adults manage lists and definitions; per-list flags for children and the dashboard | accepted | Q-043 | arch/Tasks.md, arch/Domain.md |
+| [D-046](D-046-tasks-in-calendar.md) | Tasks in calendar views: per-task display mode; the agenda is reserved for key dates | accepted | Q-044 | arch/Tasks.md, arch/Frontend.md |
+| [D-047](D-047-no-starter-templates.md) | No starter task templates for now | accepted | Q-045 | arch/Tasks.md |
+| [D-048](D-048-goals-concept.md) | Goals with progress are a separate concept from tasks (scope pending) | accepted | Q-036 | arch/Overall.md, arch/Tasks.md |

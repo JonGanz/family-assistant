@@ -1,12 +1,12 @@
 ---
 id: Q-044
 title: Do tasks appear in the calendar and agenda
-status: open
+status: resolved
 batch: 14
 area: frontend
 created: 2026-10-24
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-046]
 ---
 
 # Q-044: Do tasks appear in the calendar and agenda

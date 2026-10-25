@@ -1,12 +1,12 @@
 ---
 id: Q-038
 title: Pool tasks: claim first, or just do it
-status: open
+status: resolved
 batch: 14
 area: domain
 created: 2026-10-24
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-040]
 ---
 
 # Q-038: Pool tasks: claim first, or just do it

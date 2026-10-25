@@ -1,12 +1,12 @@
 ---
 id: Q-040
 title: The "now important" list: what goes on it and in what order
-status: open
+status: resolved
 batch: 14
 area: domain
 created: 2026-10-24
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-042]
 ---
 
 # Q-040: The "now important" list: what goes on it and in what order

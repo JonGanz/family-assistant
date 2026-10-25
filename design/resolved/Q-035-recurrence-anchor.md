@@ -1,12 +1,12 @@
 ---
 id: Q-035
 title: When the next occurrence of a recurring task is due
-status: open
+status: resolved
 batch: 14
 area: domain
 created: 2026-10-24
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-037]
 ---
 
 # Q-035: When the next occurrence of a recurring task is due

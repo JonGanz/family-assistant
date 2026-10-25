@@ -27,20 +27,12 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Batch 14, open
+## Batch 15, open
 | ID | Title | Area |
 |---|---|---|
-| [Q-035](Q-035-recurrence-anchor.md) | When the next occurrence of a recurring task is due | domain |
-| [Q-036](Q-036-missed-occurrences.md) | What happens to recurring tasks that aren't done in time | domain |
-| [Q-037](Q-037-rotation-rules.md) | Rotation details: who did it, skips, absences | domain |
-| [Q-038](Q-038-pool-claiming.md) | Pool tasks: claim first, or just do it | domain |
-| [Q-039](Q-039-routines.md) | Children's morning (and other) routines | domain |
-| [Q-040](Q-040-now-list-priority.md) | The "now important" list: what goes on it and in what order | domain |
-| [Q-041](Q-041-seasonal-weather-tasks.md) | Seasonal and weather-triggered tasks | domain |
-| [Q-042](Q-042-notifications.md) | Which task events send phone notifications (ntfy) | domain |
-| [Q-043](Q-043-task-permissions.md) | Who can create and edit tasks and lists | security |
-| [Q-044](Q-044-tasks-in-calendar.md) | Do tasks appear in the calendar and agenda | frontend |
-| [Q-045](Q-045-starter-templates.md) | Starter chores and routines | frontend |
+| [Q-046](Q-046-missed-schedule-default.md) | Default for missed schedule-anchored tasks | domain |
+| [Q-047](Q-047-goals-milestone.md) | When to build goals | domain |
+| [Q-048](Q-048-goals-model.md) | What a goal looks like | domain |
 
 ## Resolved
 | ID | Title | Decisions |
@@ -79,3 +71,14 @@ decisions: []
 | [Q-032](resolved/Q-032-email-metadata-kept.md) | What email metadata survives the content purge | D-034 |
 | [Q-033](resolved/Q-033-repo-visibility.md) | Repository visibility & license | D-035 |
 | [Q-034](resolved/Q-034-event-visibility.md) | Who sees which calendar events (dashboard, children) | D-036 |
+| [Q-035](resolved/Q-035-recurrence-anchor.md) | When the next occurrence of a recurring task is due | D-037 |
+| [Q-036](resolved/Q-036-missed-occurrences.md) | What happens to recurring tasks that aren't done in time | D-038, D-048 |
+| [Q-037](resolved/Q-037-rotation-rules.md) | Rotation details: who did it, skips, absences | D-039 |
+| [Q-038](resolved/Q-038-pool-claiming.md) | Pool tasks: claim first, or just do it | D-040 |
+| [Q-039](resolved/Q-039-routines.md) | Children's morning (and other) routines | D-041 |
+| [Q-040](resolved/Q-040-now-list-priority.md) | The "now important" list: what goes on it and in what order | D-042 |
+| [Q-041](resolved/Q-041-seasonal-weather-tasks.md) | Seasonal and weather-triggered tasks | D-043 |
+| [Q-042](resolved/Q-042-notifications.md) | Which task events send phone notifications (ntfy) | D-044 |
+| [Q-043](resolved/Q-043-task-permissions.md) | Who can create and edit tasks and lists | D-045 |
+| [Q-044](resolved/Q-044-tasks-in-calendar.md) | Do tasks appear in the calendar and agenda | D-046 |
+| [Q-045](resolved/Q-045-starter-templates.md) | Starter chores and routines | D-047 |

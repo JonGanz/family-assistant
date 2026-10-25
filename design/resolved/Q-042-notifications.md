@@ -1,12 +1,12 @@
 ---
 id: Q-042
 title: Which task events send phone notifications (ntfy)
-status: open
+status: resolved
 batch: 14
 area: domain
 created: 2026-10-24
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-044]
 ---
 
 # Q-042: Which task events send phone notifications (ntfy)

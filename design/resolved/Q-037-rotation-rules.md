@@ -1,12 +1,12 @@
 ---
 id: Q-037
 title: Rotation details: who did it, skips, absences
-status: open
+status: resolved
 batch: 14
 area: domain
 created: 2026-10-24
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-039]
 ---
 
 # Q-037: Rotation details: who did it, skips, absences

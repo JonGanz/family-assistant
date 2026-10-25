@@ -2,14 +2,14 @@
 title: Domain Model
 scope: domain (all bounded contexts, persistence conventions)
 status: draft
-updated: 2026-10-24
+updated: 2026-10-25
 drawio: Domain.drawio
 drawio_src: src/Domain.py
-depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034, D-036]
+depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-037, D-038, D-039, D-040, D-041, D-044, D-045, D-046, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034, D-036]
 milestone: M0
 ---
 
-# Domain Model (DRAFT v3)
+# Domain Model (DRAFT v4)
 
 This is the full UML class model, split into packages (bounded contexts). Each package below matches a page in `Domain.drawio`. The model covers every milestone, but **M0 only implements Identity and Audit**. The other packages appear in migrations when their milestone arrives. Items marked **[Q-0xx]** depend on an open question.
 
@@ -36,7 +36,7 @@ This is the full UML class model, split into packages (bounded contexts). Each p
 | `Session` | account, created/last_seen, user_agent, expires_at | Stored in Postgres. Rolls for 180 days for children and 30 days for adults. Adults can revoke child sessions (D-031) |
 | `Device` | kind: `dashboard`, name, token_hash, last_seen, revoked_at? | A shared kiosk identity, not a user (D-006) |
 | `DeviceElevation` | device, member (adult), expires_at | Created by a PIN step-up and lasts about 5 minutes (D-019) |
-| `NotifyPref` | member, channel: `ntfy`, topic, triggers[] | D-010 |
+| `NotifyPref` | member, topic, token (Secret), triggers, quiet hours override, copy_to_member? | D-010, D-044. Detail in [Tasks.md](Tasks.md) §5 |
 | `AuditEntry` | actor_member?, device?, action, subject_type, subject_id, before/after jsonb, at | Append-only, with no UPDATE or DELETE grants |
 | `Secret` | owner_type, owner_id, kind, ciphertext, nonce, key_version | Envelope encryption |
 
@@ -45,7 +45,9 @@ This is the full UML class model, split into packages (bounded contexts). Each p
 |---|---|---|---|---|
 | Read own tasks and calendar | ✓ | ✓ | ✓ (all members) | ✓ |
 | Read all household data | ✗ | ✓ | dashboard subset | dashboard subset |
-| Complete a task | own (if the list policy allows) | ✓ | ✓ when the override is on (D-013) | ✓ |
+| Complete a task or routine step | own (if the list policy allows) | ✓ | ✓ when the override is on (D-013) | ✓ |
+| Add a one-off task | own, on lists with `child_can_add = own` (D-045) | ✓ | on lists with `dashboard_add` | ✓ |
+| Manage lists, definitions, routines, absences; skip | ✗ | ✓ | ✗ | skip only |
 | Add a grocery item | ✓ | ✓ | ✓ | ✓ |
 | Approve an event, Gmail actions | ✗ | ✓ | ✗ | ✓ |
 | Household and child settings, pipelines | ✗ | ✓ | ✗ | ✗ |
@@ -87,15 +89,19 @@ Synced events are stored **one row per occurrence** (recurrences are expanded in
 ## Package: Tasks (M2)
 | Class | Key attributes | Notes |
 |---|---|---|
-| `TaskList` | name, kind: `chores\|routine\|homework\|email\|general`, completion_policy: `assignee\|adult_only`, visible_on_dashboard | D-013 |
-| `TaskDefinition` | list, title, recurrence (RRULE), strategy: `fixed\|rotation\|pool\|smart`, candidates[] (ordered Members), rotation_cursor, last_done_at, lead_time, season_window?, weather_rule? | The template for recurring work |
-| `Task` | list, definition?, title, notes, steps[] (TaskStep), assignees[], due_at?, priority (computed), urgency? (1–5, D-027), status: `open\|done\|skipped`, origin: `manual\|email\|system\|weather`, source_ref, completed_by?, completed_via_device? | One occurrence |
-| `TaskStep` | task, order, text, done_at? | Homework steps and morning routine steps |
+| `TaskList` | name, kind: `chores\|homework\|general` (+ `email` in M3), completion_policy: `assignee\|adult_only`, child_can_add, dashboard_add, calendar_default, claim_ttl | D-013, D-045, D-046 |
+| `TaskDefinition` | list, title, schedule: `rrule` or `after_done` interval, lead_time, on_missed, strategy: `fixed\|rotation\|pool\|smart`, candidates[] (ordered Members), rotation_cursor, advance_on, skip_advances, priority_flag, season window and condition?, last_done_at, next_due_at | D-037 to D-039, D-043 |
+| `Task` | list, definition?, weather_rule?, title, notes, steps[] (TaskStep), assignees[], due_at?, visible_from?, priority_flag, urgency? (1–5, M4, D-027), status: `open\|done\|skipped\|suggested`, origin: `manual\|email\|system\|weather`, calendar_display, source_ref, completed_by?, completed_via_device?, claimed_by? | One occurrence. The Now score is computed at read time (D-042) |
+| `TaskStep` | task, order, text, done_at? | Homework steps and preparation for key dates |
+| `Routine`, `RoutineStep`, `RoutineRun`, `RoutineRunStep` | members, window, day filter (school days from a calendar), steps with target times; one run per member per qualifying day | D-041 |
+| `MemberAway` | member, from, until | D-039. Every strategy honours it |
+
+Full tables, scheduling, strategies, and notifications are in [Tasks.md](Tasks.md).
 
 **Invariants:**
-- A `rotation` definition advances `rotation_cursor` only when a task is completed.
+- A `rotation` definition advances `rotation_cursor` only on completion or skip, as `advance_on` and `skip_advances` allow (D-039).
 - A `fixed` definition has exactly one candidate.
-- Completing a task stamps `last_done_at` on its definition, and the next occurrence is created from that date (for tasks like "every 7 days after it was last done"), not from the calendar.
+- Completing a task stamps `last_done_at` on its definition. For `after_done` schedules the next occurrence is due `interval` after that date; `rrule` schedules follow the calendar (D-037).
 
 ## Package: Meals (M5)
 | Class | Key attributes |

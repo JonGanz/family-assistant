@@ -105,3 +105,5 @@ Platform details (layout, security, deployment, backups) are in **[Platform.md](
 | M4 | Backend registry, System One sidecars, kNN, S2, eval, **Pipeline and Backends settings**, GPU agent, WoL, advisories | `AI.md` |
 | M5 | Recipes, meal plan, grocery | `Meals.md` |
 | M6 | Smart assignment, TUI | updates |
+
+**Goals** (D-048) are a separate concept from tasks. Their milestone and shape are open (Q-047, Q-048).

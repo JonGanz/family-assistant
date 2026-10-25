@@ -5,7 +5,7 @@ description: Process answered design questions in design/ into decisions, arch u
 
 # Process Answers
 
-Use the helpers in `tools/fa.py`: `answered`, `new_question`, `new_decision`, `resolve`, `supersede`, `annotate`, `rebuild_design_index`, and `edit`. Start scripts with `import sys; sys.path.insert(0, "tools"); from fa import *`.
+Use the helpers in `tools/fa.py`: `answered`, `new_question`, `new_decision`, `resolve`, `supersede`, `annotate`, `rebuild_design_index`, and `edit`. Start scripts with `import sys; sys.path.insert(0, "tools"); from fa import *`. Call `new_question` with keyword arguments (`area=`, `batch=`, `question=`, `options=`): the positional order is `(n, slug, title, area, batch, question, options)`, and swapping them silently writes a broken file.
 
 1. Find the answered questions with:
    `for f in design/Q-*.md; do a=$(sed -n "/<!-- answer below this line -->/,\$p" "$f" | tail -n +2 | grep -v "^\s*$"); [ -n "$a" ] && { echo "=== $f"; echo "$a"; }; done`
