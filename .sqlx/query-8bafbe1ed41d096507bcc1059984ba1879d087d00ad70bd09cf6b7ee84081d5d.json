@@ -1,0 +1,23 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT title FROM event\n             WHERE calendar_id = $1 AND all_day AND NOT cancelled\n               AND start_date <= $2 AND $2 < GREATEST(end_date, start_date + 1)\n             ORDER BY start_date, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "title",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "8bafbe1ed41d096507bcc1059984ba1879d087d00ad70bd09cf6b7ee84081d5d"
+}

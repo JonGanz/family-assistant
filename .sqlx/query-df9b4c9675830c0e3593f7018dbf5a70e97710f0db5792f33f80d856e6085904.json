@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id, ARRAY(SELECT member_id FROM task_assignee WHERE task_id = t.id\n                                  ORDER BY member_id) AS \"assignees!\"\n               FROM task t\n               WHERE t.status = 'open' AND t.archived_at IS NULL AND t.due_at < $1\n                 AND EXISTS (SELECT 1 FROM task_assignee WHERE task_id = t.id)\n               ORDER BY t.due_at, t.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "assignees!",
+        "type_info": "UuidArray"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      null
+    ]
+  },
+  "hash": "df9b4c9675830c0e3593f7018dbf5a70e97710f0db5792f33f80d856e6085904"
+}

@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE task SET title = $2, notes = $3, due_at = $4, priority_flag = $5,\n                    calendar_display = $6, version = version + 1\n             WHERE id = $1 AND version = $7\n             RETURNING version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Text",
+        "Text",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "c8540617034efb967b8aae2bff39cbba7f012f08340dcd187ceef2eba3793f08"
+}

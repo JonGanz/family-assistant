@@ -7,15 +7,18 @@ on a wall dashboard and on everyone's phone.
 Everything runs locally. Deterministic rules do most of the work, and local AI models help only
 where rules can't decide.
 
-> **Status:** M1 (dashboard core) is code-complete. On top of the M0 platform (login, members,
-> dashboard device pairing with PIN elevation, the job queue, backups, CI) it adds calendars
-> (Google, CalDAV, ICS), the weather forecast with rule-based advisories, and a real dashboard.
-> Feature milestones come next (see [Roadmap](#roadmap)).
+> **Status:** M2 (tasks) is code-complete. On top of the M0 platform (login, members, dashboard
+> device pairing with PIN elevation, the job queue, backups, CI) and M1 (calendars: Google, CalDAV,
+> ICS; the weather forecast with rule-based advisories; a real dashboard) it adds task lists,
+> recurring chores with fixed, rotating or pooled assignment, routines, the "Now" list, weather
+> and season tasks, tasks on the calendar, and ntfy push notifications. Feature milestones come
+> next (see [Roadmap](#roadmap)).
 
 ## Contents
 - [Run it locally](#run-it-locally)
 - [Connecting calendars](#connecting-calendars)
 - [Weather and the household location](#weather-and-the-household-location)
+- [Tasks, routines and notifications](#tasks-routines-and-notifications)
 - [The dashboard layout](#the-dashboard-layout)
 - [Configuration reference](#configuration-reference)
 - [Day-to-day development](#day-to-day-development)
@@ -41,11 +44,12 @@ copied as-is, from the repository root.
 
 ### 1. Start the database and create a dev master key
 ```bash
-docker compose -f deploy/compose.dev.yaml up -d --wait postgres
+docker compose -f deploy/compose.dev.yaml up -d --wait postgres ntfy
 scripts/dev-key.sh
 # with just: just dev-db dev-key
 ```
 The dev database listens on `127.0.0.1:55432` (user, password and database are all `fa`). The dev
+ntfy server (push notifications, step 9) listens on `127.0.0.1:18090`. The dev
 key goes to `.dev/master.key` (git-ignored). The key encrypts stored secrets such as calendar
 links, so it is needed by every `fa-server` command. Local settings live in [`.env.dev`](.env.dev).
 
@@ -119,7 +123,47 @@ prints the URL. The page saves the token and removes it from the address bar. *T
 there exercises the adult-PIN flow. The layout (panels, theme, orientation) is edited per device,
 see [The dashboard layout](#the-dashboard-layout).
 
-When you are done, stop the processes (`kill %1 %2 %3` or Ctrl-C) and the database with
+### 8. Tasks and routines
+This step makes a list and a chore, turns it into a task straight away, and checks it off. Log in
+as `alex@example.com` and:
+1. Open **Settings, Tasks**. On **Lists** add a list named `Chores` (kind *Chores*).
+2. On **Chores & schedules** press **Add a chore or schedule**: title `Wipe the counters`, list
+   `Chores`, schedule *Every N days after it's done* with 2 days, start date today, strategy
+   *Pool* with a few people ticked. Save.
+3. The worker creates the task within a minute. To see it immediately, run one pass of the
+   scheduler jobs yourself (it uses the same database as the server):
+   ```bash
+   cargo run -p fa-server -- tasks run-now
+   ```
+   It prints how many tasks and routine runs it created.
+4. Open **Tasks**. The chore is in **Now** and under **Lists**. Tick it: it leaves the open list and
+   an **Undo** toast appears (undo works for 10 minutes and restores the schedule).
+5. For a **routine**, go to **Settings, Tasks, Routines**, add one (for example `Morning` with three
+   steps, *Daily*, starts `00:00`, done by `23:59`, a child ticked) and run `tasks run-now` again.
+   The **Routines** page now shows today's run with a progress bar.
+6. Pair a device (step 7) and open **Edit layout**: add the **Now**, **Member tasks** and
+   **Routine** panels. On the dashboard, completing a task or step asks "Who did it?" first. That
+   needs the household's *dashboard completion override*, which is on by default: switch it off
+   under **Settings, Household** ("Allow ticking off tasks on dashboards") or with
+   `dashboard_completion_override = false` in the `[household]` table of the household TOML
+   (omitted: left as it is; new households start with it on). With it off, dashboard panels are
+   read-only.
+
+### 9. Phone notifications
+`.env.dev` sets `FA_NTFY_URL=http://127.0.0.1:18090`, the dev ntfy server from step 1 (restart
+`serve` after changing it). Open **Settings, Notifications**: it shows a *subscribe address*
+(`http://127.0.0.1:18090/<topic>`) and a QR code. Without a phone, open that address in a browser:
+ntfy's web app shows the topic. Press **Send test** in the app: the test message appears in the
+browser within a second. The same from the shell:
+```bash
+cargo run -p fa-server -- notify test --member alex
+```
+(it prints the subscribe address; without `FA_NTFY_URL` it says so). Real notifications (a task
+assigned to you, overdue, the morning digest) are sent by the worker every minute, and are
+grouped and held during quiet hours, see [below](#notifications). On a phone, install the ntfy app
+and subscribe to the address on the same network or tailnet.
+
+When you are done, stop the processes (`kill %1 %2 %3` or Ctrl-C) and the containers with
 `docker compose -f deploy/compose.dev.yaml stop`.
 
 ## Connecting calendars
@@ -157,10 +201,180 @@ gives "Frost tonight". The editor checks a condition as you type, shows the erro
 previews whether it would fire with the latest forecast. Eight default rules are seeded; edit,
 disable or add your own.
 
+## Tasks, routines and notifications
+Open **Tasks** (everyone) and **Settings, Tasks** (adults). The pieces fit together like this.
+
+### Lists
+A **list** groups tasks, for example *Chores*, *Homework* or *Errands*. Its **kind** sets the
+defaults, and every one of them can be changed per list:
+
+| Kind | Who may complete | Children may add | On the dashboard "+" | On the calendar |
+|---|---|---|---|---|
+| Chores | the assignee (or any adult) | no | no | hidden |
+| Homework | the assignee | their own | no | until done |
+| General | the assignee | no | yes | hidden |
+
+*Adult only* makes a list completable by an adult's own login only. A list can also be hidden from
+the dashboard, coloured, and given a **claim time** (how long a claimed pool task stays yours; by
+default until the end of the day).
+
+### Chores and schedules
+A **chore** (a *task definition*) makes tasks on a schedule. There are two kinds:
+- **Every N days after it's done** (`after_done`): the next one is due N days after you finish (or
+  skip) the last one. Good for "water the plants": being late never makes the next one pile up.
+- **Repeats** (`rrule`): fixed calendar dates, such as every Tuesday or the first of the month. The
+  editor builds the rule for you and previews the next dates. It stays on schedule whether or not
+  the last one was done.
+
+**Due time** and **lead days** control when a task appears: a task shows up that many days before
+it is due. **If it's missed** (the previous task is still open when the next is due) you choose
+*Roll over* (keep the open one, create nothing; the default for after-done chores), *Skip it*
+(mark the old one skipped and create the new one; the default for repeating chores) or *Pile up*
+(create another). A **season** limits a chore to part of the year (a window that wraps the year end
+is fine, such as 11-01 to 02-28), and an optional **weather condition** (the same language as
+weather rules, for example `sum(precip_mm, today) < 5`) postpones it until the forecast allows.
+Missing weather never blocks a chore.
+
+### Who does it
+- **Fixed**: one person. If they are away the task stays with them and adults see a flag.
+- **Rotation**: take turns in the order you set. By default the turn moves on when anyone
+  completes it; you can require that only the person whose turn it is does. Skipping moves the turn
+  on unless you turn that off. People who are away on the due date are passed over.
+- **Pool**: everyone listed can do it. A member can **claim** it so others see it is taken
+  (**Release** gives it back; claims expire).
+
+**Absences** (Settings, Tasks, Absences) record who is away from when to when, and rotation and
+pool assignment respect them. Absences are operational data, not part of the TOML export.
+Completing, reopening and skipping are written to the audit log with who and from which device.
+**Undo** (reopen within 10 minutes of completing) puts the chore's schedule and rotation back as
+they were; reopening later only reopens the task.
+
+### Routines
+A **routine** is a checklist a member repeats, such as *Morning*: steps with optional target times,
+a start time, a "done by" time, and a **day filter**: every day, weekdays, weekends, or **school
+days**. School days are weekdays minus days where the chosen *school calendar* has an all-day event
+whose title contains one of your keywords ("no school", "holiday", "inset", "closed" by default).
+Without a calendar it behaves like weekdays. The worker creates one run per member per qualifying
+day; ticking the last step finishes the run, unticking reopens it, and an unfinished run is
+skipped the next day. Phones show progress per member (children see their own); the dashboard
+**Routine** panel shows large touch targets and a progress bar that turns green at 100%.
+
+### The Now list
+**Now** is the short list of what to do next: the top few open tasks (7 by default; **Settings,
+Household**, or `now_list_size` in the TOML) by a score that rises as a task approaches its due time and keeps
+rising while overdue, plus a bonus for high priority and for tasks made by a weather rule. The
+weights are `now_weights` (`due`, `flag`, `weather`) in the TOML. On a phone, **Tasks, Now** lists yours first,
+then the household's. The dashboard **Now** panel shows the same list and can be filtered by member
+or list in the layout editor.
+
+### Tasks on the calendar
+Each task has a calendar display. *Hidden* tasks live only in task views. *Until done* tasks with a
+due date show as a chip on the **Calendar** page and the week panel until completed. *Always* tasks
+are **key dates** (for example a project due date): they stay after completion, shown as done, and
+are the only tasks the agenda panel lists. Homework defaults to *until done*; mark a task as a key
+date to make it *always*. Add preparation as steps or as earlier one-off tasks.
+
+### Weather tasks
+A **weather rule** (Settings, Weather) with action *Create a task* creates a task from a chore of your
+choice once per rule and day when its condition holds ("rain tomorrow: take in the washing"). In
+*suggest* mode the task is only proposed: adults see it under **Tasks, Suggested** and **Accept**
+or **Dismiss** it.
+
+### Notifications
+Notifications use [ntfy](https://ntfy.sh/), a push service you host (the compose file and the dev
+setup include one). Each member gets a private random topic; **Settings, Notifications** shows the
+subscribe address and a QR code, and **Send test** checks the whole path. Without `FA_NTFY_URL`
+notifications are off and the screen says so.
+
+| Trigger | When | On by default |
+|---|---|---|
+| Assigned | a task is created for you, or someone else adds one for you | yes |
+| Overdue | an open task passes its due time (once per task) | yes |
+| Digest | a morning summary of today's tasks, when quiet hours end | yes |
+| Due soon | a set time before the due time (default 120 minutes) | no |
+| Routine nudge | a set time before "done by" while steps remain (default 10 minutes) | no |
+| Calendar needs attention | adults only: a calendar source needs to be reconnected | no |
+
+Every member can switch triggers on or off and change the two lead times. **Quiet hours** (a
+household default of 21:00 to 07:00, overridable per member) hold messages until they end.
+Messages for one member that are at least a minute old are grouped, so a burst of new chores
+arrives as "3 updates" with the titles listed. A failed send is retried with growing delays (five
+attempts). **Children's copies**: set a child's *copy to* to an adult and that adult receives every
+notification of the child, prefixed with the child's name, subject to the adult's own triggers and
+quiet hours. Tapping a notification opens the app (the link uses `FA_PUBLIC_BASE_URL`).
+
+### Household TOML
+All of this can be written in the household TOML (`fa-server config import`), which checks every
+RRULE, weather condition and season condition first and lists all the errors before writing
+anything. Topics and absences are never exported. The example below shows only the new keys:
+put them into your household file next to its existing `[household]` (which also needs `name`,
+`tz` and so on), `[[members]]` and calendar tables. It assumes the members `alex` and `riley` and
+the *School calendar* source of `config/examples/household.example.toml`:
+```toml
+[household]
+now_list_size = 5
+now_weights = { due = 1.0, flag = 0.75, weather = 0.5 }
+quiet_from = "20:30"
+quiet_until = "06:45"
+
+[[members]]
+key = "riley"
+display_name = "Riley"
+role = "child"
+[members.notify]
+triggers = ["assigned", "due_soon"]   # assigned|overdue|digest|due_soon|routine_nudge|source_reauth
+due_soon_minutes = 90
+nudge_minutes = 5
+quiet_from = "21:30"
+quiet_until = "07:30"
+copy_to = "alex"                      # adult member key
+
+[[task_lists]]
+name = "Chores"
+kind = "chores"                       # chores|homework|general
+claim_ttl_minutes = 60                # omitted: until the end of the local day
+color = "#44aa88"
+
+[[task_definitions]]
+list = "Chores"
+title = "Take out the bins"
+steps = ["Recycling", "Rubbish"]
+rrule = "FREQ=WEEKLY;BYDAY=TU"        # or every_days = 3 (exactly one of the two)
+start_date = "2026-01-06"
+due_time = "19:00"
+lead_days = 1
+candidates = ["alex", "riley"]        # member keys, in order
+strategy = "rotation"                 # fixed|rotation|pool
+season_from = "04-01"
+season_until = "10-31"
+season_condition = "min(temp_c, today) > 5"
+
+[[routines]]
+name = "Morning"
+members = ["riley"]
+starts_at = "07:00"
+done_by = "08:00"
+day_filter = "school_days"
+school_calendar = "School calendar/School"   # "source name/calendar name"
+no_school_match = ["holiday", "inset"]
+steps = [{ text = "Brush teeth", target_time = "07:10" }, { text = "Pack bag" }]
+
+[[weather_rules]]
+name = "Bins in the rain"
+condition = "sum(precip_mm, next 24h) > 5"
+action = "task"
+severity = "info"
+message = "Rain tomorrow"
+task_mode = "suggest"                 # create (default)|suggest
+task_definition = "Take out the bins" # title, or "List/Title" if ambiguous
+```
+Import is idempotent by name or title within a list. `weather_rules` may point at a chore
+(`task_definition`) from the same file.
+
 ## The dashboard layout
 Each paired device has its own layout: **Settings, Devices, Edit layout** lets you pick a preset,
 orientation, theme, agenda length, and add, remove and reorder panels (clock, weather, advisories,
-agenda, week, members), with a live preview of the device. The layout is stored on the server, so
+agenda, week, members, now, member tasks, routine), with a live preview of the device. The layout is stored on the server, so
 the screen picks it up on its next refresh.
 
 ## Configuration reference
@@ -172,23 +386,27 @@ Settings come from environment variables (`FA_*` and `DATABASE_URL`). Local defa
 | `DATABASE_URL` | none | Postgres URL |
 | `FA_MASTER_KEY_PATH` | `/run/secrets/fa_master_key` | 32-byte key file; encrypts stored secrets |
 | `FA_BIND_ADDR` | `127.0.0.1:8080` | API listen address (the port the app is served on) |
-| `FA_PUBLIC_BASE_URL` | none | URL users reach (cookies, pairing links) |
+| `FA_PUBLIC_BASE_URL` | none | URL users reach (cookies, pairing links, the links in notifications) |
 | `FA_COOKIE_SECURE` | `true` | `false` only for plain-http local use |
 | `FA_WEB_DIST_DIR` | `/srv/web` | The built web app |
 | `FA_PUBLIC_URL` | `FA_PUBLIC_BASE_URL` | Base of the Google OAuth redirect (`/api/v1/oauth/google/callback`); https |
 | `FA_GOOGLE_CLIENT_ID`, `FA_GOOGLE_CLIENT_SECRET` | unset | Google OAuth client; unset hides Google in the UI |
 | `FA_OPEN_METEO_URL` | `https://api.open-meteo.com` | Weather provider (point it at a stub or your own instance) |
 | `FA_ALLOW_HTTP_FEEDS` | `false` | Allow plain `http` feeds (LAN CalDAV, local fixtures) |
+| `FA_NTFY_URL` | unset | ntfy server that notifications are published to (`http` or `https`; plain `http` is allowed and independent of `FA_ALLOW_HTTP_FEEDS`). Unset (or empty) turns notifications off, and the UI says so. The worker sends every minute |
+| `FA_NTFY_TOKEN` | unset | Optional bearer token (a secret) for an ntfy server with access control. Never logged |
 | `FA_LOG_LEVEL`, `FA_LOG_FORMAT` | `info`, `pretty` | `trace` to `error`; `pretty` or `json` |
 
-**Ports:** the app serves `8080` (`FA_BIND_ADDR`); the dev database is `55432`; ntfy (deployment) is `8090`; the e2e stack uses `55499`, `18080`, `18091` and `18092`.
+**Ports:** the app serves `8080` (`FA_BIND_ADDR`); the dev database is `55432`; the dev ntfy is `18090`; ntfy in the deployment is `8090`; the e2e stack uses `55499`, `18080`, `18091`, `18092` and `18093` (ntfy).
 
 **`fa-server` commands:**
 | Command | What it does |
 |---|---|
 | `serve [all\|api\|worker]` | Run the server. `api` also runs migrations and the live-update bridge, `worker` runs the jobs, `all` is both in one process |
 | `migrate` | Apply migrations and exit |
-| `config import <file> [--replace]` / `config export [--out f]` | Household TOML in and out. Import validates weather-rule conditions (naming the rule and position) and seeds the default rules. Export never includes secrets |
+| `config import <file> [--replace]` / `config export [--out f]` | Household TOML in and out. Import validates RRULEs, weather conditions and season conditions first (naming each one and the position) and fails before writing anything if any is invalid. It seeds the default weather rules. Export never includes secrets or notification topics |
+| `tasks run-now` | One pass of `tasks.materialize`, `tasks.tick` and `routines.materialize` in this process: new tasks and routine runs appear at once instead of within a minute |
+| `notify test --member <key>` | Publishes a test notification to a member's topic and prints the subscribe address. Fails clearly if `FA_NTFY_URL` is unset |
 | `user add --member <key> --username <u>` / `user reset-password` | Accounts (add `--password-stdin` to script it) |
 | `pin set --member <key>` | An adult's PIN |
 | `device pair --name <n>` / `device revoke <id>` | Dashboard devices |
@@ -224,7 +442,7 @@ just e2e         # = scripts/e2e.sh
 | Script | What it does |
 |---|---|
 | [`scripts/ci-local.sh`](scripts/ci-local.sh) | Mirrors `.github/workflows/ci.yml`: fmt, clippy, tests against a **fresh throwaway Postgres** with `SQLX_OFFLINE=true`, cargo-deny (if installed), the example-data hygiene check, and web lint, typecheck, test and build. `--no-web` skips the web part |
-| [`scripts/e2e.sh`](scripts/e2e.sh) | The end-to-end suite. Starts a throwaway Postgres, `serve api` and `serve worker` as **separate processes**, a fixture server (ICS calendars and an Open-Meteo stub, [`e2e/stubs/`](e2e/stubs/) and [`e2e/fixtures/`](e2e/fixtures/)) and Radicale (CalDAV, `tomsquest/docker-radicale`), seeds the example household, sources, a device and the first sync through the API, then runs the Playwright API specs (`e2e/`) and UI specs (`apps/web/e2e/`). Everything is torn down on exit. `FA_E2E_HOLD=<seconds>` keeps the seeded stack up for debugging |
+| [`scripts/e2e.sh`](scripts/e2e.sh) | The end-to-end suite. Starts a throwaway Postgres, `serve api` and `serve worker` as **separate processes**, a fixture server (ICS calendars and an Open-Meteo stub, [`e2e/stubs/`](e2e/stubs/) and [`e2e/fixtures/`](e2e/fixtures/)), Radicale (CalDAV, `tomsquest/docker-radicale`) and a real ntfy (`binwiederhier/ntfy`), seeds the example household, sources, a device, task lists, chores, a routine and a weather rule through the API, runs `tasks run-now`, then runs the Playwright API specs (`e2e/`) and UI specs (`apps/web/e2e/`). Everything is torn down on exit. `FA_E2E_HOLD=<seconds>` keeps the seeded stack up for debugging |
 | [`scripts/compose-smoke.sh`](scripts/compose-smoke.sh) | Builds the image, starts `deploy/compose.example.yaml` and takes an on-demand backup |
 | [`scripts/restore-rehearsal.sh`](scripts/restore-rehearsal.sh) | Restores a backup dump into a fresh Postgres and checks the app comes up with the same data |
 | [`scripts/check-example-data.sh`](scripts/check-example-data.sh) | Fails if example data, fixtures or e2e files contain non-reserved email domains |
@@ -249,7 +467,9 @@ The app is meant to be reachable **only over Tailscale**. Never expose it to the
    ([layouts](deploy/README.md#layouts)).
 2. **Configure.** `cp deploy/.env.example deploy/.env` and fill in every value: strong
    `POSTGRES_PASSWORD`, `BACKUP_DIR` (your NAS mount), `FA_PUBLIC_BASE_URL`, and optionally the
-   feed and Google variables (table in [Configuration reference](#configuration-reference)).
+   feed, Google and ntfy variables (table in [Configuration reference](#configuration-reference)).
+   The compose file already runs ntfy and points `FA_NTFY_URL` at it; set `NTFY_BASE_URL` to its
+   tailnet address ([ntfy notifications](deploy/README.md#ntfy-notifications)).
    Both `api` and `worker` need outbound HTTPS (calendars, weather, Google).
 3. **Create the master key and back it up offline.**
    `head -c 32 /dev/urandom > fa_master_key && chmod 400 fa_master_key`, then keep a copy in a
@@ -285,8 +505,10 @@ Install in one page: [`deploy/runbooks/install.md`](deploy/runbooks/install.md).
 ```
 crates/          Rust libraries: fa-domain (types and permissions), fa-store (DB, migrations, RLS,
                  encrypted secrets), fa-config, fa-auth, fa-jobs, fa-api, fa-connectors (HTTP clients:
-                 Google, CalDAV, ICS, Open-Meteo), fa-calendar (sync, recurrence, queries), fa-weather
-                 (forecast, rule language, advisories)
+                 Google, CalDAV, ICS, Open-Meteo, ntfy), fa-calendar (sync, recurrence, queries),
+                 fa-weather (forecast, rule language, advisories), fa-tasks (schedules, rotation
+                 and pools, completion, routines, the Now list), fa-notify (the outbox, quiet
+                 hours, batching, ntfy delivery)
 bins/            fa-server (server and operator CLI), fa-gpu-agent (GPU node helper, M4)
 apps/web/        Vue 3 + TypeScript PWA, including the /dashboard kiosk view
 e2e/             Playwright API specs, the fixture server and ICS fixtures (e2e/stubs, e2e/fixtures)
@@ -318,7 +540,7 @@ repository**. Examples use `example.com`.
 |---|---|---|
 | M0 | Skeleton: workspace, DB with RLS, config, auth and RBAC, devices and PIN, jobs, Vue shell, compose, backups, CI | ✅ code-complete |
 | M1 | Members, weather, calendar read (Google, CalDAV, ICS), real dashboard | ✅ code-complete ([plan](plan/M1.md)) |
-| M2 | Tasks and chores (rotation, pools), ntfy notifications | |
+| M2 | Tasks and chores (rotation, pools), routines, the Now list, ntfy notifications | ✅ code-complete ([plan](plan/M2.md)) |
 | M3 | Gmail ingest, rules pipeline, bills, school and teacher linking, event approvals | |
 | M4 | AI: System One decision models, local LLM, GPU node wake, eval harness | |
 | M5 | Recipes, meal plan, grocery list | |

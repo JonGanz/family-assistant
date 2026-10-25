@@ -4,6 +4,7 @@ use utoipa::{Modify, OpenApi};
 use crate::error::Problem;
 use crate::feeds;
 use crate::routes::{self, *};
+use crate::{notify, tasks};
 use fa_domain::*;
 
 struct Security;
@@ -44,8 +45,19 @@ impl Modify for Security {
         feeds::list_rules, feeds::create_rule, feeds::patch_rule, feeds::delete_rule,
         feeds::validate_rule, feeds::get_device, feeds::patch_device, feeds::get_dashboard,
         feeds::get_status,
+        tasks::list_tasks, tasks::create_task, tasks::get_task, tasks::patch_task,
+        tasks::delete_task, tasks::complete_task, tasks::reopen_task, tasks::skip_task,
+        tasks::accept_task, tasks::claim_task, tasks::release_task, tasks::tick_task_step,
+        tasks::list_task_lists, tasks::create_task_list, tasks::patch_task_list,
+        tasks::delete_task_list, tasks::list_definitions, tasks::create_definition,
+        tasks::patch_definition, tasks::delete_definition, tasks::validate_definition,
+        tasks::list_routines, tasks::create_routine, tasks::patch_routine,
+        tasks::delete_routine, tasks::routines_today, tasks::tick_routine_step,
+        tasks::list_away, tasks::add_away, tasks::delete_away,
+        notify::get_prefs, notify::put_prefs, notify::test_prefs,
     ),
     components(schemas(
+        crate::tasks::ViewParam, crate::tasks::StatusParam,
         Problem, MemberView, MemberPublic, MemberFull, DashboardSettings,
         LoginReq, LoginResp, MeResponse, ActorView, CreateMemberReq, PatchMemberReq,
         CreateAccountReq, PasswordReq, PinReq, PairDeviceReq, PairDeviceResp, ElevateReq,

@@ -68,6 +68,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/away/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_away"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/calendar-sources": {
         parameters: {
             query?: never;
@@ -356,6 +372,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/members/{id}/away": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_away"];
+        put?: never;
+        post: operations["add_away"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/members/{id}/notify-prefs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_prefs"];
+        put: operations["put_prefs"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/members/{id}/notify-prefs/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["test_prefs"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/members/{id}/pin": {
         parameters: {
             query?: never;
@@ -436,6 +500,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/routine-runs/{id}/steps/{step_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["tick_routine_step"];
+        trace?: never;
+    };
+    "/api/v1/routines": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_routines"];
+        put?: never;
+        post: operations["create_routine"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/routines/today": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["routines_today"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/routines/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_routine"];
+        options?: never;
+        head?: never;
+        patch: operations["patch_routine"];
+        trace?: never;
+    };
     "/api/v1/sessions": {
         parameters: {
             query?: never;
@@ -498,6 +626,230 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/task-definitions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_definitions"];
+        put?: never;
+        post: operations["create_definition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/task-definitions/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["validate_definition"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/task-definitions/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_definition"];
+        options?: never;
+        head?: never;
+        patch: operations["patch_definition"];
+        trace?: never;
+    };
+    "/api/v1/task-lists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_task_lists"];
+        put?: never;
+        post: operations["create_task_list"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/task-lists/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_task_list"];
+        options?: never;
+        head?: never;
+        patch: operations["patch_task_list"];
+        trace?: never;
+    };
+    "/api/v1/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_tasks"];
+        put?: never;
+        post: operations["create_task"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_task"];
+        put?: never;
+        post?: never;
+        delete: operations["delete_task"];
+        options?: never;
+        head?: never;
+        patch: operations["patch_task"];
+        trace?: never;
+    };
+    "/api/v1/tasks/{id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["accept_task"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{id}/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["claim_task"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{id}/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["complete_task"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{id}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["release_task"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reopen_task"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{id}/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["skip_task"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tasks/{id}/steps/{step_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["tick_task_step"];
         trace?: never;
     };
     "/api/v1/weather": {
@@ -606,6 +958,8 @@ export interface components {
             kind: string;
             member?: null | components["schemas"]["MemberView"];
         };
+        /** @enum {string} */
+        AdvanceOn: "any_completion" | "assignee_completion";
         /** Format: uuid */
         AdvisoryId: string;
         /** @enum {string} */
@@ -627,6 +981,8 @@ export interface components {
             last_at?: string | null;
             ok: boolean;
         };
+        /** @enum {string} */
+        CalendarDisplay: "hidden" | "until_done" | "always";
         /** Format: uuid */
         CalendarId: string;
         CalendarPatch: {
@@ -647,6 +1003,11 @@ export interface components {
             /** Format: int32 */
             version: number;
         };
+        /** @enum {string} */
+        ChildCanAdd: "own" | "none";
+        CompleteTask: {
+            member?: null | components["schemas"]["MemberId"];
+        };
         CreateAccountReq: {
             password: string;
             username: string;
@@ -664,8 +1025,15 @@ export interface components {
             role: string;
         };
         DashboardHousehold: {
+            /** @description Anyone may complete tasks from the dashboard (D-013). */
+            completion_override: boolean;
             location?: null | components["schemas"]["Location"];
             name: string;
+            /**
+             * Format: int32
+             * @description Size of the Now list (D-042).
+             */
+            now_list_size: number;
             tz: string;
             units: components["schemas"]["Units"];
         };
@@ -684,8 +1052,20 @@ export interface components {
             events: components["schemas"]["EventView"][];
             household: components["schemas"]["DashboardHousehold"];
             members: components["schemas"]["MemberPublicDto"][];
+            routines: components["schemas"]["RoutineRunView"][];
             settings: components["schemas"]["DashboardSettings"];
+            /** @description Active task lists (the add form offers those with `dashboard_add`). */
+            task_lists: components["schemas"]["TaskListView"][];
+            tasks: components["schemas"]["TaskView"][];
             weather?: null | components["schemas"]["WeatherView"];
+        };
+        /** @enum {string} */
+        DayFilter: "daily" | "weekdays" | "weekends" | "school_days";
+        DefinitionError: {
+            field: string;
+            message: string;
+            /** Format: int32 */
+            position?: number | null;
         };
         DeviceDto: {
             id: components["schemas"]["DeviceId"];
@@ -761,9 +1141,17 @@ export interface components {
             calendar_future_days?: number | null;
             /** Format: int32 */
             calendar_past_days?: number | null;
+            dashboard_completion_override?: boolean | null;
             location?: null | components["schemas"]["Location"];
             name?: string | null;
+            /** Format: int32 */
+            now_list_size?: number | null;
+            now_weights?: null | components["schemas"]["NowWeights"];
             private_events_as_busy?: boolean | null;
+            /** @example 21:00 */
+            quiet_from?: string | null;
+            /** @example 07:00 */
+            quiet_until?: string | null;
             tz?: string | null;
             units?: null | components["schemas"]["Units"];
             /** Format: int32 */
@@ -774,11 +1162,23 @@ export interface components {
             calendar_future_days: number;
             /** Format: int32 */
             calendar_past_days: number;
+            /** @description Adults may let dashboards (devices) tick off tasks. */
+            dashboard_completion_override: boolean;
             /** @description Read-only: true when the Google client is configured. */
             google_oauth_enabled: boolean;
             location?: null | components["schemas"]["Location"];
             name: string;
+            /** Format: int32 */
+            now_list_size: number;
+            now_weights: components["schemas"]["NowWeights"];
             private_events_as_busy: boolean;
+            /**
+             * @description `"HH:MM"`.
+             * @example 21:00
+             */
+            quiet_from: string;
+            /** @example 07:00 */
+            quiet_until: string;
             tz: string;
             units: components["schemas"]["Units"];
             /** Format: int32 */
@@ -786,6 +1186,8 @@ export interface components {
             /** Format: int32 */
             weather_retention_days: number;
         };
+        /** @enum {string} */
+        ListCompletionPolicy: "assignee" | "adult_only";
         Location: {
             label: string;
             /** Format: double */
@@ -807,6 +1209,17 @@ export interface components {
         MeResponse: {
             actor: components["schemas"]["ActorView"];
             household: components["schemas"]["HouseholdDto"];
+        };
+        /** Format: uuid */
+        MemberAwayId: string;
+        MemberAwayView: {
+            /** Format: date */
+            from: string;
+            id: components["schemas"]["MemberAwayId"];
+            member: components["schemas"]["MemberId"];
+            note?: string | null;
+            /** Format: date */
+            until: string;
         };
         /** @description Full member view for adults. Never includes the PIN hash. */
         MemberDto: {
@@ -846,6 +1259,13 @@ export interface components {
         MemberSelection: components["schemas"]["AllMarker"] | components["schemas"]["MemberId"][];
         /** @description Either member view, as returned by the members API (untagged). */
         MemberView: components["schemas"]["MemberDto"] | components["schemas"]["MemberPublicDto"];
+        NewAway: {
+            /** Format: date */
+            from: string;
+            note?: string | null;
+            /** Format: date */
+            until: string;
+        };
         /** @description New source. Debug output redacts passwords and URLs. */
         NewSource: {
             /** @enum {string} */
@@ -868,6 +1288,18 @@ export interface components {
             owner?: null | components["schemas"]["MemberId"];
             url: string;
         };
+        NewTask: {
+            assignees?: components["schemas"]["MemberId"][];
+            calendar_display?: null | components["schemas"]["CalendarDisplay"];
+            /** Format: date-time */
+            due_at?: string | null;
+            list: components["schemas"]["TaskListId"];
+            member?: null | components["schemas"]["MemberId"];
+            notes?: string | null;
+            priority_flag?: null | components["schemas"]["PriorityFlag"];
+            steps?: string[];
+            title: string;
+        };
         NewWeatherRule: {
             action: components["schemas"]["RuleAction"];
             condition: string;
@@ -875,6 +1307,50 @@ export interface components {
             name: string;
             severity: components["schemas"]["Severity"];
             status?: null | components["schemas"]["RuleStatus"];
+            task_definition?: Record<string, never> | null;
+            task_mode?: null | components["schemas"]["TaskMode"];
+        };
+        NotifyPrefPatch: {
+            copy_to_member?: null | components["schemas"]["MemberId"];
+            /** Format: int32 */
+            due_soon_minutes?: number | null;
+            enabled_triggers?: components["schemas"]["NotifyTrigger"][] | null;
+            /** Format: int32 */
+            nudge_minutes?: number | null;
+            /** @description Absent = keep, `null` = use the household default. */
+            quiet_from?: string | null;
+            quiet_until?: string | null;
+        };
+        NotifyPrefView: {
+            copy_to_member?: null | components["schemas"]["MemberId"];
+            /** Format: int32 */
+            due_soon_minutes: number;
+            enabled_triggers: components["schemas"]["NotifyTrigger"][];
+            member: components["schemas"]["MemberId"];
+            /** Format: int32 */
+            nudge_minutes: number;
+            /** @example 21:00 */
+            quiet_from?: string | null;
+            /** @example 07:00 */
+            quiet_until?: string | null;
+            /** @description False when the server has no `FA_NTFY_URL`. */
+            server_configured: boolean;
+            subscribe_url?: string | null;
+            /** @description Shown only to that member and to adults. */
+            topic?: string | null;
+            /** Format: int32 */
+            version: number;
+        };
+        /** @enum {string} */
+        NotifyTrigger: "assigned" | "overdue" | "digest" | "due_soon" | "routine_nudge" | "source_reauth";
+        /** @description Weights of the Now score (D-042), stored in `household.now_weights`. */
+        NowWeights: {
+            /** Format: double */
+            due: number;
+            /** Format: double */
+            flag: number;
+            /** Format: double */
+            weather: number;
         };
         /** Format: uuid */
         OAuthAccountId: string;
@@ -887,6 +1363,8 @@ export interface components {
             scopes: string[];
             state: components["schemas"]["SourceState"];
         };
+        /** @enum {string} */
+        OnMissed: "roll_over" | "auto_skip" | "pile_up";
         /** @enum {string} */
         Orientation: "landscape" | "portrait";
         PairDeviceReq: {
@@ -925,9 +1403,13 @@ export interface components {
         PinReq: {
             pin: string;
         };
+        /** @enum {string} */
+        PriorityFlag: "normal" | "high";
         /** @description The `application/problem+json` body (RFC 9457). Invalid weather rules add `position` and `message`. */
         Problem: {
             detail: string;
+            /** @description Task and routine validation errors: the offending input field. */
+            field?: string | null;
             /** @description Weather-rule errors only. */
             message?: string | null;
             /**
@@ -955,6 +1437,94 @@ export interface components {
         };
         /** @enum {string} */
         Role: "adult" | "child";
+        /** Format: uuid */
+        RoutineId: string;
+        RoutineInput: {
+            day_filter?: components["schemas"]["DayFilter"];
+            /** @example 08:15 */
+            done_by: string;
+            members?: components["schemas"]["MemberId"][];
+            name: string;
+            /** @description Defaults to `no school, holiday, inset, closed`. */
+            no_school_match?: string[] | null;
+            school_calendar?: null | components["schemas"]["CalendarId"];
+            show_on_dashboard?: boolean;
+            /** @example 06:45 */
+            starts_at: string;
+            steps?: components["schemas"]["RoutineStepInput"][];
+        };
+        RoutinePatch: {
+            day_filter?: null | components["schemas"]["DayFilter"];
+            done_by?: string | null;
+            members?: components["schemas"]["MemberId"][] | null;
+            name?: string | null;
+            no_school_match?: string[] | null;
+            school_calendar?: null | components["schemas"]["CalendarId"];
+            show_on_dashboard?: boolean | null;
+            starts_at?: string | null;
+            steps?: components["schemas"]["RoutineStepInput"][] | null;
+        };
+        /** Format: uuid */
+        RoutineRunId: string;
+        RoutineRunStepView: {
+            /** Format: date-time */
+            done_at?: string | null;
+            /** Format: int32 */
+            ord: number;
+            step: components["schemas"]["RoutineStepId"];
+            /** @example 07:30 */
+            target_time?: string | null;
+            text: string;
+        };
+        RoutineRunView: {
+            /** Format: int32 */
+            done: number;
+            /** @example 08:15 */
+            done_by: string;
+            id: components["schemas"]["RoutineRunId"];
+            member: components["schemas"]["MemberId"];
+            routine: components["schemas"]["RoutineId"];
+            routine_name: string;
+            /** Format: date */
+            run_date: string;
+            /** @example 06:45 */
+            starts_at: string;
+            status: components["schemas"]["RunStatus"];
+            steps: components["schemas"]["RoutineRunStepView"][];
+            /** Format: int32 */
+            total: number;
+        };
+        /** Format: uuid */
+        RoutineStepId: string;
+        RoutineStepInput: {
+            /** @example 07:30 */
+            target_time?: string | null;
+            text: string;
+        };
+        RoutineStepView: {
+            id: components["schemas"]["RoutineStepId"];
+            /** Format: int32 */
+            ord: number;
+            /** @example 07:30 */
+            target_time?: string | null;
+            text: string;
+        };
+        RoutineView: {
+            day_filter: components["schemas"]["DayFilter"];
+            /** @example 08:15 */
+            done_by: string;
+            id: components["schemas"]["RoutineId"];
+            members: components["schemas"]["MemberId"][];
+            name: string;
+            no_school_match: string[];
+            school_calendar?: null | components["schemas"]["CalendarId"];
+            show_on_dashboard: boolean;
+            /** @example 06:45 */
+            starts_at: string;
+            steps: components["schemas"]["RoutineStepView"][];
+            /** Format: int32 */
+            version: number;
+        };
         /** @enum {string} */
         RuleAction: "alert" | "task";
         RuleError: {
@@ -970,6 +1540,23 @@ export interface components {
         };
         /** @enum {string} */
         RuleStatus: "active" | "suggested" | "disabled";
+        /** @enum {string} */
+        RunStatus: "open" | "done" | "skipped";
+        Schedule: {
+            /** Format: int32 */
+            interval_days: number;
+            /** @enum {string} */
+            kind: "after_done";
+        } | {
+            /** @enum {string} */
+            kind: "rrule";
+            rrule: string;
+        };
+        /** @description A season window, both ends `"MM-DD"`; may wrap the year end. */
+        Season: {
+            from: string;
+            until: string;
+        };
         SessionView: {
             /** Format: date-time */
             created_at: string;
@@ -1038,14 +1625,216 @@ export interface components {
             /** Format: int32 */
             version: number;
         };
+        /** @enum {string} */
+        StatusParam: "open" | "done" | "skipped" | "suggested" | "any";
         StatusView: {
             backup: components["schemas"]["BackupStatus"];
             queue: components["schemas"]["QueueStatus"];
             sources: components["schemas"]["SourceStatus"][];
             weather: components["schemas"]["WeatherStatus"];
         };
+        StepTick: {
+            done: boolean;
+            member?: null | components["schemas"]["MemberId"];
+        };
+        /** @enum {string} */
+        Strategy: "fixed" | "rotation" | "pool";
         /** @enum {string} */
         SuggestedBy: "default" | "s2" | "user";
+        /** Format: uuid */
+        TaskDefinitionId: string;
+        TaskDefinitionInput: {
+            advance_on?: components["schemas"]["AdvanceOn"];
+            candidates?: components["schemas"]["MemberId"][];
+            /** @example 18:00 */
+            due_time?: string | null;
+            /** Format: int32 */
+            lead_days?: number;
+            list: components["schemas"]["TaskListId"];
+            notes?: string | null;
+            on_missed?: null | components["schemas"]["OnMissed"];
+            paused?: boolean;
+            priority_flag?: components["schemas"]["PriorityFlag"];
+            schedule: components["schemas"]["Schedule"];
+            season?: null | components["schemas"]["Season"];
+            season_condition?: string | null;
+            skip_advances?: boolean;
+            /** Format: date */
+            start_date: string;
+            steps_template?: string[];
+            strategy: components["schemas"]["Strategy"];
+            title: string;
+        };
+        TaskDefinitionPatch: {
+            advance_on?: null | components["schemas"]["AdvanceOn"];
+            candidates?: components["schemas"]["MemberId"][] | null;
+            due_time?: string | null;
+            /** Format: int32 */
+            lead_days?: number | null;
+            list?: null | components["schemas"]["TaskListId"];
+            notes?: string | null;
+            on_missed?: null | components["schemas"]["OnMissed"];
+            paused?: boolean | null;
+            priority_flag?: null | components["schemas"]["PriorityFlag"];
+            schedule?: null | components["schemas"]["Schedule"];
+            season?: null | components["schemas"]["Season"];
+            season_condition?: string | null;
+            skip_advances?: boolean | null;
+            /** Format: date */
+            start_date?: string | null;
+            steps_template?: string[] | null;
+            strategy?: null | components["schemas"]["Strategy"];
+            title?: string | null;
+        };
+        TaskDefinitionView: {
+            advance_on: components["schemas"]["AdvanceOn"];
+            candidates: components["schemas"]["MemberId"][];
+            condition_ok?: boolean | null;
+            /** @example 18:00 */
+            due_time?: string | null;
+            id: components["schemas"]["TaskDefinitionId"];
+            /** Format: date-time */
+            last_done_at?: string | null;
+            /** Format: int32 */
+            lead_days: number;
+            list: components["schemas"]["TaskListId"];
+            next_assignee?: null | components["schemas"]["MemberId"];
+            /** Format: date-time */
+            next_due_at?: string | null;
+            notes?: string | null;
+            on_missed: components["schemas"]["OnMissed"];
+            paused: boolean;
+            priority_flag: components["schemas"]["PriorityFlag"];
+            schedule: components["schemas"]["Schedule"];
+            season?: null | components["schemas"]["Season"];
+            season_condition?: string | null;
+            skip_advances: boolean;
+            /** Format: date */
+            start_date: string;
+            steps_template: string[];
+            strategy: components["schemas"]["Strategy"];
+            title: string;
+            /** Format: int32 */
+            version: number;
+        };
+        /** Format: uuid */
+        TaskId: string;
+        /** Format: uuid */
+        TaskListId: string;
+        /** @description Every field is explicit; the UI fills it from `list_defaults(kind)`. */
+        TaskListInput: {
+            calendar_default: components["schemas"]["CalendarDisplay"];
+            child_can_add: components["schemas"]["ChildCanAdd"];
+            /** Format: int32 */
+            claim_ttl_minutes?: number | null;
+            color?: string | null;
+            completion_policy: components["schemas"]["ListCompletionPolicy"];
+            dashboard_add: boolean;
+            kind: components["schemas"]["TaskListKind"];
+            name: string;
+            /** Format: int32 */
+            sort: number;
+            visible_on_dashboard: boolean;
+        };
+        /** @enum {string} */
+        TaskListKind: "chores" | "homework" | "general";
+        TaskListPatch: {
+            calendar_default?: null | components["schemas"]["CalendarDisplay"];
+            child_can_add?: null | components["schemas"]["ChildCanAdd"];
+            /**
+             * Format: int32
+             * @description Absent = keep, `null` = end of the local day.
+             */
+            claim_ttl_minutes?: number | null;
+            color?: string | null;
+            completion_policy?: null | components["schemas"]["ListCompletionPolicy"];
+            dashboard_add?: boolean | null;
+            kind?: null | components["schemas"]["TaskListKind"];
+            name?: string | null;
+            /** Format: int32 */
+            sort?: number | null;
+            visible_on_dashboard?: boolean | null;
+        };
+        TaskListView: {
+            calendar_default: components["schemas"]["CalendarDisplay"];
+            child_can_add: components["schemas"]["ChildCanAdd"];
+            /** Format: int32 */
+            claim_ttl_minutes?: number | null;
+            color?: string | null;
+            completion_policy: components["schemas"]["ListCompletionPolicy"];
+            dashboard_add: boolean;
+            id: components["schemas"]["TaskListId"];
+            kind: components["schemas"]["TaskListKind"];
+            name: string;
+            /** Format: int32 */
+            sort: number;
+            /** Format: int32 */
+            version: number;
+            visible_on_dashboard: boolean;
+        };
+        /** @enum {string} */
+        TaskMode: "create" | "suggest";
+        /** @enum {string} */
+        TaskOrigin: "manual" | "system" | "weather";
+        TaskPatch: {
+            assignees?: components["schemas"]["MemberId"][] | null;
+            calendar_display?: null | components["schemas"]["CalendarDisplay"];
+            /** Format: date-time */
+            due_at?: string | null;
+            notes?: string | null;
+            priority_flag?: null | components["schemas"]["PriorityFlag"];
+            /** @description Replacing the steps keeps ticks for unchanged texts. */
+            steps?: string[] | null;
+            title?: string | null;
+        };
+        /** @enum {string} */
+        TaskStatus: "open" | "done" | "skipped" | "suggested";
+        /** Format: uuid */
+        TaskStepId: string;
+        TaskStepView: {
+            /** Format: date-time */
+            done_at?: string | null;
+            done_by?: null | components["schemas"]["MemberId"];
+            id: components["schemas"]["TaskStepId"];
+            /** Format: int32 */
+            ord: number;
+            text: string;
+        };
+        TaskView: {
+            /** @description A fixed assignee is away on the due date. */
+            assignee_away: boolean;
+            assignees: components["schemas"]["MemberId"][];
+            calendar_display: components["schemas"]["CalendarDisplay"];
+            claimed_by?: null | components["schemas"]["MemberId"];
+            /** Format: date-time */
+            claimed_until?: string | null;
+            /** Format: date-time */
+            completed_at?: string | null;
+            completed_by?: null | components["schemas"]["MemberId"];
+            definition?: null | components["schemas"]["TaskDefinitionId"];
+            /** Format: date-time */
+            due_at?: string | null;
+            id: components["schemas"]["TaskId"];
+            list: components["schemas"]["TaskListId"];
+            list_name: string;
+            notes?: string | null;
+            origin: components["schemas"]["TaskOrigin"];
+            priority_flag: components["schemas"]["PriorityFlag"];
+            /** Format: double */
+            score: number;
+            status: components["schemas"]["TaskStatus"];
+            steps: components["schemas"]["TaskStepView"][];
+            title: string;
+            /**
+             * Format: date-time
+             * @description Until when a reopen restores the definition.
+             */
+            undo_until?: string | null;
+            /** Format: int32 */
+            version: number;
+            /** Format: date-time */
+            visible_from?: string | null;
+        };
         /** @enum {string} */
         Units: "metric" | "imperial";
         UserAccountDto: {
@@ -1056,6 +1845,18 @@ export interface components {
         };
         /** Format: uuid */
         UserAccountId: string;
+        ValidateDefinitionRequest: {
+            rrule?: string | null;
+            season_condition?: string | null;
+            /** Format: date */
+            start_date?: string | null;
+        };
+        ValidateDefinitionResponse: {
+            errors: components["schemas"]["DefinitionError"][];
+            /** @description At most 5. */
+            next_dates: string[];
+            ok: boolean;
+        };
         ValidateRuleRequest: {
             condition: string;
             message?: string | null;
@@ -1065,6 +1866,8 @@ export interface components {
             ok: boolean;
             preview?: null | components["schemas"]["RulePreview"];
         };
+        /** @enum {string} */
+        ViewParam: "now" | "mine" | "all";
         /**
          * @description D-036: `Busy` hides title, location and description.
          * @enum {string}
@@ -1079,6 +1882,8 @@ export interface components {
             name?: string | null;
             severity?: null | components["schemas"]["Severity"];
             status?: null | components["schemas"]["RuleStatus"];
+            task_definition?: Record<string, never> | null;
+            task_mode?: null | components["schemas"]["TaskMode"];
         };
         WeatherRuleView: {
             action: components["schemas"]["RuleAction"];
@@ -1089,6 +1894,9 @@ export interface components {
             severity: components["schemas"]["Severity"];
             status: components["schemas"]["RuleStatus"];
             suggested_by: components["schemas"]["SuggestedBy"];
+            /** @description Definition template for action `task` (opaque JSON). */
+            task_definition?: Record<string, never> | null;
+            task_mode: components["schemas"]["TaskMode"];
             /** Format: int32 */
             version: number;
         };
@@ -1231,6 +2039,42 @@ export interface operations {
                 content?: never;
             };
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_away: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description absence id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2363,6 +3207,256 @@ export interface operations {
             };
         };
     };
+    list_away: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description member id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberAwayView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    add_away: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description member id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewAway"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberAwayView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_prefs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description member id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotifyPrefView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_prefs: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description member id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotifyPrefPatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotifyPrefView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    test_prefs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description member id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description published */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description ntfy rejected the message */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description ntfy is not configured */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     set_pin: {
         parameters: {
             query?: never;
@@ -2533,6 +3627,267 @@ export interface operations {
             };
         };
     };
+    tick_routine_step: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description routine run id */
+                id: string;
+                /** @description routine step id */
+                step_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StepTick"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutineRunView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description a device did not send `member` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_routines: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutineView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_routine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoutineInput"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutineView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    routines_today: {
+        parameters: {
+            query?: {
+                member?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutineRunView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_routine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description routine id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_routine: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description routine id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RoutinePatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RoutineView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_sessions: {
         parameters: {
             query?: {
@@ -2638,13 +3993,966 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description `heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `resync`), bridged from `fa_change`; honours Last-Event-ID */
+            /** @description `heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `resync`), bridged from `fa_change`; honours Last-Event-ID */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "text/event-stream": unknown;
+                };
+            };
+        };
+    };
+    list_definitions: {
+        parameters: {
+            query?: {
+                list?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDefinitionView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_definition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskDefinitionInput"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDefinitionView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description invalid RRULE or `season_condition`: `{field, position?, message}` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    validate_definition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValidateDefinitionRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ValidateDefinitionResponse"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_definition: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description definition id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_definition: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description definition id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskDefinitionPatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskDefinitionView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_task_lists: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskListView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_task_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskListInput"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskListView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_task_list: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description list id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_task_list: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description list id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskListPatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskListView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_tasks: {
+        parameters: {
+            query?: {
+                view?: components["schemas"]["ViewParam"];
+                member?: string;
+                list?: string;
+                status?: components["schemas"]["StatusParam"];
+                from?: string;
+                to?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewTask"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `{field, message}` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description task id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskView"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description task id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_task: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description task id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TaskPatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    accept_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description task id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    claim_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description task id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description claimed by someone else or not open */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description not a pool task or not a candidate */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    complete_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description task id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CompleteTask"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description a device did not send `member` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    release_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description task id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reopen_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description task id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    skip_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description task id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    tick_task_step: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description task id */
+                id: string;
+                /** @description step id */
+                step_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StepTick"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description a device did not send `member` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };

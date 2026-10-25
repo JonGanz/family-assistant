@@ -1,0 +1,112 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, household_id, name, kind, completion_policy, child_can_add, dashboard_add,\n                    calendar_default, claim_ttl_minutes, visible_on_dashboard, color, sort,\n                    archived_at, version, created_at, updated_at\n             FROM task_list WHERE $1 OR archived_at IS NULL ORDER BY sort, created_at, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "household_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "kind",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "completion_policy",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "child_can_add",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "dashboard_add",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
+        "name": "calendar_default",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "claim_ttl_minutes",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 9,
+        "name": "visible_on_dashboard",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 10,
+        "name": "color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "sort",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 12,
+        "name": "archived_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 14,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 15,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "6f08d3736a8069c62ef60dd2a63be003f61762dd45223d910aa4740ac93e9b3f"
+}

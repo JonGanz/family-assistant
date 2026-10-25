@@ -7,8 +7,8 @@ use fa_domain::api::WeatherView;
 use fa_domain::{AdvisorySource, Household, HouseholdId, RuleAction, RuleStatus, Units};
 use fa_jobs::JobError;
 use fa_store::{
-    AdvisoryRepo, ChangeBus, JobRepo, NewJob, Store, SystemStatusRepo, WeatherRuleRepo,
-    WeatherSnapshotRepo,
+    AdvisoryRepo, ChangeBus, JobRepo, NewJob, Store, SystemStatusRepo, TaskDefinitionRepo,
+    WeatherRuleRepo, WeatherSnapshotRepo,
 };
 use serde::Serialize;
 use serde_json::{Value, json};
@@ -162,11 +162,8 @@ impl WeatherService {
         let data = SnapshotData::new(&snapshot, tz);
         let rules = WeatherRuleRepo::list(&mut tx, Some(&[RuleStatus::Active])).await?;
         let mut changed = false;
+        let mut task_jobs: Vec<(Value, String)> = Vec::new();
         for rule in rules.iter().map(|r| &r.value) {
-            if rule.action == RuleAction::Task {
-                tracing::debug!(rule = %rule.id, "task rules do not fire before M2");
-                continue;
-            }
             let parsed = match dsl::parse(&rule.condition) {
                 Ok(p) => p,
                 Err(e) => {
@@ -178,6 +175,17 @@ impl WeatherService {
             let (true, Some((from, until)), Some(date)) = (ev.matches, ev.when, ev.key_date) else {
                 continue;
             };
+            if rule.action == RuleAction::Task {
+                if rule.task_definition.is_none() {
+                    tracing::debug!(rule = %rule.id, "task rule has no task definition, skipping");
+                } else {
+                    task_jobs.push((
+                        json!({"household": id, "rule": rule.id, "date": date}),
+                        format!("tasks.from_weather:{}:{date}", rule.id),
+                    ));
+                }
+                continue;
+            }
             let from = from
                 .with_minute(0)
                 .and_then(|d| d.with_second(0))
@@ -201,7 +209,36 @@ impl WeatherService {
         if changed {
             ChangeBus::publish(&mut tx, id, "advisory.updated", &json!({})).await?;
         }
+        let mut warned = false;
+        for (def, cond) in TaskDefinitionRepo::with_condition(&mut tx).await? {
+            let ok = match dsl::parse(&cond) {
+                Ok(p) => Some(evaluate_data(&p, &data, tz, now).matches),
+                Err(e) => {
+                    if !warned {
+                        tracing::warn!(error = %e, "season condition does not parse");
+                        warned = true;
+                    }
+                    None
+                }
+            };
+            TaskDefinitionRepo::set_condition_outcome(&mut tx, def, ok, now).await?;
+        }
         tx.commit().await?;
+        for (payload, key) in task_jobs {
+            fa_jobs::enqueue(
+                &self.store,
+                "tasks.from_weather",
+                payload,
+                None,
+                0,
+                Some(key),
+            )
+            .await
+            .map_err(|e| match e {
+                JobError::Store(e) => WeatherError::Store(e),
+                other => WeatherError::Job(other.to_string()),
+            })?;
+        }
         Ok(())
     }
 

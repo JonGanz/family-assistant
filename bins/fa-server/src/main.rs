@@ -41,6 +41,10 @@ async fn main() -> Result<()> {
                 Command::Weather { action } => {
                     ops::weather(&cfg, &store, cli.household, action).await
                 }
+                Command::Notify { action } => {
+                    ops::notify(&cfg, &store, cli.household, action).await
+                }
+                Command::Tasks { action } => ops::tasks(&store, cli.household, action).await,
                 Command::GenOpenapi { .. } => unreachable!("handled above"),
             }
         }

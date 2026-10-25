@@ -1,4 +1,13 @@
-export type PanelKind = 'clock' | 'weather' | 'advisories' | 'agenda' | 'week' | 'members'
+export type PanelKind =
+  | 'clock'
+  | 'weather'
+  | 'advisories'
+  | 'agenda'
+  | 'week'
+  | 'members'
+  | 'now'
+  | 'member_tasks'
+  | 'routine'
 export type Orientation = 'landscape' | 'portrait'
 
 export interface PanelConfig {
@@ -27,6 +36,9 @@ export const KNOWN_PANELS: readonly string[] = [
   'agenda',
   'week',
   'members',
+  'now',
+  'member_tasks',
+  'routine',
 ]
 
 const base = { orientation: 'landscape', theme: 'auto', members: 'all' } as const
@@ -40,7 +52,14 @@ export const PRESETS: Record<string, DashboardSettings> = {
       { kind: 'weather', hourly: true },
       { kind: 'advisories' },
       { kind: 'agenda' },
+      { kind: 'now' },
+      { kind: 'routine' },
     ],
+  },
+  'Chores board': {
+    ...base,
+    agenda_days: 3,
+    panels: [{ kind: 'clock' }, { kind: 'weather', hourly: false }, { kind: 'member_tasks' }],
   },
   'Calendar wall': {
     ...base,
@@ -61,11 +80,11 @@ export function defaultSettings(): DashboardSettings {
   return structuredClone(PRESETS[DEFAULT_PRESET]!)
 }
 
-const LEFT = new Set(['clock', 'weather', 'advisories', 'members'])
+const LEFT = new Set(['clock', 'weather', 'advisories', 'members', 'now'])
 
 /**
- * Landscape: 12-column grid, left 4 columns hold clock/weather/advisories/members,
- * right 8 hold agenda/week. Portrait: full-width rows in panel order.
+ * Landscape: 12-column grid, left 4 columns hold clock/weather/advisories/members/now,
+ * right 8 hold agenda/week/member_tasks/routine. Portrait: full-width rows in panel order.
  * Unknown panel kinds are dropped here but remain in `settings.panels`.
  */
 export function resolveLayout(settings: DashboardSettings, orientation?: Orientation): GridArea[] {

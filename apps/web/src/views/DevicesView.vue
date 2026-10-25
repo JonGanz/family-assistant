@@ -144,6 +144,7 @@ async function revoke(d: DeviceDto) {
         <LayoutEditor
           v-model="draft"
           :members="preview.members"
+          :lists="preview.task_lists ?? []"
           :saving="saving"
           @save="saveLayout"
         />

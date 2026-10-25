@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import type { WeatherRuleView } from '../../api/client'
 import ErrorBanner from '../../components/ErrorBanner.vue'
 import { ApiError } from '../../api/http'
+import { useDefinitionsStore } from '../../stores/definitions'
 import { useRulesStore } from '../../stores/rules'
 import { describeError } from '../shared'
 import { useRuleValidation } from './useRuleValidation'
@@ -12,13 +13,20 @@ const props = defineProps<{ rule: WeatherRuleView | null }>()
 const emit = defineEmits<{ done: [] }>()
 
 const rules = useRulesStore()
+const defs = useDefinitionsStore()
 const name = ref(props.rule?.name ?? '')
 const condition = ref(props.rule?.condition ?? '')
 const message = ref(props.rule?.message ?? '')
 const severity = ref(props.rule?.severity ?? 'info')
 const action = ref(props.rule?.action ?? 'alert')
+const taskMode = ref<'create' | 'suggest'>(props.rule?.task_mode ?? 'create')
+const taskDef = ref(
+  ((props.rule?.task_definition ?? null) as { definition?: string } | null)?.definition ?? '',
+)
 const saveError = ref('')
 const conditionEl = ref<HTMLInputElement | null>(null)
+
+onMounted(() => void defs.load())
 
 const { result, failure, pending } = useRuleValidation(condition, message)
 
@@ -52,8 +60,24 @@ function insert(text: string) {
   el?.focus()
 }
 
+/** Task options only apply to the `task` action; `task_definition` is `{definition: id}`. */
+function taskFields() {
+  if (action.value !== 'task') return {}
+  return {
+    task_mode: taskMode.value,
+    task_definition: (taskDef.value ? { definition: taskDef.value } : null) as Record<
+      string,
+      never
+    > | null,
+  }
+}
+
 async function save() {
   saveError.value = ''
+  if (action.value === 'task' && !taskDef.value) {
+    saveError.value = 'Pick the chore or task this rule should create.'
+    return
+  }
   try {
     if (props.rule) {
       const ok = await rules.patch(props.rule, {
@@ -62,6 +86,7 @@ async function save() {
         message: message.value,
         severity: severity.value,
         action: action.value,
+        ...taskFields(),
       })
       if (!ok) return
     } else {
@@ -71,6 +96,7 @@ async function save() {
         message: message.value,
         severity: severity.value,
         action: action.value,
+        ...taskFields(),
       })
     }
     emit('done')
@@ -138,9 +164,28 @@ async function save() {
       Action
       <select v-model="action" name="action">
         <option value="alert">Show an advisory</option>
-        <option value="task">Create a task (from M2)</option>
+        <option value="task">Create a task</option>
       </select>
     </label>
+    <template v-if="action === 'task'">
+      <label>
+        Task to create
+        <select v-model="taskDef" name="task_definition" required>
+          <option value="" disabled>Pick a chore or schedule</option>
+          <option v-for="d in defs.items" :key="d.id" :value="d.id">{{ d.title }}</option>
+        </select>
+        <span class="settings-note">
+          Pick from the chores in Settings → Tasks. It is made once per day the rule fires.
+        </span>
+      </label>
+      <label>
+        What happens
+        <select v-model="taskMode" name="task_mode">
+          <option value="create">Create the task right away</option>
+          <option value="suggest">Suggest it (an adult accepts or dismisses)</option>
+        </select>
+      </label>
+    </template>
     <ErrorBanner v-if="rules.conflict" conflict @reload="rules.load()" />
     <ErrorBanner v-if="saveError" :message="saveError" />
     <div class="row">

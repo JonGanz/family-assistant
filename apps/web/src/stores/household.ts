@@ -13,6 +13,12 @@ export const useHouseholdStore = defineStore('household', () => {
 
   const tz = computed(() => view.value?.tz ?? useSessionStore().household?.tz ?? 'UTC')
   const units = computed(() => view.value?.units ?? 'metric')
+  const nowListSize = computed(() => view.value?.now_list_size ?? 7)
+  const nowWeights = computed(() => view.value?.now_weights ?? { due: 1, flag: 0.5, weather: 0.5 })
+  const quiet = computed(() => ({
+    from: view.value?.quiet_from ?? '21:00',
+    until: view.value?.quiet_until ?? '07:00',
+  }))
 
   async function load(): Promise<void> {
     try {
@@ -46,5 +52,18 @@ export const useHouseholdStore = defineStore('household', () => {
     if (kind === 'household.updated' || kind === 'resync') await load()
   }
 
-  return { view, error, conflict, loaded, tz, units, load, save, invalidate }
+  return {
+    view,
+    error,
+    conflict,
+    loaded,
+    tz,
+    units,
+    nowListSize,
+    nowWeights,
+    quiet,
+    load,
+    save,
+    invalidate,
+  }
 })

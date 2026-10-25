@@ -5,17 +5,38 @@ import type { DashboardData } from '../dashboard/types'
 vi.mock('../api/client', () => ({
   api: { me: vi.fn(), dashboard: vi.fn(), dismissAdvisory: vi.fn() },
 }))
+vi.mock('../kiosk/taskApi', () => ({
+  taskApi: {
+    lists: vi.fn().mockResolvedValue([]),
+    household: vi.fn().mockResolvedValue({ now_list_size: 4 }),
+    complete: vi.fn(),
+    reopen: vi.fn(),
+    create: vi.fn(),
+    tickStep: vi.fn(),
+  },
+}))
 import { api } from '../api/client'
+import { ApiError } from '../api/http'
+import { taskApi } from '../kiosk/taskApi'
 import { CACHE_KEY, daysToFetch, readCache, useDashboardStore } from './dashboard'
 
 const dash = vi.mocked(api.dashboard)
 
 function snap(over: Partial<DashboardData['settings']> = {}): DashboardData {
   return {
-    household: { name: 'Example Household', tz: 'UTC', units: 'metric', location: null },
+    household: {
+      name: 'Example Household',
+      tz: 'UTC',
+      units: 'metric',
+      location: null,
+      now_list_size: 4,
+      completion_override: true,
+    },
     members: [],
     events: [],
     advisories: [],
+    tasks: [{ id: 't1', title: 'Water the plants' }],
+    routines: [],
     weather: null,
     settings: {
       orientation: 'landscape',
@@ -108,15 +129,20 @@ describe('dashboard store', () => {
     expect(dash).toHaveBeenCalledTimes(1)
   })
 
-  it.each(['weather.updated', 'advisory.updated', 'member.updated', 'household.updated', 'resync'])(
-    '%s refetches',
-    async (kind) => {
-      const s = await loaded()
-      expect(s.handleEvent(kind, undefined)).toBe(true)
-      await s.refresh()
-      expect(dash).toHaveBeenCalled()
-    },
-  )
+  it.each([
+    'tasks.updated',
+    'routines.updated',
+    'weather.updated',
+    'advisory.updated',
+    'member.updated',
+    'household.updated',
+    'resync',
+  ])('%s refetches', async (kind) => {
+    const s = await loaded()
+    expect(s.handleEvent(kind, undefined)).toBe(true)
+    await s.refresh()
+    expect(dash).toHaveBeenCalled()
+  })
 
   it('device.updated refetches for this device only', async () => {
     const s = await loaded()
@@ -136,5 +162,40 @@ describe('dashboard store', () => {
       daysToFetch(snap({ agenda_days: 2, panels: [{ kind: 'week' }] as never }).settings),
     ).toBe(7)
     expect(daysToFetch(snap({ agenda_days: 30 }).settings)).toBe(14)
+  })
+
+  it('keeps tasks and the Now list size in the snapshot and the offline cache', async () => {
+    await loaded()
+    expect(readCache()?.snapshot.tasks).toHaveLength(1)
+    expect(readCache()?.snapshot.now_list_size).toBe(4)
+    setActivePinia(createPinia())
+    dash.mockRejectedValue(new Error('offline'))
+    const s = useDashboardStore()
+    await s.refresh()
+    expect(s.stale).toBe(true)
+    expect(s.snapshot?.tasks).toHaveLength(1)
+  })
+
+  it('a 403 on completion switches the dashboard to read-only', async () => {
+    const s = await loaded()
+    vi.mocked(taskApi.complete).mockRejectedValue(new ApiError(403, { status: 403 }))
+    expect(await s.complete('t1', 'm1')).toBe(false)
+    expect(s.snapshot?.completion_enabled).toBe(false)
+    expect(s.snapshot?.epoch).toBe(1)
+  })
+
+  it('a routine step tick is optimistic and sent as the run member', async () => {
+    const s = await loaded()
+    s.snapshot!.routines = [
+      {
+        id: 'r1',
+        member: 'm1',
+        steps: [{ step: 's1', done_at: null }],
+        done: 0,
+      } as never,
+    ]
+    vi.mocked(taskApi.tickStep).mockResolvedValue({} as never)
+    await s.tickStep('r1', 's1', true)
+    expect(taskApi.tickStep).toHaveBeenCalledWith('r1', 's1', true, 'm1')
   })
 })

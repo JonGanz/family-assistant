@@ -30,6 +30,30 @@ export const routes: RouteRecordRaw[] = [
     meta: { auth: 'user' },
   },
   {
+    path: '/tasks',
+    name: 'tasks',
+    component: () => import('../views/TasksView.vue'),
+    meta: { auth: 'user' },
+  },
+  {
+    path: '/tasks/:id',
+    name: 'task-detail',
+    component: () => import('../views/TaskDetailView.vue'),
+    meta: { auth: 'user' },
+  },
+  {
+    path: '/routines',
+    name: 'routines',
+    component: () => import('../views/RoutinesView.vue'),
+    meta: { auth: 'user' },
+  },
+  {
+    path: '/settings/notifications',
+    name: 'settings-notifications',
+    component: () => import('../views/SettingsNotificationsView.vue'),
+    meta: { auth: 'user' },
+  },
+  {
     path: '/members',
     name: 'members',
     component: () => import('../views/MembersView.vue'),
@@ -40,6 +64,12 @@ export const routes: RouteRecordRaw[] = [
     path: '/settings/household',
     name: 'settings-household',
     component: () => import('../views/SettingsHouseholdView.vue'),
+    meta: { auth: 'adult' },
+  },
+  {
+    path: '/settings/tasks',
+    name: 'settings-tasks',
+    component: () => import('../views/SettingsTasksView.vue'),
     meta: { auth: 'adult' },
   },
   {

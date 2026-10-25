@@ -1,0 +1,18 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE routine_run_step SET done_at = CASE WHEN $3 THEN now() END,\n                    done_by = CASE WHEN $3 THEN $4::uuid END,\n                    done_via_device = CASE WHEN $3 THEN $5::uuid END\n             WHERE run_id = $1 AND step_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bool",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2bb7f90b81d25ac9b1c25c65dd9a10cba88b2280ec306c80777e0fbc7c53f13d"
+}

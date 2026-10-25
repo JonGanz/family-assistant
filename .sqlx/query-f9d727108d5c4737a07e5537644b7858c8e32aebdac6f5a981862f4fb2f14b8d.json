@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE routine_run SET status = 'skipped' WHERE status = 'open' AND run_date < $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Date"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f9d727108d5c4737a07e5537644b7858c8e32aebdac6f5a981862f4fb2f14b8d"
+}

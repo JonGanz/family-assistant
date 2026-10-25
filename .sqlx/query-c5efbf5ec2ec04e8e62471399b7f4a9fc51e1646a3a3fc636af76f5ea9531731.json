@@ -1,0 +1,119 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, household_id, member_id, trigger, subject_type, subject_id, title, body,\n                    click_path, priority, dedupe_key, status, not_before, sent_at, attempts,\n                    last_error, created_at\n             FROM notification WHERE status = 'pending' AND not_before <= $1\n             ORDER BY created_at, id LIMIT $2",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "household_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "member_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "trigger",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "subject_type",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "subject_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "body",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "click_path",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "priority",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "dedupe_key",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 12,
+        "name": "not_before",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 13,
+        "name": "sent_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 14,
+        "name": "attempts",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 15,
+        "name": "last_error",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 16,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz",
+        "Int8"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      false
+    ]
+  },
+  "hash": "c5efbf5ec2ec04e8e62471399b7f4a9fc51e1646a3a3fc636af76f5ea9531731"
+}

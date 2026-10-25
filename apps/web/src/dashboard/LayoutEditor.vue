@@ -6,23 +6,27 @@ import {
   clampDays,
   isValid,
   movePanel,
+  panelHasId,
   removePanel,
   setPanelOption,
   toggleMember,
+  togglePanelId,
 } from './editor'
 import { KNOWN_PANELS, PRESETS } from './layout'
 import { S } from './strings'
-import type { DashboardSettings, MemberPublic } from './types'
+import type { DashboardSettings, MemberPublic, TaskListView } from './types'
 
 const props = defineProps<{
   modelValue: DashboardSettings
   members: MemberPublic[]
+  lists?: TaskListView[]
   saving?: boolean
 }>()
 const emit = defineEmits<{ 'update:modelValue': [s: DashboardSettings]; save: [] }>()
 
 const s = computed(() => props.modelValue)
 const memberIds = computed(() => props.members.map((m) => m.id))
+const listIds = computed(() => (props.lists ?? []).map((l) => l.id))
 const toAdd = ref('')
 const valid = computed(() => isValid(s.value))
 const known = (k: string) => KNOWN_PANELS.includes(k)
@@ -132,6 +136,47 @@ function preset(e: Event) {
             />
             {{ S.hourly }}
           </label>
+          <label v-if="p.kind === 'routine'" class="check">
+            <input
+              type="checkbox"
+              data-testid="pinned"
+              :checked="p['pinned'] === true"
+              @change="
+                set(setPanelOption(s, i, 'pinned', ($event.target as HTMLInputElement).checked))
+              "
+            />
+            {{ S.pinned }}
+          </label>
+          <span
+            v-if="['now', 'member_tasks', 'routine'].includes(p.kind) && members.length"
+            class="opts"
+            :aria-label="S.panelMembers"
+          >
+            <label v-for="m in members" :key="m.id" class="check">
+              <input
+                type="checkbox"
+                :data-opt="`members:${m.id}`"
+                :checked="panelHasId(p, 'members', m.id)"
+                @change="set(togglePanelId(s, i, 'members', m.id, memberIds))"
+              />
+              {{ m.display_name }}
+            </label>
+          </span>
+          <span
+            v-if="['now', 'member_tasks'].includes(p.kind) && listIds.length"
+            class="opts"
+            :aria-label="S.panelLists"
+          >
+            <label v-for="l in lists" :key="l.id" class="check">
+              <input
+                type="checkbox"
+                :data-opt="`lists:${l.id}`"
+                :checked="panelHasId(p, 'lists', l.id)"
+                @change="set(togglePanelId(s, i, 'lists', l.id, listIds))"
+              />
+              {{ l.name }}
+            </label>
+          </span>
           <button
             type="button"
             :disabled="i === 0"
@@ -213,7 +258,13 @@ ol {
 }
 li {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
+  gap: var(--space-2);
+}
+.opts {
+  display: inline-flex;
+  flex-wrap: wrap;
   gap: var(--space-2);
 }
 .name {

@@ -294,3 +294,15 @@ impl MemberRepo {
         Ok(())
     }
 }
+
+impl MemberRepo {
+    /// Non-archived adults of the transaction's household.
+    pub async fn adults(conn: &mut PgConnection) -> Result<Vec<MemberId>> {
+        let ids = sqlx::query_scalar!(
+            "SELECT id FROM member WHERE role = 'adult' AND archived_at IS NULL ORDER BY created_at, id"
+        )
+        .fetch_all(conn)
+        .await?;
+        Ok(ids.into_iter().map(Into::into).collect())
+    }
+}

@@ -70,3 +70,33 @@ export function toggleMember(s: DashboardSettings, id: string, all: string[]): D
   const picked = all.filter((m) => cur.has(m))
   return { ...s, members: picked.length === all.length ? 'all' : picked }
 }
+
+/** Toggle one id in a panel's id-list option (`members` or `lists`); an empty list means all. */
+export function togglePanelId(
+  s: DashboardSettings,
+  index: number,
+  key: 'members' | 'lists',
+  id: string,
+  all: string[],
+): DashboardSettings {
+  const cur: unknown = s.panels[index]?.[key]
+  const set = new Set<string>(Array.isArray(cur) && cur.length ? cur.map(String) : all)
+  if (set.has(id)) set.delete(id)
+  else set.add(id)
+  const picked = all.filter((x) => set.has(x))
+  return setPanelOption(
+    s,
+    index,
+    key,
+    picked.length === all.length || picked.length === 0 ? [] : picked,
+  )
+}
+
+export function panelHasId(
+  p: { [k: string]: unknown },
+  key: 'members' | 'lists',
+  id: string,
+): boolean {
+  const cur = p[key]
+  return !Array.isArray(cur) || cur.length === 0 || cur.includes(id)
+}

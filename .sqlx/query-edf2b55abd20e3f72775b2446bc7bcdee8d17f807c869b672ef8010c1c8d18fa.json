@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE task_step SET done_at = CASE WHEN $3 THEN now() END,\n                    done_by = CASE WHEN $3 THEN $4::uuid END\n             WHERE id = $1 AND task_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bool",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "edf2b55abd20e3f72775b2446bc7bcdee8d17f807c869b672ef8010c1c8d18fa"
+}

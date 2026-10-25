@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO task_definition (id, household_id, list_id, title, notes, steps_template,\n                    schedule_kind, interval_days, rrule, start_date, due_time, lead_days, on_missed,\n                    strategy, advance_on, skip_advances, rotation_cursor, priority_flag, season_from,\n                    season_until, season_condition, paused, next_due_at)\n             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18,\n                     $19, $20, $21, $22, $23)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "TextArray",
+        "Text",
+        "Int4",
+        "Text",
+        "Date",
+        "Time",
+        "Int4",
+        "Text",
+        "Text",
+        "Text",
+        "Bool",
+        "Int4",
+        "Text",
+        "Int4",
+        "Int4",
+        "Text",
+        "Bool",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "599edcc6863e101b24f5bef5d59e0781c960df1f63ad385fcc35ad5a45a44eaa"
+}

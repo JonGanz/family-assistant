@@ -11,7 +11,12 @@ pub mod dashboard;
 pub mod entities;
 pub mod feeds;
 pub mod ids;
+pub mod notify;
 pub mod oauth;
+pub mod routines;
+pub mod tasks;
+pub mod tasks_api;
+pub mod timefmt;
 pub mod validation;
 
 pub use api::*;
@@ -21,4 +26,5 @@ pub use entities::*;
 pub use feeds::*;
 pub use ids::*;
 pub use oauth::*;
+pub use tasks_api::*;
 pub use validation::*;

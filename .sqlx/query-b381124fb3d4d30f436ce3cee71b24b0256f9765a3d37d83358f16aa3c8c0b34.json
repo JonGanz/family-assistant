@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO task_definition_candidate (definition_id, member_id, household_id, ord)\n         SELECT $1, t.member_id, $2, (t.ord - 1)::int\n         FROM unnest($3::uuid[]) WITH ORDINALITY AS t(member_id, ord)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "b381124fb3d4d30f436ce3cee71b24b0256f9765a3d37d83358f16aa3c8c0b34"
+}

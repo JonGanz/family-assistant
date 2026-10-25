@@ -8,7 +8,7 @@ b("Frontend: apps/web structure (UML 2 component), DRAFT v1 (M1)", 20, 10, 900, 
 b("«subsystem» apps/web (Vue 3 PWA)", 20, 50, 1000, 720, PKG)
 router = b("router\nguards: user | adult | device", 60, 100, 240, 60, COMP)
 app = b("AppLayout + views\nToday · Calendar · Members · Settings (household, calendars, weather, devices, status)", 340, 100, 640, 60, COMP)
-kiosk = b("KioskLayout + dashboard/\nlayout engine · panels: clock, weather, advisories, agenda, week, members", 340, 200, 640, 60, COMP)
+kiosk = b("KioskLayout + dashboard/\nlayout engine · panels: clock, weather, advisories, agenda, week, members; M2: now, member_tasks, routine", 340, 200, 640, 60, COMP)
 kmod = b("kiosk/\nkeepAlive · watchdog · deviceToken · sse", 60, 200, 240, 60, COMP)
 stores = b("stores (Pinia)\nsession · members · household · calendar · weather · sources · devices · dashboard", 340, 320, 640, 60, COMP)
 live = b("composables\nuseLiveStream · useUnits · useRange · useClock", 60, 320, 240, 60, COMP)

@@ -1,0 +1,58 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT rs.step_id, s.ord, s.text, s.target_time, rs.done_at, rs.done_by,\n                    rs.done_via_device\n             FROM routine_run_step rs JOIN routine_step s ON s.id = rs.step_id\n             WHERE rs.run_id = $1 ORDER BY s.ord",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "step_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "ord",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 2,
+        "name": "text",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "target_time",
+        "type_info": "Time"
+      },
+      {
+        "ordinal": 4,
+        "name": "done_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 5,
+        "name": "done_by",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 6,
+        "name": "done_via_device",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "01f101d661315cd6d3281633985e225eae6c82076f357a946734fcc810f4e713"
+}

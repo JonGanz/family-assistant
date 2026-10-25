@@ -1,8 +1,9 @@
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
 use crate::ids::*;
+use crate::tasks::NowWeights;
 
 macro_rules! text_enum {
     ($(#[$m:meta])* $name:ident { $($var:ident),+ $(,)? }) => {
@@ -12,6 +13,38 @@ macro_rules! text_enum {
         #[sqlx(type_name = "text", rename_all = "snake_case")]
         #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
         pub enum $name { $($var),+ }
+    };
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, thiserror::Error)]
+#[error("invalid {ty}: {value:?}")]
+pub struct ParseEnumError {
+    pub ty: &'static str,
+    pub value: String,
+}
+
+/// A `text_enum!` plus `as_str()` and `FromStr` using the DB text values.
+macro_rules! db_enum {
+    ($(#[$m:meta])* $name:ident { $($var:ident => $text:literal),+ $(,)? }) => {
+        text_enum!($(#[$m])* $name { $($var),+ });
+
+        impl $name {
+            pub const ALL: &'static [$name] = &[$($name::$var),+];
+
+            pub fn as_str(&self) -> &'static str {
+                match self { $($name::$var => $text),+ }
+            }
+        }
+
+        impl std::str::FromStr for $name {
+            type Err = ParseEnumError;
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                match s {
+                    $($text => Ok($name::$var),)+
+                    _ => Err(ParseEnumError { ty: stringify!($name), value: s.to_string() }),
+                }
+            }
+        }
     };
 }
 
@@ -58,6 +91,60 @@ text_enum!(RuleStatus {
 text_enum!(SuggestedBy { Default, S2, User });
 text_enum!(AdvisorySource { Rule, S2 });
 
+db_enum!(TaskListKind { Chores => "chores", Homework => "homework", General => "general" });
+db_enum!(ChildCanAdd { Own => "own", None => "none" });
+db_enum!(CalendarDisplay { Hidden => "hidden", UntilDone => "until_done", Always => "always" });
+db_enum!(ScheduleKind { AfterDone => "after_done", Rrule => "rrule" });
+db_enum!(OnMissed { RollOver => "roll_over", AutoSkip => "auto_skip", PileUp => "pile_up" });
+db_enum!(Strategy { Fixed => "fixed", Rotation => "rotation", Pool => "pool" });
+db_enum!(AdvanceOn { AnyCompletion => "any_completion", AssigneeCompletion => "assignee_completion" });
+db_enum!(PriorityFlag { Normal => "normal", High => "high" });
+db_enum!(TaskStatus { Open => "open", Done => "done", Skipped => "skipped", Suggested => "suggested" });
+db_enum!(TaskOrigin { Manual => "manual", System => "system", Weather => "weather" });
+db_enum!(DayFilter { Daily => "daily", Weekdays => "weekdays", Weekends => "weekends", SchoolDays => "school_days" });
+db_enum!(RunStatus { Open => "open", Done => "done", Skipped => "skipped" });
+db_enum!(NotifyTrigger {
+    Assigned => "assigned",
+    Overdue => "overdue",
+    Digest => "digest",
+    DueSoon => "due_soon",
+    RoutineNudge => "routine_nudge",
+    SourceReauth => "source_reauth",
+});
+db_enum!(NotificationStatus { Pending => "pending", Sent => "sent", Dropped => "dropped", Failed => "failed" });
+db_enum!(TaskMode { Create => "create", Suggest => "suggest" });
+
+#[allow(clippy::derivable_impls)]
+impl Default for CalendarDisplay {
+    fn default() -> Self {
+        Self::Hidden
+    }
+}
+#[allow(clippy::derivable_impls)]
+impl Default for AdvanceOn {
+    fn default() -> Self {
+        Self::AnyCompletion
+    }
+}
+#[allow(clippy::derivable_impls)]
+impl Default for PriorityFlag {
+    fn default() -> Self {
+        Self::Normal
+    }
+}
+#[allow(clippy::derivable_impls)]
+impl Default for TaskMode {
+    fn default() -> Self {
+        Self::Create
+    }
+}
+#[allow(clippy::derivable_impls)]
+impl Default for DayFilter {
+    fn default() -> Self {
+        Self::Weekdays
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, utoipa::ToSchema)]
 #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
 pub struct Location {
@@ -81,6 +168,10 @@ pub struct Household {
     pub calendar_future_days: i32,
     pub weather_retention_days: i32,
     pub private_events_as_busy: bool,
+    pub now_list_size: i32,
+    pub now_weights: NowWeights,
+    pub quiet_from: NaiveTime,
+    pub quiet_until: NaiveTime,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -363,3 +454,194 @@ pub enum MemberView {
 
 pub type MemberPublic = MemberPublicDto;
 pub type MemberFull = MemberDto;
+
+// ---- M2 entities (tasks, routines, notifications) ----
+
+#[derive(Debug, Clone)]
+pub struct TaskList {
+    pub id: TaskListId,
+    pub household_id: HouseholdId,
+    pub name: String,
+    pub kind: TaskListKind,
+    pub completion_policy: crate::authz::ListCompletionPolicy,
+    pub child_can_add: ChildCanAdd,
+    pub dashboard_add: bool,
+    pub calendar_default: CalendarDisplay,
+    /// `None` = end of the local day.
+    pub claim_ttl_minutes: Option<i32>,
+    pub visible_on_dashboard: bool,
+    pub color: Option<String>,
+    pub sort: i32,
+    pub archived_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS, utoipa::ToSchema)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+#[ts(export, export_to = "../../../apps/web/src/gen/types/")]
+pub enum Schedule {
+    AfterDone { interval_days: i32 },
+    Rrule { rrule: String },
+}
+
+impl Schedule {
+    pub fn kind(&self) -> ScheduleKind {
+        match self {
+            Self::AfterDone { .. } => ScheduleKind::AfterDone,
+            Self::Rrule { .. } => ScheduleKind::Rrule,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct TaskDefinition {
+    pub id: TaskDefinitionId,
+    pub household_id: HouseholdId,
+    pub list_id: TaskListId,
+    pub title: String,
+    pub notes: Option<String>,
+    pub steps_template: Vec<String>,
+    pub schedule: Schedule,
+    pub start_date: NaiveDate,
+    pub due_time: Option<NaiveTime>,
+    pub lead_days: i32,
+    pub on_missed: OnMissed,
+    pub strategy: Strategy,
+    pub advance_on: AdvanceOn,
+    pub skip_advances: bool,
+    pub rotation_cursor: i32,
+    pub priority_flag: PriorityFlag,
+    /// `(from, until)` as MMDD ints (401 = April 1st); both or neither.
+    pub season: Option<(i32, i32)>,
+    pub season_condition: Option<String>,
+    pub condition_ok: Option<bool>,
+    pub condition_checked_at: Option<DateTime<Utc>>,
+    pub last_done_at: Option<DateTime<Utc>>,
+    pub next_due_at: Option<DateTime<Utc>>,
+    pub paused: bool,
+    pub archived_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Task {
+    pub id: TaskId,
+    pub household_id: HouseholdId,
+    pub list_id: TaskListId,
+    pub definition_id: Option<TaskDefinitionId>,
+    pub weather_rule_id: Option<WeatherRuleId>,
+    pub title: String,
+    pub notes: Option<String>,
+    pub due_at: Option<DateTime<Utc>>,
+    pub visible_from: Option<DateTime<Utc>>,
+    pub status: TaskStatus,
+    pub origin: TaskOrigin,
+    pub source_ref: Option<serde_json::Value>,
+    pub priority_flag: PriorityFlag,
+    pub calendar_display: CalendarDisplay,
+    pub created_by: Option<MemberId>,
+    pub completed_at: Option<DateTime<Utc>>,
+    pub completed_by: Option<MemberId>,
+    pub completed_via_device: Option<DeviceId>,
+    /// `None` on a skipped task = skipped by the system.
+    pub skipped_by: Option<MemberId>,
+    pub claimed_by: Option<MemberId>,
+    pub claimed_until: Option<DateTime<Utc>>,
+    /// The definition's `{rotation_cursor, last_done_at, next_due_at}` before the completion.
+    pub completion_undo: Option<serde_json::Value>,
+    pub archived_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TaskStep {
+    pub id: TaskStepId,
+    pub household_id: HouseholdId,
+    pub task_id: TaskId,
+    pub ord: i32,
+    pub text: String,
+    pub done_at: Option<DateTime<Utc>>,
+    pub done_by: Option<MemberId>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Routine {
+    pub id: RoutineId,
+    pub household_id: HouseholdId,
+    pub name: String,
+    pub starts_at: NaiveTime,
+    pub done_by: NaiveTime,
+    pub day_filter: DayFilter,
+    pub school_calendar_id: Option<CalendarId>,
+    pub no_school_match: Vec<String>,
+    pub show_on_dashboard: bool,
+    pub archived_at: Option<DateTime<Utc>>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RoutineStep {
+    pub id: RoutineStepId,
+    pub household_id: HouseholdId,
+    pub routine_id: RoutineId,
+    pub ord: i32,
+    pub text: String,
+    pub target_time: Option<NaiveTime>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RoutineRun {
+    pub id: RoutineRunId,
+    pub household_id: HouseholdId,
+    pub routine_id: RoutineId,
+    pub member_id: MemberId,
+    pub run_date: NaiveDate,
+    pub status: RunStatus,
+    pub completed_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone)]
+pub struct RoutineRunStep {
+    pub household_id: HouseholdId,
+    pub run_id: RoutineRunId,
+    pub step_id: RoutineStepId,
+    pub done_at: Option<DateTime<Utc>>,
+    pub done_by: Option<MemberId>,
+    pub done_via_device: Option<DeviceId>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MemberAway {
+    pub id: MemberAwayId,
+    pub household_id: HouseholdId,
+    pub member_id: MemberId,
+    pub from_date: NaiveDate,
+    pub until_date: NaiveDate,
+    pub note: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Notification {
+    pub id: NotificationId,
+    pub household_id: HouseholdId,
+    pub member_id: MemberId,
+    pub trigger: NotifyTrigger,
+    pub subject_type: String,
+    pub subject_id: Option<uuid::Uuid>,
+    pub title: String,
+    pub body: String,
+    pub click_path: Option<String>,
+    pub priority: i32,
+    pub dedupe_key: String,
+    pub status: NotificationStatus,
+    pub not_before: DateTime<Utc>,
+    pub sent_at: Option<DateTime<Utc>>,
+    pub attempts: i32,
+    pub last_error: Option<String>,
+    pub created_at: DateTime<Utc>,
+}

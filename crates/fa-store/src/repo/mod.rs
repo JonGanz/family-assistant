@@ -14,16 +14,25 @@ mod calendar;
 mod calendar_source;
 mod device;
 mod event;
+mod ext_t05;
 mod ext_t06;
+mod ext_t06m2;
+mod ext_t07;
 mod ext_t08;
+mod ext_t08m2;
 mod household;
 mod jobs;
 mod member;
+mod notification;
 mod notify;
 mod oauth;
+mod routine;
 mod secrets;
 mod session;
 mod status;
+mod task;
+mod task_definition;
+mod task_list;
 mod weather;
 mod weather_rule;
 
@@ -39,11 +48,18 @@ pub use ext_t08::ConfigExtRepo;
 pub use household::HouseholdRepo;
 pub use jobs::{Job, JobCounts, JobRepo, NewJob, Schedule, ScheduleRepo};
 pub use member::{MemberLockout, MemberRepo};
+pub use notification::{NewNotification, NotificationRepo};
 pub use notify::{NotifyPref, NotifyPrefRepo};
 pub use oauth::{OAuthAccountRepo, OAuthPending, OAuthPendingRepo};
+pub use routine::{
+    MemberAwayRepo, RoutineFull, RoutineRepo, RoutineRunRepo, RoutineStepSpec, RunRow, RunStepRow,
+};
 pub use secrets::SecretRepo;
 pub use session::{SessionRecord, SessionRepo};
 pub use status::SystemStatusRepo;
+pub use task::{NewTaskRow, TaskFilter, TaskRepo, TaskRow};
+pub use task_definition::TaskDefinitionRepo;
+pub use task_list::TaskListRepo;
 pub use weather::WeatherSnapshotRepo;
 pub use weather_rule::WeatherRuleRepo;
 

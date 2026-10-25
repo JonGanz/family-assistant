@@ -9,6 +9,10 @@ use crate::{Result, StoreError, Versioned};
 
 pub struct HouseholdRepo;
 
+fn weights(w: &fa_domain::tasks::NowWeights) -> Result<serde_json::Value> {
+    serde_json::to_value(w).map_err(|e| StoreError::Corrupt(format!("now_weights: {e}")))
+}
+
 struct Row {
     id: Uuid,
     name: String,
@@ -23,6 +27,10 @@ struct Row {
     calendar_future_days: i32,
     weather_retention_days: i32,
     private_events_as_busy: bool,
+    now_list_size: i32,
+    now_weights: serde_json::Value,
+    quiet_from: chrono::NaiveTime,
+    quiet_until: chrono::NaiveTime,
     version: i32,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -49,6 +57,11 @@ impl TryFrom<Row> for Versioned<Household> {
                 calendar_future_days: r.calendar_future_days,
                 weather_retention_days: r.weather_retention_days,
                 private_events_as_busy: r.private_events_as_busy,
+                now_list_size: r.now_list_size,
+                now_weights: serde_json::from_value(r.now_weights)
+                    .map_err(|e| StoreError::Corrupt(format!("now_weights: {e}")))?,
+                quiet_from: r.quiet_from,
+                quiet_until: r.quiet_until,
                 created_at: r.created_at,
                 updated_at: r.updated_at,
             },
@@ -67,12 +80,13 @@ impl HouseholdRepo {
             "INSERT INTO household (id, name, tz, location_lat, location_lon, location_label,
                                     meal_plan_horizon_weeks, dashboard_completion_override,
                                     units, calendar_past_days, calendar_future_days,
-                                    weather_retention_days, private_events_as_busy)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                                    weather_retention_days, private_events_as_busy,
+                                    now_list_size, now_weights, quiet_from, quiet_until)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
              RETURNING id, name, tz, location_lat, location_lon, location_label,
                        meal_plan_horizon_weeks, dashboard_completion_override, units,
                        calendar_past_days, calendar_future_days, weather_retention_days,
-                       private_events_as_busy, version,
+                    private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, version,
                        created_at, updated_at",
             h.id.as_uuid(),
             h.name,
@@ -86,7 +100,11 @@ impl HouseholdRepo {
             h.calendar_past_days,
             h.calendar_future_days,
             h.weather_retention_days,
-            h.private_events_as_busy
+            h.private_events_as_busy,
+            h.now_list_size,
+            weights(&h.now_weights)?,
+            h.quiet_from,
+            h.quiet_until
         )
         .fetch_one(conn)
         .await?;
@@ -102,7 +120,7 @@ impl HouseholdRepo {
             "SELECT id, name, tz, location_lat, location_lon, location_label,
                     meal_plan_horizon_weeks, dashboard_completion_override, units,
                        calendar_past_days, calendar_future_days, weather_retention_days,
-                       private_events_as_busy, version,
+                    private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, version,
                     created_at, updated_at
              FROM household WHERE id = $1",
             id.as_uuid()
@@ -119,7 +137,7 @@ impl HouseholdRepo {
             "SELECT id, name, tz, location_lat, location_lon, location_label,
                     meal_plan_horizon_weeks, dashboard_completion_override, units,
                        calendar_past_days, calendar_future_days, weather_retention_days,
-                       private_events_as_busy, version,
+                    private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, version,
                     created_at, updated_at
              FROM household ORDER BY created_at, id"
         )
@@ -143,8 +161,9 @@ impl HouseholdRepo {
                     location_label = $6, meal_plan_horizon_weeks = $7,
                     dashboard_completion_override = $8, units = $9, calendar_past_days = $10,
                     calendar_future_days = $11, weather_retention_days = $12,
-                    private_events_as_busy = $13, version = version + 1
-             WHERE id = $1 AND version = $14
+                    private_events_as_busy = $13, now_list_size = $14, now_weights = $15,
+                    quiet_from = $16, quiet_until = $17, version = version + 1
+             WHERE id = $1 AND version = $18
              RETURNING version",
             h.id.as_uuid(),
             h.name,
@@ -159,6 +178,10 @@ impl HouseholdRepo {
             h.calendar_future_days,
             h.weather_retention_days,
             h.private_events_as_busy,
+            h.now_list_size,
+            weights(&h.now_weights)?,
+            h.quiet_from,
+            h.quiet_until,
             expected_version
         )
         .fetch_optional(&mut *conn)
@@ -189,8 +212,13 @@ impl HouseholdRepo {
                     calendar_future_days = COALESCE($9, calendar_future_days),
                     weather_retention_days = COALESCE($10, weather_retention_days),
                     private_events_as_busy = COALESCE($11, private_events_as_busy),
+                    now_list_size = COALESCE($12, now_list_size),
+                    now_weights = COALESCE($13, now_weights),
+                    quiet_from = COALESCE($14, quiet_from),
+                    quiet_until = COALESCE($15, quiet_until),
+                    dashboard_completion_override = COALESCE($16, dashboard_completion_override),
                     version = version + 1
-             WHERE id = $1 AND version = $12
+             WHERE id = $1 AND version = $17
              RETURNING version",
             id.as_uuid(),
             p.name,
@@ -203,6 +231,11 @@ impl HouseholdRepo {
             p.calendar_future_days,
             p.weather_retention_days,
             p.private_events_as_busy,
+            p.now_list_size,
+            p.now_weights.as_ref().map(weights).transpose()?,
+            p.quiet_from,
+            p.quiet_until,
+            p.dashboard_completion_override,
             expected_version
         )
         .fetch_optional(&mut *conn)

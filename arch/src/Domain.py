@@ -80,7 +80,7 @@ ws = cls(p2, "WeatherSnapshot", ["fetched_at, provider", "current / hourly / dai
 wr = cls(p2, "WeatherRule", ["condition (DSL)", "action: alert|task", "task_mode: create|suggest", "status: active|suggested|disabled", "suggested_by"], 280, 540, 220)
 adv = cls(p2, "Advisory", ["rule?, text, severity", "valid_from/until", "source, dedupe_key", "dismissed_at?"], 540, 540)
 nt = cls(p2, "Notification", ["member, trigger, dedupe_key", "title, body, not_before", "sent_at?, attempts"], 1000, 540)
-np = cls(p2, "NotifyPref", ["topic, token (Secret)", "triggers, quiet hours", "copy_to_member?"], 1240, 540)
+np = cls(p2, "NotifyPref", ["topic (random)", "triggers, quiet hours", "copy_to_member?"], 1240, 540)
 assoc(p2, np, nt, "1", "*")
 assoc(p2, wr, td, "*", "0..1 task_definition", kind="dependency")
 p2.box("Goals (M7)", 20, 770, 720, 150, PKG)

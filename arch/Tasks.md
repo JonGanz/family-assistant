@@ -9,7 +9,7 @@ depends_on: [D-006, D-010, D-013, D-017, D-018, D-019, D-023, D-027, D-029, D-03
 milestone: M2
 ---
 
-# Tasks: lists, recurrence, assignment, routines, notifications (DRAFT v1)
+# Tasks: lists, recurrence, assignment, routines, notifications (DRAFT v1.1)
 
 This doc covers M2 (D-023): task lists, recurring work, the fixed/rotation/pool strategies, routines, the Now list, completion from phones and the dashboard, and ntfy notifications. v1 is derived from the requirements and D-013 and D-037 to D-050. It replaces the preliminary v0.
 
@@ -31,14 +31,13 @@ Routines are their own kind, not tasks with steps (D-041): they run every qualif
 ## 2. Crates (page "Components")
 | Crate | Responsibility | Depends on |
 |---|---|---|
-| `fa-tasks` (new) | Lists, definitions, occurrences, steps, routines and runs, absences. Scheduling (§4.1), the `AssignmentStrategy` trait with `fixed`, `rotation`, `pool` (§4.2), completion policy (§4.3), the Now score (§4.4), season windows (§4.5), the school-day calendar check (§4.6). Jobs `tasks.materialize`, `tasks.tick`, `routines.materialize` | fa-domain, fa-store, fa-jobs |
-| `fa-notify` (new) | The `Notifier` trait and its ntfy implementation, per-member preferences, quiet hours, copies to an adult, batching through an outbox (§5). Job `notify.send`. M3 adds email and approval triggers | fa-domain, fa-store, fa-jobs, fa-connectors |
+| `fa-tasks` (new) | Lists, definitions, occurrences, steps, routines and runs, absences. Scheduling (§4.1), the `AssignmentStrategy` trait with `fixed`, `rotation`, `pool` (§4.2), completion policy (§4.3), season windows (§4.5), the school-day check (§4.6, reading `event` through fa-store). Writes notification rows to the outbox. Jobs `tasks.materialize`, `tasks.tick`, `tasks.digest`, `tasks.from_weather`, `routines.materialize` | fa-domain, fa-store, fa-jobs |
+| `fa-notify` (new) | Drains the `notification` outbox (§5): applies preferences and quiet hours, batches, copies to an adult, and publishes through the `Notifier` trait (ntfy implementation). Job `notify.send`. Any crate can produce notifications by inserting outbox rows; M3 adds email and approval triggers | fa-domain, fa-store, fa-jobs, fa-connectors |
 | `fa-connectors` (extended) | `ntfy` client: publish to `<base>/<topic>` with `Title`, `Priority`, `Tags`, `Click` headers and a bearer access token. No DB access | (external crates only) |
-| `fa-weather` (extended) | Rules with action `task` now fire, through the `TaskSink` trait in `fa-domain` (§4.5) | fa-domain |
-| `fa-calendar` (extended) | Implements `CalendarQuery` from `fa-domain` (all-day events on a calendar for a date), used for school days (§4.6) | fa-domain |
-| `fa-api` (extended) | Routes in §6, plus `tasks.updated` and `routines.updated` on the SSE hub (ChangeBus, Feeds.md §6) | fa-tasks, fa-notify |
+| `fa-weather` (extended) | Rules with action `task` now fire by enqueuing a `tasks.from_weather` job. `weather.evaluate` also evaluates every definition's `season_condition` and stores the result on the definition (§4.5) | fa-domain, fa-store, fa-jobs |
+| `fa-api` (extended) | Routes in §6, plus `tasks.updated` and `routines.updated` on the SSE hub (ChangeBus, Feeds.md §6). Validates `season_condition` with `fa_weather::parse` | fa-tasks, fa-notify, fa-weather |
 
-Feature crates still never depend on each other. `fa-server` wires `fa-tasks` in as the `TaskSink` for `fa-weather`, and `fa-calendar` in as the `CalendarQuery` for `fa-tasks`.
+Feature crates still never depend on each other. They meet only through the store and the job queue: weather → tasks is a `tasks.from_weather` job plus the `condition_ok` column, tasks → calendar is a read of `event` through fa-store, and anything → notify is the `notification` outbox. That keeps the api and worker processes independent, with nothing to wire in `fa-server` beyond registering handlers.
 
 ## 3. Data model (page "Model")
 This refines the Tasks package of [Domain.md](Domain.md). All tables are household-scoped with RLS and follow its persistence conventions (UUID ids, `version` for optimistic concurrency, `archived_at` soft delete, audit log).
@@ -48,7 +47,7 @@ This refines the Tasks package of [Domain.md](Domain.md). All tables are househo
 |---|---|---|
 | `household` (+cols) | `now_list_size` (7), `now_weights jsonb` (§4.4), `quiet_from` (21:00), `quiet_until` (07:00) | Editable in Settings → Household. Quiet hours are a household default that a member can override |
 | `task_list` | name, kind: `chores\|homework\|general` (+ `email` in M3), completion_policy: `assignee\|adult_only` (D-013), `child_can_add: own\|none`, `dashboard_add`, `calendar_default: hidden\|until_done\|always`, `claim_ttl` (default: end of day), visible_on_dashboard, color?, sort, version | Defaults by kind in §3.2 |
-| `task_definition` | list, title, notes?, steps_template text[], `schedule_kind: rrule\|after_done`, rrule?, interval?, dtstart, lead_time, `on_missed: roll_over\|auto_skip\|pile_up` (default `roll_over` for `after_done`, `auto_skip` for `rrule`, D-038, D-049), strategy: `fixed\|rotation\|pool` (`smart` reserved for M6), `advance_on: any_completion\|assignee_completion`, `skip_advances`, rotation_cursor, priority_flag: `normal\|high`, season_from?/season_until? (month-day), season_condition? (rule DSL), last_done_at?, next_due_at, paused, version | D-037 to D-039, D-043. `rrule` and `interval` are exclusive (CHECK) |
+| `task_definition` | list, title, notes?, steps_template text[], `schedule_kind: rrule\|after_done`, rrule?, interval?, dtstart, lead_time, `on_missed: roll_over\|auto_skip\|pile_up` (default `roll_over` for `after_done`, `auto_skip` for `rrule`, D-038, D-049), strategy: `fixed\|rotation\|pool` (`smart` reserved for M6), `advance_on: any_completion\|assignee_completion`, `skip_advances`, rotation_cursor, priority_flag: `normal\|high`, season_from?/season_until? (month-day), season_condition? (rule DSL), condition_ok? and condition_checked_at? (written by `weather.evaluate`), last_done_at?, next_due_at, paused, version | D-037 to D-039, D-043, D-049. `rrule` and `interval` are exclusive (CHECK) |
 | `task_definition_candidate` | definition, member, ord | Ordered. `fixed` has exactly one |
 | `task` | list, definition?, weather_rule?, title, notes?, due_at?, visible_from?, status: `open\|done\|skipped\|suggested`, origin: `manual\|system\|weather` (+ `email` in M3), source_ref?, priority_flag, calendar_display: `hidden\|until_done\|always`, created_by?, completed_at?, completed_by?, completed_via_device?, skipped_by? (`null` = system), claimed_by?, claimed_until?, version | One occurrence. The score is computed at read time. `suggested` is a weather task waiting for an adult (D-043) |
 | `task_assignee` | task ↔ member | Set by the strategy when the occurrence is created |
@@ -57,7 +56,7 @@ This refines the Tasks package of [Domain.md](Domain.md). All tables are househo
 | `routine` | name, members[] (`routine_member`), steps (`routine_step`: ord, text, target_time?), starts_at, done_by, `day_filter: daily\|weekdays\|weekends\|school_days` (default `weekdays`), school_calendar?, `no_school_match` text[] (default `["no school", "holiday", "inset", "closed"]`), show_on_dashboard, version | D-041 |
 | `routine_run` | routine, member, date, status: `open\|done\|skipped`, completed_at? | Unique `(routine, member, date)` |
 | `routine_run_step` | run, step, done_at?, done_by?, done_via_device? | Progress = done steps / all steps |
-| `notify_pref` | member, topic, token (Secret), triggers jsonb (§5), quiet_from?/quiet_until? (override), `copy_to_member?` | D-044. Replaces Domain.md's M0 placeholder |
+| `notify_pref` (+cols) | member, topic (random, §5.2), triggers text[] (§5), due_soon_minutes (120), nudge_minutes (10), quiet_from?/quiet_until? (override), `copy_to_member?` | D-044. Extends the M0 table |
 | `notification` | member, trigger, subject_type, subject_id, dedupe_key (unique), title, body, click_url?, not_before, sent_at?, attempts, last_error? | Outbox (§5) |
 | `weather_rule` (+col) | `task_mode: create\|suggest` (default `create`) | D-043, Feeds.md §2 |
 
@@ -72,7 +71,7 @@ All of these are editable per list (D-045, D-046). A task can change its own `ca
 
 ### 3.3 Invariants
 - A `fixed` definition has exactly one candidate. `rotation` and `pool` have at least one.
-- At most one open (or suggested) occurrence per definition, unless `on_missed = pile_up`. Partial unique index on `(definition) WHERE status IN ('open','suggested')`, skipped for `pile_up` definitions by a flag column copied onto the task.
+- At most one open (or suggested) occurrence per definition, unless `on_missed = pile_up`. Enforced in code: materialisation locks the definition row (`FOR UPDATE SKIP LOCKED`) before checking.
 - The rotation cursor moves only inside the transaction that completes or skips an occurrence, and only as `advance_on` and `skip_advances` allow.
 - Completing an occurrence sets `last_done_at` on its definition, and for `after_done` sets `next_due_at = last_done_at + interval`. For `rrule`, `next_due_at` is the next RRULE instance after the current one's due time, regardless of completion.
 
@@ -91,7 +90,7 @@ All of these are editable per list (D-045, D-046). A task can change its own `ca
 ### 4.2 Assignment strategies (D-013, D-039, D-040)
 | Strategy | On create | On complete or skip |
 |---|---|---|
-| `fixed` | The one candidate. If they are away, the task keeps them and is flagged to adults | — |
+| `fixed` | The one candidate. If they are away, the task keeps them and is flagged (`assignee_away`) so adults see it | — |
 | `rotation` | The candidate at `rotation_cursor`, skipping members who are away on the due date | `any_completion`: move on after any completion. `assignee_completion`: move on only when the assignee completes. A skip moves on only if `skip_advances` |
 | `pool` | All candidates who are not away. Anyone in the pool can complete it. A member can claim it (`claimed_by`, `claimed_until = now + list.claim_ttl`), and the claim can be released | — |
 
@@ -111,8 +110,8 @@ All of these are editable per list (D-045, D-046). A task can change its own `ca
 
 ### 4.5 Seasons and weather (D-043)
 - A **season window** is `season_from`–`season_until` as month-day values, and it may wrap the year end (Nov–Feb). Outside it, `tasks.materialize` creates nothing and moves `next_due_at` to the window's next start.
-- A **season condition** reuses the weather rule DSL (Feeds.md) against the latest snapshot ("not if `sum(precip_mm, today) > 5`"). If it fails, the occurrence is deferred by a day.
-- A **weather rule** with action `task` calls `TaskSink::create_from_rule(rule, snapshot)` and creates a task from its `task_definition` with `origin = weather`. It is deduplicated per rule and day. With `task_mode = suggest`, the task is created as `suggested` and appears in a Suggested section for adults to accept (it becomes `open`) or dismiss (it becomes `skipped`).
+- A **season condition** is a weather DSL expression (Feeds.md) that must be **true** for the occurrence to be created (for example `sum(precip_mm, today) < 5`). `weather.evaluate` evaluates it after every fetch and writes `condition_ok` and `condition_checked_at` on the definition. `tasks.materialize` defers a due occurrence while `condition_ok = false`. A missing or stale result (older than 6 h, or no weather at all) counts as true, so tasks never stall on missing weather.
+- A **weather rule** with action `task` that matches enqueues `tasks.from_weather{rule, date}` with the idempotency key `tasks.from_weather:{rule}:{date}`, which is the dedupe per rule and day. The fa-tasks handler creates a task from the rule's `task_definition` with `origin = weather` and that definition's strategy. With `task_mode = suggest`, the task is created as `suggested` and appears in a Suggested section for adults to accept (it becomes `open`) or dismiss (it becomes `skipped`).
 
 ### 4.6 Routines (D-041)
 - **Day filters:** `daily`, `weekdays` (default), `weekends`, or `school_days`. `school_days` means weekdays, minus any day with an all-day event on `school_calendar` whose title contains one of `no_school_match`, case-insensitive. The keywords are editable. If no school calendar is set, `school_days` behaves like `weekdays`.
@@ -139,8 +138,10 @@ All of these are editable per list (D-045, D-046). A task can change its own `ca
 | `routine_nudge` | A set time before `done_by` (default 10 min) while steps remain | off |
 
 ### 5.2 Delivery
-- Each member has a topic with a random name. Topic names never contain household specifics. The ntfy server runs with `auth-default-access: deny-all`. Each member gets a read token for their own topic, and `fa-server` holds one write token. Tokens are `Secret`s, and the topic and read token are shown once in Settings → Notifications as a subscribe link or QR code. This is the deployment setup, documented in `deploy/README.md`.
-- Triggers write to the `notification` outbox with `not_before` pushed past quiet hours. `notify.send` runs every 30 seconds. It groups each member's due rows from the last 60 seconds into one message ("3 new tasks"), publishes, and retries with backoff (at most 5 attempts).
+- Each member's topic is a random 24-character name, generated when preferences are first saved. It acts as the capability (ntfy's standard model) and never contains household specifics. The API returns it only to that member and to adults, and `config export` leaves it out.
+- `fa-server` publishes to `FA_NTFY_URL` with an optional `FA_NTFY_TOKEN` (bearer). Without `FA_NTFY_URL`, notifications are disabled and the settings screen says so. Settings → Notifications shows the subscribe URL and a QR code.
+- Hosters who want more than topic secrecy enable ntfy's own access control (`auth-default-access: deny-all`, a write token for `fa-server`, read access per topic). `deploy/README.md` documents it; the app doesn't manage ntfy users.
+- Producers (fa-tasks now, M3 later) insert outbox rows unconditionally, deduplicated by `dedupe_key`. `notify.send` runs every minute and decides: it drops rows whose trigger the member has turned off, holds rows during quiet hours (household default or the member's override), groups each member's remaining rows that are at least 60 seconds old into one message ("3 new tasks"), publishes, and retries failures with backoff (at most 5 attempts).
 - **Children:** notifications go to the child's own topic. With `copy_to_member` set, the same message also goes to that adult, prefixed with the child's name.
 - **Test:** Settings → Notifications has a "Send test" button.
 - The existing `needs_reauth` state of calendar sources gets an adult-only trigger in M2 (cheap, and it uses the same path).
@@ -169,11 +170,11 @@ All of these are editable per list (D-045, D-046). A task can change its own `ca
 | Add a one-off task | own, on `child_can_add = own` lists | ✓ | on `dashboard_add` lists | ✓ |
 | Edit own one-off task | ✓ | ✓ | ✗ | ✗ |
 | Manage lists, definitions, routines, absences | ✗ | ✓ | ✗ | ✗ |
-| Skip, accept suggested | ✗ | ✓ | ✗ | ✓ |
+| Skip, accept suggested | ✗ | ✓ | ✗ | ✗ (adult's own session) |
 | Notification preferences | own | own and children's | ✗ | ✗ |
 
 ## 8. Configuration (D-018)
-The household TOML gains `[[task_list]]`, `[[task_definition]]`, `[[routine]]`, and per-member `notify` tables (without tokens; topics get new tokens on import). `config export` writes them back. The example household gets no task data (D-047).
+The household TOML gains `[[task_list]]`, `[[task_definition]]`, `[[routine]]`, and per-member `notify` tables (triggers and quiet hours, without topics: topics are regenerated on import). `config export` writes them back. The example household gets no task data (D-047).
 
 ## 9. Frontend (summary)
 Frontend.md gets the M2 screens with the M2 plan:

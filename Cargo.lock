@@ -929,7 +929,9 @@ dependencies = [
  "fa-calendar",
  "fa-connectors",
  "fa-domain",
+ "fa-notify",
  "fa-store",
+ "fa-tasks",
  "fa-weather",
  "futures",
  "serde",
@@ -1044,6 +1046,7 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "chrono",
+ "chrono-tz",
  "serde",
  "serde_json",
  "sqlx",
@@ -1075,6 +1078,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "fa-notify"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "chrono",
+ "chrono-tz",
+ "fa-connectors",
+ "fa-domain",
+ "fa-jobs",
+ "fa-store",
+ "rand 0.9.5",
+ "serde_json",
+ "sqlx",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
+ "wiremock",
+]
+
+[[package]]
 name = "fa-server"
 version = "0.1.0"
 dependencies = [
@@ -1090,7 +1114,9 @@ dependencies = [
  "fa-connectors",
  "fa-domain",
  "fa-jobs",
+ "fa-notify",
  "fa-store",
+ "fa-tasks",
  "fa-weather",
  "serde_json",
  "sqlx",
@@ -1115,6 +1141,25 @@ dependencies = [
  "serde_json",
  "sqlx",
  "tempfile",
+ "thiserror",
+ "tokio",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "fa-tasks"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "chrono-tz",
+ "fa-domain",
+ "fa-jobs",
+ "fa-store",
+ "rrule",
+ "serde",
+ "serde_json",
+ "sqlx",
  "thiserror",
  "tokio",
  "tracing",

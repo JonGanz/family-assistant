@@ -1,0 +1,39 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE household SET name = $2, tz = $3, location_lat = $4, location_lon = $5,\n                    location_label = $6, meal_plan_horizon_weeks = $7,\n                    dashboard_completion_override = $8, units = $9, calendar_past_days = $10,\n                    calendar_future_days = $11, weather_retention_days = $12,\n                    private_events_as_busy = $13, now_list_size = $14, now_weights = $15,\n                    quiet_from = $16, quiet_until = $17, version = version + 1\n             WHERE id = $1 AND version = $18\n             RETURNING version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Float8",
+        "Float8",
+        "Text",
+        "Int4",
+        "Bool",
+        "Text",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Bool",
+        "Int4",
+        "Jsonb",
+        "Time",
+        "Time",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3238ea065de884c0ee9e78574d3f3c8541e5477eab383a2de34f30cccb8e9828"
+}

@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO routine_run (id, household_id, routine_id, member_id, run_date)\n             SELECT $1, household_id, id, $3, $4 FROM routine WHERE id = $2\n             ON CONFLICT (routine_id, member_id, run_date) DO NOTHING\n             RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Date"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "661a17f192f0887300cb8147c960f075a447eb97872977b5ff4c683fc239b279"
+}

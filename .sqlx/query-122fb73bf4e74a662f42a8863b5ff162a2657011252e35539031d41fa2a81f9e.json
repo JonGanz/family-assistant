@@ -1,0 +1,22 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO routine (id, household_id, name, starts_at, done_by, day_filter,\n                                  school_calendar_id, no_school_match, show_on_dashboard)\n             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Time",
+        "Time",
+        "Text",
+        "Uuid",
+        "TextArray",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "122fb73bf4e74a662f42a8863b5ff162a2657011252e35539031d41fa2a81f9e"
+}

@@ -2,14 +2,19 @@ import { describe, expect, it } from 'vitest'
 import { burnInOffset, defaultSettings, PRESETS, resolveLayout } from './index'
 
 describe('layout engine', () => {
-  it('has the three presets, default is Family hub', () => {
-    expect(Object.keys(PRESETS)).toEqual(['Family hub', 'Calendar wall', 'Minimal'])
+  it('has the presets, default is Family hub', () => {
+    expect(Object.keys(PRESETS)).toEqual(['Family hub', 'Chores board', 'Calendar wall', 'Minimal'])
     expect(defaultSettings().panels.map((p) => p.kind)).toEqual([
       'clock',
       'weather',
       'advisories',
       'agenda',
+      'now',
+      'routine',
     ])
+  })
+  it('Chores board has member_tasks', () => {
+    expect(PRESETS['Chores board']!.panels.map((p) => p.kind)).toContain('member_tasks')
   })
   it('landscape: left 4 columns and right 8', () => {
     const areas = resolveLayout(defaultSettings(), 'landscape')
@@ -17,11 +22,14 @@ describe('layout engine', () => {
     expect(col('clock')).toBe('1 / 5')
     expect(col('weather')).toBe('1 / 5')
     expect(col('agenda')).toBe('5 / 13')
-    expect(areas.find((a) => a.panel.kind === 'agenda')!.row).toBe('1 / 4')
+    expect(col('now')).toBe('1 / 5')
+    expect(col('routine')).toBe('5 / 13')
+    expect(areas.find((a) => a.panel.kind === 'agenda')!.row).toBe('1 / 3')
+    expect(areas.find((a) => a.panel.kind === 'routine')!.row).toBe('3 / 5')
   })
   it('portrait stacks full width', () => {
     const areas = resolveLayout(defaultSettings(), 'portrait')
-    expect(areas.map((a) => a.row)).toEqual(['1 / 2', '2 / 3', '3 / 4', '4 / 5'])
+    expect(areas.map((a) => a.row)).toEqual(['1 / 2', '2 / 3', '3 / 4', '4 / 5', '5 / 6', '6 / 7'])
     expect(areas.every((a) => a.column === '1 / 13')).toBe(true)
   })
   it('drops unknown panels from the grid but keeps them in the data', () => {
@@ -29,6 +37,10 @@ describe('layout engine', () => {
     s.panels.push({ kind: 'hologram' })
     expect(resolveLayout(s, 'landscape').some((a) => a.panel.kind === 'hologram')).toBe(false)
     expect(s.panels.some((p) => p.kind === 'hologram')).toBe(true)
+  })
+  it('places member_tasks on the right', () => {
+    const areas = resolveLayout(PRESETS['Chores board']!, 'landscape')
+    expect(areas.find((a) => a.panel.kind === 'member_tasks')!.column).toBe('5 / 13')
   })
   it('burn-in offset is small and changes every 10 minutes', () => {
     const t = new Date('2026-10-24T10:00:00Z')

@@ -1,0 +1,191 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT t.id, t.household_id, t.list_id, t.definition_id, t.weather_rule_id, t.title,\n                    t.notes, t.due_at, t.visible_from, t.status, t.origin, t.source_ref,\n                    t.priority_flag, t.calendar_display, t.created_by, t.completed_at,\n                    t.completed_by, t.completed_via_device, t.skipped_by, t.claimed_by,\n                    t.claimed_until, t.completion_undo, t.archived_at, t.version, t.created_at,\n                    t.updated_at, l.name AS list_name, l.completion_policy\n             FROM task t JOIN task_list l ON l.id = t.list_id\n             WHERE t.archived_at IS NULL\n               AND ($1::uuid[] IS NULL OR t.id = ANY($1))\n               AND ($2::text[] IS NULL OR t.status = ANY($2))\n               AND ($3::uuid IS NULL OR t.list_id = $3)\n               AND ($4::uuid IS NULL OR EXISTS (\n                        SELECT 1 FROM task_assignee a WHERE a.task_id = t.id AND a.member_id = $4))\n               AND ($5::timestamptz IS NULL OR t.due_at >= $5)\n               AND ($6::timestamptz IS NULL OR t.due_at < $6)\n               AND ($7::timestamptz IS NULL OR t.visible_from IS NULL OR t.visible_from <= $7)\n               AND (NOT $8 OR t.calendar_display <> 'hidden')\n             ORDER BY t.due_at NULLS LAST, t.created_at, t.id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "household_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "list_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "definition_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "weather_rule_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 5,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "notes",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "due_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 8,
+        "name": "visible_from",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 9,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
+        "name": "origin",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 11,
+        "name": "source_ref",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 12,
+        "name": "priority_flag",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "calendar_display",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "created_by",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 15,
+        "name": "completed_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 16,
+        "name": "completed_by",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 17,
+        "name": "completed_via_device",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 18,
+        "name": "skipped_by",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 19,
+        "name": "claimed_by",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 20,
+        "name": "claimed_until",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 21,
+        "name": "completion_undo",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 22,
+        "name": "archived_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 23,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 24,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 25,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 26,
+        "name": "list_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 27,
+        "name": "completion_policy",
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "UuidArray",
+        "TextArray",
+        "Uuid",
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz",
+        "Timestamptz",
+        "Bool"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "c595124aa8ec1f96f3a70a0e38bb819f471f4e7cc7a4ad490705637d0c6f55e0"
+}

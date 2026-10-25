@@ -18,9 +18,13 @@ async function logout() {
       <nav v-if="session.isUser">
         <RouterLink to="/">Today</RouterLink>
         <RouterLink to="/calendar">Calendar</RouterLink>
+        <RouterLink to="/tasks">Tasks</RouterLink>
+        <RouterLink to="/routines">Routines</RouterLink>
         <RouterLink to="/members">Members</RouterLink>
+        <RouterLink to="/settings/notifications">Notifications</RouterLink>
         <template v-if="session.isAdult">
           <RouterLink to="/settings/household">Household</RouterLink>
+          <RouterLink to="/settings/tasks">Task settings</RouterLink>
           <RouterLink to="/settings/calendars">Calendars</RouterLink>
           <RouterLink to="/settings/weather">Weather</RouterLink>
           <RouterLink to="/settings/devices">Devices</RouterLink>

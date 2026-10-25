@@ -263,3 +263,24 @@ impl EventRepo {
             .collect()
     }
 }
+
+impl EventRepo {
+    /// Titles of the non-cancelled all-day events of `calendar` that cover the local `date`
+    /// (`end_date` is exclusive).
+    pub async fn all_day_titles(
+        conn: &mut PgConnection,
+        calendar: CalendarId,
+        date: chrono::NaiveDate,
+    ) -> Result<Vec<String>> {
+        Ok(sqlx::query_scalar!(
+            "SELECT title FROM event
+             WHERE calendar_id = $1 AND all_day AND NOT cancelled
+               AND start_date <= $2 AND $2 < GREATEST(end_date, start_date + 1)
+             ORDER BY start_date, id",
+            calendar.as_uuid(),
+            date
+        )
+        .fetch_all(conn)
+        .await?)
+    }
+}

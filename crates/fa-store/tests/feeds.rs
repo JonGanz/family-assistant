@@ -20,6 +20,10 @@ fn household(name: &str) -> Household {
         calendar_future_days: 400,
         weather_retention_days: 7,
         private_events_as_busy: true,
+        now_list_size: 7,
+        now_weights: fa_domain::tasks::NowWeights::default(),
+        quiet_from: chrono::NaiveTime::from_hms_opt(21, 0, 0).expect("time"),
+        quiet_until: chrono::NaiveTime::from_hms_opt(7, 0, 0).expect("time"),
         created_at: Utc::now(),
         updated_at: Utc::now(),
     }
@@ -136,6 +140,10 @@ async fn seed_calendar(
 async fn migration_reverts_and_reapplies(pool: PgPool) {
     let down = include_str!("../migrations/20261025000001_m1_feeds.down.sql");
     let up = include_str!("../migrations/20261025000001_m1_feeds.up.sql");
+    // M2 depends on M1 tables: revert it first and reapply it last.
+    let down2 = include_str!("../migrations/20261026000001_m2_tasks.down.sql");
+    let up2 = include_str!("../migrations/20261026000001_m2_tasks.up.sql");
+    pool.execute(down2).await.unwrap();
     pool.execute(down).await.unwrap();
     let n: i64 = sqlx::query_scalar("SELECT count(*) FROM information_schema.tables WHERE table_name IN ('event','advisory','calendar')")
         .fetch_one(&pool)
@@ -143,6 +151,7 @@ async fn migration_reverts_and_reapplies(pool: PgPool) {
         .unwrap();
     assert_eq!(n, 0);
     pool.execute(up).await.unwrap();
+    pool.execute(up2).await.unwrap();
     let n: i64 = sqlx::query_scalar("SELECT count(*) FROM information_schema.tables WHERE table_name IN ('event','advisory','calendar')")
         .fetch_one(&pool)
         .await

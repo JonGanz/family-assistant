@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE task_definition SET condition_ok = $2, condition_checked_at = $3, updated_at = now()\n             WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Bool",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "101d3c09ef62b91053c868fe98245b7279d0919abb6751b2cc8d28d965eefa8e"
+}

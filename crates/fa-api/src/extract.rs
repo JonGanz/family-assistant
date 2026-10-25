@@ -39,6 +39,17 @@ pub fn require(actor: &Actor, action: Action, resource: &Resource) -> Result<(),
     Ok(())
 }
 
+/// Like [`require`], with the household and list flags the M2 task policy depends on.
+pub fn require_ctx(
+    actor: &Actor,
+    action: Action,
+    resource: &Resource,
+    ctx: &PolicyCtx,
+) -> Result<(), ApiError> {
+    authorize(actor, action, resource, ctx)?;
+    Ok(())
+}
+
 /// JSON body whose parse failures render as problem+json.
 pub struct ApiJson<T>(pub T);
 

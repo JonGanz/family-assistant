@@ -17,6 +17,13 @@ const form = reactive({
   future: 400,
   retention: 7,
   asBusy: true,
+  override: true,
+  nowSize: 7,
+  wDue: 1,
+  wFlag: 0.5,
+  wWeather: 0.5,
+  quietFrom: '21:00',
+  quietUntil: '07:00',
 })
 const message = ref('')
 const error = ref('')
@@ -38,6 +45,13 @@ function fill() {
   form.future = v.calendar_future_days
   form.retention = v.weather_retention_days
   form.asBusy = v.private_events_as_busy
+  form.override = v.dashboard_completion_override
+  form.nowSize = v.now_list_size
+  form.wDue = v.now_weights.due
+  form.wFlag = v.now_weights.flag
+  form.wWeather = v.now_weights.weather
+  form.quietFrom = v.quiet_from
+  form.quietUntil = v.quiet_until
 }
 
 onMounted(async () => {
@@ -92,6 +106,11 @@ async function save() {
       calendar_future_days: form.future,
       weather_retention_days: form.retention,
       private_events_as_busy: form.asBusy,
+      dashboard_completion_override: form.override,
+      now_list_size: form.nowSize,
+      now_weights: { due: form.wDue, flag: form.wFlag, weather: form.wWeather },
+      quiet_from: form.quietFrom,
+      quiet_until: form.quietUntil,
       location: hasLoc ? { label: form.label || 'Home', lat, lon } : null,
     })
     if (ok) message.value = 'Saved.'
@@ -148,6 +167,49 @@ async function reload() {
         Days of weather history to keep
         <input v-model.number="form.retention" name="retention" type="number" min="1" max="365" />
       </label>
+      <fieldset>
+        <legend>Tasks</legend>
+        <label class="inline">
+          <input v-model="form.override" name="dashboard_completion_override" type="checkbox" />
+          Allow ticking off tasks on dashboards
+        </label>
+        <label>
+          How many tasks the "Now" list shows
+          <input
+            v-model.number="form.nowSize"
+            name="now_list_size"
+            type="number"
+            min="1"
+            max="50"
+          />
+        </label>
+        <p class="settings-note">
+          What floats to the top of "Now": higher numbers count for more. Due date is how close or
+          late a task is, priority is the high-priority flag, weather is a task made by a weather
+          rule.
+        </p>
+        <label
+          >Weight: due date
+          <input v-model.number="form.wDue" name="w_due" type="number" min="0" step="0.1"
+        /></label>
+        <label
+          >Weight: priority
+          <input v-model.number="form.wFlag" name="w_flag" type="number" min="0" step="0.1"
+        /></label>
+        <label
+          >Weight: weather
+          <input v-model.number="form.wWeather" name="w_weather" type="number" min="0" step="0.1"
+        /></label>
+      </fieldset>
+      <fieldset>
+        <legend>Default quiet hours (no notifications)</legend>
+        <label
+          >From <input v-model="form.quietFrom" name="quiet_from" type="time" required
+        /></label>
+        <label
+          >Until <input v-model="form.quietUntil" name="quiet_until" type="time" required
+        /></label>
+      </fieldset>
       <label class="inline">
         <input v-model="form.asBusy" name="private_events_as_busy" type="checkbox" />
         Show adults' private events as "Busy" to children and on the dashboard

@@ -34,6 +34,7 @@ All of these are optional and go in `deploy/.env` (see `.env.example` for the de
 | `FA_GOOGLE_CLIENT_ID`, `FA_GOOGLE_CLIENT_SECRET` | unset | The OAuth client below. When unset, Google is hidden in the UI (ICS and CalDAV still work) |
 | `FA_OPEN_METEO_URL` | `https://api.open-meteo.com` | Weather provider base URL |
 | `FA_ALLOW_HTTP_FEEDS` | `false` | Accept plain `http` for feeds (for example a CalDAV server on the LAN) and for the OAuth redirect |
+| `FA_NTFY_URL`, `FA_NTFY_TOKEN` | `http://ntfy:80`, unset | See [ntfy notifications](#ntfy-notifications) |
 | `FA_HOST_API_PORT`, `FA_HOST_NTFY_PORT` | `8080`, `8090` | Host ports (on 127.0.0.1) that the compose file publishes |
 
 ## Google OAuth client
@@ -46,6 +47,51 @@ This is the one-time setup (human step H-05) that lets the app read Google calen
 6. In the app, open Settings, Calendars, **Connect a Google account**.
 
 The app asks only for the read-only calendar scope. While the consent screen is in **Testing** mode, Google expires the refresh token after **7 days**. The source then shows *needs reauth*: use Reconnect. Moving the consent screen to *In production* avoids this (Google may require verification for sensitive scopes), and so does adding the calendar through its secret iCal address as an ICS source (slower to refresh, no OAuth).
+
+## ntfy notifications
+Notifications (assigned tasks, overdue, the daily digest, routine nudges, calendar re-connect) go through [ntfy](https://ntfy.sh/), a self-hosted push service. The default profile runs it as the `ntfy` service (pinned to `binwiederhier/ntfy:v2.17.0`), and `api` and `worker` publish to it over the compose network.
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `FA_NTFY_URL` | `http://ntfy:80` | Where fa-server publishes. Plain `http` is fine on the compose network (this is independent of `FA_ALLOW_HTTP_FEEDS`). Set it empty to turn notifications off: the app then says so under Settings, Notifications |
+| `FA_NTFY_TOKEN` | unset | Bearer token for publishing, needed only with the access control below |
+| `NTFY_BASE_URL` | `http://localhost:8090` | The address phones use for ntfy (the `tailscale serve` URL). ntfy puts it in links |
+| `FA_PUBLIC_BASE_URL` | none | Also the base of the click links in notifications, so tapping one opens the app |
+
+`notify.send` runs on the worker every minute. A message waits at least a minute so several updates become one ("3 updates"), and nothing is sent during a member's quiet hours.
+
+**1. Expose ntfy on the tailnet** (the compose file publishes it only on `127.0.0.1:8090`):
+```sh
+tailscale serve --bg --https=8443 http://127.0.0.1:8090
+```
+Set `NTFY_BASE_URL=https://<host>.<tailnet>.ts.net:8443` in `deploy/.env` and restart (`up -d`).
+
+**2. Phone setup** (each person, on their own phone):
+1. Install the ntfy app (Android: Google Play or F-Droid; iOS: App Store) and join the tailnet.
+2. In the app, open Settings and set the default server to the ntfy URL above. Skip this if you subscribe with the link in the next step.
+3. In Family Assistant open **Settings, Notifications** (choose your own name; adults can also choose a child) and either open the subscribe address on the phone or scan the QR code. The address is `<ntfy URL>/<your topic>`.
+4. Press **Send test**; a notification should arrive within seconds.
+
+The topic is a random 24-character name and acts as the password: anyone who knows it can read that member's notifications, so don't share the subscribe address. The API shows a topic only to that member and to adults, and `config export` leaves topics out.
+
+**3. Optional: access control.** Topic secrecy is enough on a private tailnet. If you want ntfy itself to check who reads and writes, enable its authentication and give each phone a login:
+```sh
+# in deploy/.env (or the ntfy service's environment): NTFY_AUTH_FILE and NTFY_AUTH_DEFAULT_ACCESS
+# are the commented lines in compose.example.yaml. Uncomment both, then `up -d`.
+alias ntfy='docker compose --env-file deploy/.env -f deploy/compose.example.yaml exec ntfy ntfy'
+ntfy user add fa-server                      # prompts for a password
+ntfy access fa-server '*' write-only         # may publish everywhere, read nothing
+ntfy token add --label fa-server fa-server   # prints tk_...; put it in deploy/.env as FA_NTFY_TOKEN
+ntfy user add alex                           # one login per person
+ntfy access alex <alex-topic> read-only      # the topic from Settings, Notifications
+```
+With `auth-default-access: deny-all`, nobody else can read or publish. In the ntfy app, add the login under Settings, Users, and subscribe as before. Restart `api` and `worker` after setting `FA_NTFY_TOKEN`. The app does not manage ntfy users.
+
+**4. Human step H-08 (after deploying M2):**
+1. Set `FA_NTFY_URL` (the default is right for the compose file), plus `FA_NTFY_TOKEN` if you enabled access control, and `NTFY_BASE_URL`.
+2. `docker compose ... up -d`, then check Settings, Notifications shows a subscribe address and no "not configured" note.
+3. Install the ntfy app on each phone (on the tailnet) and subscribe with the link or QR code.
+4. Press **Send test** on every phone. From the shell: `fa notify test --member <member-key>` prints the subscribe URL too.
 
 ## Layouts
 **Single machine:** run everything on one host: `docker compose --env-file deploy/.env -f deploy/compose.example.yaml --profile gpu up -d` (omit `--profile gpu` if there is no GPU).

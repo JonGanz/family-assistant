@@ -19,6 +19,7 @@ struct Row {
     task_definition: Option<serde_json::Value>,
     status: String,
     suggested_by: String,
+    task_mode: String,
     archived_at: Option<DateTime<Utc>>,
     version: i32,
     created_at: DateTime<Utc>,
@@ -41,6 +42,7 @@ impl TryFrom<Row> for Versioned<WeatherRule> {
                 task_definition: r.task_definition,
                 status: parse_enum(&r.status)?,
                 suggested_by: parse_enum(&r.suggested_by)?,
+                task_mode: parse_enum(&r.task_mode)?,
                 archived_at: r.archived_at,
                 created_at: r.created_at,
                 updated_at: r.updated_at,
@@ -57,10 +59,10 @@ impl WeatherRuleRepo {
         let row = sqlx::query_as!(
             Row,
             "INSERT INTO weather_rule (id, household_id, name, condition, action, severity, message,
-                                       task_definition, status, suggested_by)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                                       task_definition, status, suggested_by, task_mode)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
              RETURNING id, household_id, name, condition, action, severity, message, task_definition,
-                       status, suggested_by, archived_at, version, created_at, updated_at",
+                       status, suggested_by, task_mode, archived_at, version, created_at, updated_at",
             r.id.as_uuid(),
             r.household_id.as_uuid(),
             r.name,
@@ -70,7 +72,8 @@ impl WeatherRuleRepo {
             r.message,
             r.task_definition,
             enum_str(&r.status),
-            enum_str(&r.suggested_by)
+            enum_str(&r.suggested_by),
+            enum_str(&r.task_mode)
         )
         .fetch_one(conn)
         .await?;
@@ -84,7 +87,7 @@ impl WeatherRuleRepo {
         let row = sqlx::query_as!(
             Row,
             "SELECT id, household_id, name, condition, action, severity, message, task_definition,
-                    status, suggested_by, archived_at, version, created_at, updated_at
+                    status, suggested_by, task_mode, archived_at, version, created_at, updated_at
              FROM weather_rule WHERE id = $1",
             id.as_uuid()
         )
@@ -102,7 +105,7 @@ impl WeatherRuleRepo {
         let rows = sqlx::query_as!(
             Row,
             "SELECT id, household_id, name, condition, action, severity, message, task_definition,
-                    status, suggested_by, archived_at, version, created_at, updated_at
+                    status, suggested_by, task_mode, archived_at, version, created_at, updated_at
              FROM weather_rule
              WHERE archived_at IS NULL AND ($1::text[] IS NULL OR status = ANY($1))
              ORDER BY created_at, id",
@@ -121,8 +124,8 @@ impl WeatherRuleRepo {
     ) -> Result<i32> {
         let v = sqlx::query_scalar!(
             "UPDATE weather_rule SET name = $2, condition = $3, action = $4, severity = $5, message = $6,
-                    task_definition = $7, status = $8, version = version + 1
-             WHERE id = $1 AND version = $9
+                    task_definition = $7, status = $8, task_mode = $9, version = version + 1
+             WHERE id = $1 AND version = $10
              RETURNING version",
             r.id.as_uuid(),
             r.name,
@@ -132,6 +135,7 @@ impl WeatherRuleRepo {
             r.message,
             r.task_definition,
             enum_str(&r.status),
+            enum_str(&r.task_mode),
             expected_version
         )
         .fetch_optional(&mut *conn)

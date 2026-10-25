@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO routine_member (routine_id, member_id, household_id)\n         SELECT $1, m, $2 FROM unnest($3::uuid[]) AS m ON CONFLICT DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cd3b65799e34111e8efa8e041e986f2f38c810fb84e2bc1dc18e9c06e330b5b3"
+}

@@ -65,6 +65,10 @@ async fn seed(pool: PgPool) -> Fx {
             calendar_future_days: 400,
             weather_retention_days: 7,
             private_events_as_busy: true,
+            now_list_size: 7,
+            now_weights: fa_domain::tasks::NowWeights::default(),
+            quiet_from: chrono::NaiveTime::from_hms_opt(21, 0, 0).expect("time"),
+            quiet_until: chrono::NaiveTime::from_hms_opt(7, 0, 0).expect("time"),
             created_at: Utc::now(),
             updated_at: Utc::now(),
         },
@@ -118,6 +122,15 @@ async fn seed(pool: PgPool) -> Fx {
             fa_weather::WeatherConfig::default(),
         )
         .unwrap(),
+        tasks: std::sync::Arc::new(fa_tasks::TaskService::new(store.clone())),
+        notify: fa_notify::NotifyService::new(
+            store.clone(),
+            fa_notify::NotifyConfig {
+                ntfy_url: None,
+                ntfy_token: None,
+                public_base_url: "https://fa.example.com".into(),
+            },
+        ),
         oauth,
     };
     let state = AppState::new(

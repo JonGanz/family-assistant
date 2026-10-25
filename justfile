@@ -3,9 +3,9 @@ set dotenv-load
 
 compose := "docker compose -f deploy/compose.dev.yaml"
 
-# Start the dev Postgres and wait until healthy
+# Start the dev Postgres and ntfy and wait until healthy
 dev-db:
-    {{compose}} up -d --wait postgres
+    {{compose}} up -d --wait postgres ntfy
 
 # Dev DB, api/worker with auto-reload, and the Vite dev server
 dev: dev-db dev-key

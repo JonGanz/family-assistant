@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM routine_member WHERE routine_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e81ea773fe3aae1e4325a95aa457cfb339697ae1342db7b7f46f2f9bbdf97a87"
+}

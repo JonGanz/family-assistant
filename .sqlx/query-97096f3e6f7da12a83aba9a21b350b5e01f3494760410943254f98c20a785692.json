@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO routine_run_step (run_id, step_id, household_id)\n             SELECT $1, s, (SELECT household_id FROM routine_run WHERE id = $1)\n             FROM unnest($2::uuid[]) AS s",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "97096f3e6f7da12a83aba9a21b350b5e01f3494760410943254f98c20a785692"
+}

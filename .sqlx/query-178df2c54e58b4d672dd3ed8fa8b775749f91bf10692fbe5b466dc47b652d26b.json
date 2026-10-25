@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM task_definition_candidate WHERE definition_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "178df2c54e58b4d672dd3ed8fa8b775749f91bf10692fbe5b466dc47b652d26b"
+}

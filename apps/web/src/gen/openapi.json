@@ -171,6 +171,58 @@
         ]
       }
     },
+    "/api/v1/away/{id}": {
+      "delete": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "delete_away",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "absence id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/calendar-sources": {
       "get": {
         "tags": [
@@ -1880,6 +1932,385 @@
         ]
       }
     },
+    "/api/v1/members/{id}/away": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "list_away",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "member id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MemberAwayView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "add_away",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "member id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewAway"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberAwayView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/members/{id}/notify-prefs": {
+      "get": {
+        "tags": [
+          "notify"
+        ],
+        "operationId": "get_prefs",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "member id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotifyPrefView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "notify"
+        ],
+        "operationId": "put_prefs",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "member id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotifyPrefPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotifyPrefView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/members/{id}/notify-prefs/test": {
+      "post": {
+        "tags": [
+          "notify"
+        ],
+        "operationId": "test_prefs",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "member id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "published"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "ntfy rejected the message",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "ntfy is not configured",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/members/{id}/pin": {
       "put": {
         "tags": [
@@ -2120,6 +2551,413 @@
         }
       }
     },
+    "/api/v1/routine-runs/{id}/steps/{step_id}": {
+      "patch": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "tick_routine_step",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "routine run id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "step_id",
+            "in": "path",
+            "description": "routine step id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StepTick"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutineRunView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "a device did not send `member`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/routines": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "list_routines",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoutineView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "create_routine",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoutineInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutineView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/routines/today": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "routines_today",
+        "parameters": [
+          {
+            "name": "member",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoutineRunView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/routines/{id}": {
+      "delete": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "delete_routine",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "routine id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "patch_routine",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "routine id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoutinePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoutineView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/sessions": {
       "get": {
         "tags": [
@@ -2279,9 +3117,1492 @@
         "operationId": "stream",
         "responses": {
           "200": {
-            "description": "`heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `resync`), bridged from `fa_change`; honours Last-Event-ID",
+            "description": "`heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `resync`), bridged from `fa_change`; honours Last-Event-ID",
             "content": {
               "text/event-stream": {}
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/task-definitions": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "list_definitions",
+        "parameters": [
+          {
+            "name": "list",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskDefinitionView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "create_definition",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskDefinitionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskDefinitionView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "invalid RRULE or `season_condition`: `{field, position?, message}`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/task-definitions/validate": {
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "validate_definition",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateDefinitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValidateDefinitionResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/task-definitions/{id}": {
+      "delete": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "delete_definition",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "definition id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "patch_definition",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "definition id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskDefinitionPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskDefinitionView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/task-lists": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "list_task_lists",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskListView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "create_task_list",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskListInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskListView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/task-lists/{id}": {
+      "delete": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "delete_task_list",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "list id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "patch_task_list",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "list id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskListPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskListView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tasks": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "list_tasks",
+        "parameters": [
+          {
+            "name": "view",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ViewParam"
+            }
+          },
+          {
+            "name": "member",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "list",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/StatusParam"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TaskView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "create_task",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewTask"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`{field, message}`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}": {
+      "get": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "get_task",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "task id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "delete_task",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "task id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "patch_task",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "task id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TaskPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}/accept": {
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "accept_task",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "task id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}/claim": {
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "claim_task",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "task id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "claimed by someone else or not open",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "not a pool task or not a candidate",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}/complete": {
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "complete_task",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "task id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CompleteTask"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "a device did not send `member`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}/release": {
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "release_task",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "task id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}/reopen": {
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "reopen_task",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "task id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}/skip": {
+      "post": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "skip_task",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "task id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tasks/{id}/steps/{step_id}": {
+      "patch": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "tick_task_step",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "task id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "step_id",
+            "in": "path",
+            "description": "step id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StepTick"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TaskView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "a device did not send `member`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
             }
           }
         },
@@ -2703,6 +5024,13 @@
           }
         }
       },
+      "AdvanceOn": {
+        "type": "string",
+        "enum": [
+          "any_completion",
+          "assignee_completion"
+        ]
+      },
       "AdvisoryId": {
         "type": "string",
         "format": "uuid"
@@ -2770,6 +5098,14 @@
             "type": "boolean"
           }
         }
+      },
+      "CalendarDisplay": {
+        "type": "string",
+        "enum": [
+          "hidden",
+          "until_done",
+          "always"
+        ]
       },
       "CalendarId": {
         "type": "string",
@@ -2852,6 +5188,28 @@
           }
         }
       },
+      "ChildCanAdd": {
+        "type": "string",
+        "enum": [
+          "own",
+          "none"
+        ]
+      },
+      "CompleteTask": {
+        "type": "object",
+        "properties": {
+          "member": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MemberId"
+              }
+            ]
+          }
+        }
+      },
       "CreateAccountReq": {
         "type": "object",
         "required": [
@@ -2930,9 +5288,15 @@
         "required": [
           "name",
           "tz",
-          "units"
+          "units",
+          "now_list_size",
+          "completion_override"
         ],
         "properties": {
+          "completion_override": {
+            "type": "boolean",
+            "description": "Anyone may complete tasks from the dashboard (D-013)."
+          },
           "location": {
             "oneOf": [
               {
@@ -2945,6 +5309,11 @@
           },
           "name": {
             "type": "string"
+          },
+          "now_list_size": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Size of the Now list (D-042)."
           },
           "tz": {
             "type": "string"
@@ -3001,7 +5370,10 @@
           "members",
           "events",
           "advisories",
-          "settings"
+          "settings",
+          "tasks",
+          "routines",
+          "task_lists"
         ],
         "properties": {
           "advisories": {
@@ -3025,8 +5397,27 @@
               "$ref": "#/components/schemas/MemberPublicDto"
             }
           },
+          "routines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoutineRunView"
+            }
+          },
           "settings": {
             "$ref": "#/components/schemas/DashboardSettings"
+          },
+          "task_lists": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskListView"
+            },
+            "description": "Active task lists (the add form offers those with `dashboard_add`)."
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskView"
+            }
           },
           "weather": {
             "oneOf": [
@@ -3037,6 +5428,37 @@
                 "$ref": "#/components/schemas/WeatherView"
               }
             ]
+          }
+        }
+      },
+      "DayFilter": {
+        "type": "string",
+        "enum": [
+          "daily",
+          "weekdays",
+          "weekends",
+          "school_days"
+        ]
+      },
+      "DefinitionError": {
+        "type": "object",
+        "required": [
+          "field",
+          "message"
+        ],
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "position": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -3319,6 +5741,12 @@
             ],
             "format": "int32"
           },
+          "dashboard_completion_override": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "location": {
             "oneOf": [
               {
@@ -3335,11 +5763,42 @@
               "null"
             ]
           },
+          "now_list_size": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "now_weights": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/NowWeights"
+              }
+            ]
+          },
           "private_events_as_busy": {
             "type": [
               "boolean",
               "null"
             ]
+          },
+          "quiet_from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "21:00"
+          },
+          "quiet_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "07:00"
           },
           "tz": {
             "type": [
@@ -3376,7 +5835,12 @@
           "calendar_future_days",
           "weather_retention_days",
           "private_events_as_busy",
+          "dashboard_completion_override",
           "google_oauth_enabled",
+          "now_list_size",
+          "now_weights",
+          "quiet_from",
+          "quiet_until",
           "version"
         ],
         "properties": {
@@ -3387,6 +5851,10 @@
           "calendar_past_days": {
             "type": "integer",
             "format": "int32"
+          },
+          "dashboard_completion_override": {
+            "type": "boolean",
+            "description": "Adults may let dashboards (devices) tick off tasks."
           },
           "google_oauth_enabled": {
             "type": "boolean",
@@ -3405,8 +5873,24 @@
           "name": {
             "type": "string"
           },
+          "now_list_size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "now_weights": {
+            "$ref": "#/components/schemas/NowWeights"
+          },
           "private_events_as_busy": {
             "type": "boolean"
+          },
+          "quiet_from": {
+            "type": "string",
+            "description": "`\"HH:MM\"`.",
+            "example": "21:00"
+          },
+          "quiet_until": {
+            "type": "string",
+            "example": "07:00"
           },
           "tz": {
             "type": "string"
@@ -3423,6 +5907,13 @@
             "format": "int32"
           }
         }
+      },
+      "ListCompletionPolicy": {
+        "type": "string",
+        "enum": [
+          "assignee",
+          "adult_only"
+        ]
       },
       "Location": {
         "type": "object",
@@ -3493,6 +5984,41 @@
           },
           "household": {
             "$ref": "#/components/schemas/HouseholdDto"
+          }
+        }
+      },
+      "MemberAwayId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "MemberAwayView": {
+        "type": "object",
+        "required": [
+          "id",
+          "member",
+          "from",
+          "until"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "id": {
+            "$ref": "#/components/schemas/MemberAwayId"
+          },
+          "member": {
+            "$ref": "#/components/schemas/MemberId"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "until": {
+            "type": "string",
+            "format": "date"
           }
         }
       },
@@ -3649,6 +6175,29 @@
         ],
         "description": "Either member view, as returned by the members API (untagged)."
       },
+      "NewAway": {
+        "type": "object",
+        "required": [
+          "from",
+          "until"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "until": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
       "NewSource": {
         "oneOf": [
           {
@@ -3758,6 +6307,77 @@
         ],
         "description": "New source. Debug output redacts passwords and URLs."
       },
+      "NewTask": {
+        "type": "object",
+        "required": [
+          "list",
+          "title"
+        ],
+        "properties": {
+          "assignees": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "calendar_display": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarDisplay"
+              }
+            ]
+          },
+          "due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "list": {
+            "$ref": "#/components/schemas/TaskListId"
+          },
+          "member": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MemberId",
+                "description": "The acting member on a dashboard device."
+              }
+            ]
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priority_flag": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PriorityFlag"
+              }
+            ]
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
       "NewWeatherRule": {
         "type": "object",
         "required": [
@@ -3793,6 +6413,183 @@
                 "description": "Defaults to `active`."
               }
             ]
+          },
+          "task_definition": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "task_mode": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TaskMode",
+                "description": "Defaults to `create`."
+              }
+            ]
+          }
+        }
+      },
+      "NotifyPrefPatch": {
+        "type": "object",
+        "properties": {
+          "copy_to_member": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MemberId"
+              }
+            ]
+          },
+          "due_soon_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "enabled_triggers": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/NotifyTrigger"
+            }
+          },
+          "nudge_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "quiet_from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Absent = keep, `null` = use the household default."
+          },
+          "quiet_until": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "NotifyPrefView": {
+        "type": "object",
+        "required": [
+          "member",
+          "enabled_triggers",
+          "due_soon_minutes",
+          "nudge_minutes",
+          "server_configured",
+          "version"
+        ],
+        "properties": {
+          "copy_to_member": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MemberId"
+              }
+            ]
+          },
+          "due_soon_minutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "enabled_triggers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotifyTrigger"
+            }
+          },
+          "member": {
+            "$ref": "#/components/schemas/MemberId"
+          },
+          "nudge_minutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "quiet_from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "21:00"
+          },
+          "quiet_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "07:00"
+          },
+          "server_configured": {
+            "type": "boolean",
+            "description": "False when the server has no `FA_NTFY_URL`."
+          },
+          "subscribe_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "topic": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Shown only to that member and to adults."
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "NotifyTrigger": {
+        "type": "string",
+        "enum": [
+          "assigned",
+          "overdue",
+          "digest",
+          "due_soon",
+          "routine_nudge",
+          "source_reauth"
+        ]
+      },
+      "NowWeights": {
+        "type": "object",
+        "description": "Weights of the Now score (D-042), stored in `household.now_weights`.",
+        "required": [
+          "due",
+          "flag",
+          "weather"
+        ],
+        "properties": {
+          "due": {
+            "type": "number",
+            "format": "double"
+          },
+          "flag": {
+            "type": "number",
+            "format": "double"
+          },
+          "weather": {
+            "type": "number",
+            "format": "double"
           }
         }
       },
@@ -3839,6 +6636,14 @@
             "$ref": "#/components/schemas/SourceState"
           }
         }
+      },
+      "OnMissed": {
+        "type": "string",
+        "enum": [
+          "roll_over",
+          "auto_skip",
+          "pile_up"
+        ]
       },
       "Orientation": {
         "type": "string",
@@ -3991,6 +6796,13 @@
           }
         }
       },
+      "PriorityFlag": {
+        "type": "string",
+        "enum": [
+          "normal",
+          "high"
+        ]
+      },
       "Problem": {
         "type": "object",
         "description": "The `application/problem+json` body (RFC 9457). Invalid weather rules add `position` and `message`.",
@@ -4003,6 +6815,13 @@
         "properties": {
           "detail": {
             "type": "string"
+          },
+          "field": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Task and routine validation errors: the offending input field."
           },
           "message": {
             "type": [
@@ -4083,6 +6902,360 @@
           "child"
         ]
       },
+      "RoutineId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "RoutineInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "starts_at",
+          "done_by"
+        ],
+        "properties": {
+          "day_filter": {
+            "$ref": "#/components/schemas/DayFilter"
+          },
+          "done_by": {
+            "type": "string",
+            "example": "08:15"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "no_school_match": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Defaults to `no school, holiday, inset, closed`."
+          },
+          "school_calendar": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarId"
+              }
+            ]
+          },
+          "show_on_dashboard": {
+            "type": "boolean"
+          },
+          "starts_at": {
+            "type": "string",
+            "example": "06:45"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoutineStepInput"
+            }
+          }
+        }
+      },
+      "RoutinePatch": {
+        "type": "object",
+        "properties": {
+          "day_filter": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DayFilter"
+              }
+            ]
+          },
+          "done_by": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "members": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "no_school_match": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "school_calendar": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarId"
+              }
+            ]
+          },
+          "show_on_dashboard": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "starts_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "steps": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/RoutineStepInput"
+            }
+          }
+        }
+      },
+      "RoutineRunId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "RoutineRunStepView": {
+        "type": "object",
+        "required": [
+          "step",
+          "ord",
+          "text"
+        ],
+        "properties": {
+          "done_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "ord": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "step": {
+            "$ref": "#/components/schemas/RoutineStepId"
+          },
+          "target_time": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "07:30"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "RoutineRunView": {
+        "type": "object",
+        "required": [
+          "id",
+          "routine",
+          "routine_name",
+          "member",
+          "run_date",
+          "status",
+          "starts_at",
+          "done_by",
+          "steps",
+          "done",
+          "total"
+        ],
+        "properties": {
+          "done": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "done_by": {
+            "type": "string",
+            "example": "08:15"
+          },
+          "id": {
+            "$ref": "#/components/schemas/RoutineRunId"
+          },
+          "member": {
+            "$ref": "#/components/schemas/MemberId"
+          },
+          "routine": {
+            "$ref": "#/components/schemas/RoutineId"
+          },
+          "routine_name": {
+            "type": "string"
+          },
+          "run_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "starts_at": {
+            "type": "string",
+            "example": "06:45"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoutineRunStepView"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "RoutineStepId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "RoutineStepInput": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "target_time": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "07:30"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "RoutineStepView": {
+        "type": "object",
+        "required": [
+          "id",
+          "ord",
+          "text"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/RoutineStepId"
+          },
+          "ord": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "target_time": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "07:30"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "RoutineView": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "members",
+          "steps",
+          "starts_at",
+          "done_by",
+          "day_filter",
+          "no_school_match",
+          "show_on_dashboard",
+          "version"
+        ],
+        "properties": {
+          "day_filter": {
+            "$ref": "#/components/schemas/DayFilter"
+          },
+          "done_by": {
+            "type": "string",
+            "example": "08:15"
+          },
+          "id": {
+            "$ref": "#/components/schemas/RoutineId"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "no_school_match": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "school_calendar": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarId"
+              }
+            ]
+          },
+          "show_on_dashboard": {
+            "type": "boolean"
+          },
+          "starts_at": {
+            "type": "string",
+            "example": "06:45"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RoutineStepView"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "RuleAction": {
         "type": "string",
         "enum": [
@@ -4138,6 +7311,71 @@
           "suggested",
           "disabled"
         ]
+      },
+      "RunStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "done",
+          "skipped"
+        ]
+      },
+      "Schedule": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "interval_days",
+              "kind"
+            ],
+            "properties": {
+              "interval_days": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "after_done"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "rrule",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "rrule"
+                ]
+              },
+              "rrule": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "Season": {
+        "type": "object",
+        "description": "A season window, both ends `\"MM-DD\"`; may wrap the year end.",
+        "required": [
+          "from",
+          "until"
+        ],
+        "properties": {
+          "from": {
+            "type": "string"
+          },
+          "until": {
+            "type": "string"
+          }
+        }
       },
       "SessionView": {
         "type": "object",
@@ -4405,6 +7643,16 @@
           }
         }
       },
+      "StatusParam": {
+        "type": "string",
+        "enum": [
+          "open",
+          "done",
+          "skipped",
+          "suggested",
+          "any"
+        ]
+      },
       "StatusView": {
         "type": "object",
         "required": [
@@ -4431,6 +7679,35 @@
           }
         }
       },
+      "StepTick": {
+        "type": "object",
+        "required": [
+          "done"
+        ],
+        "properties": {
+          "done": {
+            "type": "boolean"
+          },
+          "member": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MemberId"
+              }
+            ]
+          }
+        }
+      },
+      "Strategy": {
+        "type": "string",
+        "enum": [
+          "fixed",
+          "rotation",
+          "pool"
+        ]
+      },
       "SuggestedBy": {
         "type": "string",
         "enum": [
@@ -4438,6 +7715,869 @@
           "s2",
           "user"
         ]
+      },
+      "TaskDefinitionId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "TaskDefinitionInput": {
+        "type": "object",
+        "required": [
+          "list",
+          "title",
+          "schedule",
+          "start_date",
+          "strategy"
+        ],
+        "properties": {
+          "advance_on": {
+            "$ref": "#/components/schemas/AdvanceOn"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "due_time": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "18:00"
+          },
+          "lead_days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "list": {
+            "$ref": "#/components/schemas/TaskListId"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "on_missed": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OnMissed",
+                "description": "Defaults per schedule kind (D-038, D-049)."
+              }
+            ]
+          },
+          "paused": {
+            "type": "boolean"
+          },
+          "priority_flag": {
+            "$ref": "#/components/schemas/PriorityFlag"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/Schedule"
+          },
+          "season": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Season"
+              }
+            ]
+          },
+          "season_condition": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "skip_advances": {
+            "type": "boolean"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "steps_template": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/Strategy"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "TaskDefinitionPatch": {
+        "type": "object",
+        "properties": {
+          "advance_on": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AdvanceOn"
+              }
+            ]
+          },
+          "candidates": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "due_time": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "lead_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "list": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TaskListId"
+              }
+            ]
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "on_missed": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OnMissed"
+              }
+            ]
+          },
+          "paused": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "priority_flag": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PriorityFlag"
+              }
+            ]
+          },
+          "schedule": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Schedule"
+              }
+            ]
+          },
+          "season": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Season"
+              }
+            ]
+          },
+          "season_condition": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "skip_advances": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "start_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          },
+          "steps_template": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "strategy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Strategy"
+              }
+            ]
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "TaskDefinitionView": {
+        "type": "object",
+        "required": [
+          "id",
+          "list",
+          "title",
+          "steps_template",
+          "schedule",
+          "start_date",
+          "lead_days",
+          "on_missed",
+          "strategy",
+          "candidates",
+          "advance_on",
+          "skip_advances",
+          "priority_flag",
+          "paused",
+          "version"
+        ],
+        "properties": {
+          "advance_on": {
+            "$ref": "#/components/schemas/AdvanceOn"
+          },
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "condition_ok": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "due_time": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "example": "18:00"
+          },
+          "id": {
+            "$ref": "#/components/schemas/TaskDefinitionId"
+          },
+          "last_done_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "lead_days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "list": {
+            "$ref": "#/components/schemas/TaskListId"
+          },
+          "next_assignee": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MemberId",
+                "description": "Who the next occurrence goes to (rotation and fixed)."
+              }
+            ]
+          },
+          "next_due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "on_missed": {
+            "$ref": "#/components/schemas/OnMissed"
+          },
+          "paused": {
+            "type": "boolean"
+          },
+          "priority_flag": {
+            "$ref": "#/components/schemas/PriorityFlag"
+          },
+          "schedule": {
+            "$ref": "#/components/schemas/Schedule"
+          },
+          "season": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Season"
+              }
+            ]
+          },
+          "season_condition": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "skip_advances": {
+            "type": "boolean"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date"
+          },
+          "steps_template": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "strategy": {
+            "$ref": "#/components/schemas/Strategy"
+          },
+          "title": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "TaskId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "TaskListId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "TaskListInput": {
+        "type": "object",
+        "description": "Every field is explicit; the UI fills it from `list_defaults(kind)`.",
+        "required": [
+          "name",
+          "kind",
+          "completion_policy",
+          "child_can_add",
+          "dashboard_add",
+          "calendar_default",
+          "visible_on_dashboard",
+          "sort"
+        ],
+        "properties": {
+          "calendar_default": {
+            "$ref": "#/components/schemas/CalendarDisplay"
+          },
+          "child_can_add": {
+            "$ref": "#/components/schemas/ChildCanAdd"
+          },
+          "claim_ttl_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "completion_policy": {
+            "$ref": "#/components/schemas/ListCompletionPolicy"
+          },
+          "dashboard_add": {
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TaskListKind"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "visible_on_dashboard": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TaskListKind": {
+        "type": "string",
+        "enum": [
+          "chores",
+          "homework",
+          "general"
+        ]
+      },
+      "TaskListPatch": {
+        "type": "object",
+        "properties": {
+          "calendar_default": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarDisplay"
+              }
+            ]
+          },
+          "child_can_add": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ChildCanAdd"
+              }
+            ]
+          },
+          "claim_ttl_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Absent = keep, `null` = end of the local day."
+          },
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "completion_policy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ListCompletionPolicy"
+              }
+            ]
+          },
+          "dashboard_add": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "kind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TaskListKind"
+              }
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "sort": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "visible_on_dashboard": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      },
+      "TaskListView": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "kind",
+          "completion_policy",
+          "child_can_add",
+          "dashboard_add",
+          "calendar_default",
+          "visible_on_dashboard",
+          "sort",
+          "version"
+        ],
+        "properties": {
+          "calendar_default": {
+            "$ref": "#/components/schemas/CalendarDisplay"
+          },
+          "child_can_add": {
+            "$ref": "#/components/schemas/ChildCanAdd"
+          },
+          "claim_ttl_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "completion_policy": {
+            "$ref": "#/components/schemas/ListCompletionPolicy"
+          },
+          "dashboard_add": {
+            "type": "boolean"
+          },
+          "id": {
+            "$ref": "#/components/schemas/TaskListId"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TaskListKind"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sort": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "visible_on_dashboard": {
+            "type": "boolean"
+          }
+        }
+      },
+      "TaskMode": {
+        "type": "string",
+        "enum": [
+          "create",
+          "suggest"
+        ]
+      },
+      "TaskOrigin": {
+        "type": "string",
+        "enum": [
+          "manual",
+          "system",
+          "weather"
+        ]
+      },
+      "TaskPatch": {
+        "type": "object",
+        "properties": {
+          "assignees": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "calendar_display": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarDisplay"
+              }
+            ]
+          },
+          "due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priority_flag": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PriorityFlag"
+              }
+            ]
+          },
+          "steps": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            },
+            "description": "Replacing the steps keeps ticks for unchanged texts."
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "TaskStatus": {
+        "type": "string",
+        "enum": [
+          "open",
+          "done",
+          "skipped",
+          "suggested"
+        ]
+      },
+      "TaskStepId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "TaskStepView": {
+        "type": "object",
+        "required": [
+          "id",
+          "ord",
+          "text"
+        ],
+        "properties": {
+          "done_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "done_by": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MemberId"
+              }
+            ]
+          },
+          "id": {
+            "$ref": "#/components/schemas/TaskStepId"
+          },
+          "ord": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "TaskView": {
+        "type": "object",
+        "required": [
+          "id",
+          "list",
+          "list_name",
+          "title",
+          "status",
+          "origin",
+          "priority_flag",
+          "calendar_display",
+          "assignees",
+          "assignee_away",
+          "steps",
+          "score",
+          "version"
+        ],
+        "properties": {
+          "assignee_away": {
+            "type": "boolean",
+            "description": "A fixed assignee is away on the due date."
+          },
+          "assignees": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "calendar_display": {
+            "$ref": "#/components/schemas/CalendarDisplay"
+          },
+          "claimed_by": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MemberId"
+              }
+            ]
+          },
+          "claimed_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "completed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "completed_by": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MemberId"
+              }
+            ]
+          },
+          "definition": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TaskDefinitionId"
+              }
+            ]
+          },
+          "due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "id": {
+            "$ref": "#/components/schemas/TaskId"
+          },
+          "list": {
+            "$ref": "#/components/schemas/TaskListId"
+          },
+          "list_name": {
+            "type": "string"
+          },
+          "notes": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "origin": {
+            "$ref": "#/components/schemas/TaskOrigin"
+          },
+          "priority_flag": {
+            "$ref": "#/components/schemas/PriorityFlag"
+          },
+          "score": {
+            "type": "number",
+            "format": "double"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskStepView"
+            }
+          },
+          "title": {
+            "type": "string"
+          },
+          "undo_until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "Until when a reopen restores the definition."
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "visible_from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
       },
       "Units": {
         "type": "string",
@@ -4472,6 +8612,57 @@
       "UserAccountId": {
         "type": "string",
         "format": "uuid"
+      },
+      "ValidateDefinitionRequest": {
+        "type": "object",
+        "properties": {
+          "rrule": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "season_condition": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "start_date": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date"
+          }
+        }
+      },
+      "ValidateDefinitionResponse": {
+        "type": "object",
+        "required": [
+          "ok",
+          "errors",
+          "next_dates"
+        ],
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DefinitionError"
+            }
+          },
+          "next_dates": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "At most 5."
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        }
       },
       "ValidateRuleRequest": {
         "type": "object",
@@ -4520,6 +8711,14 @@
             ]
           }
         }
+      },
+      "ViewParam": {
+        "type": "string",
+        "enum": [
+          "now",
+          "mine",
+          "all"
+        ]
       },
       "Visibility": {
         "type": "string",
@@ -4583,6 +8782,22 @@
                 "$ref": "#/components/schemas/RuleStatus"
               }
             ]
+          },
+          "task_definition": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "task_mode": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TaskMode"
+              }
+            ]
           }
         }
       },
@@ -4597,6 +8812,7 @@
           "message",
           "status",
           "suggested_by",
+          "task_mode",
           "version"
         ],
         "properties": {
@@ -4623,6 +8839,16 @@
           },
           "suggested_by": {
             "$ref": "#/components/schemas/SuggestedBy"
+          },
+          "task_definition": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Definition template for action `task` (opaque JSON)."
+          },
+          "task_mode": {
+            "$ref": "#/components/schemas/TaskMode"
           },
           "version": {
             "type": "integer",

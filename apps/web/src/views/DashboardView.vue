@@ -5,6 +5,7 @@ import { ApiError } from '../api/http'
 import PinPad from '../components/PinPad.vue'
 import { useClock } from '../composables/useClock'
 import DashboardCanvas from '../dashboard/DashboardCanvas.vue'
+import TaskFlow from '../dashboard/TaskFlow.vue'
 import { S } from '../dashboard/strings'
 import { getDeviceToken } from '../kiosk/deviceToken'
 import { startKeepAlive } from '../kiosk/keepAlive'
@@ -14,6 +15,7 @@ import { useDashboardStore } from '../stores/dashboard'
 const store = useDashboardStore()
 const hasToken = ref(!!getDeviceToken())
 const now = useClock()
+const flow = ref<InstanceType<typeof TaskFlow> | null>(null)
 
 const connLabel = computed(
   () =>
@@ -107,8 +109,12 @@ const mmss = computed(
       burn-in
       @dismiss="store.dismiss"
       @pick="pick"
+      @complete="(id: string) => flow?.beginComplete(id)"
+      @tick="(r: string, st: string, d: boolean) => store.tickStep(r, st, d)"
+      @add="flow?.beginAdd()"
     />
     <p v-else class="loading">{{ S.loading }}</p>
+    <TaskFlow ref="flow" />
 
     <div v-if="showElevation" class="elevation" role="dialog" aria-label="Elevation">
       <div v-if="expiresAt && remaining > 0" data-testid="elevated">{{ S.elevated(mmss) }}</div>

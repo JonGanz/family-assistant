@@ -5,8 +5,10 @@ mod error;
 mod extract;
 mod feeds;
 mod hub;
+mod notify;
 mod openapi;
 mod routes;
+mod tasks;
 
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -72,6 +74,8 @@ pub struct Services {
     pub calendar: Arc<CalendarService>,
     pub weather: WeatherService,
     pub oauth: OAuthService,
+    pub tasks: Arc<fa_tasks::TaskService>,
+    pub notify: fa_notify::NotifyService,
 }
 
 #[derive(Clone)]
@@ -172,6 +176,63 @@ pub fn router(state: AppState) -> Router {
             "/weather-rules/{id}",
             patch(feeds::patch_rule).delete(feeds::delete_rule),
         )
+        .route("/tasks", get(tasks::list_tasks).post(tasks::create_task))
+        .route(
+            "/tasks/{id}",
+            get(tasks::get_task)
+                .patch(tasks::patch_task)
+                .delete(tasks::delete_task),
+        )
+        .route("/tasks/{id}/complete", post(tasks::complete_task))
+        .route("/tasks/{id}/reopen", post(tasks::reopen_task))
+        .route("/tasks/{id}/skip", post(tasks::skip_task))
+        .route("/tasks/{id}/accept", post(tasks::accept_task))
+        .route("/tasks/{id}/claim", post(tasks::claim_task))
+        .route("/tasks/{id}/release", post(tasks::release_task))
+        .route("/tasks/{id}/steps/{step_id}", patch(tasks::tick_task_step))
+        .route(
+            "/task-lists",
+            get(tasks::list_task_lists).post(tasks::create_task_list),
+        )
+        .route(
+            "/task-lists/{id}",
+            patch(tasks::patch_task_list).delete(tasks::delete_task_list),
+        )
+        .route(
+            "/task-definitions",
+            get(tasks::list_definitions).post(tasks::create_definition),
+        )
+        .route(
+            "/task-definitions/validate",
+            post(tasks::validate_definition),
+        )
+        .route(
+            "/task-definitions/{id}",
+            patch(tasks::patch_definition).delete(tasks::delete_definition),
+        )
+        .route(
+            "/routines",
+            get(tasks::list_routines).post(tasks::create_routine),
+        )
+        .route("/routines/today", get(tasks::routines_today))
+        .route(
+            "/routines/{id}",
+            patch(tasks::patch_routine).delete(tasks::delete_routine),
+        )
+        .route(
+            "/routine-runs/{id}/steps/{step_id}",
+            patch(tasks::tick_routine_step),
+        )
+        .route(
+            "/members/{id}/away",
+            get(tasks::list_away).post(tasks::add_away),
+        )
+        .route("/away/{id}", delete(tasks::delete_away))
+        .route(
+            "/members/{id}/notify-prefs",
+            get(notify::get_prefs).put(notify::put_prefs),
+        )
+        .route("/members/{id}/notify-prefs/test", post(notify::test_prefs))
         .route("/dashboard", get(feeds::get_dashboard))
         .route("/status", get(feeds::get_status))
         .route("/device/elevate", post(routes::elevate))

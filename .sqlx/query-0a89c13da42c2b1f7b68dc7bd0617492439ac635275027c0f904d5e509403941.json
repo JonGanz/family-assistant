@@ -1,0 +1,82 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT r.id, r.household_id, r.routine_id, r.member_id, r.run_date, r.status,\n                    r.completed_at, ro.name AS routine_name, ro.starts_at, ro.done_by,\n                    ro.show_on_dashboard\n             FROM routine_run r JOIN routine ro ON ro.id = r.routine_id WHERE r.id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "household_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "routine_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "member_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 4,
+        "name": "run_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 5,
+        "name": "status",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "completed_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 7,
+        "name": "routine_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "starts_at",
+        "type_info": "Time"
+      },
+      {
+        "ordinal": 9,
+        "name": "done_by",
+        "type_info": "Time"
+      },
+      {
+        "ordinal": 10,
+        "name": "show_on_dashboard",
+        "type_info": "Bool"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "0a89c13da42c2b1f7b68dc7bd0617492439ac635275027c0f904d5e509403941"
+}

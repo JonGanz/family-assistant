@@ -1,0 +1,17 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE notification SET attempts = attempts + 1, last_error = $2, not_before = $3,\n                    status = CASE WHEN $4 THEN 'failed' ELSE 'pending' END\n             WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Timestamptz",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "c9c26c2e262546d212e2aeb1db45d79e0fe64f6244ade6180fd5038d999446da"
+}

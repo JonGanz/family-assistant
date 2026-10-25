@@ -1,13 +1,15 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { api } from '../api/client'
+import { api, type DashboardView } from '../api/client'
 import type { DashboardData } from '../dashboard/types'
+import { ApiError } from '../api/http'
+import { taskApi } from '../kiosk/taskApi'
 import { getDeviceToken } from '../kiosk/deviceToken'
 import { connectSse, type SseHandle, type SseMessage, type SseStatus } from '../kiosk/sse'
 import { addDays, dayKey, msUntilNextMidnight, startOfDay } from '../lib/time'
 
 export const CACHE_KEY = 'fa.dashboard.snapshot'
-const CACHE_VERSION = 2
+const CACHE_VERSION = 3
 
 interface CacheEntry {
   v: number
@@ -84,16 +86,97 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
+  /** Fields the UI derives from the snapshot (D-013 override, Now list size, addable lists). */
+  function derived(data: DashboardView): Partial<DashboardData> {
+    return {
+      task_lists: data.task_lists ?? [],
+      now_list_size: data.household.now_list_size,
+      completion_enabled: data.household.completion_override,
+      epoch: snapshot.value?.epoch,
+    }
+  }
+
+  function patch(p: Partial<DashboardData>): void {
+    if (snapshot.value) snapshot.value = { ...snapshot.value, ...p }
+  }
+
+  /** Re-render task checkboxes from the data (after a cancelled or refused completion). */
+  function resetChecks(): void {
+    patch({ epoch: (snapshot.value?.epoch ?? 0) + 1 })
+  }
+
+  /** Complete a task for `member`. A 403 means the household turned dashboard completion off. */
+  async function complete(id: string, member: string): Promise<boolean> {
+    try {
+      await taskApi.complete(id, member)
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 403) patch({ completion_enabled: false })
+      resetChecks()
+      return false
+    }
+    await refresh()
+    return true
+  }
+
+  async function reopen(id: string, member: string): Promise<void> {
+    try {
+      await taskApi.reopen(id, member)
+    } finally {
+      await refresh()
+    }
+  }
+
+  /** Tick or untick a routine step as the run's member; optimistic, then reconciled. */
+  async function tickStep(run: string, step: string, done: boolean): Promise<void> {
+    const s = snapshot.value
+    const r = s?.routines.find((x) => x.id === run)
+    if (!s || !r) return
+    const stamp = done ? new Date().toISOString() : null
+    patch({
+      routines: s.routines.map((x) =>
+        x.id === run
+          ? {
+              ...x,
+              steps: x.steps.map((st) => (st.step === step ? { ...st, done_at: stamp } : st)),
+              done: x.steps.filter((st) => (st.step === step ? done : st.done_at)).length,
+            }
+          : x,
+      ),
+    })
+    try {
+      await taskApi.tickStep(run, step, done, r.member)
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 403) patch({ completion_enabled: false })
+    } finally {
+      await refresh()
+    }
+  }
+
+  async function addTask(b: Parameters<typeof taskApi.create>[0]): Promise<boolean> {
+    try {
+      await taskApi.create(b)
+    } catch {
+      return false
+    }
+    await refresh()
+    return true
+  }
+
   async function doRefresh(): Promise<void> {
     try {
       const days = daysToFetch(snapshot.value?.settings)
       let data = await api.dashboard(days)
       const wanted = daysToFetch(data.settings)
       if (wanted !== days) data = await api.dashboard(wanted)
-      snapshot.value = data
+      snapshot.value = {
+        ...data,
+        ...derived(data),
+        tasks: data.tasks ?? [],
+        routines: data.routines ?? [],
+      }
       savedAt.value = Date.now()
       stale.value = false
-      writeCache(data, savedAt.value)
+      writeCache(snapshot.value, savedAt.value)
     } catch {
       applyCache()
       stale.value = true
@@ -131,6 +214,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
       case 'device.updated':
         if (p.id && deviceId.value && p.id !== deviceId.value) return false
         break
+      case 'tasks.updated':
+      case 'routines.updated':
       case 'weather.updated':
       case 'advisory.updated':
       case 'member.updated':
@@ -221,6 +306,11 @@ export const useDashboardStore = defineStore('dashboard', () => {
     refresh,
     handleEvent,
     dismiss,
+    complete,
+    reopen,
+    tickStep,
+    addTask,
+    resetChecks,
     start,
     stop,
   }

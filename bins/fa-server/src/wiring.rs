@@ -25,6 +25,14 @@ pub fn weather_config(cfg: &ProcessConfig) -> WeatherConfig {
     }
 }
 
+pub fn notify_config(cfg: &ProcessConfig) -> fa_notify::NotifyConfig {
+    fa_notify::NotifyConfig {
+        ntfy_url: cfg.ntfy_url.as_ref().map(|u| u.as_str().to_owned()),
+        ntfy_token: cfg.ntfy_token.as_ref().map(|t| t.expose().to_owned()),
+        public_base_url: cfg.public_base_url.clone(),
+    }
+}
+
 fn google_client(cfg: &ProcessConfig) -> Option<GoogleOAuth> {
     let id = cfg
         .google_client_id
@@ -69,6 +77,8 @@ pub fn build_services(cfg: &ProcessConfig, store: &Store) -> Result<Services> {
         calendar: Arc::new(calendar),
         weather,
         oauth,
+        tasks: Arc::new(fa_tasks::TaskService::new(store.clone())),
+        notify: fa_notify::NotifyService::new(store.clone(), notify_config(cfg)),
     })
 }
 
@@ -80,6 +90,8 @@ pub fn feature_handlers(
     let mut all = fa_calendar::handlers(services.calendar.clone());
     all.extend(fa_weather::handlers(weather_config(cfg))?);
     all.extend(fa_auth::handlers());
+    all.extend(fa_tasks::handlers(services.tasks.clone()));
+    all.extend(fa_notify::handlers(services.notify.clone()));
     Ok(all)
 }
 
@@ -88,7 +100,9 @@ pub async fn ensure_feature_schedules(store: &Store) -> Result<()> {
     let schedules = fa_calendar::default_schedules()
         .into_iter()
         .chain(fa_weather::default_schedules())
-        .chain(fa_auth::default_schedules());
+        .chain(fa_auth::default_schedules())
+        .chain(fa_tasks::default_schedules())
+        .chain(fa_notify::default_schedules());
     let mut tx = store.tx_system().await?;
     for (kind, cron) in schedules {
         ScheduleRepo::upsert(&mut tx, kind, cron, kind, &serde_json::json!({}), true).await?;

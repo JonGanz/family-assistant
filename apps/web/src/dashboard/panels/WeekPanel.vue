@@ -4,11 +4,13 @@ import { textColorFor } from '../../lib/contrast'
 import { dayKey, formatRange, groupByDay } from '../../lib/time'
 import { toEventLike, visibleEvents } from '../filter'
 import { S } from '../strings'
+import { datedTasks } from '../tasksModel'
 import type { PanelProps } from '../types'
 
 const props = defineProps<PanelProps>()
 const tz = computed(() => props.data.household.tz)
 const today = computed(() => dayKey(props.now, tz.value))
+const chips = computed(() => datedTasks(props.data, tz.value, true))
 const cols = computed(() => {
   const events = visibleEvents(props.data, props.settings).map(toEventLike)
   return [...groupByDay(events, tz.value, today.value, 7)].map(([key, list]) => {
@@ -19,6 +21,7 @@ const cols = computed(() => {
       dom: d.getUTCDate(),
       today: key === today.value,
       events: list,
+      tasks: chips.value.get(key) ?? [],
     }
   })
 })
@@ -31,6 +34,15 @@ const cols = computed(() => {
         <span>{{ c.weekday }}</span> <span class="dom">{{ c.dom }}</span>
       </h2>
       <ul>
+        <li
+          v-for="t in c.tasks"
+          :key="t.id"
+          class="chip"
+          :class="{ done: t.status === 'done' }"
+          data-testid="task-chip"
+        >
+          <span class="n">⚑ {{ t.title }}</span>
+        </li>
         <li
           v-for="(e, i) in c.events"
           :key="e.id ?? i"
@@ -87,6 +99,14 @@ li {
   border-radius: var(--radius-sm);
   font-size: var(--font-size-sm);
   overflow-wrap: anywhere;
+}
+li.chip {
+  background: transparent;
+  border: 2px dashed var(--color-accent);
+}
+li.chip.done .n {
+  text-decoration: line-through;
+  color: var(--color-muted);
 }
 li.busy {
   background: var(--color-border);

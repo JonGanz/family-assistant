@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE task SET claimed_by = NULL, claimed_until = NULL, version = version + 1\n             WHERE claimed_until IS NOT NULL AND claimed_until <= $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8e59fcf85bded29dd259b0028dcd22c607e8bc5ef590281b7910aa96e37349f8"
+}

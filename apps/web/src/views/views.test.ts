@@ -28,9 +28,14 @@ const household = {
   calendar_future_days: 400,
   weather_retention_days: 7,
   private_events_as_busy: true,
+  dashboard_completion_override: true,
   google_oauth_enabled: false,
   version: 3,
   location: null,
+  now_list_size: 7,
+  now_weights: { due: 1, flag: 0.5, weather: 0.5 },
+  quiet_from: '21:00',
+  quiet_until: '07:00',
 }
 
 beforeEach(() => {
@@ -38,6 +43,47 @@ beforeEach(() => {
   vi.resetAllMocks()
 })
 afterEach(() => vi.useRealTimers())
+
+describe('household M2 fields', () => {
+  it('saves the Now list size, weights and quiet hours', async () => {
+    m.household.mockResolvedValue(household as never)
+    m.patchHousehold.mockResolvedValue(household as never)
+    const w = mount(SettingsHouseholdView)
+    await flushPromises()
+    await w.find('input[name=now_list_size]').setValue(9)
+    await w.find('input[name=w_flag]').setValue(2)
+    await w.find('input[name=quiet_from]').setValue('22:00')
+    await w.find('form').trigger('submit')
+    await flushPromises()
+    expect(m.patchHousehold).toHaveBeenCalledWith(
+      3,
+      expect.objectContaining({
+        now_list_size: 9,
+        now_weights: { due: 1, flag: 2, weather: 0.5 },
+        quiet_from: '22:00',
+        quiet_until: '07:00',
+      }),
+    )
+  })
+})
+
+describe('dashboard completion override', () => {
+  it('shows the saved value and saves a change', async () => {
+    m.household.mockResolvedValue(household as never)
+    m.patchHousehold.mockResolvedValue(household as never)
+    const w = mount(SettingsHouseholdView)
+    await flushPromises()
+    const box = w.find('input[name=dashboard_completion_override]')
+    expect((box.element as HTMLInputElement).checked).toBe(true)
+    await box.setValue(false)
+    await w.find('form').trigger('submit')
+    await flushPromises()
+    expect(m.patchHousehold).toHaveBeenCalledWith(
+      3,
+      expect.objectContaining({ dashboard_completion_override: false }),
+    )
+  })
+})
 
 describe('409 conflict banner', () => {
   it('shows "changed elsewhere" and reloads on demand', async () => {

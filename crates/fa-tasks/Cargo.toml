@@ -1,0 +1,30 @@
+[package]
+name = "fa-tasks"
+description = "Family Assistant: tasks, recurrence, assignment and routines"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+fa-domain.workspace = true
+fa-store.workspace = true
+fa-jobs.workspace = true
+rrule.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+sqlx.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+fa-domain.workspace = true

@@ -3,7 +3,7 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::entities::Role;
+use crate::entities::{ChildCanAdd, Role};
 use crate::ids::*;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -52,10 +52,17 @@ pub enum Action {
     ManageWeatherRules,
     DismissAdvisory,
     ManageDeviceSettings,
+    // M2
+    ManageTasks,
+    AddTask,
+    EditTask,
+    ClaimTask,
+    TickRoutineStep,
+    ManageNotifyPrefs,
 }
 
 impl Action {
-    pub const ALL: [Action; 22] = [
+    pub const ALL: [Action; 28] = [
         Action::ReadMemberPublic,
         Action::ReadMemberFull,
         Action::ManageMember,
@@ -78,6 +85,12 @@ impl Action {
         Action::ManageWeatherRules,
         Action::DismissAdvisory,
         Action::ManageDeviceSettings,
+        Action::ManageTasks,
+        Action::AddTask,
+        Action::EditTask,
+        Action::ClaimTask,
+        Action::TickRoutineStep,
+        Action::ManageNotifyPrefs,
     ];
 }
 
@@ -91,7 +104,14 @@ pub enum Resource {
         owner_role: Role,
     },
     Task {
-        assignee: Option<MemberId>,
+        assignees: Vec<MemberId>,
+        created_by: Option<MemberId>,
+        /// True when the task was materialised from a definition.
+        definition: bool,
+    },
+    TaskList {
+        child_can_add: ChildCanAdd,
+        dashboard_add: bool,
     },
     GroceryItem,
     Event,
@@ -106,14 +126,48 @@ pub enum Resource {
 }
 
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, TS, utoipa::ToSchema,
+    Debug,
+    Clone,
+    Copy,
+    PartialEq,
+    Eq,
+    Default,
+    Serialize,
+    Deserialize,
+    sqlx::Type,
+    TS,
+    utoipa::ToSchema,
 )]
 #[serde(rename_all = "snake_case")]
+#[sqlx(type_name = "text", rename_all = "snake_case")]
 #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
 pub enum ListCompletionPolicy {
     #[default]
     Assignee,
     AdultOnly,
+}
+
+impl ListCompletionPolicy {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Assignee => "assignee",
+            Self::AdultOnly => "adult_only",
+        }
+    }
+}
+
+impl std::str::FromStr for ListCompletionPolicy {
+    type Err = crate::entities::ParseEnumError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "assignee" => Ok(Self::Assignee),
+            "adult_only" => Ok(Self::AdultOnly),
+            _ => Err(crate::entities::ParseEnumError {
+                ty: "ListCompletionPolicy",
+                value: s.to_string(),
+            }),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -219,9 +273,9 @@ pub fn authorize(
                     role: Role::Child,
                     ..
                 } => match resource {
-                    Resource::Task { assignee: Some(a) } => allow(
+                    Resource::Task { assignees, .. } => allow(
                         ctx.list_completion_policy == ListCompletionPolicy::Assignee
-                            && a == member_id,
+                            && assignees.contains(member_id),
                     ),
                     _ => Err(Denied),
                 },
@@ -250,6 +304,73 @@ pub fn authorize(
         Action::ReadCalendar | Action::DismissAdvisory => allow(true),
         // D-019: no settings on the dashboard, not even elevated.
         Action::ManageWeatherRules | Action::ManageDeviceSettings => allow(adult_user.is_some()),
+        // Settings-like (D-019): not on the dashboard, not even elevated.
+        Action::ManageTasks => allow(adult_user.is_some()),
+        Action::AddTask => match resource {
+            Resource::TaskList {
+                child_can_add,
+                dashboard_add,
+            } => {
+                if adult_member.is_some() {
+                    return Ok(());
+                }
+                match actor {
+                    Actor::User {
+                        role: Role::Child, ..
+                    } => allow(*child_can_add == ChildCanAdd::Own),
+                    Actor::Device { .. } => allow(*dashboard_add),
+                    _ => Err(Denied),
+                }
+            }
+            _ => Err(Denied),
+        },
+        Action::EditTask => match resource {
+            Resource::Task {
+                created_by,
+                definition,
+                ..
+            } => match actor {
+                _ if adult_member.is_some() => Ok(()),
+                Actor::User {
+                    member_id,
+                    role: Role::Child,
+                    ..
+                } => allow(!*definition && *created_by == Some(*member_id)),
+                _ => Err(Denied),
+            },
+            _ => Err(Denied),
+        },
+        Action::ClaimTask => match resource {
+            Resource::Task { assignees, .. } => {
+                allow(adult_member.is_some() || user_member.is_some_and(|m| assignees.contains(&m)))
+            }
+            _ => Err(Denied),
+        },
+        // The resource is the run's member.
+        Action::TickRoutineStep => match resource {
+            Resource::Member(id, _) => {
+                if adult_member.is_some() {
+                    return Ok(());
+                }
+                match actor {
+                    Actor::User { member_id, .. } => allow(member_id == id),
+                    Actor::Device { .. } => allow(ctx.dashboard_completion_override),
+                    _ => Err(Denied),
+                }
+            }
+            _ => Err(Denied),
+        },
+        Action::ManageNotifyPrefs => match resource {
+            Resource::Member(id, role) => match actor {
+                Actor::User {
+                    member_id,
+                    role: me_role,
+                    ..
+                } => allow(member_id == id || (*me_role == Role::Adult && *role == Role::Child)),
+                _ => Err(Denied),
+            },
+            _ => Err(Denied),
+        },
     }
 }
 
@@ -638,13 +759,14 @@ mod tests {
         );
 
         // CompleteTask: policy and override matrix.
-        let own = Resource::Task {
-            assignee: Some(f.child),
+        let task = |assignees: Vec<MemberId>, created_by, definition| Resource::Task {
+            assignees,
+            created_by,
+            definition,
         };
-        let theirs = Resource::Task {
-            assignee: Some(f.child2),
-        };
-        let unassigned = Resource::Task { assignee: None };
+        let own = task(vec![f.child], None, false);
+        let theirs = task(vec![f.child2], None, false);
+        let unassigned = task(vec![], None, false);
         let ctx = |o, p| PolicyCtx {
             dashboard_completion_override: o,
             list_completion_policy: p,
@@ -848,6 +970,185 @@ mod tests {
             t(action, Resource::Household, c, adult_only);
         }
 
+        // M2 actions.
+        let adult_only = [
+            (Adult, ALLOW),
+            (Child, DENY),
+            (Device, DENY),
+            (Elevated, DENY),
+            (System, ALLOW),
+        ];
+        t(Action::ManageTasks, Resource::Household, c, adult_only);
+        let list = |child_can_add, dashboard_add| Resource::TaskList {
+            child_can_add,
+            dashboard_add,
+        };
+        t(
+            Action::AddTask,
+            list(ChildCanAdd::None, false),
+            c,
+            [
+                (Adult, ALLOW),
+                (Child, DENY),
+                (Device, DENY),
+                (Elevated, ALLOW),
+                (System, ALLOW),
+            ],
+        );
+        t(
+            Action::AddTask,
+            list(ChildCanAdd::Own, false),
+            c,
+            [
+                (Adult, ALLOW),
+                (Child, ALLOW),
+                (Device, DENY),
+                (Elevated, ALLOW),
+                (System, ALLOW),
+            ],
+        );
+        t(
+            Action::AddTask,
+            list(ChildCanAdd::None, true),
+            c,
+            [
+                (Adult, ALLOW),
+                (Child, DENY),
+                (Device, ALLOW),
+                (Elevated, ALLOW),
+                (System, ALLOW),
+            ],
+        );
+        t(
+            Action::AddTask,
+            Resource::Household,
+            c,
+            [
+                (Adult, DENY),
+                (Child, DENY),
+                (Device, DENY),
+                (Elevated, DENY),
+                (System, ALLOW),
+            ],
+        );
+        // EditTask: children only their own one-offs.
+        for (res, child) in [
+            (task(vec![], Some(f.child), false), ALLOW),
+            (task(vec![f.child], Some(f.child), true), DENY),
+            (task(vec![f.child], Some(f.adult), false), DENY),
+            (task(vec![f.child], None, false), DENY),
+        ] {
+            t(
+                Action::EditTask,
+                res,
+                c,
+                [
+                    (Adult, ALLOW),
+                    (Child, child),
+                    (Device, DENY),
+                    (Elevated, ALLOW),
+                    (System, ALLOW),
+                ],
+            );
+        }
+        // ClaimTask: an assignee or an adult.
+        for (res, child) in [
+            (task(vec![f.child, f.child2], None, false), ALLOW),
+            (task(vec![f.child2], None, false), DENY),
+            (task(vec![], None, false), DENY),
+        ] {
+            t(
+                Action::ClaimTask,
+                res,
+                c,
+                [
+                    (Adult, ALLOW),
+                    (Child, child),
+                    (Device, DENY),
+                    (Elevated, ALLOW),
+                    (System, ALLOW),
+                ],
+            );
+        }
+        // TickRoutineStep: the run's member, adults, devices while the override is on.
+        let on = PolicyCtx {
+            dashboard_completion_override: true,
+            ..PolicyCtx::default()
+        };
+        t(
+            Action::TickRoutineStep,
+            m_child.clone(),
+            on,
+            [
+                (Adult, ALLOW),
+                (Child, ALLOW),
+                (Device, ALLOW),
+                (Elevated, ALLOW),
+                (System, ALLOW),
+            ],
+        );
+        t(
+            Action::TickRoutineStep,
+            m_child.clone(),
+            c,
+            [
+                (Adult, ALLOW),
+                (Child, ALLOW),
+                (Device, DENY),
+                (Elevated, ALLOW),
+                (System, ALLOW),
+            ],
+        );
+        t(
+            Action::TickRoutineStep,
+            m_child_other.clone(),
+            on,
+            [
+                (Adult, ALLOW),
+                (Child, DENY),
+                (Device, ALLOW),
+                (Elevated, ALLOW),
+                (System, ALLOW),
+            ],
+        );
+        // ManageNotifyPrefs: self, or an adult for a child.
+        t(
+            Action::ManageNotifyPrefs,
+            m_adult_self.clone(),
+            c,
+            adult_only,
+        );
+        t(
+            Action::ManageNotifyPrefs,
+            m_adult_other.clone(),
+            c,
+            [
+                (Adult, DENY),
+                (Child, DENY),
+                (Device, DENY),
+                (Elevated, DENY),
+                (System, ALLOW),
+            ],
+        );
+        t(
+            Action::ManageNotifyPrefs,
+            m_child.clone(),
+            c,
+            [
+                (Adult, ALLOW),
+                (Child, ALLOW),
+                (Device, DENY),
+                (Elevated, DENY),
+                (System, ALLOW),
+            ],
+        );
+        t(
+            Action::ManageNotifyPrefs,
+            m_child_other.clone(),
+            c,
+            adult_only,
+        );
+
         let all: HashSet<Action> = Action::ALL.into_iter().collect();
         assert_eq!(covered, all, "every Action variant needs a policy test");
     }
@@ -878,9 +1179,15 @@ mod tests {
                 | Action::ReadCalendar
                 | Action::ManageWeatherRules
                 | Action::DismissAdvisory
-                | Action::ManageDeviceSettings => {}
+                | Action::ManageDeviceSettings
+                | Action::ManageTasks
+                | Action::AddTask
+                | Action::EditTask
+                | Action::ClaimTask
+                | Action::TickRoutineStep
+                | Action::ManageNotifyPrefs => {}
             }
         }
-        assert_eq!(Action::ALL.iter().collect::<HashSet<_>>().len(), 22);
+        assert_eq!(Action::ALL.iter().collect::<HashSet<_>>().len(), 28);
     }
 }

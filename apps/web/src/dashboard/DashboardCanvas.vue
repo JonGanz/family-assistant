@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { panelVisible } from './tasksModel'
 import { burnInOffset, resolveLayout } from './layout'
 import PanelHost from './panels/PanelHost.vue'
 import { prefersDark, resolveTheme } from './theme'
@@ -15,12 +16,29 @@ const props = withDefaults(
   }>(),
   { settings: undefined, burnIn: false },
 )
-defineEmits<{ dismiss: [id: string]; pick: [id: string] }>()
+defineEmits<{
+  dismiss: [id: string]
+  pick: [id: string]
+  complete: [id: string]
+  tick: [run: string, step: string, done: boolean]
+  add: []
+}>()
 
 const cfg = computed(() => props.settings ?? props.data.settings)
-const areas = computed(() => resolveLayout(cfg.value))
+/** Panels with nothing to show (an idle routine) are dropped so the others use the space. */
+const areas = computed(() =>
+  resolveLayout({
+    ...cfg.value,
+    panels: cfg.value.panels.filter((p) => panelVisible(p, props.data, props.now)),
+  }),
+)
 const rows = computed(() =>
   Math.max(1, ...areas.value.map((a) => Number(a.row.split('/')[1]?.trim() ?? '2') - 1)),
+)
+/** Portrait rows share the height by weight, so a long list scrolls inside its panel. */
+const WEIGHT: Record<string, number> = { clock: 1, weather: 2, advisories: 1, agenda: 4, now: 5 }
+const portraitRows = computed(() =>
+  areas.value.map((a) => `minmax(0, ${WEIGHT[a.panel.kind] ?? 4}fr)`).join(' '),
 )
 const theme = computed(() =>
   resolveTheme(
@@ -47,7 +65,7 @@ const landscape = computed(() => cfg.value.orientation === 'landscape')
     <div
       class="grid"
       :style="{
-        gridTemplateRows: `repeat(${rows}, auto)`,
+        gridTemplateRows: landscape ? `repeat(${rows}, auto)` : portraitRows,
         transform: `translate(${shift.x}px, ${shift.y}px)`,
       }"
     >
@@ -55,7 +73,7 @@ const landscape = computed(() => cfg.value.orientation === 'landscape')
         v-for="(a, i) in areas"
         :key="i"
         class="cell"
-        :class="[`k-${a.panel.kind}`, { fill: landscape && a.column === '5 / 13' }]"
+        :class="[`k-${a.panel.kind}`, { fill: !landscape || a.column === '5 / 13' }]"
         :style="{ gridColumn: a.column, gridRow: a.row }"
       >
         <div class="inner">
@@ -66,6 +84,9 @@ const landscape = computed(() => cfg.value.orientation === 'landscape')
             :now="now"
             @dismiss="(id: string) => $emit('dismiss', id)"
             @pick="(id: string) => $emit('pick', id)"
+            @complete="(id: string) => $emit('complete', id)"
+            @tick="(r: string, st: string, d: boolean) => $emit('tick', r, st, d)"
+            @add="$emit('add')"
           />
         </div>
       </div>
@@ -94,7 +115,7 @@ const landscape = computed(() => cfg.value.orientation === 'landscape')
   align-content: stretch;
 }
 .portrait .grid {
-  align-content: start;
+  align-content: stretch;
 }
 .cell {
   min-width: 0;
@@ -106,6 +127,10 @@ const landscape = computed(() => cfg.value.orientation === 'landscape')
 .cell.fill .inner {
   position: absolute;
   inset: 0;
+  overflow: hidden;
+}
+.cell.fill .inner > :deep(*) {
+  max-height: 100%;
   overflow: hidden;
 }
 

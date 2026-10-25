@@ -1,6 +1,8 @@
 use chrono::{DateTime, Utc};
 use fa_domain::api::SourcePatch;
-use fa_domain::{CalendarSource, CalendarSourceId, HouseholdId, Role, SecretId, SourceState};
+use fa_domain::{
+    CalendarSource, CalendarSourceId, HouseholdId, MemberId, Role, SecretId, SourceState,
+};
 use sqlx::PgConnection;
 use uuid::Uuid;
 
@@ -271,6 +273,32 @@ impl CalendarSourceRepo {
         Ok(rows
             .into_iter()
             .map(|r| (r.household_id.into(), r.id.into()))
+            .collect())
+    }
+}
+
+impl CalendarSourceRepo {
+    /// Non-archived sources in `needs_reauth`: `(source, owner, last_synced_at)`. Reads the
+    /// transaction's household (all of them in a system tx).
+    pub async fn needing_reauth(
+        conn: &mut PgConnection,
+    ) -> Result<Vec<(CalendarSourceId, Option<MemberId>, Option<DateTime<Utc>>)>> {
+        let rows = sqlx::query!(
+            "SELECT id, owner_member, last_synced_at FROM calendar_source
+             WHERE state = 'needs_reauth' AND archived_at IS NULL
+             ORDER BY created_at, id"
+        )
+        .fetch_all(conn)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|r| {
+                (
+                    r.id.into(),
+                    r.owner_member.map(Into::into),
+                    r.last_synced_at,
+                )
+            })
             .collect())
     }
 }

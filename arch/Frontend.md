@@ -2,14 +2,14 @@
 title: Frontend
 scope: Vue PWA structure, routes, dashboard (kiosk) design and layout config, settings screens, data flow (REST + SSE), offline behaviour
 status: draft
-updated: 2026-10-24
+updated: 2026-10-25
 drawio: Frontend.drawio
 drawio_src: src/Frontend.py
-depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036]
-milestone: M1
+depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046]
+milestone: M2
 ---
 
-# Frontend (DRAFT v1)
+# Frontend (DRAFT v2)
 
 This doc describes the Vue 3 PWA in `apps/web`: one app with two shells. The **app shell** is for signed-in people on phones and desktops. The **kiosk shell** is `/dashboard` on the Echo Show and other wall screens. This version covers what M1 builds. Later milestones add screens (tasks M2, inbox and labelling M3, pipelines and backends M4, meals M5). Backend data comes from [Feeds.md](Feeds.md).
 
@@ -65,6 +65,15 @@ Children see `/`, `/calendar`, and `/members` (public fields). Settings are adul
 - **Weather rule editor:** a monospace condition field. The server validates it on input, with a 300 ms debounce, through `POST /weather-rules/validate`, which returns the error position or `{matches, value}` for the latest snapshot. A chip row inserts fields and windows.
 - All mutating forms send `If-Match` versions and show a "changed elsewhere, reload" banner on a 409.
 
+## 3a. App shell screens (M2, [Tasks.md](Tasks.md))
+- **Tasks** (`/tasks`): tabs *Now* (D-042: "Mine" first, then "Household"), *Mine*, *Lists* (each list with its open tasks), and *Suggested* (adults, weather suggestions to accept or dismiss). Each item shows title, due (relative, overdue in red), assignee chips, a step count, and a claim button for pool tasks. Completing shows a 10-second **Undo** toast.
+- **Task detail and editor:** title, notes, due, steps (add, reorder, tick), priority flag, and calendar display (`hidden`, `until done`, `always`; "key date" is the label for `always`, D-046). Children get the same editor for their own one-off tasks on lists that allow it (D-045).
+- **Routines** (`/routines`): today's runs with a **progress bar** per member (D-041). Children see their own.
+- **Settings → Tasks** (adults): lists (policy, flags, calendar default, claim time), definitions (schedule `every N days after done` or `repeat on…` with an RRULE builder for weekly/monthly, lead days, due time, missed behaviour, strategy and ordered candidates, rotation options, priority, season window and condition with the same validation as the weather rule editor, pause), routines (members, window, steps with target times, day filter, school calendar and keywords, dashboard toggle), and **absences** (member, from, until).
+- **Settings → Notifications:** per member (self, plus children for adults): trigger toggles, due-soon and nudge minutes, quiet-hours override, copy-to adult, the subscribe URL with a QR code, and "Send test". When the server has no ntfy URL, the screen says notifications are not configured.
+- **Settings → Household** gains the Now list size and weights, and the default quiet hours.
+- **Calendar page:** tasks with `until_done` or `always` show as task chips (checkbox and member colour) on their due day; `always` stays after completion, shown as done (D-046).
+
 ## 4. Dashboard (kiosk shell)
 ### 4.1 Layout model
 The layout is data held in `device.settings` and edited by adults in Settings → Devices. It is never edited on the dashboard itself (D-019).
@@ -76,6 +85,7 @@ The layout is data held in `device.settings` and edited by adults in Settings �
   "panels": [ {"kind": "clock"}, {"kind": "weather", "hourly": true},
               {"kind": "advisories"}, {"kind": "agenda"}, {"kind": "week"}, {"kind": "members"} ] }
 ```
+- **Panels in M2:** `now` (the Now list, D-042, with optional `members` and `lists` filters), `member_tasks` (one column per member with their open tasks for today), and `routine` (D-041: shown automatically during a routine window, one column per member with large step buttons and a progress bar; `pinned: true` keeps it visible outside the window). `agenda` also shows key-date tasks (`always`), and `week` shows `until_done` and `always` task chips (D-046). Completing anything on the dashboard opens the member picker ("who did it?", preselecting the assignee) and needs no PIN while the override is on (D-013, D-019).
 - **Panels in M1:** `clock` (time, date), `weather` (now, the next 12 h, and 5–7 days), `advisories` (coloured by severity, dismissable without a PIN), `agenda` (today plus the next N days, grouped by day, with member chips), `week` (a 7-day column grid), `members` (avatars, which is also the entry point for M2 per-member task views and the PIN step-up).
 - **Presets** ("Family hub", "Calendar wall", "Minimal") fill `panels`. Unknown panel kinds are ignored, so an older client survives a newer layout.
 - **Landscape 1920×1080:** a 12-column grid. The left column (4) holds clock, weather, and advisories, and the right (8) holds agenda or week. **Portrait** stacks them. Type is sized for 2–3 m (base 28 px on the kiosk scale).
@@ -83,6 +93,7 @@ The layout is data held in `device.settings` and edited by adults in Settings �
 
 ### 4.2 Data & resilience
 - **One fetch:** `GET /api/v1/dashboard?days=N` returns household (name, tz, units), members (public fields + avatar URL), events in the window (already masked), the latest weather, active advisories, and the device settings. Refreshes reuse it.
+- **M2 data:** `GET /api/v1/dashboard` gains `tasks[]` (open tasks visible now, plus calendar-displayed tasks in the window) and `routines[]` (today's runs with steps). SSE `tasks.updated` and `routines.updated` trigger a refetch of those parts.
 - **Live:** SSE kinds update the snapshot: `calendar.updated` (refetch when its range overlaps), `weather.updated`, `advisory.updated`, `device.updated`, `member.updated`, `household.updated`, and `resync` (full refetch).
 - **Offline:** the last snapshot is saved to localStorage (extending the M0 cache) with `savedAt`. While the stream is down, the dashboard shows the cache with a quiet "last updated hh:mm" badge. The service worker caches the app shell and avatar images.
 - **Day rollover:** at midnight in the household tz, the dashboard refetches. The nightly reload (D-011) stays as a backstop.

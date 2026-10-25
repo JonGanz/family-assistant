@@ -32,6 +32,34 @@ export type StatusView = S['StatusView']
 export type DashboardView = S['DashboardView']
 export type DeviceView = S['DeviceView']
 export type DevicePatch = S['DevicePatch']
+export type TaskView = S['TaskView']
+export type NewTask = S['NewTask']
+export type TaskPatch = S['TaskPatch']
+export type TaskListView = S['TaskListView']
+export type TaskListInput = S['TaskListInput']
+export type TaskListPatch = S['TaskListPatch']
+export type TaskDefinitionView = S['TaskDefinitionView']
+export type TaskDefinitionInput = S['TaskDefinitionInput']
+export type TaskDefinitionPatch = S['TaskDefinitionPatch']
+export type ValidateDefinitionResponse = S['ValidateDefinitionResponse']
+export type RoutineView = S['RoutineView']
+export type RoutineInput = S['RoutineInput']
+export type RoutinePatch = S['RoutinePatch']
+export type RoutineRunView = S['RoutineRunView']
+export type MemberAwayView = S['MemberAwayView']
+export type NewAway = S['NewAway']
+export type NotifyPrefView = S['NotifyPrefView']
+export type NotifyPrefPatch = S['NotifyPrefPatch']
+export type NotifyTrigger = S['NotifyTrigger']
+
+export interface TaskQuery {
+  view?: 'now' | 'mine' | 'all'
+  member?: string
+  list?: string
+  status?: 'open' | 'done' | 'skipped' | 'suggested' | 'any'
+  from?: string
+  to?: string
+}
 
 /** Adults get every field; children and devices only the public ones. */
 export type Member = MemberPublicDto & Partial<Omit<MemberDto, keyof MemberPublicDto>>
@@ -154,4 +182,121 @@ export const api = {
     }),
 
   status: () => request<StatusView>('/api/v1/status', U),
+
+  tasks: (q: TaskQuery = {}) => {
+    const p = new URLSearchParams()
+    for (const [k, v] of Object.entries(q)) if (v) p.set(k, v)
+    const qs = p.toString()
+    return request<TaskView[]>(`/api/v1/tasks${qs ? `?${qs}` : ''}`, U)
+  },
+  task: (id: string) => request<TaskView>(`/api/v1/tasks/${id}`, U),
+  createTask: (b: NewTask) => request<TaskView>('/api/v1/tasks', { method: 'POST', body: b, ...U }),
+  patchTask: (id: string, version: number, b: TaskPatch) =>
+    request<TaskView>(`/api/v1/tasks/${id}`, {
+      method: 'PATCH',
+      body: b,
+      headers: ifMatch(version),
+      ...U,
+    }),
+  deleteTask: (id: string) => request<void>(`/api/v1/tasks/${id}`, { method: 'DELETE', ...U }),
+  completeTask: (id: string, member?: string) =>
+    request<TaskView>(`/api/v1/tasks/${id}/complete`, {
+      method: 'POST',
+      body: { member: member ?? null },
+      ...U,
+    }),
+  reopenTask: (id: string, member?: string) =>
+    request<TaskView>(`/api/v1/tasks/${id}/reopen`, {
+      method: 'POST',
+      body: { member: member ?? null },
+      ...U,
+    }),
+  skipTask: (id: string) => request<TaskView>(`/api/v1/tasks/${id}/skip`, { method: 'POST', ...U }),
+  acceptTask: (id: string) =>
+    request<TaskView>(`/api/v1/tasks/${id}/accept`, { method: 'POST', ...U }),
+  claimTask: (id: string) =>
+    request<TaskView>(`/api/v1/tasks/${id}/claim`, { method: 'POST', ...U }),
+  releaseTask: (id: string) =>
+    request<TaskView>(`/api/v1/tasks/${id}/release`, { method: 'POST', ...U }),
+  tickTaskStep: (id: string, stepId: string, done: boolean, member?: string) =>
+    request<TaskView>(`/api/v1/tasks/${id}/steps/${stepId}`, {
+      method: 'PATCH',
+      body: { done, member: member ?? null },
+      ...U,
+    }),
+
+  taskLists: () => request<TaskListView[]>('/api/v1/task-lists', U),
+  createTaskList: (b: TaskListInput) =>
+    request<TaskListView>('/api/v1/task-lists', { method: 'POST', body: b, ...U }),
+  patchTaskList: (id: string, version: number, b: TaskListPatch) =>
+    request<TaskListView>(`/api/v1/task-lists/${id}`, {
+      method: 'PATCH',
+      body: b,
+      headers: ifMatch(version),
+      ...U,
+    }),
+  deleteTaskList: (id: string) =>
+    request<void>(`/api/v1/task-lists/${id}`, { method: 'DELETE', ...U }),
+
+  taskDefinitions: (list?: string) =>
+    request<TaskDefinitionView[]>(`/api/v1/task-definitions${list ? `?list=${list}` : ''}`, U),
+  createTaskDefinition: (b: TaskDefinitionInput) =>
+    request<TaskDefinitionView>('/api/v1/task-definitions', { method: 'POST', body: b, ...U }),
+  patchTaskDefinition: (id: string, version: number, b: TaskDefinitionPatch) =>
+    request<TaskDefinitionView>(`/api/v1/task-definitions/${id}`, {
+      method: 'PATCH',
+      body: b,
+      headers: ifMatch(version),
+      ...U,
+    }),
+  deleteTaskDefinition: (id: string) =>
+    request<void>(`/api/v1/task-definitions/${id}`, { method: 'DELETE', ...U }),
+  validateDefinition: (b: {
+    rrule: string | null
+    season_condition: string | null
+    start_date?: string | null
+  }) =>
+    request<ValidateDefinitionResponse>('/api/v1/task-definitions/validate', {
+      method: 'POST',
+      body: b,
+      ...U,
+    }),
+
+  routines: () => request<RoutineView[]>('/api/v1/routines', U),
+  createRoutine: (b: RoutineInput) =>
+    request<RoutineView>('/api/v1/routines', { method: 'POST', body: b, ...U }),
+  patchRoutine: (id: string, version: number, b: RoutinePatch) =>
+    request<RoutineView>(`/api/v1/routines/${id}`, {
+      method: 'PATCH',
+      body: b,
+      headers: ifMatch(version),
+      ...U,
+    }),
+  deleteRoutine: (id: string) =>
+    request<void>(`/api/v1/routines/${id}`, { method: 'DELETE', ...U }),
+  routinesToday: (member?: string) =>
+    request<RoutineRunView[]>(`/api/v1/routines/today${member ? `?member=${member}` : ''}`, U),
+  tickRoutineStep: (runId: string, stepId: string, done: boolean, member?: string) =>
+    request<RoutineRunView>(`/api/v1/routine-runs/${runId}/steps/${stepId}`, {
+      method: 'PATCH',
+      body: { done, member: member ?? null },
+      ...U,
+    }),
+
+  away: (member: string) => request<MemberAwayView[]>(`/api/v1/members/${member}/away`, U),
+  addAway: (member: string, b: NewAway) =>
+    request<MemberAwayView>(`/api/v1/members/${member}/away`, { method: 'POST', body: b, ...U }),
+  deleteAway: (id: string) => request<void>(`/api/v1/away/${id}`, { method: 'DELETE', ...U }),
+
+  notifyPrefs: (member: string) =>
+    request<NotifyPrefView>(`/api/v1/members/${member}/notify-prefs`, U),
+  putNotifyPrefs: (member: string, version: number, b: NotifyPrefPatch) =>
+    request<NotifyPrefView>(`/api/v1/members/${member}/notify-prefs`, {
+      method: 'PUT',
+      body: b,
+      headers: ifMatch(version),
+      ...U,
+    }),
+  testNotify: (member: string) =>
+    request<void>(`/api/v1/members/${member}/notify-prefs/test`, { method: 'POST', ...U }),
 }

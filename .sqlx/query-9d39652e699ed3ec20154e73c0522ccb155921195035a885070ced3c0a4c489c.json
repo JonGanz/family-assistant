@@ -1,0 +1,43 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE task_definition SET list_id = $2, title = $3, notes = $4, steps_template = $5,\n                    schedule_kind = $6, interval_days = $7, rrule = $8, start_date = $9, due_time = $10,\n                    lead_days = $11, on_missed = $12, strategy = $13, advance_on = $14,\n                    skip_advances = $15, priority_flag = $16, season_from = $17, season_until = $18,\n                    season_condition = $19, paused = $20, next_due_at = $21, version = version + 1\n             WHERE id = $1 AND version = $22\n             RETURNING version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "TextArray",
+        "Text",
+        "Int4",
+        "Text",
+        "Date",
+        "Time",
+        "Int4",
+        "Text",
+        "Text",
+        "Text",
+        "Bool",
+        "Text",
+        "Int4",
+        "Int4",
+        "Text",
+        "Bool",
+        "Timestamptz",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9d39652e699ed3ec20154e73c0522ccb155921195035a885070ced3c0a4c489c"
+}

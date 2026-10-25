@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO notification (id, household_id, member_id, trigger, subject_type, subject_id,\n                                       title, body, click_path, priority, dedupe_key, not_before)\n             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, COALESCE($12, now()))\n             ON CONFLICT (household_id, dedupe_key) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Int4",
+        "Text",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "520e705015b9e91a4c2032d8a2ade6063bf14475838b6bc0c1aa545e554f1cd4"
+}

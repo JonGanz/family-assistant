@@ -1,0 +1,94 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, household_id, name, starts_at, done_by, day_filter, school_calendar_id,\n                    no_school_match, show_on_dashboard, archived_at, version, created_at, updated_at\n             FROM routine WHERE id = $1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "household_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "starts_at",
+        "type_info": "Time"
+      },
+      {
+        "ordinal": 4,
+        "name": "done_by",
+        "type_info": "Time"
+      },
+      {
+        "ordinal": 5,
+        "name": "day_filter",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "school_calendar_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 7,
+        "name": "no_school_match",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 8,
+        "name": "show_on_dashboard",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 9,
+        "name": "archived_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 10,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 12,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "1c39b531c1d0a0600ea73034cb1d0f59d968a378512a42f223122d6944615b79"
+}

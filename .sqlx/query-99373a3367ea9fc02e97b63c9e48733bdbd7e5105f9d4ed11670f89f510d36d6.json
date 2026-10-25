@@ -1,0 +1,30 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE routine SET name = $2, starts_at = $3, done_by = $4, day_filter = $5,\n                    school_calendar_id = $6, no_school_match = $7, show_on_dashboard = $8,\n                    version = version + 1\n             WHERE id = $1 AND version = $9\n             RETURNING version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Time",
+        "Time",
+        "Text",
+        "Uuid",
+        "TextArray",
+        "Bool",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "99373a3367ea9fc02e97b63c9e48733bdbd7e5105f9d4ed11670f89f510d36d6"
+}

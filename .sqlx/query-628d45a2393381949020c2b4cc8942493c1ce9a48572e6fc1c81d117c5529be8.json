@@ -1,0 +1,32 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, owner_member, last_synced_at FROM calendar_source\n             WHERE state = 'needs_reauth' AND archived_at IS NULL\n             ORDER BY created_at, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "owner_member",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "last_synced_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": []
+    },
+    "nullable": [
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "628d45a2393381949020c2b4cc8942493c1ce9a48572e6fc1c81d117c5529be8"
+}

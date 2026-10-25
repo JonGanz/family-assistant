@@ -6,8 +6,10 @@ pub mod error;
 pub mod google;
 pub mod http;
 pub mod ics;
+pub mod ntfy;
 pub mod openmeteo;
 
 pub use dto::*;
 pub use error::ConnectorError;
 pub use http::Http;
+pub use ntfy::NtfyMessage;

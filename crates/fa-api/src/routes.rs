@@ -868,7 +868,7 @@ fn to_event(e: &HubEvent) -> Event {
 
 #[utoipa::path(get, path = "/api/v1/stream", tag = "stream", security(("cookie" = []), ("bearer" = [])),
     responses((status = 200, content_type = "text/event-stream",
-               description = "`heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `resync`), bridged from `fa_change`; honours Last-Event-ID")))]
+               description = "`heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `resync`), bridged from `fa_change`; honours Last-Event-ID")))]
 pub async fn stream(
     State(s): State<AppState>,
     auth: Auth,

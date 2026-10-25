@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE routine_step SET target_time = $2 WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Time"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "bc4b70c50d7f95f9bf694fe47e9bb7a6cdc53b777d2df24ae48a8343feadb516"
+}

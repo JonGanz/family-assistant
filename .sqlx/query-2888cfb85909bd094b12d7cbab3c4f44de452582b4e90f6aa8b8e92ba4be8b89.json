@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM task t\n             WHERE t.definition_id = $1 AND t.status = 'open' AND t.created_at > $2\n               AND NOT EXISTS (SELECT 1 FROM task_step s WHERE s.task_id = t.id AND s.done_at IS NOT NULL)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2888cfb85909bd094b12d7cbab3c4f44de452582b4e90f6aa8b8e92ba4be8b89"
+}

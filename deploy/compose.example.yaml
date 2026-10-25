@@ -29,6 +29,10 @@ x-fa-server: &fa-server
     FA_GOOGLE_CLIENT_SECRET: ${FA_GOOGLE_CLIENT_SECRET:-}
     FA_OPEN_METEO_URL: ${FA_OPEN_METEO_URL:-https://api.open-meteo.com}
     FA_ALLOW_HTTP_FEEDS: ${FA_ALLOW_HTTP_FEEDS:-false}
+    # Notifications (M2). The service name resolves on the compose network; a plain http URL is fine.
+    # Set FA_NTFY_URL= (empty) in deploy/.env to turn notifications off. FA_NTFY_TOKEN is needed only with ntfy access control.
+    FA_NTFY_URL: ${FA_NTFY_URL-http://ntfy:80}
+    FA_NTFY_TOKEN: ${FA_NTFY_TOKEN:-}
   volumes:
     - ${BACKUP_DIR:?set BACKUP_DIR}:/backups:ro
 
@@ -76,12 +80,15 @@ services:
       disable: true   # the image healthcheck targets the api port
 
   ntfy:
-    image: binwiederhier/ntfy
+    image: binwiederhier/ntfy:v2.17.0
     restart: unless-stopped
     command: ["serve"]
     environment:
       NTFY_BASE_URL: ${NTFY_BASE_URL:-http://localhost:8090}
       NTFY_CACHE_FILE: /var/cache/ntfy/cache.db
+      # Optional access control (see deploy/README.md, ntfy notifications):
+      # NTFY_AUTH_FILE: /var/cache/ntfy/user.db
+      # NTFY_AUTH_DEFAULT_ACCESS: deny-all
     ports:
       - "127.0.0.1:${FA_HOST_NTFY_PORT:-8090}:80"   # for `tailscale serve`
     volumes:

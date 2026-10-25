@@ -16,6 +16,10 @@ fn household(name: &str) -> Household {
         calendar_future_days: 400,
         weather_retention_days: 7,
         private_events_as_busy: true,
+        now_list_size: 7,
+        now_weights: fa_domain::tasks::NowWeights::default(),
+        quiet_from: chrono::NaiveTime::from_hms_opt(21, 0, 0).expect("time"),
+        quiet_until: chrono::NaiveTime::from_hms_opt(7, 0, 0).expect("time"),
         created_at: Utc::now(),
         updated_at: Utc::now(),
     }

@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT household_id, id FROM task_definition\n             WHERE archived_at IS NULL AND NOT paused\n               AND (next_due_at IS NULL OR next_due_at - make_interval(days => lead_days + 1) <= $1)\n             ORDER BY next_due_at NULLS FIRST, id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "household_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "af41fbeffa9e78488917e240d534ed8b24c1f69e7e5e53dd521450d8ed39f96b"
+}

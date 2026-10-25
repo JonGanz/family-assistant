@@ -1,0 +1,20 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE task SET status = $2,\n                    completed_at = CASE WHEN $3 THEN now() END,\n                    completed_by = CASE WHEN $3 THEN $5::uuid END,\n                    completed_via_device = CASE WHEN $3 THEN $6::uuid END,\n                    skipped_by = CASE WHEN $4 THEN $5::uuid END,\n                    completion_undo = CASE WHEN $3 OR $4 THEN $7::jsonb END,\n                    claimed_by = CASE WHEN $3 THEN NULL ELSE claimed_by END,\n                    claimed_until = CASE WHEN $3 THEN NULL ELSE claimed_until END,\n                    version = version + 1\n             WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Bool",
+        "Bool",
+        "Uuid",
+        "Uuid",
+        "Jsonb"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "9bea7d5a96a8fd6cef8a2b5983f4675b1d79f23127f548452eaaa847697dc2b2"
+}

@@ -71,6 +71,11 @@ fn household_view(h: &Household, version: i32, google: bool) -> HouseholdView {
         calendar_future_days: h.calendar_future_days,
         weather_retention_days: h.weather_retention_days,
         private_events_as_busy: h.private_events_as_busy,
+        dashboard_completion_override: h.dashboard_completion_override,
+        now_list_size: h.now_list_size,
+        now_weights: h.now_weights,
+        quiet_from: h.quiet_from,
+        quiet_until: h.quiet_until,
         google_oauth_enabled: google,
         version,
     }
@@ -150,6 +155,16 @@ fn validate_household_patch(p: &mut HouseholdPatch) -> ApiResult<()> {
     range(p.calendar_past_days, 0, 3650, "calendar_past_days")?;
     range(p.calendar_future_days, 1, 800, "calendar_future_days")?;
     range(p.weather_retention_days, 1, 365, "weather_retention_days")?;
+    range(p.now_list_size, 1, 50, "now_list_size")?;
+    if let Some(w) = &p.now_weights {
+        for (v, what) in [(w.due, "due"), (w.flag, "flag"), (w.weather, "weather")] {
+            if !(0.0..=10.0).contains(&v) {
+                return Err(ApiError::Unprocessable(format!(
+                    "now_weights.{what} must be 0 to 10"
+                )));
+            }
+        }
+    }
     Ok(())
 }
 
@@ -1007,6 +1022,8 @@ fn rule_view(r: &WeatherRule, version: i32) -> WeatherRuleView {
         message: r.message.clone(),
         status: r.status,
         suggested_by: r.suggested_by,
+        task_mode: r.task_mode,
+        task_definition: r.task_definition.clone(),
         version,
     }
 }
@@ -1086,6 +1103,7 @@ pub async fn create_rule(
     let hid = household(&auth.actor)?;
     check_rule_text(&new.name, &new.condition, &new.message)?;
     check_condition(&s, hid, &new.condition).await?;
+    crate::tasks::check_rule_task(&s, hid, new.action, new.task_definition.as_ref()).await?;
     let now = Utc::now();
     let rule = WeatherRule {
         id: WeatherRuleId::new(),
@@ -1095,9 +1113,10 @@ pub async fn create_rule(
         action: new.action,
         severity: new.severity,
         message: new.message,
-        task_definition: None,
+        task_definition: new.task_definition.filter(|v| !v.is_null()),
         status: new.status.unwrap_or(RuleStatus::Active),
         suggested_by: SuggestedBy::User,
+        task_mode: new.task_mode.unwrap_or(fa_domain::TaskMode::Create),
         archived_at: None,
         created_at: now,
         updated_at: now,
@@ -1164,6 +1183,19 @@ pub async fn patch_rule(
     }
     if let Some(v) = p.status {
         r.status = v;
+    }
+    if let Some(v) = p.task_mode {
+        r.task_mode = v;
+    }
+    let action_changed = p.action.is_some();
+    if let Some(v) = p.task_definition.filter(|v| !v.is_null()) {
+        r.task_definition = Some(v);
+        crate::tasks::check_rule_task(&s, hid, r.action, r.task_definition.as_ref()).await?;
+    } else if action_changed {
+        if r.action == fa_domain::RuleAction::Alert {
+            r.task_definition = None;
+        }
+        crate::tasks::check_rule_task(&s, hid, r.action, r.task_definition.as_ref()).await?;
     }
     check_rule_text(&r.name, &r.condition, &r.message)?;
     check_condition(&s, hid, &r.condition).await?;
@@ -1421,15 +1453,28 @@ pub async fn get_dashboard(
         .await?;
     let weather = s.services.weather.latest_view(hid).await?;
     let advisories = active_advisories(&s, hid).await?;
+    let tasks = crate::tasks::tasks_for_members(
+        s.services.tasks.dashboard_tasks(hid, from, to).await?,
+        &settings.members,
+    );
+    let routines = crate::tasks::runs_for_members(
+        s.services.tasks.dashboard_routines(hid).await?,
+        &settings.members,
+    );
     Ok(Json(DashboardView {
         household: DashboardHousehold {
             name: h.name,
             tz: h.tz,
             units: h.units,
             location: h.location,
+            now_list_size: h.now_list_size,
+            completion_override: h.dashboard_completion_override,
         },
         members,
         events,
+        tasks,
+        routines,
+        task_lists: s.services.tasks.list_task_lists(hid).await?,
         weather,
         advisories,
         settings,

@@ -1,0 +1,197 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, household_id, list_id, title, notes, steps_template, schedule_kind,\n                    interval_days, rrule, start_date, due_time, lead_days, on_missed, strategy,\n                    advance_on, skip_advances, rotation_cursor, priority_flag, season_from,\n                    season_until, season_condition, condition_ok, condition_checked_at,\n                    last_done_at, next_due_at, paused, archived_at, version, created_at, updated_at FROM task_definition WHERE list_id = $1 AND title = $2 AND archived_at IS NULL\n             ORDER BY created_at, id LIMIT 1",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "household_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "list_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 3,
+        "name": "title",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "notes",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "steps_template",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 6,
+        "name": "schedule_kind",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 7,
+        "name": "interval_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 8,
+        "name": "rrule",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "start_date",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 10,
+        "name": "due_time",
+        "type_info": "Time"
+      },
+      {
+        "ordinal": 11,
+        "name": "lead_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 12,
+        "name": "on_missed",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "strategy",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 14,
+        "name": "advance_on",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
+        "name": "skip_advances",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 16,
+        "name": "rotation_cursor",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 17,
+        "name": "priority_flag",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 18,
+        "name": "season_from",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 19,
+        "name": "season_until",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 20,
+        "name": "season_condition",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 21,
+        "name": "condition_ok",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 22,
+        "name": "condition_checked_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 23,
+        "name": "last_done_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 24,
+        "name": "next_due_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 25,
+        "name": "paused",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 26,
+        "name": "archived_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 27,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 28,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 29,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "a2e5025a79856ddf4ebb1c9dddde5a673df007e93c95df563ef00b4df383528e"
+}

@@ -2,7 +2,22 @@ import type { components } from '../gen/api'
 import type { PanelConfig } from './layout'
 
 type Schemas = components['schemas']
-export type DashboardData = Schemas['DashboardView']
+export type TaskView = Schemas['TaskView']
+export type RoutineRunView = Schemas['RoutineRunView']
+export type TaskListView = Schemas['TaskListView']
+
+/** Client-side additions the store merges into the server snapshot. */
+export interface DashboardExtras {
+  /** Task lists (for the add form); read with the device token. */
+  task_lists?: TaskListView[]
+  /** The household's Now list size; falls back to 7. */
+  now_list_size?: number
+  /** False once the server refused a device completion (override off): tasks become read-only. */
+  completion_enabled?: boolean
+  /** Bumped to reset uncontrolled checkboxes after a cancelled picker. */
+  epoch?: number
+}
+export type DashboardData = Schemas['DashboardView'] & DashboardExtras
 export type DashboardSettings = Schemas['DashboardSettings']
 export type EventView = Schemas['EventView']
 export type AdvisoryView = Schemas['AdvisoryView']

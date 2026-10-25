@@ -2,13 +2,16 @@
 
 use std::fmt;
 
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::dashboard::DashboardSettings;
 use crate::entities::*;
 use crate::ids::*;
+use crate::tasks::NowWeights;
+use crate::tasks_api::{RoutineRunView, TaskListView, TaskView};
+use crate::timefmt;
 
 // ---- household ----
 
@@ -22,8 +25,19 @@ pub struct HouseholdView {
     pub calendar_future_days: i32,
     pub weather_retention_days: i32,
     pub private_events_as_busy: bool,
+    /// Adults may let dashboards (devices) tick off tasks.
+    pub dashboard_completion_override: bool,
     /// Read-only: true when the Google client is configured.
     pub google_oauth_enabled: bool,
+    pub now_list_size: i32,
+    pub now_weights: NowWeights,
+    /// `"HH:MM"`.
+    #[serde(with = "timefmt::hhmm")]
+    #[schema(value_type = String, example = "21:00")]
+    pub quiet_from: NaiveTime,
+    #[serde(with = "timefmt::hhmm")]
+    #[schema(value_type = String, example = "07:00")]
+    pub quiet_until: NaiveTime,
     pub version: i32,
 }
 
@@ -37,6 +51,15 @@ pub struct HouseholdPatch {
     pub calendar_future_days: Option<i32>,
     pub weather_retention_days: Option<i32>,
     pub private_events_as_busy: Option<bool>,
+    pub dashboard_completion_override: Option<bool>,
+    pub now_list_size: Option<i32>,
+    pub now_weights: Option<NowWeights>,
+    #[serde(default, with = "timefmt::hhmm_opt")]
+    #[schema(value_type = Option<String>, example = "21:00")]
+    pub quiet_from: Option<NaiveTime>,
+    #[serde(default, with = "timefmt::hhmm_opt")]
+    #[schema(value_type = Option<String>, example = "07:00")]
+    pub quiet_until: Option<NaiveTime>,
 }
 
 // ---- calendar sources ----
@@ -227,6 +250,10 @@ pub struct WeatherRuleView {
     pub message: String,
     pub status: RuleStatus,
     pub suggested_by: SuggestedBy,
+    pub task_mode: TaskMode,
+    /// Definition template for action `task` (opaque JSON).
+    #[schema(value_type = Option<Object>)]
+    pub task_definition: Option<serde_json::Value>,
     pub version: i32,
 }
 
@@ -239,6 +266,10 @@ pub struct NewWeatherRule {
     pub message: String,
     /// Defaults to `active`.
     pub status: Option<RuleStatus>,
+    /// Defaults to `create`.
+    pub task_mode: Option<TaskMode>,
+    #[schema(value_type = Option<Object>)]
+    pub task_definition: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -249,6 +280,9 @@ pub struct WeatherRulePatch {
     pub severity: Option<Severity>,
     pub message: Option<String>,
     pub status: Option<RuleStatus>,
+    pub task_mode: Option<TaskMode>,
+    #[schema(value_type = Option<Object>)]
+    pub task_definition: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -302,6 +336,10 @@ pub struct DashboardHousehold {
     pub tz: String,
     pub units: Units,
     pub location: Option<Location>,
+    /// Size of the Now list (D-042).
+    pub now_list_size: i32,
+    /// Anyone may complete tasks from the dashboard (D-013).
+    pub completion_override: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -312,6 +350,10 @@ pub struct DashboardView {
     pub weather: Option<WeatherView>,
     pub advisories: Vec<AdvisoryView>,
     pub settings: DashboardSettings,
+    pub tasks: Vec<TaskView>,
+    pub routines: Vec<RoutineRunView>,
+    /// Active task lists (the add form offers those with `dashboard_add`).
+    pub task_lists: Vec<TaskListView>,
 }
 
 // ---- status ----

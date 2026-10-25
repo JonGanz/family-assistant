@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE task_list SET archived_at = COALESCE(archived_at, now()), version = version + 1\n             WHERE id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "a26fd6891f57b7194710dd4ebebe5da5c8c1d28a46476b3c4dd7a0325c1ef4b3"
+}

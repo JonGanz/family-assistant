@@ -64,6 +64,28 @@ pub struct ProcessConfig {
     pub open_meteo_url: Url,
     /// `FA_ALLOW_HTTP_FEEDS`: also accept plain `http` for feeds and OAuth redirects (LAN, dev).
     pub allow_http_feeds: bool,
+    /// `FA_NTFY_URL`: ntfy server for notifications. Without it none are sent.
+    #[serde(default, deserialize_with = "empty_none")]
+    pub ntfy_url: Option<Url>,
+    /// `FA_NTFY_TOKEN` (redacted in `Debug`).
+    #[serde(default, deserialize_with = "empty_none")]
+    pub ntfy_token: Option<SecretString>,
+}
+
+/// Empty strings mean unset.
+fn empty_none<'de, D, T>(d: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: serde::de::DeserializeOwned,
+{
+    let v = Option::<serde_json::Value>::deserialize(d)?;
+    match v {
+        None | Some(serde_json::Value::Null) => Ok(None),
+        Some(serde_json::Value::String(s)) if s.trim().is_empty() => Ok(None),
+        Some(v) => serde_json::from_value(v)
+            .map(Some)
+            .map_err(serde::de::Error::custom),
+    }
 }
 
 #[derive(Serialize)]
@@ -178,6 +200,11 @@ impl ProcessConfig {
         if !matches!(self.open_meteo_url.scheme(), "https" | "http") {
             errs.push("FA_OPEN_METEO_URL must be an http(s) URL".to_string());
         }
+        if let Some(u) = &self.ntfy_url
+            && !matches!(u.scheme(), "https" | "http")
+        {
+            errs.push("FA_NTFY_URL must be an http(s) URL".to_string());
+        }
         if self.log_level.trim().is_empty() {
             errs.push("FA_LOG_LEVEL must not be empty".to_string());
         }
@@ -260,6 +287,22 @@ mod tests {
         assert!(ProcessConfig::from_figment(fig(&t)).is_err());
         let ok = format!("{t}\nallow_http_feeds=true");
         assert!(ProcessConfig::from_figment(fig(&ok)).is_ok());
+    }
+
+    #[test]
+    fn ntfy_optional_empty_unset_and_redacted() {
+        let c = ProcessConfig::from_figment(fig(BASE)).unwrap();
+        assert!(c.ntfy_url.is_none() && c.ntfy_token.is_none());
+        let c =
+            ProcessConfig::from_figment(fig(&format!("{BASE}ntfy_url=''\nntfy_token=''"))).unwrap();
+        assert!(c.ntfy_url.is_none() && c.ntfy_token.is_none());
+        let c = ProcessConfig::from_figment(fig(&format!(
+            "{BASE}ntfy_url='https://ntfy.example.com'\nntfy_token='tk_s3cret'"
+        )))
+        .unwrap();
+        assert_eq!(c.ntfy_url.unwrap().host_str(), Some("ntfy.example.com"));
+        assert!(!format!("{:?}", c.ntfy_token).contains("tk_s3cret"));
+        assert!(ProcessConfig::from_figment(fig(&format!("{BASE}ntfy_url='nope'"))).is_err());
     }
 
     #[test]

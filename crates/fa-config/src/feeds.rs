@@ -341,6 +341,7 @@ pub(crate) async fn import_feeds(
                         task_definition: None,
                         status: rc.status,
                         suggested_by: SuggestedBy::User,
+                        task_mode: fa_domain::TaskMode::Create,
                         archived_at: None,
                         created_at: now,
                         updated_at: now,
@@ -407,6 +408,7 @@ fn slug(s: &str) -> String {
 pub(crate) async fn export_feeds(
     conn: &mut PgConnection,
     id_to_key: &HashMap<MemberId, String>,
+    ex: &crate::tasks::ExportedTasks,
 ) -> Result<(Vec<CalendarSourceConfig>, Vec<WeatherRuleConfig>), ImportError> {
     let key_of = |m: MemberId| id_to_key.get(&m).cloned();
     let mut used = HashSet::new();
@@ -466,6 +468,11 @@ pub(crate) async fn export_feeds(
                 severity: r.severity,
                 message: r.message,
                 status: r.status,
+                task_mode: (r.task_mode != fa_domain::TaskMode::Create).then_some(r.task_mode),
+                task_definition: r
+                    .task_definition
+                    .as_ref()
+                    .and_then(|v| crate::tasks::definition_spec(v, ex)),
             }
         })
         .collect();

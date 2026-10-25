@@ -10,6 +10,8 @@ members = [
     "crates/fa-connectors",
     "crates/fa-calendar",
     "crates/fa-weather",
+    "crates/fa-tasks",
+    "crates/fa-notify",
     "bins/fa-server",
     "bins/fa-gpu-agent",
 ]
@@ -48,6 +50,8 @@ fa-api = { path = "crates/fa-api" }
 fa-connectors = { path = "crates/fa-connectors" }
 fa-calendar = { path = "crates/fa-calendar" }
 fa-weather = { path = "crates/fa-weather" }
+fa-tasks = { path = "crates/fa-tasks" }
+fa-notify = { path = "crates/fa-notify" }
 
 # async and HTTP
 tokio = { version = "1.54.1", features = ["full"] }

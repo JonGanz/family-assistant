@@ -78,6 +78,15 @@ id_type!(CalendarId);
 id_type!(EventId);
 id_type!(WeatherRuleId);
 id_type!(AdvisoryId);
+id_type!(TaskListId);
+id_type!(TaskDefinitionId);
+id_type!(TaskId);
+id_type!(TaskStepId);
+id_type!(RoutineId);
+id_type!(RoutineStepId);
+id_type!(RoutineRunId);
+id_type!(MemberAwayId);
+id_type!(NotificationId);
 
 #[cfg(test)]
 mod tests {

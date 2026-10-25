@@ -17,7 +17,8 @@ use fa_store::{
 };
 
 use crate::cli::{
-    CalendarAction, ConfigAction, DeviceAction, PinAction, UserAction, WeatherAction,
+    CalendarAction, ConfigAction, DeviceAction, NotifyAction, PinAction, TasksAction, UserAction,
+    WeatherAction,
 };
 use crate::wiring;
 
@@ -55,19 +56,32 @@ async fn require_household(store: &Store, given: Option<HouseholdId>) -> Result<
         .ok_or_else(|| anyhow!("no household yet; run `fa-server config import <file>` first"))
 }
 
-/// Every weather-rule condition must parse before anything is written.
-fn check_weather_rules(cfg: &HouseholdConfig) -> Result<()> {
-    for r in &cfg.weather_rules {
-        if let Err(e) = fa_weather::parse(&r.condition) {
-            bail!(
-                "weather rule '{}': invalid condition at position {}: {}",
-                r.name,
-                e.position,
-                e.message
-            );
+/// Every RRULE and weather/season condition must parse before anything is written; all errors are
+/// reported together with their location.
+fn check_config(cfg: &HouseholdConfig) -> Result<()> {
+    let mut errors = Vec::new();
+    for (title, rrule) in cfg.rrules() {
+        if let Err(m) = fa_tasks::validate_rrule(rrule) {
+            errors.push(format!("task definition '{title}': invalid rrule: {m}"));
         }
     }
-    Ok(())
+    for (label, condition) in cfg.conditions() {
+        if let Err(e) = fa_weather::validate_condition(condition) {
+            errors.push(format!(
+                "{label}: invalid condition at position {}: {}",
+                e.position, e.message
+            ));
+        }
+    }
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        bail!(
+            "{} error(s) in the household file:\n  {}",
+            errors.len(),
+            errors.join("\n  ")
+        )
+    }
 }
 
 pub async fn config(
@@ -80,7 +94,7 @@ pub async fn config(
             let text = std::fs::read_to_string(&file)
                 .with_context(|| format!("reading {}", file.display()))?;
             let cfg = HouseholdConfig::from_toml(&text)?;
-            check_weather_rules(&cfg)?;
+            check_config(&cfg)?;
             let mode = if replace {
                 ImportMode::Replace
             } else {
@@ -390,6 +404,59 @@ pub async fn weather(
     Ok(())
 }
 
+pub async fn notify(
+    cfg: &ProcessConfig,
+    store: &Store,
+    household: Option<HouseholdId>,
+    action: NotifyAction,
+) -> Result<()> {
+    let NotifyAction::Test { member } = action;
+    let hid = require_household(store, household).await?;
+    let mut tx = store.tx_for(hid).await?;
+    let m = member_by_key(&mut tx, hid, &member).await?;
+    tx.rollback().await?;
+    let svc = fa_notify::NotifyService::new(store.clone(), wiring::notify_config(cfg));
+    match svc.send_test(hid, m.id).await {
+        Ok(()) => {}
+        Err(fa_notify::NotifyError::NotConfigured) => {
+            bail!(
+                "ntfy is not configured; set FA_NTFY_URL (and FA_NTFY_TOKEN if the server needs one)"
+            )
+        }
+        Err(e) => return Err(anyhow!(e)).context("publishing the test notification"),
+    }
+    let prefs = svc.get_prefs(hid, m.id).await?;
+    println!("test notification sent to {}", m.display_name);
+    if let Some(url) = prefs.subscribe_url {
+        println!("subscribe url: {url}");
+    }
+    Ok(())
+}
+
+pub async fn tasks(
+    store: &Store,
+    household: Option<HouseholdId>,
+    action: TasksAction,
+) -> Result<()> {
+    let TasksAction::RunNow = action;
+    let hid = require_household(store, household).await?;
+    let svc = fa_tasks::TaskService::new(store.clone());
+    let now = Utc::now();
+    let created = svc
+        .materialize_all(now)
+        .await
+        .context("tasks.materialize")?;
+    svc.tick(hid, now).await.context("tasks.tick")?;
+    let runs = svc
+        .routines_materialize(hid, now)
+        .await
+        .context("routines.materialize")?;
+    println!("tasks.materialize: {created} task(s) created");
+    println!("tasks.tick: done");
+    println!("routines.materialize: {runs} run(s) created");
+    Ok(())
+}
+
 pub async fn pin(store: &Store, household: Option<HouseholdId>, action: PinAction) -> Result<()> {
     let PinAction::Set { member, pin_stdin } = action;
     let hid = require_household(store, household).await?;
@@ -444,7 +511,7 @@ mod tests {
     fn config_import_rejects_a_bad_rule_with_its_name_and_position() {
         let toml = include_str!("../../../config/examples/household.example.toml");
         let mut cfg = HouseholdConfig::from_toml(toml).unwrap();
-        check_weather_rules(&cfg).unwrap();
+        check_config(&cfg).unwrap();
         cfg.weather_rules.push(fa_config::WeatherRuleConfig {
             name: "Broken".into(),
             condition: "temperature >>> 3".into(),
@@ -452,11 +519,40 @@ mod tests {
             severity: fa_domain::Severity::Info,
             message: "x".into(),
             status: fa_domain::RuleStatus::Active,
+            task_mode: None,
+            task_definition: None,
         });
-        let err = check_weather_rules(&cfg).unwrap_err().to_string();
+        let err = check_config(&cfg).unwrap_err().to_string();
         assert!(
             err.contains("'Broken'") && err.contains("position"),
             "{err}"
         );
+    }
+
+    #[test]
+    fn config_import_reports_every_bad_rrule_and_season_condition() {
+        let toml = include_str!("../../../config/examples/household.example.toml");
+        let extra = r#"
+[[task_lists]]
+name = "Chores"
+
+[[task_definitions]]
+list = "Chores"
+title = "Bins"
+rrule = "FREQ=SOMETIMES"
+candidates = ["alex"]
+
+[[task_definitions]]
+list = "Chores"
+title = "Mow"
+rrule = "FREQ=WEEKLY"
+season_condition = "temperature >>> 3"
+candidates = ["alex"]
+"#;
+        let cfg = HouseholdConfig::from_toml(&format!("{toml}\n{extra}")).unwrap();
+        let err = check_config(&cfg).unwrap_err().to_string();
+        assert!(err.contains("2 error(s)"), "{err}");
+        assert!(err.contains("'Bins'") && err.contains("rrule"), "{err}");
+        assert!(err.contains("'Mow'") && err.contains("position"), "{err}");
     }
 }

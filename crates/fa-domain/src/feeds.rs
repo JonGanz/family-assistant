@@ -109,6 +109,7 @@ pub struct WeatherRule {
     pub severity: Severity,
     pub message: String,
     pub task_definition: Option<serde_json::Value>,
+    pub task_mode: TaskMode,
     pub status: RuleStatus,
     pub suggested_by: SuggestedBy,
     pub archived_at: Option<DateTime<Utc>>,

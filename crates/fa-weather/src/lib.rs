@@ -21,4 +21,11 @@ pub enum WeatherError {
     Store(#[from] fa_store::StoreError),
     #[error(transparent)]
     Connector(#[from] fa_connectors::ConnectorError),
+    #[error("job error: {0}")]
+    Job(String),
+}
+
+/// Checks that `s` is a valid weather-rule condition.
+pub fn validate_condition(s: &str) -> Result<(), ParseError> {
+    parse(s).map(|_| ())
 }

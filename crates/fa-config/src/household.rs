@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use chrono::{NaiveDate, Utc};
 use fa_domain::Role;
+use fa_domain::timefmt::{format_hhmm, parse_hhmm};
 use fa_domain::{
     AuditEntry, AuditEntryId, Household, HouseholdId, Location, Member, MemberId, RuleAction,
     RuleStatus, Severity, SourceKind, Units,
@@ -16,6 +17,9 @@ pub const SUPPORTED_SECTIONS: &[&str] = &[
     "members",
     "calendar_sources",
     "weather_rules",
+    "task_lists",
+    "task_definitions",
+    "routines",
 ];
 
 pub const DEFAULT_UNITS: Units = Units::Metric;
@@ -40,6 +44,12 @@ pub struct HouseholdConfig {
     pub calendar_sources: Vec<CalendarSourceConfig>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub weather_rules: Vec<WeatherRuleConfig>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub task_lists: Vec<crate::tasks::TaskListConfig>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub task_definitions: Vec<crate::tasks::TaskDefinitionConfig>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub routines: Vec<crate::tasks::RoutineConfig>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -59,6 +69,20 @@ pub struct HouseholdSection {
     pub weather_retention_days: Option<i32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub private_events_as_busy: Option<bool>,
+    /// Let dashboards tick off tasks (omitted: unchanged; new households: on).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dashboard_completion_override: Option<bool>,
+    /// Size of the Now list (1-50, default 7).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub now_list_size: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub now_weights: Option<fa_domain::tasks::NowWeights>,
+    /// `"HH:MM"`, default 21:00.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quiet_from: Option<String>,
+    /// `"HH:MM"`, default 07:00.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub quiet_until: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -90,6 +114,8 @@ pub struct MemberConfig {
     pub hobbies: Vec<String>,
     #[serde(default)]
     pub responsibilities: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub notify: Option<crate::tasks::NotifyConfig>,
 }
 
 /// A calendar account. Secrets are never part of the file: Google needs reconnecting, a CalDAV
@@ -147,6 +173,12 @@ pub struct WeatherRuleConfig {
     pub message: String,
     #[serde(default = "default_rule_status")]
     pub status: RuleStatus,
+    /// Defaults to `create`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub task_mode: Option<fa_domain::TaskMode>,
+    /// Title of a task definition (or `"List name/Title"` when ambiguous), for action `task`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub task_definition: Option<String>,
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -199,9 +231,43 @@ pub struct ImportReport {
     pub rules_created: Vec<String>,
     pub rules_updated: Vec<String>,
     pub rules_unchanged: Vec<String>,
+    pub task_lists_created: Vec<String>,
+    pub task_lists_updated: Vec<String>,
+    pub task_lists_unchanged: Vec<String>,
+    pub task_definitions_created: Vec<String>,
+    pub task_definitions_updated: Vec<String>,
+    pub task_definitions_unchanged: Vec<String>,
+    pub routines_created: Vec<String>,
+    pub routines_updated: Vec<String>,
+    pub routines_unchanged: Vec<String>,
+    pub notify_created: Vec<String>,
+    pub notify_updated: Vec<String>,
+    pub notify_unchanged: Vec<String>,
 }
 
 impl HouseholdConfig {
+    /// `(definition title, rrule)` of every task definition, for syntax checks by the caller.
+    pub fn rrules(&self) -> impl Iterator<Item = (&str, &str)> {
+        self.task_definitions
+            .iter()
+            .filter_map(|d| d.rrule.as_deref().map(|r| (d.title.as_str(), r)))
+    }
+
+    /// `(label, condition)` of every weather-rule condition and task-definition
+    /// `season_condition`, for DSL checks by the caller.
+    pub fn conditions(&self) -> impl Iterator<Item = (String, &str)> {
+        let rules = self
+            .weather_rules
+            .iter()
+            .map(|r| (format!("weather rule '{}'", r.name), r.condition.as_str()));
+        let seasons = self.task_definitions.iter().filter_map(|d| {
+            d.season_condition
+                .as_deref()
+                .map(|c| (format!("task definition '{}' season_condition", d.title), c))
+        });
+        rules.chain(seasons)
+    }
+
     pub fn from_toml(s: &str) -> Result<Self, HouseholdTomlError> {
         let table: toml::Table = s.parse()?;
         let unknown: Vec<String> = table
@@ -289,6 +355,7 @@ impl HouseholdConfig {
             }
         }
         crate::feeds::validate_feeds(self, src, &mut errs);
+        crate::tasks::validate_tasks(self, &mut errs);
         if errs.is_empty() {
             Ok(())
         } else {
@@ -363,6 +430,18 @@ pub async fn import(
         rules_created: vec![],
         rules_updated: vec![],
         rules_unchanged: vec![],
+        task_lists_created: vec![],
+        task_lists_updated: vec![],
+        task_lists_unchanged: vec![],
+        task_definitions_created: vec![],
+        task_definitions_updated: vec![],
+        task_definitions_unchanged: vec![],
+        routines_created: vec![],
+        routines_updated: vec![],
+        routines_unchanged: vec![],
+        notify_created: vec![],
+        notify_updated: vec![],
+        notify_unchanged: vec![],
     };
 
     match HouseholdRepo::get(&mut tx, hid).await? {
@@ -376,7 +455,9 @@ pub async fn import(
                     tz: cfg.household.tz.clone(),
                     location,
                     meal_plan_horizon_weeks: 2,
-                    dashboard_completion_override: false,
+                    dashboard_completion_override: sec
+                        .dashboard_completion_override
+                        .unwrap_or(true),
                     units: sec.units.unwrap_or(DEFAULT_UNITS),
                     calendar_past_days: sec
                         .calendar_past_days
@@ -390,6 +471,10 @@ pub async fn import(
                     private_events_as_busy: sec
                         .private_events_as_busy
                         .unwrap_or(DEFAULT_PRIVATE_EVENTS_AS_BUSY),
+                    now_list_size: sec.now_list_size.unwrap_or(7),
+                    now_weights: sec.now_weights.unwrap_or_default(),
+                    quiet_from: quiet(sec.quiet_from.as_deref(), 21),
+                    quiet_until: quiet(sec.quiet_until.as_deref(), 7),
                     created_at: now,
                     updated_at: now,
                 },
@@ -418,14 +503,34 @@ pub async fn import(
             if let Some(b) = sec.private_events_as_busy {
                 h.private_events_as_busy = b;
             }
-            let changed = h.name != before.name
+            if let Some(b) = sec.dashboard_completion_override {
+                h.dashboard_completion_override = b;
+            }
+            if let Some(n) = sec.now_list_size {
+                h.now_list_size = n;
+            }
+            if let Some(w) = sec.now_weights {
+                h.now_weights = w;
+            }
+            if let Some(t) = sec.quiet_from.as_deref().and_then(parse_hhmm) {
+                h.quiet_from = t;
+            }
+            if let Some(t) = sec.quiet_until.as_deref().and_then(parse_hhmm) {
+                h.quiet_until = t;
+            }
+            let changed = h.now_list_size != before.now_list_size
+                || h.now_weights != before.now_weights
+                || h.quiet_from != before.quiet_from
+                || h.quiet_until != before.quiet_until
+                || h.name != before.name
                 || h.tz != before.tz
                 || h.location != before.location
                 || h.units != before.units
                 || h.calendar_past_days != before.calendar_past_days
                 || h.calendar_future_days != before.calendar_future_days
                 || h.weather_retention_days != before.weather_retention_days
-                || h.private_events_as_busy != before.private_events_as_busy;
+                || h.private_events_as_busy != before.private_events_as_busy
+                || h.dashboard_completion_override != before.dashboard_completion_override;
             if changed {
                 HouseholdRepo::update(&mut tx, &h, v.version).await?;
                 report.household_updated = true;
@@ -497,6 +602,16 @@ pub async fn import(
     }
 
     crate::feeds::import_feeds(&mut tx, hid, cfg, &mut report).await?;
+    let tz: chrono_tz::Tz = cfg.household.tz.parse().unwrap_or(chrono_tz::UTC);
+    let mut member_ids: std::collections::HashMap<&str, MemberId> = Default::default();
+    for m in &cfg.members {
+        let v = MemberRepo::get_by_config_key(&mut tx, hid, &m.key)
+            .await?
+            .ok_or(StoreError::NotFound)?;
+        member_ids.insert(m.key.as_str(), v.value.id);
+    }
+    crate::tasks::import_tasks(&mut tx, hid, tz, cfg, &member_ids, &mut report).await?;
+    crate::tasks::import_rule_tasks(&mut tx, cfg, &mut report).await?;
 
     AuditRepo::insert(
         &mut tx,
@@ -520,6 +635,12 @@ pub async fn import(
     tx.commit().await?;
     tracing::info!(household = %hid, ?mode, "household config imported");
     Ok(report)
+}
+
+fn quiet(s: Option<&str>, default_hour: u32) -> chrono::NaiveTime {
+    s.and_then(parse_hhmm)
+        .or_else(|| chrono::NaiveTime::from_hms_opt(default_hour, 0, 0))
+        .unwrap_or(chrono::NaiveTime::MIN)
 }
 
 fn slug(s: &str) -> String {
@@ -568,7 +689,9 @@ pub async fn export(
     }
     let id_to_key: std::collections::HashMap<MemberId, String> =
         members.iter().map(|(k, m)| (m.id, k.clone())).collect();
-    let (calendar_sources, weather_rules) = crate::feeds::export_feeds(&mut tx, &id_to_key).await?;
+    let ex = crate::tasks::export_tasks(&mut tx, &id_to_key).await?;
+    let (calendar_sources, weather_rules) =
+        crate::feeds::export_feeds(&mut tx, &id_to_key, &ex).await?;
     tx.rollback().await?;
 
     Ok(HouseholdConfig {
@@ -586,10 +709,16 @@ pub async fn export(
             calendar_future_days: Some(h.calendar_future_days),
             weather_retention_days: Some(h.weather_retention_days),
             private_events_as_busy: Some(h.private_events_as_busy),
+            dashboard_completion_override: Some(h.dashboard_completion_override),
+            now_list_size: Some(h.now_list_size),
+            now_weights: Some(h.now_weights),
+            quiet_from: Some(format_hhmm(h.quiet_from)),
+            quiet_until: Some(format_hhmm(h.quiet_until)),
         },
         members: members
             .into_iter()
             .map(|(key, m)| MemberConfig {
+                notify: ex.notify.get(&m.id).cloned(),
                 key,
                 display_name: m.display_name,
                 role: m.role,
@@ -604,5 +733,8 @@ pub async fn export(
             .collect(),
         calendar_sources,
         weather_rules,
+        task_lists: ex.task_lists,
+        task_definitions: ex.task_definitions,
+        routines: ex.routines,
     })
 }

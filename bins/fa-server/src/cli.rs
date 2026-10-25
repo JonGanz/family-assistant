@@ -66,6 +66,16 @@ pub enum Command {
         #[command(subcommand)]
         action: WeatherAction,
     },
+    /// Notification tools.
+    Notify {
+        #[command(subcommand)]
+        action: NotifyAction,
+    },
+    /// Task tools.
+    Tasks {
+        #[command(subcommand)]
+        action: TasksAction,
+    },
     /// Write the OpenAPI document.
     GenOpenapi {
         #[arg(long, default_value = "apps/web/src/gen/openapi.json")]
@@ -129,6 +139,22 @@ pub enum CalendarAction {
 pub enum WeatherAction {
     /// Fetch the forecast, evaluate the rules in this process and print the result.
     Fetch,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum NotifyAction {
+    /// Publish a test notification to a member's topic and print the subscribe URL.
+    Test {
+        /// Member key from the household TOML.
+        #[arg(long)]
+        member: String,
+    },
+}
+
+#[derive(Debug, Subcommand)]
+pub enum TasksAction {
+    /// Run one pass of tasks.materialize, tasks.tick and routines.materialize for the household.
+    RunNow,
 }
 
 #[derive(Debug, Subcommand)]

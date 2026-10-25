@@ -36,7 +36,7 @@ This is the full UML class model, split into packages (bounded contexts). Each p
 | `Session` | account, created/last_seen, user_agent, expires_at | Stored in Postgres. Rolls for 180 days for children and 30 days for adults. Adults can revoke child sessions (D-031) |
 | `Device` | kind: `dashboard`, name, token_hash, last_seen, revoked_at? | A shared kiosk identity, not a user (D-006) |
 | `DeviceElevation` | device, member (adult), expires_at | Created by a PIN step-up and lasts about 5 minutes (D-019) |
-| `NotifyPref` | member, topic, token (Secret), triggers, quiet hours override, copy_to_member? | D-010, D-044. Detail in [Tasks.md](Tasks.md) §5 |
+| `NotifyPref` | member, topic (random), triggers, quiet hours override, copy_to_member? | D-010, D-044. Detail in [Tasks.md](Tasks.md) §5 |
 | `AuditEntry` | actor_member?, device?, action, subject_type, subject_id, before/after jsonb, at | Append-only, with no UPDATE or DELETE grants |
 | `Secret` | owner_type, owner_id, kind, ciphertext, nonce, key_version | Envelope encryption |
 
@@ -47,7 +47,7 @@ This is the full UML class model, split into packages (bounded contexts). Each p
 | Read all household data | ✗ | ✓ | dashboard subset | dashboard subset |
 | Complete a task or routine step | own (if the list policy allows) | ✓ | ✓ when the override is on (D-013) | ✓ |
 | Add a one-off task | own, on lists with `child_can_add = own` (D-045) | ✓ | on lists with `dashboard_add` | ✓ |
-| Manage lists, definitions, routines, absences; skip | ✗ | ✓ | ✗ | skip only |
+| Manage lists, definitions, routines, absences; skip | ✗ | ✓ | ✗ | ✗ |
 | Add a grocery item | ✓ | ✓ | ✓ | ✓ |
 | Approve an event, Gmail actions | ✗ | ✓ | ✗ | ✓ |
 | Household and child settings, pipelines | ✗ | ✓ | ✗ | ✗ |

@@ -89,6 +89,17 @@ test('settings: add an ICS source and enable its calendar', async ({ page }) => 
   await page.getByRole('button', { name: 'Test' }).click()
   await expect(page.getByTestId('test-result')).toContainText('It works')
   await page.getByRole('button', { name: 'Add', exact: true }).click()
+  await expect(page.getByTestId('source-UI Added Feed')).toBeVisible()
+  // The worker's first sync bumps the calendar's version; toggling with a stale version is a
+  // 409. Wait for it, then reload so the page holds the current versions.
+  await expect
+    .poll(async () => {
+      const res = await page.request.get('/api/v1/calendar-sources')
+      const rows = (await res.json()) as { name: string; last_synced_at?: string | null }[]
+      return rows.find((r) => r.name === 'UI Added Feed')?.last_synced_at ?? null
+    })
+    .not.toBeNull()
+  await page.reload()
   const source = page.getByTestId('source-UI Added Feed')
   await expect(source).toBeVisible()
   const show = source.getByRole('checkbox', { name: /^Show / })

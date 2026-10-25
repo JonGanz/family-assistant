@@ -217,3 +217,54 @@ fn household_defaults_and_ranges() {
     .to_string();
     assert!(e.contains("calendar_future_days"), "{e}");
 }
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn completion_override_key_defaults_on_and_is_applied(pool: PgPool) {
+    let store = Store::from_pool(pool);
+    let read = |key: &str| {
+        let toml = EXAMPLE.replacen("[household]\n", &format!("[household]\n{key}"), 1);
+        HouseholdConfig::from_toml(&toml).unwrap()
+    };
+    // Omitted: new households start with the override on.
+    let r = import(&store, None, &read(""), ImportMode::Merge)
+        .await
+        .unwrap();
+    let hid = r.household_id;
+    assert_eq!(
+        export(&store, hid)
+            .await
+            .unwrap()
+            .household
+            .dashboard_completion_override,
+        Some(true)
+    );
+    // Explicit false is applied to the existing household and round-trips.
+    let r = import(
+        &store,
+        Some(hid),
+        &read("dashboard_completion_override = false\n"),
+        ImportMode::Merge,
+    )
+    .await
+    .unwrap();
+    assert!(r.household_updated);
+    let out = export(&store, hid).await.unwrap();
+    assert_eq!(out.household.dashboard_completion_override, Some(false));
+    assert!(
+        out.to_toml()
+            .unwrap()
+            .contains("dashboard_completion_override = false")
+    );
+    // Omitted again: left as is.
+    import(&store, Some(hid), &read(""), ImportMode::Merge)
+        .await
+        .unwrap();
+    assert_eq!(
+        export(&store, hid)
+            .await
+            .unwrap()
+            .household
+            .dashboard_completion_override,
+        Some(false)
+    );
+}

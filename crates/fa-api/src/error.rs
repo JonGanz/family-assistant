@@ -22,6 +22,9 @@ pub struct Problem {
     /// Weather-rule errors only.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub message: Option<String>,
+    /// Task and routine validation errors: the offending input field.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub field: Option<String>,
 }
 
 /// Every API failure; rendered as `application/problem+json` (RFC 9457).
@@ -50,6 +53,15 @@ pub enum ApiError {
     /// An invalid weather-rule condition: 422 with `{position, message}`.
     #[error("{message}")]
     RuleInvalid { position: u32, message: String },
+    /// A field-level validation error: 422 with `{field, position?, message}`.
+    #[error("{message}")]
+    FieldInvalid {
+        field: String,
+        position: Option<u32>,
+        message: String,
+    },
+    #[error("{0}")]
+    Unavailable(String),
     #[error("{0}")]
     BadGateway(String),
     #[error("{0}")]
@@ -71,7 +83,10 @@ impl ApiError {
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Conflict(_) => StatusCode::CONFLICT,
             Self::PreconditionRequired(_) => StatusCode::PRECONDITION_REQUIRED,
-            Self::Unprocessable(_) | Self::RuleInvalid { .. } => StatusCode::UNPROCESSABLE_ENTITY,
+            Self::Unprocessable(_) | Self::RuleInvalid { .. } | Self::FieldInvalid { .. } => {
+                StatusCode::UNPROCESSABLE_ENTITY
+            }
+            Self::Unavailable(_) => StatusCode::SERVICE_UNAVAILABLE,
             Self::PayloadTooLarge(_) => StatusCode::PAYLOAD_TOO_LARGE,
             Self::UnsupportedMedia(_) => StatusCode::UNSUPPORTED_MEDIA_TYPE,
             Self::BadGateway(_) => StatusCode::BAD_GATEWAY,
@@ -93,9 +108,16 @@ impl IntoResponse for ApiError {
             }
             other => other.to_string(),
         };
-        let (position, message) = match &self {
-            Self::RuleInvalid { position, message } => (Some(*position), Some(message.clone())),
-            _ => (None, None),
+        let (position, message, field) = match &self {
+            Self::RuleInvalid { position, message } => {
+                (Some(*position), Some(message.clone()), None)
+            }
+            Self::FieldInvalid {
+                field,
+                position,
+                message,
+            } => (*position, Some(message.clone()), Some(field.clone())),
+            _ => (None, None, None),
         };
         let body = Problem {
             r#type: "about:blank".into(),
@@ -104,6 +126,7 @@ impl IntoResponse for ApiError {
             detail,
             position,
             message,
+            field,
         };
         let json = serde_json::to_string(&body).unwrap_or_default();
         let mut res = (status, json).into_response();
@@ -191,6 +214,42 @@ impl From<WeatherError> for ApiError {
         match e {
             WeatherError::Store(s) => s.into(),
             WeatherError::Connector(_) => Self::BadGateway("the weather service failed".into()),
+            WeatherError::Job(m) => Self::Internal(m),
+        }
+    }
+}
+
+impl From<fa_tasks::TaskError> for ApiError {
+    fn from(e: fa_tasks::TaskError) -> Self {
+        use fa_tasks::TaskError as T;
+        match e {
+            T::NotFound => Self::NotFound,
+            T::Conflict => Self::Conflict("the record was changed by someone else".into()),
+            e @ (T::WrongStatus { .. } | T::ClaimedByOther) => Self::Conflict(e.to_string()),
+            e @ (T::NotCandidate | T::NotPool) => Self::Unprocessable(e.to_string()),
+            T::Invalid {
+                field,
+                position,
+                message,
+            } => Self::FieldInvalid {
+                field,
+                position: position.and_then(|p| u32::try_from(p).ok()),
+                message,
+            },
+            T::Store(s) => s.into(),
+        }
+    }
+}
+
+impl From<fa_notify::NotifyError> for ApiError {
+    fn from(e: fa_notify::NotifyError) -> Self {
+        use fa_notify::NotifyError as N;
+        match e {
+            N::NotConfigured => Self::Unavailable("ntfy is not configured on this server".into()),
+            N::Publish(m) => Self::BadGateway(m),
+            N::Invalid(m) => Self::Unprocessable(m),
+            N::NotFound => Self::NotFound,
+            N::Store(s) => s.into(),
         }
     }
 }
