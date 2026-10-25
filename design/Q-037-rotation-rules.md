@@ -28,3 +28,4 @@ D-013 defines `rotation` as an ordered set of members, where the task moves on a
 
 ## Answer
 <!-- answer below this line -->
+Option C. 

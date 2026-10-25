@@ -26,3 +26,4 @@ The proposed score uses: how close the due time is (and whether it's overdue), t
 
 ## Answer
 <!-- answer below this line -->
+Option C. I see you've picked up on me wanting this to be highly configurable. 

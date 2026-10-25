@@ -24,3 +24,4 @@ Homework due dates, bill-pay tasks (M3), and dated chores have a due time. The d
 
 ## Answer
 <!-- answer below this line -->
+Option C. Some homework tasks are more than just complete the homework, but knowing that it's a certain day in the calendar, for example, school presentations. There's work that comes before that, but we always want to show it in the calendar even if the work is done. Other things like reading do just needs to be signed. So once it's done, we don't care if it's in the calendar. Chores also would be something we need to see in the calendar. We just want to see that on the task list. The agenda view should be saved for big items -- events for the day and larger items that are happening at school or work.

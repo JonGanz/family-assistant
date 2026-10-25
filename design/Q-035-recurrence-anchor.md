@@ -29,3 +29,4 @@ Some chores fit one way better than the other: bins go out on collection day, wh
 
 ## Answer
 <!-- answer below this line -->
+Option C.

@@ -24,3 +24,4 @@ New households start empty. The project could ship a **library of starter templa
 
 ## Answer
 <!-- answer below this line -->
+We'll go with option A for now. 

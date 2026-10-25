@@ -24,3 +24,4 @@ D-013's `pool` strategy lets anyone in a set of members take a task.
 
 ## Answer
 <!-- answer below this line -->
+Option C. 

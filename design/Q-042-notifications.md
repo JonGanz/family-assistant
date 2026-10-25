@@ -30,3 +30,4 @@ Questions: which triggers should be on by default, should there be **quiet hours
 
 ## Answer
 <!-- answer below this line -->
+Option C. 

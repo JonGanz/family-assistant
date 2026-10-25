@@ -24,3 +24,4 @@ PROJECT.md lists the children's morning routine (get dressed, eat, brush teeth, 
 
 ## Answer
 <!-- answer below this line -->
+Option C let's make sure we keep the progress bar that seems awesome.

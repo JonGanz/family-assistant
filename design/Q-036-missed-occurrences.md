@@ -25,3 +25,4 @@ A recurring task can pass its due time while still open. For example, "Water pla
 
 ## Answer
 <!-- answer below this line -->
+Option A when completion-anchored. It may also be nice for a progressive task that is as an example read 10 minutes a night if not checked off may become read 10 minutes the next night and then 30 the next. Actually, that would probably be better set as a goal with progress. So ignore that. That won't be a task. We might want goals on here instead, things to track how far kids are along on homework for adults on other targets and objectives.

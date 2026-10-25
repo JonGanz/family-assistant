@@ -24,3 +24,4 @@ D-006 and the RBAC matrix in `Domain.md` cover reading and completing tasks, but
 
 ## Answer
 <!-- answer below this line -->
+We'll go option C.
