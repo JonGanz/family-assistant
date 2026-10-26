@@ -1,0 +1,27 @@
+---
+id: Q-065
+title: Where does the Members page live, and what do children see there?
+status: open
+batch: 17
+area: frontend
+created: 2026-10-26
+resolved:
+decisions: []
+---
+
+# Q-065: Where does the Members page live, and what do children see there?
+
+## Question
+Review finding U-08. `/members` is a top-level page for every signed-in user, but it is a management screen (add, edit, avatar, role). The nav is now split into pages of value and a Settings area; the proposed structure moves Members under Settings (`/settings/members`, adults) with a redirect from `/members`.
+
+**Where should Members go, and what should a child see?**
+
+## Options
+- A. **Under Settings for adults; children get a read-only 'Household' card on Today showing names, avatars and today's routines** (recommended).
+- B. Under Settings for adults; children have no members page at all.
+- C. Keep `/members` top-level, read-only for children, editable for adults.
+- D. Something else (describe).
+
+## Answer
+<!-- answer below this line -->
+

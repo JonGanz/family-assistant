@@ -27,6 +27,7 @@ async function logout() {
 
 <template>
   <div class="app-layout">
+    <a class="skip-link" href="#main">Skip to content</a>
     <header class="app-header">
       <strong>Family Assistant</strong>
       <nav v-if="session.isUser" aria-label="Primary" class="nav-primary">
@@ -71,7 +72,7 @@ async function logout() {
         <RouterLink to="/settings/status">Status</RouterLink>
       </template>
     </nav>
-    <main class="app-main"><slot /></main>
+    <main id="main" class="app-main"><slot /></main>
   </div>
 </template>
 

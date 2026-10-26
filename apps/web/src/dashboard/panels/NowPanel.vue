@@ -65,7 +65,7 @@ h2 {
   border: 0;
   border-radius: 999px;
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
   font-size: 2.5rem;
   line-height: 1;
   cursor: pointer;

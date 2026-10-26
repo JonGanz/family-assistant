@@ -12,39 +12,8 @@
     --kiosk-font-title: 4rem;
     --kiosk-font-small: 1.5rem;
     color-scheme: light dark;
-}
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --color-bg: #0f1218;
-        --color-surface: #181d26;
-        --color-text: #eef1f6;
-        --color-muted: #9aa4b5;
-        --color-border: #2a3140;
-        --color-accent: #6b9bff;
-    }
-}
-
-*,
-*::before,
-*::after {
-    box-sizing: border-box;
-}
-
-body {
-    margin: 0;
-    font-family: var(--font-sans);
-    background: var(--color-bg);
-    color: var(--color-text);
-    line-height: 1.5;
-}
-
-a {
-    color: var(--color-accent);
-}
-
-/* ---- Design tokens (M1) ---- */
-:root {
+    /* ---- Design tokens (M1) ---- */
     --space-1: 0.25rem;
     --space-2: 0.5rem;
     --space-3: 0.75rem;
@@ -61,11 +30,26 @@ a {
     --font-size-xl: 1.75rem;
     --font-size-2xl: 2.5rem;
     --color-danger: #c62828;
-    --color-warning: #b26a00;
+    --color-warning: #9a5b00;
     --color-success: #2e7d32;
     --color-focus: #1a4fc4;
     --color-on-accent: #ffffff;
     --min-touch: 44px;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+        --color-bg: #0f1218;
+        --color-surface: #181d26;
+        --color-text: #eef1f6;
+        --color-muted: #9aa4b5;
+        --color-border: #2a3140;
+        --color-accent: #6b9bff;
+        --color-focus: #9dbbff;
+        --color-danger: #ff6b6b;
+        --color-warning: #ffb74d;
+        --color-success: #66bb6a;
+    }
 }
 
 :root[data-theme='light'] {
@@ -93,13 +77,35 @@ a {
     --color-success: #66bb6a;
 }
 
-@media (prefers-color-scheme: dark) {
-    :root:not([data-theme='light']) {
-        --color-focus: #9dbbff;
-        --color-danger: #ff6b6b;
-        --color-warning: #ffb74d;
-        --color-success: #66bb6a;
-    }
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-sans);
+    background: var(--color-bg);
+    color: var(--color-text);
+    line-height: 1.5;
+}
+
+a {
+    color: var(--color-accent);
+}
+
+.skip-link {
+    position: absolute;
+    left: -999px;
+    top: 0;
+}
+.skip-link:focus {
+    left: 1rem;
+    top: 1rem;
+    background: var(--color-surface);
+    padding: 0.5rem 1rem;
+    z-index: 1000;
 }
 
 /* Kiosk scale: base 28px for viewing distance */

@@ -139,7 +139,7 @@ ul {
 .on .box {
   background: var(--color-success, #2e9e5b);
   border-color: var(--color-success, #2e9e5b);
-  color: #fff;
+  color: var(--color-on-accent);
 }
 @media (prefers-reduced-motion: no-preference) {
   .step {

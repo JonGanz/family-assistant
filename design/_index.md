@@ -27,8 +27,15 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Open
-_None. The next question number is Q-061._
+## Batch 17, open
+| ID | Title | Area |
+|---|---|---|
+| [Q-061](Q-061-next-milestone-order.md) | What comes next: real-hardware shakedown, M4 AI, or M5 food? | infra |
+| [Q-062](Q-062-m4-scope.md) | How big is M4: minimal AI slice or the full registry design? | tech |
+| [Q-063](Q-063-device-inbox-and-advisories.md) | What may an unelevated dashboard device do: read the approval inbox, dismiss advisories? | security |
+| [Q-064](Q-064-trusted-proxy-default.md) | Which peers may set the client IP (X-Forwarded-For)? | security |
+| [Q-065](Q-065-members-page-placement.md) | Where does the Members page live, and what do children see there? | frontend |
+| [Q-066](Q-066-interests-consumer.md) | What should use member interests, hobbies and responsibilities? | domain |
 
 ## Resolved
 | ID | Title | Decisions |

@@ -94,7 +94,7 @@ Coverage: fa-api (lib, extract, routes, hub, parts of mail and feeds), fa-auth (
 | C-12 | LOW | argon2 verify runs while a pooled transaction is open; a burst exhausts the pool (`login.rs:75`, `pin.rs:76`) | Read, release, verify, short transaction to record | QUICK | todo |
 | C-13 | LOW | Route naming drifts: `/device/elevate` vs `/devices`, `/away/{id}` vs `/members/{id}/away`, three dry-run verbs (`validate`, `validate`, `test`), kind in the path for `/inbox/{kind}/{id}/approve` | Settle conventions, document in Platform.md API table, alias old paths for one milestone | QUICK (doc) + LARGER | todo |
 | C-14 | LOW | Only `GET /messages` paginates; tasks, bills, orgs, inbox, sessions return bare arrays | Standard `{items, next_before}` envelope for growing lists | LARGER | todo |
-| C-15 | LOW | Session cookie built by hand with `format!`; `cookie_secure=false` behind TLS goes unnoticed (`routes.rs:192`) | Use the `cookie` builder; warn at startup when the public base URL is https and the flag is off | QUICK | todo |
+| C-15 | LOW | Session cookie built by hand with `format!`; `cookie_secure=false` behind TLS goes unnoticed (`routes.rs:192`) | Use the `cookie` builder (needs `time` as a direct fa-api dependency for `max_age`); warn at startup in `bins/fa-server/src/serve.rs`, where `cookie_secure` is set | QUICK | todo (attempted; blocked on the dependency) |
 
 ## 4. UI: consistency and navigation
 
@@ -112,11 +112,11 @@ Root causes: no shared page shell, no global UI kit (`base.css` has no button/in
 | U-08 | Settings pages are not structurally distinct; `/settings` redirects to Household; `/members` (CRUD) is a top-level page; `/settings/notifications` is the only user-level settings page | Nested `/settings` parent route with `SettingsLayout` (sidebar on desktop, chips on mobile), a `SettingsIndexView` of grouped cards (Personal / Household / Sources & rules / System); move Members to `/settings/members` with a redirect (needs a decision on what children see) | LARGER | todo |
 | U-09 | No UI kit: ~60 default-styled buttons, one-off classes (`primary`, `cancel`, `ok`, `undo`, `try`); `.row` defined 8 times, `.error` 5, `.actions` 3; three tab implementations | Global kit in `base.css`: `button` base + `.btn-primary/.btn-danger/.btn-ghost`, `.stack/.row`, `.form/.field`, `.muted/.text-danger/.text-success`, `.card/.card-list`, `.tabs` with `role=tab`; migrate `.settings-*` names | LARGER | todo |
 | U-10 | Loading states almost absent (only the dashboard has one); empty states use three different classes | `StateBlock` component (`loading`, `error`, `empty`) used by Calendar, Tasks, Inbox, Mail, Bills, Routines | LARGER | todo |
-| U-11 | `base.css` declares `:root` tokens twice and the palettes three times; two kiosk font systems | Consolidate | QUICK | todo |
-| U-12 | Accessibility: no skip link, unlabelled `<section>` roots, nested pages don't mark their parent nav item, `--color-warning` borderline for small text | Skip link; `aria-labelledby` on sections; `router-link-active` on parents (done by U-01 for exact paths); darken warning | QUICK | todo |
+| U-11 | `base.css` declares `:root` tokens twice and the palettes three times; two kiosk font systems | Consolidated into one `:root`, one dark `@media` and one `data-theme=dark` block; kiosk font systems still two | QUICK | done (kiosk fonts todo) |
+| U-12 | Accessibility: no skip link, unlabelled `<section>` roots, nested pages don't mark their parent nav item, `--color-warning` borderline for small text | Skip link (done); `aria-labelledby` on sections (todo); `router-link-active` on parents (done by U-01); warning darkened to #9a5b00 (done) | QUICK | mostly done |
 | U-13 | Forms on value pages capped at 32 rem by `.settings-form` | `.form-wide` variant (with U-09) | QUICK | todo |
 
 ## Suggested order of work
-1. **Decisions needed from the user** (become questions): recommendations 1–5 in section 3; C-04 (proxy default), C-08 (device inbox access), U-08 (children and Members).
+1. **Decisions needed from the user**: batch 17, Q-061 (milestone order), Q-062 (M4 scope), Q-063 (device inbox and advisories, C-08/C-09), Q-064 (trusted proxies, C-04), Q-065 (Members placement, U-08), Q-066 (interests consumer, R-07).
 2. **Next code wave (one brief each, Sonnet 5.5 medium):** C-01/C-02 `FOR UPDATE` + sqlx prepare; C-12; C-15; C-05 SSRF guard; C-03 password change; U-07 PageHeader; U-09 UI kit; U-10 StateBlock; U-11; U-12.
 3. **Process:** P-02 status page, P-06 fa.py CLI, P-07 skills, P-08 backfill, P-09/P-14 rules-common, P-10 brief decisions.
