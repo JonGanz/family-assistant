@@ -6,7 +6,10 @@ use fa_domain::tasks::due_instant;
 use fa_domain::tasks_api::*;
 use fa_domain::*;
 use fa_store::*;
-use fa_tasks::{StatusFilter, TaskError, TaskQuery, TaskService, TaskViewMode, Viewer};
+use fa_tasks::{
+    MailTaskMode, MailTaskRequest, StatusFilter, TaskError, TaskQuery, TaskService, TaskViewMode,
+    Viewer,
+};
 use sqlx::PgPool;
 
 const LONDON: chrono_tz::Tz = chrono_tz::Europe::London;
@@ -34,6 +37,9 @@ fn member(h: HouseholdId, name: &str, role: Role) -> Member {
         interests: vec![],
         hobbies: vec![],
         responsibilities: vec![],
+        aliases: Vec::new(),
+        gender: None,
+        relevance_tags: Vec::new(),
         pin_hash: None,
         archived_at: None,
         created_at: Utc::now(),
@@ -134,6 +140,7 @@ impl Env {
                 quiet_from: None,
                 quiet_until: None,
                 copy_to_member_id: None,
+                approval_mode: ApprovalMode::Batched,
                 archived_at: None,
             },
             None,
@@ -181,6 +188,13 @@ async fn env(pool: PgPool) -> Env {
         now_weights: fa_domain::tasks::NowWeights::default(),
         quiet_from: tm(21, 0),
         quiet_until: tm(7, 0),
+        currency: fa_domain::DEFAULT_CURRENCY.to_string(),
+        gender_terms: Default::default(),
+        disabled_signals: Vec::new(),
+        events: Default::default(),
+        inbox: Default::default(),
+        retention_mail: Default::default(),
+        bill_lead_days: fa_domain::DEFAULT_BILL_LEAD_DAYS,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     };
@@ -1240,4 +1254,260 @@ test!(from_weather_is_idempotent_and_suggests, |e| {
 
     let none = rule(&e, None, TaskMode::Create).await;
     assert!(!e.svc.from_weather(e.h, none, d(2026, 2, 1)).await.unwrap());
+});
+
+// ---- M3: email and bills ----
+
+fn mail_req(e: &Env, msg: MessageId, title: &str, mode: MailTaskMode) -> MailTaskRequest {
+    MailTaskRequest {
+        household: Some(e.h),
+        message: msg,
+        kind: Some("action".into()),
+        title: title.into(),
+        due_at: Some(t(2026, 3, 10, 12, 0)),
+        assignees: vec![e.adult, e.kid1],
+        mode,
+        external_url: Some("https://mail.example.com/m/1".into()),
+    }
+}
+
+fn new_bill(e: &Env, due_on: Option<NaiveDate>, status: BillStatus) -> Bill {
+    Bill {
+        id: BillId::new(),
+        household_id: e.h,
+        message_id: None,
+        org_id: None,
+        payee: "Example Power".into(),
+        amount_minor: 4250,
+        currency: "USD".into(),
+        due_on,
+        account_hint: None,
+        statement_period: None,
+        status,
+        confidence: 0.9,
+        task_id: None,
+        source_ref: serde_json::json!({}),
+        dedupe_key: format!("bill:{}", BillId::new()),
+        created_at: Utc::now(),
+        updated_at: Utc::now(),
+    }
+}
+
+async fn put_bill(e: &Env, b: &Bill) {
+    let mut tx = e.store.tx_for(e.h).await.unwrap();
+    BillRepo::insert_if_new(&mut tx, b).await.unwrap().unwrap();
+    tx.commit().await.unwrap();
+}
+
+async fn get_bill(e: &Env, id: BillId) -> Bill {
+    let mut tx = e.store.tx_for(e.h).await.unwrap();
+    BillRepo::get(&mut tx, id).await.unwrap().unwrap().value
+}
+
+test!(from_mail_suggest_and_create, |e| {
+    let msg = MessageId::new();
+    let id = e
+        .svc
+        .from_mail(mail_req(&e, msg, "Sign the form", MailTaskMode::Suggest))
+        .await
+        .unwrap()
+        .unwrap();
+    let sug = e.tasks(StatusFilter::Suggested).await;
+    assert_eq!(sug.len(), 1);
+    assert_eq!(sug[0].id, id);
+    assert_eq!(sug[0].origin, TaskOrigin::Email);
+    assert_eq!(sug[0].list_name, "Email");
+    assert_eq!(sug[0].due_at, Some(t(2026, 3, 10, 12, 0)));
+    // Approval rows go to the adult only; no assigned rows yet.
+    assert_eq!(e.count("approval_needed").await, 1);
+    assert_eq!(e.count("assigned").await, 0);
+    let src: serde_json::Value = sqlx::query_scalar("SELECT source_ref FROM task WHERE id = $1")
+        .bind(id.as_uuid())
+        .fetch_one(&e.pool)
+        .await
+        .unwrap();
+    assert_eq!(src["kind"], "email");
+    assert_eq!(src["message_id"], msg.to_string());
+    assert_eq!(src["external_url"], "https://mail.example.com/m/1");
+
+    // A second message in create mode: open, with assignees and assigned rows.
+    let id2 = e
+        .svc
+        .from_mail(mail_req(
+            &e,
+            MessageId::new(),
+            "Reply to coach",
+            MailTaskMode::Create,
+        ))
+        .await
+        .unwrap()
+        .unwrap();
+    let open = e.tasks(StatusFilter::Open).await;
+    assert_eq!(open.len(), 1);
+    assert_eq!(open[0].id, id2);
+    assert_eq!(e.count("assigned").await, 2);
+    assert_eq!(e.count("approval_needed").await, 1);
+    // The Email list is reused.
+    let lists: i64 = sqlx::query_scalar("SELECT count(*) FROM task_list WHERE kind = 'email'")
+        .fetch_one(&e.pool)
+        .await
+        .unwrap();
+    assert_eq!(lists, 1);
+
+    // Accepting the suggestion opens it.
+    assert_eq!(
+        e.svc.accept(e.h, id).await.unwrap().status,
+        TaskStatus::Open
+    );
+});
+
+test!(from_mail_is_idempotent, |e| {
+    let msg = MessageId::new();
+    assert!(
+        e.svc
+            .from_mail(mail_req(&e, msg, "Pack lunch", MailTaskMode::Suggest))
+            .await
+            .unwrap()
+            .is_some()
+    );
+    assert!(
+        e.svc
+            .from_mail(mail_req(&e, msg, "Pack lunch", MailTaskMode::Suggest))
+            .await
+            .unwrap()
+            .is_none()
+    );
+    // Another title on the same message is a different task.
+    assert!(
+        e.svc
+            .from_mail(mail_req(&e, msg, "Bring money", MailTaskMode::Suggest))
+            .await
+            .unwrap()
+            .is_some()
+    );
+    assert_eq!(e.tasks(StatusFilter::Suggested).await.len(), 2);
+    assert_eq!(e.count("approval_needed").await, 2);
+});
+
+test!(from_bill_due_date_in_household_tz_and_noops, |e| {
+    // Lead 3 days: due 2026-04-10 -> 2026-04-07 09:00 BST = 08:00 UTC.
+    let b = new_bill(&e, Some(d(2026, 4, 10)), BillStatus::Open);
+    put_bill(&e, &b).await;
+    let id = e.svc.from_bill(Some(e.h), b.id).await.unwrap().unwrap();
+    let open = e.tasks(StatusFilter::Open).await;
+    assert_eq!(open.len(), 1);
+    assert_eq!(open[0].id, id);
+    assert_eq!(open[0].title, "Pay Example Power");
+    assert_eq!(open[0].list_name, "Bills");
+    assert_eq!(open[0].due_at, Some(t(2026, 4, 7, 8, 0)));
+    assert_eq!(open[0].assignees.len(), 1);
+    assert_eq!(open[0].assignees[0], e.adult);
+    assert_eq!(get_bill(&e, b.id).await.task_id, Some(id));
+
+    // Idempotent: the task id is set.
+    assert!(e.svc.from_bill(Some(e.h), b.id).await.unwrap().is_none());
+    assert_eq!(e.tasks(StatusFilter::Open).await.len(), 1);
+
+    // Not open: no task.
+    let p = new_bill(&e, Some(d(2026, 4, 10)), BillStatus::Proposed);
+    put_bill(&e, &p).await;
+    assert!(e.svc.from_bill(Some(e.h), p.id).await.unwrap().is_none());
+    assert!(get_bill(&e, p.id).await.task_id.is_none());
+
+    // No due date: a task without a due instant; household found from the bill alone.
+    let n = new_bill(&e, None, BillStatus::Open);
+    put_bill(&e, &n).await;
+    let nid = e.svc.from_bill(None, n.id).await.unwrap().unwrap();
+    let all = e.tasks(StatusFilter::Open).await;
+    let task = all.iter().find(|x| x.id == nid).unwrap();
+    assert_eq!(task.due_at, None);
+
+    // The Bills list is shared.
+    let lists: i64 = sqlx::query_scalar("SELECT count(*) FROM task_list WHERE name = 'Bills'")
+        .fetch_one(&e.pool)
+        .await
+        .unwrap();
+    assert_eq!(lists, 1);
+});
+
+test!(completing_and_reopening_pay_task_flips_bill, |e| {
+    let b = new_bill(&e, Some(d(2026, 4, 10)), BillStatus::Open);
+    put_bill(&e, &b).await;
+    let id = e.svc.from_bill(Some(e.h), b.id).await.unwrap().unwrap();
+    e.svc.complete(e.h, id, Some(e.adult), None).await.unwrap();
+    assert_eq!(get_bill(&e, b.id).await.status, BillStatus::Paid);
+    e.svc.reopen(e.h, id).await.unwrap();
+    assert_eq!(get_bill(&e, b.id).await.status, BillStatus::Open);
+    // A dismissed bill stays dismissed when its task is completed.
+    {
+        let mut tx = e.store.tx_for(e.h).await.unwrap();
+        BillRepo::set_status(&mut tx, b.id, BillStatus::Dismissed)
+            .await
+            .unwrap();
+        tx.commit().await.unwrap();
+    }
+    e.svc.complete(e.h, id, Some(e.adult), None).await.unwrap();
+    assert_eq!(get_bill(&e, b.id).await.status, BillStatus::Dismissed);
+});
+
+test!(digest_mentions_items_waiting_for_approval, |e| {
+    e.prefs(e.adult, &["digest"]).await;
+    let now = t(2026, 3, 1, 8, 0);
+    // Nothing at all: no digest.
+    e.svc.digest(e.h, now).await.unwrap();
+    assert_eq!(e.count("digest").await, 0);
+
+    e.svc
+        .from_mail(mail_req(
+            &e,
+            MessageId::new(),
+            "Sign the form",
+            MailTaskMode::Suggest,
+        ))
+        .await
+        .unwrap();
+    e.svc.digest(e.h, now).await.unwrap();
+    assert_eq!(e.count("digest").await, 1);
+    let body: String = sqlx::query_scalar("SELECT body FROM notification WHERE trigger = 'digest'")
+        .fetch_one(&e.pool)
+        .await
+        .unwrap();
+    assert!(body.contains("1 items waiting for approval"), "{body}");
+});
+
+test!(digest_skips_approval_line_when_mode_off, |e| {
+    {
+        let mut tx = e.store.tx_for(e.h).await.unwrap();
+        let mut p = NotifyPref {
+            id: uuid::Uuid::now_v7(),
+            household_id: e.h,
+            member_id: e.adult,
+            channel: "ntfy".into(),
+            topic: "topicoff".into(),
+            triggers: vec!["digest".into()],
+            due_soon_minutes: 120,
+            nudge_minutes: 10,
+            quiet_from: None,
+            quiet_until: None,
+            copy_to_member_id: None,
+            approval_mode: ApprovalMode::Off,
+            archived_at: None,
+        };
+        p.triggers = vec!["digest".into()];
+        NotifyPrefRepo::upsert_for_member(&mut tx, &p, None)
+            .await
+            .unwrap();
+        tx.commit().await.unwrap();
+    }
+    e.svc
+        .from_mail(mail_req(
+            &e,
+            MessageId::new(),
+            "Sign the form",
+            MailTaskMode::Suggest,
+        ))
+        .await
+        .unwrap();
+    e.svc.digest(e.h, t(2026, 3, 1, 8, 0)).await.unwrap();
+    assert_eq!(e.count("digest").await, 0);
 });

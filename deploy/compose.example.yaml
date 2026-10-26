@@ -29,6 +29,8 @@ x-fa-server: &fa-server
     FA_GOOGLE_CLIENT_SECRET: ${FA_GOOGLE_CLIENT_SECRET:-}
     FA_OPEN_METEO_URL: ${FA_OPEN_METEO_URL:-https://api.open-meteo.com}
     FA_ALLOW_HTTP_FEEDS: ${FA_ALLOW_HTTP_FEEDS:-false}
+    # Mail (M3). Empty means the real Google API; only a test stub needs a value (see deploy/.env.example).
+    FA_GOOGLE_API_BASE: ${FA_GOOGLE_API_BASE:-}
     # Notifications (M2). The service name resolves on the compose network; a plain http URL is fine.
     # Set FA_NTFY_URL= (empty) in deploy/.env to turn notifications off. FA_NTFY_TOKEN is needed only with ntfy access control.
     FA_NTFY_URL: ${FA_NTFY_URL-http://ntfy:80}

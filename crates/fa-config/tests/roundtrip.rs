@@ -56,6 +56,7 @@ async fn import_export_round_trip(pool: PgPool) {
     let mut smaller = cfg.clone();
     smaller.members.truncate(2);
     smaller.calendar_sources.clear();
+    smaller.orgs.clear();
     let r3 = import(&store, Some(r.household_id), &smaller, ImportMode::Replace)
         .await
         .unwrap();
@@ -176,6 +177,7 @@ async fn unarchives_members_found_in_file(pool: PgPool) {
     let mut smaller = cfg.clone();
     smaller.members.truncate(2);
     smaller.calendar_sources.clear();
+    smaller.orgs.clear();
     import(&store, Some(r.household_id), &smaller, ImportMode::Replace)
         .await
         .unwrap();

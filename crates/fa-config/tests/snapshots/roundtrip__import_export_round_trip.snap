@@ -16,6 +16,9 @@ dashboard_completion_override = true
 now_list_size = 7
 quiet_from = "21:00"
 quiet_until = "07:00"
+currency = "USD"
+disabled_signals = []
+bill_lead_days = 3
 
 [household.location]
 label = "Springfield (fictional)"
@@ -26,6 +29,27 @@ lon = -75.0
 due = 1.0
 flag = 0.5
 weather = 0.5
+
+[household.gender_terms]
+female = [
+    "girls",
+    "girls'",
+    "girl's",
+]
+male = [
+    "boys",
+    "boys'",
+    "boy's",
+]
+
+[household.events]
+auto_write = false
+extract_threshold = 0.9
+route_threshold = 0.9
+
+[household.inbox]
+task_expiry_days = 14
+contact_expiry_days = 14
 
 [[members]]
 key = "alex"
@@ -72,6 +96,16 @@ responsibilities = [
     "feed the cat",
     "pack school bag",
 ]
+aliases = ["Ri"]
+gender = "female"
+relevance_tags = ["soccer"]
+
+[[members.enrollments]]
+org = "Example Elementary"
+grade = "3"
+class = "3B"
+from = "2026-09-01"
+contacts = ["teacher@example.edu"]
 
 [[members]]
 key = "jordan"
@@ -84,6 +118,7 @@ interests = [
 ]
 hobbies = []
 responsibilities = ["tidy toys"]
+gender = "male"
 
 # ICS URL is not exported: paste it again in Settings.
 [[calendar_sources]]
@@ -108,3 +143,34 @@ action = "alert"
 severity = "info"
 message = "Frosty start: coats and hats for school."
 status = "active"
+
+[retention.mail]
+content_policy = "keep_for_learning"
+examples_per_category = 200
+max_pending_days = 14
+
+[[orgs]]
+name = "Example Elementary"
+kind = "school"
+domains = ["example.edu"]
+senders = ["office@example.edu"]
+ics_calendar = "school-calendar/ics"
+default_calendar = "school-calendar/ics"
+contact_mode = "suggest"
+
+[[orgs.contacts]]
+name = "Ms. Teacher"
+email = "teacher@example.edu"
+role = "teacher"
+
+[[orgs]]
+name = "Example Utilities"
+kind = "biller"
+domains = ["example.com"]
+senders = ["billing@example.com"]
+contact_mode = "suggest"
+
+[orgs.bill_template]
+amount = 'Amount due:\s*(\$[0-9.,]+)'
+due = 'Due date:\s*([A-Za-z]+ [0-9]{1,2}, [0-9]{4})'
+account = 'Account ending in\s*([0-9]{4})'

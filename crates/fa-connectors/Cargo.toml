@@ -24,6 +24,11 @@ chrono.workspace = true
 chrono-tz.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+async-imap.workspace = true
+tokio-rustls.workspace = true
+webpki-roots.workspace = true
+futures.workspace = true
+tokio.workspace = true
 
 [dev-dependencies]
 wiremock.workspace = true

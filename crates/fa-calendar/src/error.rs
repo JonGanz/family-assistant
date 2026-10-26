@@ -16,6 +16,9 @@ pub enum CalendarError {
     NotFound,
     #[error("invalid request: {0}")]
     Invalid(String),
+    /// The record is in the wrong state for the request (HTTP 409).
+    #[error("{0}")]
+    State(String),
     #[error("the requested range is longer than {0} days")]
     RangeTooLarge(i64),
 }

@@ -24,6 +24,13 @@ fn household(name: &str) -> Household {
         now_weights: fa_domain::tasks::NowWeights::default(),
         quiet_from: chrono::NaiveTime::from_hms_opt(21, 0, 0).expect("time"),
         quiet_until: chrono::NaiveTime::from_hms_opt(7, 0, 0).expect("time"),
+        currency: fa_domain::DEFAULT_CURRENCY.to_string(),
+        gender_terms: Default::default(),
+        disabled_signals: Vec::new(),
+        events: Default::default(),
+        inbox: Default::default(),
+        retention_mail: Default::default(),
+        bill_lead_days: fa_domain::DEFAULT_BILL_LEAD_DAYS,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     }
@@ -42,6 +49,9 @@ fn member(h: HouseholdId, name: &str, role: Role) -> Member {
         interests: vec![],
         hobbies: vec![],
         responsibilities: vec![],
+        aliases: Vec::new(),
+        gender: None,
+        relevance_tags: Vec::new(),
         pin_hash: None,
         archived_at: None,
         created_at: Utc::now(),
@@ -143,6 +153,9 @@ async fn migration_reverts_and_reapplies(pool: PgPool) {
     // M2 depends on M1 tables: revert it first and reapply it last.
     let down2 = include_str!("../migrations/20261026000001_m2_tasks.down.sql");
     let up2 = include_str!("../migrations/20261026000001_m2_tasks.up.sql");
+    let down3 = include_str!("../migrations/20261027000001_m3_ingest.down.sql");
+    let up3 = include_str!("../migrations/20261027000001_m3_ingest.up.sql");
+    pool.execute(down3).await.unwrap();
     pool.execute(down2).await.unwrap();
     pool.execute(down).await.unwrap();
     let n: i64 = sqlx::query_scalar("SELECT count(*) FROM information_schema.tables WHERE table_name IN ('event','advisory','calendar')")
@@ -152,6 +165,7 @@ async fn migration_reverts_and_reapplies(pool: PgPool) {
     assert_eq!(n, 0);
     pool.execute(up).await.unwrap();
     pool.execute(up2).await.unwrap();
+    pool.execute(up3).await.unwrap();
     let n: i64 = sqlx::query_scalar("SELECT count(*) FROM information_schema.tables WHERE table_name IN ('event','advisory','calendar')")
         .fetch_one(&pool)
         .await

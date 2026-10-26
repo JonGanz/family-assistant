@@ -58,6 +58,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const stale = ref(false)
   /** Why the last fetch failed (shown while there is nothing to render), or null. */
   const loadError = ref<string | null>(null)
+  /** Epoch ms until which the device is elevated (PIN step-up), or null. */
+  const elevatedUntil = ref<number | null>(null)
   let handle: SseHandle | null = null
   let midnight: ReturnType<typeof setTimeout> | undefined
   let inflight: Promise<void> | null = null
@@ -236,6 +238,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
       case 'advisory.updated':
       case 'member.updated':
       case 'household.updated':
+      case 'inbox.updated':
       case 'resync':
         break
       default:
@@ -318,6 +321,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     members,
     connection,
     lastHeartbeat,
+    elevatedUntil,
     stale,
     loadError,
     showStaleBadge,

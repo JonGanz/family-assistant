@@ -22,7 +22,7 @@ pub use devices::{DeviceService, PairedDevice};
 pub use error::{AuthError, Result};
 pub use limiter::IpRateLimiter;
 pub use login::{LoginOutcome, SessionInfo};
-pub use oauth::{OAuthAccountView, OAuthService, default_schedules, handlers};
+pub use oauth::{OAuthAccountView, OAuthPurpose, OAuthService, default_schedules, handlers};
 pub use password::{PasswordCheck, hash_password, verify_password};
 pub use service::{AuthEvents, AuthService};
 pub use session_store::PgSessionStore;

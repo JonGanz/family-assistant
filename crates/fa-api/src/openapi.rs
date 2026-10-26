@@ -4,7 +4,7 @@ use utoipa::{Modify, OpenApi};
 use crate::error::Problem;
 use crate::feeds;
 use crate::routes::{self, *};
-use crate::{notify, tasks};
+use crate::{mail, notify, tasks};
 use fa_domain::*;
 
 struct Security;
@@ -55,9 +55,24 @@ impl Modify for Security {
         tasks::delete_routine, tasks::routines_today, tasks::tick_routine_step,
         tasks::list_away, tasks::add_away, tasks::delete_away,
         notify::get_prefs, notify::put_prefs, notify::test_prefs,
+        mail::list_mail_sources, mail::create_mail_source, mail::patch_mail_source,
+        mail::delete_mail_source, mail::sync_mail_source, mail::test_imap,
+        mail::list_messages, mail::get_message, mail::label_message, mail::set_eval_sample,
+        mail::message_action, mail::undo_mail_action, mail::message_task, mail::labelling_next,
+        mail::list_orgs, mail::create_org, mail::patch_org, mail::delete_org,
+        mail::add_org_contact, mail::patch_org_contact, mail::delete_org_contact,
+        mail::list_enrollments, mail::create_enrollment, mail::patch_enrollment,
+        mail::delete_enrollment, mail::list_mail_rules, mail::create_mail_rule,
+        mail::patch_mail_rule, mail::delete_mail_rule, mail::test_mail_rule,
+        mail::list_mail_signals, mail::patch_mail_signal, mail::list_categories,
+        mail::create_category, mail::patch_category, mail::get_inbox, mail::approve_inbox,
+        mail::reject_inbox, mail::list_bills, mail::patch_bill,
     ),
     components(schemas(
         crate::tasks::ViewParam, crate::tasks::StatusParam,
+        EventApproval, TaskApproval, ContactApproval, BillPatch, BillPatchStatus, InboxItem,
+        crate::feeds::PurposeParam, crate::feeds::SourceViewExt, crate::feeds::SourcePatchExt,
+        crate::feeds::CalendarViewExt, crate::feeds::CalendarPatchExt,
         Problem, MemberView, MemberPublic, MemberFull, DashboardSettings,
         LoginReq, LoginResp, MeResponse, ActorView, CreateMemberReq, PatchMemberReq,
         CreateAccountReq, PasswordReq, PinReq, PairDeviceReq, PairDeviceResp, ElevateReq,

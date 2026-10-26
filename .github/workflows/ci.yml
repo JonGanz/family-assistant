@@ -31,6 +31,16 @@ jobs:
           --health-interval 5s
           --health-timeout 5s
           --health-retries 10
+      # IMAP tests (tests marked #[ignore = "needs FA_TEST_GREENMAIL"]): a real IMAP server.
+      greenmail:
+        image: greenmail/standalone:2.1.8
+        env:
+          GREENMAIL_OPTS: >-
+            -Dgreenmail.setup.test.imap -Dgreenmail.setup.test.imaps
+            -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled
+        ports:
+          - 3143:3143
+          - 3993:3993
     env:
       # Runtime only: #[sqlx::test] creates a fresh DB per test and runs the migrations.
       DATABASE_URL: postgres://fa:fa@127.0.0.1:5432/fa
@@ -47,6 +57,15 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo nextest run --workspace
+      - name: GreenMail-gated IMAP tests
+        env:
+          FA_TEST_GREENMAIL: 127.0.0.1:3143:3993
+        run: |
+          for _ in $(seq 60); do
+            (exec 3<>/dev/tcp/127.0.0.1/3143 && read -r -t 2 g <&3 && [[ $g == "* OK"* ]]) 2>/dev/null && break
+            sleep 1
+          done
+          cargo nextest run -p fa-connectors -p fa-mail --run-ignored only -E 'binary(imap) | binary(sync_imap)'
 
   deny:
     runs-on: ubuntu-latest

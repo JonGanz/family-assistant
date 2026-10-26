@@ -25,8 +25,8 @@ const SECRET_OWNER: &str = "calendar_source";
 
 pub struct CalendarService {
     pub(crate) store: Store,
-    key: Arc<MasterKey>,
-    remote: Remote,
+    pub(crate) key: Arc<MasterKey>,
+    pub(crate) remote: Remote,
 }
 
 /// Everything one sync run needs, loaded in a single short transaction.
@@ -48,12 +48,16 @@ pub fn window_of(h: &Household, now: DateTime<Utc>) -> Window {
     }
 }
 
-fn tz_of(h: &Household) -> Tz {
+pub(crate) fn tz_of(h: &Household) -> Tz {
     h.tz.parse().unwrap_or(Tz::UTC)
 }
 
 /// `calendar.updated{from, to}` over the household's whole window.
-async fn publish_calendar_updated(tx: &mut Tx, h: &Household, now: DateTime<Utc>) -> Result<()> {
+pub(crate) async fn publish_calendar_updated(
+    tx: &mut Tx,
+    h: &Household,
+    now: DateTime<Utc>,
+) -> Result<()> {
     let w = window_of(h, now);
     ChangeBus::publish(
         tx,
@@ -81,7 +85,7 @@ async fn publish_source_updated(
     Ok(())
 }
 
-async fn household_of(tx: &mut Tx, id: HouseholdId) -> Result<Household> {
+pub(crate) async fn household_of(tx: &mut Tx, id: HouseholdId) -> Result<Household> {
     Ok(HouseholdRepo::get(tx, id)
         .await?
         .ok_or(CalendarError::NotFound)?
@@ -118,7 +122,7 @@ impl CalendarService {
             .map_err(|_| CalendarError::Store(StoreError::Corrupt("secret is not utf-8".into())))
     }
 
-    async fn creds_of(&self, tx: &mut Tx, src: &CalendarSource) -> Result<Creds> {
+    pub(crate) async fn creds_of(&self, tx: &mut Tx, src: &CalendarSource) -> Result<Creds> {
         Ok(match src.kind {
             SourceKind::Google => Creds::Google(src.oauth_account.ok_or_else(|| {
                 CalendarError::Store(StoreError::Corrupt("google source without account".into()))
@@ -210,6 +214,94 @@ impl CalendarService {
             out.push(Self::calendar_view(&mut tx, &c).await?);
         }
         Ok(out)
+    }
+
+    /// Ids of the household's calendar sources the app may write to.
+    pub async fn writable_sources(
+        &self,
+        household: HouseholdId,
+    ) -> Result<std::collections::HashSet<CalendarSourceId>> {
+        let mut tx = self.store.tx_for(household).await?;
+        Ok(CalendarSourceRepo::list(&mut tx, false)
+            .await?
+            .into_iter()
+            .filter(|s| s.value.writable)
+            .map(|s| s.value.id)
+            .collect())
+    }
+
+    /// Ids of the calendars marked as default targets of extracted events.
+    pub async fn default_calendars(
+        &self,
+        household: HouseholdId,
+    ) -> Result<std::collections::HashSet<CalendarId>> {
+        let mut tx = self.store.tx_for(household).await?;
+        Ok(CalendarRepo::list(&mut tx, None)
+            .await?
+            .into_iter()
+            .filter(|c| c.value.is_default_target)
+            .map(|c| c.value.id)
+            .collect())
+    }
+
+    /// Lets the app write events to the source. Google sources need the account to have granted
+    /// calendar write access; ICS feeds cannot be written.
+    pub async fn set_source_writable(
+        &self,
+        household: HouseholdId,
+        id: CalendarSourceId,
+        writable: bool,
+    ) -> Result<()> {
+        let mut tx = self.store.tx_for(household).await?;
+        let src = CalendarSourceRepo::get(&mut tx, id)
+            .await?
+            .ok_or(CalendarError::NotFound)?
+            .value;
+        if writable {
+            match src.kind {
+                SourceKind::Ics => {
+                    return Err(CalendarError::Invalid(
+                        "an ICS feed cannot be written to".into(),
+                    ));
+                }
+                SourceKind::Google => {
+                    let granted = match src.oauth_account {
+                        Some(a) => OAuthAccountRepo::get(&mut tx, a).await?.is_some_and(|a| {
+                            a.value.scopes.iter().any(|s| {
+                                s == "https://www.googleapis.com/auth/calendar.events"
+                                    || s == "https://www.googleapis.com/auth/calendar"
+                            })
+                        }),
+                        None => false,
+                    };
+                    if !granted {
+                        return Err(CalendarError::Invalid(
+                            "reconnect with calendar write access".into(),
+                        ));
+                    }
+                }
+                SourceKind::Caldav => {}
+            }
+        }
+        CalendarSourceRepo::set_writable(&mut tx, id, writable).await?;
+        publish_source_updated(&mut tx, household, id, src.state).await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// Marks the calendar as a default target for extracted events.
+    pub async fn set_default_target(
+        &self,
+        household: HouseholdId,
+        id: CalendarId,
+        default_target: bool,
+    ) -> Result<()> {
+        let mut tx = self.store.tx_for(household).await?;
+        CalendarRepo::set_default_target(&mut tx, id, default_target).await?;
+        let h = household_of(&mut tx, household).await?;
+        publish_calendar_updated(&mut tx, &h, Utc::now()).await?;
+        tx.commit().await?;
+        Ok(())
     }
 
     // ---- sources ----

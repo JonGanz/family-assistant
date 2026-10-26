@@ -3,6 +3,7 @@
 
 mod error;
 pub mod expand;
+mod ingest;
 mod jobs;
 mod remote;
 mod service;

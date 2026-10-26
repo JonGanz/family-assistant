@@ -5,6 +5,7 @@ mod error;
 mod extract;
 mod feeds;
 mod hub;
+mod mail;
 mod notify;
 mod openapi;
 mod routes;
@@ -37,6 +38,7 @@ pub use error::{ApiError, Problem};
 pub use extract::IpNet;
 pub use extract::{Auth, require};
 pub use hub::{Hub, HubEvent};
+pub use mail::MailServices;
 pub use openapi::openapi;
 
 #[derive(Debug, Clone)]
@@ -76,6 +78,7 @@ pub struct Services {
     pub oauth: OAuthService,
     pub tasks: Arc<fa_tasks::TaskService>,
     pub notify: fa_notify::NotifyService,
+    pub mail: MailServices,
 }
 
 #[derive(Clone)]
@@ -150,6 +153,63 @@ pub fn router(state: AppState) -> Router {
         )
         .route("/oauth/google/start", get(feeds::oauth_start))
         .route("/oauth/google/callback", get(feeds::oauth_callback))
+        .route(
+            "/mail-sources",
+            get(mail::list_mail_sources).post(mail::create_mail_source),
+        )
+        .route("/mail-sources/imap/test", post(mail::test_imap))
+        .route(
+            "/mail-sources/{id}",
+            patch(mail::patch_mail_source).delete(mail::delete_mail_source),
+        )
+        .route("/mail-sources/{id}/sync", post(mail::sync_mail_source))
+        .route("/messages", get(mail::list_messages))
+        .route("/messages/{id}", get(mail::get_message))
+        .route("/messages/{id}/labels", post(mail::label_message))
+        .route("/messages/{id}/eval-sample", post(mail::set_eval_sample))
+        .route("/messages/{id}/actions", post(mail::message_action))
+        .route("/messages/{id}/task", post(mail::message_task))
+        .route("/mail-actions/{id}/undo", post(mail::undo_mail_action))
+        .route("/labelling/next", get(mail::labelling_next))
+        .route("/orgs", get(mail::list_orgs).post(mail::create_org))
+        .route(
+            "/orgs/{id}",
+            patch(mail::patch_org).delete(mail::delete_org),
+        )
+        .route("/orgs/{id}/contacts", post(mail::add_org_contact))
+        .route(
+            "/org-contacts/{id}",
+            patch(mail::patch_org_contact).delete(mail::delete_org_contact),
+        )
+        .route(
+            "/members/{id}/enrollments",
+            get(mail::list_enrollments).post(mail::create_enrollment),
+        )
+        .route(
+            "/enrollments/{id}",
+            patch(mail::patch_enrollment).delete(mail::delete_enrollment),
+        )
+        .route(
+            "/mail-rules",
+            get(mail::list_mail_rules).post(mail::create_mail_rule),
+        )
+        .route("/mail-rules/test", post(mail::test_mail_rule))
+        .route(
+            "/mail-rules/{id}",
+            patch(mail::patch_mail_rule).delete(mail::delete_mail_rule),
+        )
+        .route("/mail-signals", get(mail::list_mail_signals))
+        .route("/mail-signals/{key}", patch(mail::patch_mail_signal))
+        .route(
+            "/categories",
+            get(mail::list_categories).post(mail::create_category),
+        )
+        .route("/categories/{id}", patch(mail::patch_category))
+        .route("/inbox", get(mail::get_inbox))
+        .route("/inbox/{kind}/{id}/approve", post(mail::approve_inbox))
+        .route("/inbox/{kind}/{id}/reject", post(mail::reject_inbox))
+        .route("/bills", get(mail::list_bills))
+        .route("/bills/{id}", patch(mail::patch_bill))
         .route("/oauth/accounts", get(feeds::list_oauth_accounts))
         .route(
             "/calendar-sources",

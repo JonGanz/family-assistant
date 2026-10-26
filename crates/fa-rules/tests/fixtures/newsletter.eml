@@ -1,0 +1,21 @@
+From: Example Elementary <office@school.example.edu>
+To: parent@example.com
+Subject: October newsletter
+Date: Fri, 23 Oct 2026 16:00:00 -0400
+Message-ID: <news-1@school.example.edu>
+List-Unsubscribe: <mailto:unsub@school.example.edu>
+MIME-Version: 1.0
+Content-Type: text/html; charset=utf-8
+
+<html><body>
+<p>Dear families, here is what is happening this month.</p>
+<h3>Grade 3 News</h3>
+<p>Third graders visit the science museum.</p>
+<h3>Grade 5 News</h3>
+<p>Fifth graders start their band unit.</p>
+<hr>
+<h3>Girls' Volleyball</h3>
+<p>Girls' volleyball tryouts are open to all.</p>
+<p><b>Lunch Menu</b></p>
+<p>Pizza on Monday, soup on Tuesday.</p>
+</body></html>

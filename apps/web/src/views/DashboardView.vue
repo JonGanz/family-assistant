@@ -75,15 +75,20 @@ async function submitPin(pin: string) {
   try {
     const r = await api.elevate(pickedId.value, pin)
     expiresAt.value = Date.parse(r.expires_at)
+    store.elevatedUntil = expiresAt.value
     clearInterval(remainingTimer)
     const tick = () => {
       remaining.value = Math.max(0, Math.round(((expiresAt.value ?? 0) - Date.now()) / 1000))
-      if (remaining.value === 0) clearInterval(remainingTimer)
+      if (remaining.value === 0) {
+        clearInterval(remainingTimer)
+        store.elevatedUntil = null
+      }
     }
     tick()
     remainingTimer = setInterval(tick, 1000)
   } catch (e) {
     expiresAt.value = null
+    store.elevatedUntil = null
     if (e instanceof ApiError && e.status === 423) elevMsg.value = S.locked
     else if (e instanceof ApiError && e.status === 401) elevMsg.value = S.wrongPin
     else elevMsg.value = S.elevationFailed

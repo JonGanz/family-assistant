@@ -2,6 +2,7 @@ use std::collections::{HashMap, hash_map::Entry};
 
 use chrono::{DateTime, Duration, Utc};
 use chrono_tz::Tz;
+use fa_domain::mail::ApprovalMode;
 use fa_domain::notify::{effective_quiet, in_quiet, quiet_end_after};
 use fa_domain::{Household, MemberId, Notification, NotifyTrigger, Role};
 use fa_store::{
@@ -23,6 +24,21 @@ struct Group {
     rows: Vec<Notification>,
 }
 
+/// A batch of only approval and mail rows opens the inbox; anything else opens tasks.
+fn batch_click(rows: &[Notification]) -> &'static str {
+    let inbox = |t| {
+        matches!(
+            t,
+            NotifyTrigger::ApprovalNeeded | NotifyTrigger::MailTimeSensitive
+        )
+    };
+    if rows.iter().all(|r| inbox(r.trigger)) {
+        "/inbox"
+    } else {
+        "/tasks"
+    }
+}
+
 fn tag(t: NotifyTrigger) -> &'static str {
     match t {
         NotifyTrigger::Assigned => "memo",
@@ -31,6 +47,8 @@ fn tag(t: NotifyTrigger) -> &'static str {
         NotifyTrigger::DueSoon => "hourglass",
         NotifyTrigger::RoutineNudge => "alarm_clock",
         NotifyTrigger::SourceReauth => "key",
+        NotifyTrigger::ApprovalNeeded => "inbox_tray",
+        NotifyTrigger::MailTimeSensitive => "email",
     }
 }
 
@@ -71,6 +89,21 @@ impl NotifyService {
                 NotificationRepo::mark_dropped(&mut tx, row.id, "trigger disabled").await?;
                 continue;
             }
+            let mut immediate = false;
+            if row.trigger == NotifyTrigger::ApprovalNeeded {
+                match pref.approval_mode {
+                    ApprovalMode::Off => {
+                        NotificationRepo::mark_dropped(&mut tx, row.id, "off").await?;
+                        continue;
+                    }
+                    ApprovalMode::Digest => {
+                        NotificationRepo::mark_dropped(&mut tx, row.id, "digest").await?;
+                        continue;
+                    }
+                    ApprovalMode::Immediate => immediate = true,
+                    ApprovalMode::Batched => {}
+                }
+            }
             let (from, until) = effective_quiet(
                 pref.quiet_from,
                 pref.quiet_until,
@@ -86,7 +119,7 @@ impl NotifyService {
                 NotificationRepo::mark_dropped(&mut tx, row.id, "not configured").await?;
                 continue;
             }
-            if row.created_at > now - Duration::seconds(BATCH_WINDOW_SECS) {
+            if !immediate && row.created_at > now - Duration::seconds(BATCH_WINDOW_SECS) {
                 continue;
             }
             if !groups.iter().any(|(k, _)| *k == key) {
@@ -209,7 +242,7 @@ impl NotifyService {
                 .join("\n"),
             priority,
             tags,
-            click: Some(self.click_url("/tasks")),
+            click: Some(self.click_url(batch_click(rows))),
         }
     }
 

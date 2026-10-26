@@ -1,0 +1,32 @@
+From: Ms Rivera <rivera@school.example.edu>
+To: parent@example.com
+Subject: Cancelled: Parent-teacher conference
+Date: Wed, 28 Oct 2026 08:00:00 -0400
+Message-ID: <conf-2@school.example.edu>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="BOUND"
+
+--BOUND
+Content-Type: text/plain; charset=utf-8
+
+The conference is cancelled.
+
+--BOUND
+Content-Type: text/calendar; charset=utf-8; method=CANCEL
+Content-Disposition: attachment; filename="cancel.ics"
+
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Example//EN
+METHOD:CANCEL
+BEGIN:VEVENT
+UID:conf-2026-11-06@school.example.edu
+DTSTAMP:20261028T120000Z
+DTSTART;TZID=America/New_York:20261106T180000
+DTEND;TZID=America/New_York:20261106T190000
+SUMMARY:Parent-teacher conference
+STATUS:CANCELLED
+END:VEVENT
+END:VCALENDAR
+
+--BOUND--

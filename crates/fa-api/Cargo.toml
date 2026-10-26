@@ -19,6 +19,7 @@ fa-calendar.workspace = true
 fa-weather.workspace = true
 fa-tasks.workspace = true
 fa-notify.workspace = true
+fa-mail.workspace = true
 axum.workspace = true
 axum-extra.workspace = true
 tower.workspace = true

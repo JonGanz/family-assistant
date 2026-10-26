@@ -31,6 +31,13 @@ export function listDefaults(
         dashboard_add: true,
         calendar_default: 'hidden',
       }
+    case 'email':
+      return {
+        completion_policy: 'assignee',
+        child_can_add: 'none',
+        dashboard_add: false,
+        calendar_default: 'until_done',
+      }
   }
 }
 

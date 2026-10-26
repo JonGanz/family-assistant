@@ -133,7 +133,7 @@ async fn resolve_member(
 }
 
 /// An optional JSON body: empty means "all defaults".
-fn opt_body<T: DeserializeOwned>(b: &Bytes) -> ApiResult<Option<T>> {
+pub(crate) fn opt_body<T: DeserializeOwned>(b: &Bytes) -> ApiResult<Option<T>> {
     if b.iter().all(u8::is_ascii_whitespace) {
         return Ok(None);
     }

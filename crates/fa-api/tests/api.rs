@@ -37,11 +37,24 @@ fn member(h: HouseholdId, name: &str, role: Role) -> Member {
         interests: vec![],
         hobbies: vec![],
         responsibilities: vec![],
+        aliases: Vec::new(),
+        gender: None,
+        relevance_tags: Vec::new(),
         pin_hash: None,
         archived_at: None,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     }
+}
+
+fn mail_services(store: &Store, oauth: &fa_auth::OAuthService) -> fa_api::MailServices {
+    fa_api::MailServices::new(std::sync::Arc::new(fa_mail::MailDeps {
+        store: store.clone(),
+        http: fa_connectors::Http::new(true).unwrap(),
+        tokens: std::sync::Arc::new(oauth.clone()),
+        key: std::sync::Arc::new(MasterKey::from_bytes(&[7u8; 32], 1).unwrap()),
+        cfg: fa_mail::MailConfig::default(),
+    }))
 }
 
 async fn seed(pool: PgPool) -> Fx {
@@ -69,6 +82,13 @@ async fn seed(pool: PgPool) -> Fx {
             now_weights: fa_domain::tasks::NowWeights::default(),
             quiet_from: chrono::NaiveTime::from_hms_opt(21, 0, 0).expect("time"),
             quiet_until: chrono::NaiveTime::from_hms_opt(7, 0, 0).expect("time"),
+            currency: fa_domain::DEFAULT_CURRENCY.to_string(),
+            gender_terms: Default::default(),
+            disabled_signals: Vec::new(),
+            events: Default::default(),
+            inbox: Default::default(),
+            retention_mail: Default::default(),
+            bill_lead_days: fa_domain::DEFAULT_BILL_LEAD_DAYS,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         },
@@ -131,6 +151,7 @@ async fn seed(pool: PgPool) -> Fx {
                 public_base_url: "https://fa.example.com".into(),
             },
         ),
+        mail: mail_services(&store, &oauth),
         oauth,
     };
     let state = AppState::new(

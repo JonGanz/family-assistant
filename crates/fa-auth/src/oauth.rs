@@ -28,8 +28,34 @@ const SCOPES: [&str; 3] = [
     "email",
     "https://www.googleapis.com/auth/calendar.readonly",
 ];
+const SCOPE_GMAIL_READ: &str = "https://www.googleapis.com/auth/gmail.readonly";
+const SCOPE_GMAIL_MODIFY: &str = "https://www.googleapis.com/auth/gmail.modify";
+const SCOPE_CALENDAR_WRITE: &str = "https://www.googleapis.com/auth/calendar.events";
 const PENDING_TTL_MINUTES: i64 = 10;
 const EXPIRY_MARGIN_SECONDS: i64 = 60;
+
+/// Why the user connects Google: each purpose adds one scope to the base scopes.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum OAuthPurpose {
+    /// Read calendars (the base scopes only).
+    #[default]
+    Calendar,
+    GmailRead,
+    GmailModify,
+    CalendarWrite,
+}
+
+impl OAuthPurpose {
+    /// The scope added to the base scopes.
+    pub fn extra_scope(self) -> Option<&'static str> {
+        match self {
+            Self::Calendar => None,
+            Self::GmailRead => Some(SCOPE_GMAIL_READ),
+            Self::GmailModify => Some(SCOPE_GMAIL_MODIFY),
+            Self::CalendarWrite => Some(SCOPE_CALENDAR_WRITE),
+        }
+    }
+}
 
 type TokenCache = HashMap<OAuthAccountId, (String, DateTime<Utc>)>;
 
@@ -108,12 +134,14 @@ impl OAuthService {
         Ok(())
     }
 
-    /// Starts the flow for an adult; returns the Google consent URL.
+    /// Starts the flow for an adult; returns the Google consent URL. The URL asks for the base
+    /// scopes plus the purpose's scope, and (`include_granted_scopes`) those granted earlier.
     pub async fn start(
         &self,
         actor: &Actor,
         session_id: &str,
         return_to: Option<&str>,
+        purpose: OAuthPurpose,
     ) -> Result<String> {
         let google = self.google()?;
         let ids = actor_ids(actor)?;
@@ -147,8 +175,13 @@ impl OAuthService {
         )
         .await?;
         tx.commit().await?;
+        let scopes: Vec<&str> = SCOPES
+            .iter()
+            .copied()
+            .chain(purpose.extra_scope())
+            .collect();
         google
-            .authorize_url(&self.redirect_uri(), &SCOPES, &state, &challenge)
+            .authorize_url(&self.redirect_uri(), &scopes, &state, &challenge)
             .map_err(|e| AuthError::OAuth(e.to_string()))
     }
 
@@ -199,13 +232,26 @@ impl OAuthService {
             .ok_or_else(|| AuthError::OAuth("Google did not return an email address".into()))?;
 
         let mut tx = self.store.tx_for(ids.household).await?;
+        // Re-connecting the same address adds scopes; it never drops earlier ones.
+        let mut scopes = tokens.scopes.clone();
+        let existing = OAuthAccountRepo::list(&mut tx, None).await?;
+        if let Some(old) = existing
+            .iter()
+            .find(|a| a.value.provider == PROVIDER && a.value.email.eq_ignore_ascii_case(&email))
+        {
+            for s in &old.value.scopes {
+                if !scopes.contains(s) {
+                    scopes.push(s.clone());
+                }
+            }
+        }
         let account = OAuthAccountRepo::upsert(
             &mut tx,
             ids.household,
             PROVIDER,
             member,
             &email,
-            &tokens.scopes,
+            &scopes,
             None,
         )
         .await?

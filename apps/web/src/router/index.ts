@@ -91,6 +91,48 @@ export const routes: RouteRecordRaw[] = [
     meta: { auth: 'adult' },
   },
   {
+    path: '/mail',
+    name: 'mail',
+    component: () => import('../views/MailView.vue'),
+    meta: { auth: 'adult' },
+  },
+  {
+    path: '/mail/label',
+    name: 'mail-label',
+    component: () => import('../views/LabelView.vue'),
+    meta: { auth: 'adult' },
+  },
+  {
+    path: '/mail/:id',
+    name: 'mail-detail',
+    component: () => import('../views/MessageView.vue'),
+    meta: { auth: 'adult' },
+  },
+  {
+    path: '/inbox',
+    name: 'inbox',
+    component: () => import('../views/InboxView.vue'),
+    meta: { auth: 'adult' },
+  },
+  {
+    path: '/bills',
+    name: 'bills',
+    component: () => import('../views/BillsView.vue'),
+    meta: { auth: 'adult' },
+  },
+  {
+    path: '/settings/mail',
+    name: 'settings-mail',
+    component: () => import('../views/SettingsMailView.vue'),
+    meta: { auth: 'adult' },
+  },
+  {
+    path: '/settings/orgs',
+    name: 'settings-orgs',
+    component: () => import('../views/SettingsOrgsView.vue'),
+    meta: { auth: 'adult' },
+  },
+  {
     path: '/oauth/done',
     name: 'oauth-done',
     component: () => import('../views/OAuthDoneView.vue'),

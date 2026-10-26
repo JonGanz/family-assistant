@@ -1,8 +1,11 @@
 use chrono::{DateTime, NaiveDate, SecondsFormat, Utc};
 use serde::Deserialize;
-use url::Url;
 
-use crate::{ConnectorError, EventTime, Http, RemoteCalendar, RemoteEvent, Window, error::Result};
+use super::{api_url, ok_body, parse_json};
+use crate::{
+    ConnectorError, EventTime, EventWrite, Http, RemoteCalendar, RemoteEvent, Window, Written,
+    error::Result,
+};
 
 #[derive(Debug, Clone)]
 pub enum EventQuery {
@@ -128,15 +131,6 @@ impl GEvent {
     }
 }
 
-fn api_url(base: &str, segments: &[&str]) -> Result<Url> {
-    let mut url = Url::parse(base).map_err(|e| ConnectorError::Parse(e.to_string()))?;
-    url.path_segments_mut()
-        .map_err(|_| ConnectorError::Parse("bad base url".into()))?
-        .pop_if_empty()
-        .extend(segments);
-    Ok(url)
-}
-
 pub async fn list_calendars(http: &Http, base: &str, access: &str) -> Result<Vec<RemoteCalendar>> {
     let mut out = Vec::new();
     let mut page: Option<String> = None;
@@ -215,4 +209,117 @@ pub async fn list_events(
             }
         }
     }
+}
+
+#[derive(Deserialize)]
+struct WrittenResp {
+    id: String,
+    #[serde(rename = "iCalUID")]
+    ical_uid: Option<String>,
+    etag: Option<String>,
+    #[serde(rename = "htmlLink")]
+    html_link: Option<String>,
+}
+
+fn local_date(t: DateTime<Utc>, tz: &str) -> Result<NaiveDate> {
+    let tz: chrono_tz::Tz = tz
+        .parse()
+        .map_err(|_| ConnectorError::Parse("unknown time zone".into()))?;
+    Ok(t.with_timezone(&tz).date_naive())
+}
+
+fn event_body(ev: &EventWrite) -> Result<serde_json::Value> {
+    use serde_json::{Map, Value, json};
+    let (start, end) = if ev.all_day {
+        let s = local_date(ev.start, &ev.tz)?;
+        let e = local_date(ev.end, &ev.tz)?.max(s + chrono::Days::new(1));
+        (
+            json!({ "date": s.to_string() }),
+            json!({ "date": e.to_string() }),
+        )
+    } else {
+        let f = |t: DateTime<Utc>| json!({ "dateTime": t.to_rfc3339_opts(SecondsFormat::Secs, true), "timeZone": ev.tz });
+        (f(ev.start), f(ev.end))
+    };
+    let mut m = Map::new();
+    m.insert("summary".into(), Value::String(ev.summary.clone()));
+    if let Some(d) = &ev.description {
+        m.insert("description".into(), Value::String(d.clone()));
+    }
+    if let Some(l) = &ev.location {
+        m.insert("location".into(), Value::String(l.clone()));
+    }
+    m.insert("start".into(), start);
+    m.insert("end".into(), end);
+    Ok(Value::Object(m))
+}
+
+fn written(bytes: &[u8]) -> Result<Written> {
+    let w: WrittenResp = parse_json(bytes)?;
+    Ok(Written {
+        id: w.id,
+        ical_uid: w.ical_uid,
+        etag: w.etag,
+        html_link: w.html_link,
+    })
+}
+
+/// `events.insert` (scope `calendar.events`). The returned `iCalUID` is the remote UID.
+pub async fn insert_event(
+    http: &Http,
+    base: &str,
+    access: &str,
+    cal_id: &str,
+    ev: &EventWrite,
+) -> Result<Written> {
+    let url = api_url(base, &["calendar", "v3", "calendars", cal_id, "events"])?;
+    let rb = http
+        .request(reqwest::Method::POST, &url)?
+        .bearer_auth(access)
+        .json(&event_body(ev)?);
+    let resp = http.send(rb).await?;
+    written(&ok_body(http, resp).await?)
+}
+
+/// `events.patch`: only the fields of `ev` are sent.
+pub async fn patch_event(
+    http: &Http,
+    base: &str,
+    access: &str,
+    cal_id: &str,
+    event_id: &str,
+    ev: &EventWrite,
+) -> Result<Written> {
+    let url = api_url(
+        base,
+        &["calendar", "v3", "calendars", cal_id, "events", event_id],
+    )?;
+    let rb = http
+        .request(reqwest::Method::PATCH, &url)?
+        .bearer_auth(access)
+        .json(&event_body(ev)?);
+    let resp = http.send(rb).await?;
+    written(&ok_body(http, resp).await?)
+}
+
+/// `events.delete`; an already-deleted event (404 or 410) counts as done.
+pub async fn delete_event(
+    http: &Http,
+    base: &str,
+    access: &str,
+    cal_id: &str,
+    event_id: &str,
+) -> Result<()> {
+    let url = api_url(
+        base,
+        &["calendar", "v3", "calendars", cal_id, "events", event_id],
+    )?;
+    let rb = http
+        .request(reqwest::Method::DELETE, &url)?
+        .bearer_auth(access);
+    let resp = http.send(rb).await?;
+    if matches!(resp.status().as_u16(), 404 | 410) {
+        return Ok(());
+    }
+    ok_body(http, resp).await.map(|_| ())
 }

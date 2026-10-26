@@ -168,6 +168,11 @@ describe('dashboard store', () => {
     expect(s.handleEvent('device.updated', { id: 'dev-1' })).toBe(true)
   })
 
+  it('inbox.updated refetches the snapshot', async () => {
+    const s = await loaded()
+    expect(s.handleEvent('inbox.updated', {})).toBe(true)
+  })
+
   it('ignores kinds it does not show', async () => {
     const s = await loaded()
     expect(s.handleEvent('source.updated', {})).toBe(false)

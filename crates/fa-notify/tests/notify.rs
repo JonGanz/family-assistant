@@ -64,6 +64,9 @@ async fn member(store: &Store, h: HouseholdId, name: &str, role: Role) -> Member
         interests: vec![],
         hobbies: vec![],
         responsibilities: vec![],
+        aliases: Vec::new(),
+        gender: None,
+        relevance_tags: Vec::new(),
         pin_hash: None,
         archived_at: None,
         created_at: Utc::now(),
@@ -93,6 +96,13 @@ async fn env(pool: &PgPool, url: Option<&str>) -> Env {
         now_weights: fa_domain::tasks::NowWeights::default(),
         quiet_from: hm(21, 0),
         quiet_until: hm(7, 0),
+        currency: fa_domain::DEFAULT_CURRENCY.to_string(),
+        gender_terms: Default::default(),
+        disabled_signals: Vec::new(),
+        events: Default::default(),
+        inbox: Default::default(),
+        retention_mail: Default::default(),
+        bill_lead_days: fa_domain::DEFAULT_BILL_LEAD_DAYS,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     };
@@ -453,6 +463,18 @@ async fn prefs_topic_is_stable_and_validated(pool: PgPool) {
         vec![
             NotifyTrigger::Assigned,
             NotifyTrigger::Overdue,
+            NotifyTrigger::Digest,
+            NotifyTrigger::ApprovalNeeded,
+            NotifyTrigger::MailTimeSensitive
+        ]
+    );
+    assert_eq!(a.approval_mode, ApprovalMode::Batched);
+    let c = e.svc.get_prefs(e.h, e.child).await.unwrap();
+    assert_eq!(
+        c.enabled_triggers,
+        vec![
+            NotifyTrigger::Assigned,
+            NotifyTrigger::Overdue,
             NotifyTrigger::Digest
         ]
     );
@@ -559,5 +581,89 @@ fn empty() -> NotifyPrefPatch {
         quiet_from: None,
         quiet_until: None,
         copy_to_member: None,
+        approval_mode: None,
     }
+}
+
+async fn set_mode(e: &Env, m: ApprovalMode) {
+    let v = e.svc.get_prefs(e.h, e.adult).await.unwrap();
+    let mut p = empty();
+    p.approval_mode = Some(m);
+    let out = e.svc.put_prefs(e.h, e.adult, p, v.version).await.unwrap();
+    assert_eq!(out.approval_mode, m);
+    assert_eq!(
+        e.svc.get_prefs(e.h, e.adult).await.unwrap().approval_mode,
+        m
+    );
+}
+
+async fn age(e: &Env, id: NotificationId, created: DateTime<Utc>) {
+    let mut tx = e.store.tx_for(e.h).await.unwrap();
+    sqlx::query("UPDATE notification SET created_at = $2 WHERE id = $1")
+        .bind(id.as_uuid())
+        .bind(created)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+}
+
+async fn drop_reason(e: &Env, id: NotificationId) -> Option<String> {
+    let mut tx = e.store.tx_for(e.h).await.unwrap();
+    sqlx::query_scalar("SELECT last_error FROM notification WHERE id = $1")
+        .bind(id.as_uuid())
+        .fetch_one(&mut *tx)
+        .await
+        .unwrap()
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn approval_modes(pool: PgPool) {
+    let e = env(&pool, Some(URL)).await;
+    let now = utc(26, 12, 0);
+    let young = now - Duration::seconds(10);
+    e.svc.get_prefs(e.h, e.adult).await.unwrap();
+
+    // batched: waits for the window.
+    let a = e
+        .row(e.adult, NotifyTrigger::ApprovalNeeded, "appr1", 3, now)
+        .await;
+    age(&e, a, young).await;
+    e.svc.run_send_at(now).await.unwrap();
+    assert_eq!(e.get(a).await.status, NotificationStatus::Pending);
+    assert!(e.sent().is_empty());
+
+    // immediate: sent on the next pass, together with a due row.
+    set_mode(&e, ApprovalMode::Immediate).await;
+    let due = e.row(e.adult, NotifyTrigger::Assigned, "due", 3, now).await;
+    e.svc.run_send_at(now).await.unwrap();
+    assert_eq!(e.get(a).await.status, NotificationStatus::Sent);
+    assert_eq!(e.get(due).await.status, NotificationStatus::Sent);
+    assert_eq!(e.sent().len(), 1);
+
+    // a young non-approval row still waits in immediate mode.
+    let y = e
+        .row(e.adult, NotifyTrigger::Assigned, "young", 3, now)
+        .await;
+    age(&e, y, young).await;
+    e.svc.run_send_at(now).await.unwrap();
+    assert_eq!(e.get(y).await.status, NotificationStatus::Pending);
+
+    // digest and off drop with their reason.
+    for (mode, reason) in [(ApprovalMode::Digest, "digest"), (ApprovalMode::Off, "off")] {
+        set_mode(&e, mode).await;
+        let r = e
+            .row(e.adult, NotifyTrigger::ApprovalNeeded, reason, 3, now)
+            .await;
+        e.svc.run_send_at(now).await.unwrap();
+        assert_eq!(e.get(r).await.status, NotificationStatus::Dropped);
+        assert_eq!(drop_reason(&e, r).await.as_deref(), Some(reason));
+    }
+
+    // other triggers are unaffected by the mode.
+    let o = e
+        .row(e.adult, NotifyTrigger::MailTimeSensitive, "mail", 3, now)
+        .await;
+    e.svc.run_send_at(now).await.unwrap();
+    assert_eq!(e.get(o).await.status, NotificationStatus::Sent);
 }

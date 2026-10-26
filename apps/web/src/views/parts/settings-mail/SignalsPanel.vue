@@ -1,0 +1,49 @@
+<script setup lang="ts">
+import { ref } from 'vue'
+import { useMailSettingsStore } from '../../../stores/mailSettings'
+import { describeError } from '../../shared'
+
+const store = useMailSettingsStore()
+const error = ref('')
+
+async function toggle(key: string, enabled: boolean) {
+  error.value = ''
+  try {
+    await store.setSignal(key, enabled)
+  } catch (e) {
+    error.value = describeError(e, 'Could not save.')
+  }
+}
+</script>
+
+<template>
+  <div>
+    <p v-if="error" class="settings-error" role="alert">{{ error }}</p>
+    <ul class="settings-list">
+      <li v-for="s in store.signals" :key="s.key">
+        <label class="inline">
+          <input
+            type="checkbox"
+            :checked="s.enabled"
+            :aria-label="s.key"
+            @change="toggle(s.key, ($event.target as HTMLInputElement).checked)"
+          />
+          <span>
+            {{ s.description }}
+            <span class="settings-note"
+              >({{ s.decision_point }}, confidence {{ s.confidence }})</span
+            >
+          </span>
+        </label>
+      </li>
+    </ul>
+  </div>
+</template>
+
+<style scoped>
+.inline {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+</style>

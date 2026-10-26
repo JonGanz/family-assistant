@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# Fail if any email domain in example/fixture/e2e data is not a reserved one (D-035).
+# Fail if any email domain in example/fixture/e2e data is not a reserved one (D-035). example.edu
+# is allowed too: the fictional school in the examples and mail fixtures uses it.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel 2>/dev/null || dirname "$0"/..)"
 
-allowed='^(([a-z0-9-]+\.)*example\.(com|org|net)|[a-z0-9.-]+\.(test|invalid))$'
+allowed='^(([a-z0-9-]+\.)*example\.(com|org|net|edu)|[a-z0-9.-]+\.(test|invalid))$'
 status=0
 
 while IFS= read -r -d '' f; do

@@ -28,5 +28,18 @@ services:
       timeout: 3s
       retries: 20
 
+  # Local mail server for trying the mail features without a real mailbox (never exposed beyond
+  # this machine): IMAP on 13143, SMTP on 13025. Any login works (auth is off); mail sent by SMTP
+  # to <address> shows up in the mailbox whose IMAP user name is <address>.
+  greenmail:
+    image: greenmail/standalone:2.1.8
+    environment:
+      GREENMAIL_OPTS: >-
+        -Dgreenmail.setup.test.imap -Dgreenmail.setup.test.smtp
+        -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled
+    ports:
+      - "127.0.0.1:13143:3143"
+      - "127.0.0.1:13025:3025"
+
 volumes:
   fa-dev-pgdata:

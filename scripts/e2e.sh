@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # End-to-end tests against a throwaway stack: Postgres, `serve api` and `serve worker` as
 # separate processes, an ICS + Open-Meteo fixture server (Node), Radicale (CalDAV), ntfy
-# (notifications), then the
+# (notifications), GreenMail (IMAP + SMTP for the mail specs), then the
 # Playwright API specs (e2e/) and UI specs (apps/web/e2e/).
 # Env: FA_E2E_PG_PORT (55499), FA_E2E_PORT (18080), FA_E2E_STUB_PORT (18091),
-#      FA_E2E_RADICALE_PORT (18092), FA_E2E_NTFY_PORT (18093), FA_E2E_SKIP_BUILD=1 to reuse apps/web/dist,
+#      FA_E2E_RADICALE_PORT (18092), FA_E2E_NTFY_PORT (18093),
+#      FA_E2E_IMAP_PORT (18143), FA_E2E_SMTP_PORT (18025), FA_E2E_SKIP_BUILD=1 to reuse apps/web/dist,
 #      FA_E2E_HOLD=<seconds> to keep the seeded stack up for that long before the specs (debugging).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -15,13 +16,15 @@ PORT=${FA_E2E_PORT:-18080}
 STUB_PORT=${FA_E2E_STUB_PORT:-18091}
 RAD_PORT=${FA_E2E_RADICALE_PORT:-18092}
 NTFY_PORT=${FA_E2E_NTFY_PORT:-18093}
+IMAP_PORT=${FA_E2E_IMAP_PORT:-18143}
+SMTP_PORT=${FA_E2E_SMTP_PORT:-18025}
 PROJECT=fa-e2e-$$
 WORK=$(mktemp -d)
 PIDS=()
 
 cleanup() {
   for p in "${PIDS[@]:-}"; do [[ -n $p ]] && kill "$p" 2>/dev/null || true; done
-  docker rm -f -v "$PROJECT-pg" "$PROJECT-radicale" "$PROJECT-ntfy" >/dev/null 2>&1 || true
+  docker rm -f -v "$PROJECT-pg" "$PROJECT-radicale" "$PROJECT-ntfy" "$PROJECT-greenmail" >/dev/null 2>&1 || true
   rm -rf "$WORK"
 }
 trap cleanup EXIT
@@ -42,6 +45,7 @@ export FA_WEB_DIST_DIR="$ROOT/apps/web/dist"
 export FA_OPEN_METEO_URL="http://127.0.0.1:$STUB_PORT"
 export FA_ALLOW_HTTP_FEEDS=true
 export FA_NTFY_URL="http://127.0.0.1:$NTFY_PORT"
+export FA_ALLOW_PLAIN_IMAP=true # test-only: GreenMail speaks plain IMAP
 head -c 32 /dev/urandom > "$FA_MASTER_KEY_PATH"
 chmod 400 "$FA_MASTER_KEY_PATH"
 
@@ -52,7 +56,7 @@ if [[ -z ${FA_E2E_SKIP_BUILD:-} || ! -f $FA_WEB_DIST_DIR/index.html ]]; then
 fi
 BIN=$ROOT/target/debug/fa-server
 
-echo "== postgres on :$PG_PORT, radicale on :$RAD_PORT, ntfy on :$NTFY_PORT, fixture server on :$STUB_PORT"
+echo "== postgres on :$PG_PORT, greenmail on :$IMAP_PORT/:$SMTP_PORT, radicale on :$RAD_PORT, ntfy on :$NTFY_PORT, fixture server on :$STUB_PORT"
 docker run -d --name "$PROJECT-pg" -e POSTGRES_USER=fa -e POSTGRES_PASSWORD=fa -e POSTGRES_DB=fa \
   -p "127.0.0.1:$PG_PORT:5432" pgvector/pgvector:pg16 >/dev/null
 docker run -d --name "$PROJECT-radicale" -p "127.0.0.1:$RAD_PORT:5232" \
@@ -62,12 +66,17 @@ docker run -d --name "$PROJECT-radicale" -p "127.0.0.1:$RAD_PORT:5232" \
 docker run -d --name "$PROJECT-ntfy" -p "127.0.0.1:$NTFY_PORT:80" \
   -e NTFY_VISITOR_REQUEST_LIMIT_BURST=100000 -e NTFY_VISITOR_REQUEST_LIMIT_REPLENISH=10ms \
   binwiederhier/ntfy:v2.17.0 serve >/dev/null
+docker run -d --name "$PROJECT-greenmail" -p "127.0.0.1:$IMAP_PORT:3143" -p "127.0.0.1:$SMTP_PORT:3025" \
+  -e GREENMAIL_OPTS='-Dgreenmail.setup.test.imap -Dgreenmail.setup.test.smtp -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled' \
+  greenmail/standalone:2.1.8 >/dev/null
 node e2e/stubs/server.mjs "$STUB_PORT" >"$WORK/stub.log" 2>&1 &
 PIDS+=($!)
 for _ in $(seq 60); do
   docker exec "$PROJECT-pg" pg_isready -U fa -d fa >/dev/null 2>&1 \
     && curl -fsS "http://127.0.0.1:$RAD_PORT/" >/dev/null 2>&1 \
     && curl -fsS "http://127.0.0.1:$NTFY_PORT/v1/health" >/dev/null 2>&1 \
+    && (exec 3<>"/dev/tcp/127.0.0.1/$IMAP_PORT" && read -r -t 2 g <&3 && [[ $g == "* OK"* ]]) 2>/dev/null \
+    && (exec 3<>"/dev/tcp/127.0.0.1/$SMTP_PORT" && read -r -t 2 g <&3 && [[ $g == 220* ]]) 2>/dev/null \
     && curl -fsS "http://127.0.0.1:$STUB_PORT/ics/school.ics" >/dev/null 2>&1 && break
   sleep 1
 done
@@ -116,6 +125,7 @@ export FA_E2E_BASE_URL=$FA_PUBLIC_BASE_URL
 export FA_E2E_FIXTURES="http://127.0.0.1:$STUB_PORT" FA_E2E_RADICALE=$RAD
 export FA_E2E_SEED=$WORK/seed.json
 export FA_E2E_BIN=$BIN
+export FA_E2E_IMAP_PORT=$IMAP_PORT FA_E2E_SMTP_PORT=$SMTP_PORT
 export FA_E2E_NTFY=$FA_NTFY_URL FA_E2E_PG_CONTAINER=$PROJECT-pg
 echo "== seed sources, wait for first sync and weather"
 node e2e/seed.mjs "$FA_E2E_SEED" || { dump_logs; exit 1; }
@@ -134,6 +144,7 @@ cd apps/web
 if ! E2E_BASE_URL=$FA_PUBLIC_BASE_URL E2E_USERNAME=$FA_E2E_USER E2E_PASSWORD=$FA_E2E_PASSWORD \
   E2E_CHILD_USERNAME=$FA_E2E_CHILD_USER E2E_CHILD_PASSWORD=$FA_E2E_CHILD_PASSWORD \
   E2E_FIXTURES=$FA_E2E_FIXTURES E2E_PG_CONTAINER=$FA_E2E_PG_CONTAINER \
+  E2E_IMAP_PORT=$IMAP_PORT E2E_SMTP_PORT=$SMTP_PORT \
   corepack pnpm@9 exec playwright test; then dump_logs; exit 1; fi
 cd ../..
 echo "e2e OK"

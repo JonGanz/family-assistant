@@ -223,6 +223,163 @@
         ]
       }
     },
+    "/api/v1/bills": {
+      "get": {
+        "tags": [
+          "bills"
+        ],
+        "operationId": "list_bills",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "`proposed`, `open`, `paid` or `dismissed`; default all.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BillView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bills/{id}": {
+      "patch": {
+        "tags": [
+          "bills"
+        ],
+        "operationId": "patch_bill",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "bill id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
     "/api/v1/calendar-sources": {
       "get": {
         "tags": [
@@ -237,7 +394,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/SourceView"
+                    "$ref": "#/components/schemas/SourceViewExt"
                   }
                 }
               }
@@ -471,7 +628,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/SourcePatch"
+                "$ref": "#/components/schemas/SourcePatchExt"
               }
             }
           },
@@ -483,7 +640,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SourceView"
+                  "$ref": "#/components/schemas/SourceViewExt"
                 }
               }
             }
@@ -615,7 +772,7 @@
                 "schema": {
                   "type": "array",
                   "items": {
-                    "$ref": "#/components/schemas/CalendarView"
+                    "$ref": "#/components/schemas/CalendarViewExt"
                   }
                 }
               }
@@ -675,7 +832,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CalendarPatch"
+                "$ref": "#/components/schemas/CalendarPatchExt"
               }
             }
           },
@@ -687,7 +844,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CalendarView"
+                  "$ref": "#/components/schemas/CalendarViewExt"
                 }
               }
             }
@@ -739,6 +896,226 @@
           },
           {
             "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/categories": {
+      "get": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "list_categories",
+        "parameters": [
+          {
+            "name": "archived",
+            "in": "query",
+            "description": "Include archived categories.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "create_category",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/categories/{id}": {
+      "patch": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "patch_category",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "category id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CategoryPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CategoryView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
           }
         ]
       }
@@ -1161,6 +1538,161 @@
         ]
       }
     },
+    "/api/v1/enrollments/{id}": {
+      "delete": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "delete_enrollment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "enrollment id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "patch_enrollment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "enrollment id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollmentPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
     "/api/v1/events": {
       "get": {
         "tags": [
@@ -1357,6 +1889,1076 @@
           },
           {
             "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/inbox": {
+      "get": {
+        "tags": [
+          "inbox"
+        ],
+        "operationId": "get_inbox",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "description": "`event`, `bill`, `task` or `contact`; default all.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "a device without elevation gets `items: []` and the counts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InboxView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/inbox/{kind}/{id}/approve": {
+      "post": {
+        "tags": [
+          "inbox"
+        ],
+        "operationId": "approve_inbox",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "event, bill, task or contact",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "item id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "`EventApproval`, `BillPatch`, `TaskApproval` or `ContactApproval` by kind; may be empty",
+          "content": {
+            "application/json": {
+              "schema": {}
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "the item is not awaiting a decision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/inbox/{kind}/{id}/reject": {
+      "post": {
+        "tags": [
+          "inbox"
+        ],
+        "operationId": "reject_inbox",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "event, bill, task or contact",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "item id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "the item is not awaiting a decision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/labelling/next": {
+      "get": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "labelling_next",
+        "parameters": [
+          {
+            "name": "after",
+            "in": "query",
+            "description": "Skip this message (the one just skipped or labelled).",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LabelQueueItem"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "the queue is empty"
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail-actions/{id}/undo": {
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "undo_mail_action",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "mail action id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailActionView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "more than 30 days ago",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail-rules": {
+      "get": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "list_mail_rules",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MailRuleView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "create_mail_rule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailRuleInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailRuleView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`{field, message}`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail-rules/test": {
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "test_mail_rule",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleTestResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "`{field, message}`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail-rules/{id}": {
+      "delete": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "delete_mail_rule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "rule id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "patch_mail_rule",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "rule id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailRulePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailRuleView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail-signals": {
+      "get": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "list_mail_signals",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SignalView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail-signals/{key}": {
+      "patch": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "patch_mail_signal",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "description": "signal key",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SignalPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignalView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail-sources": {
+      "get": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "list_mail_sources",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MailSourceView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "create_mail_source",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewMailSource"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailSourceView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail-sources/imap/test": {
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "test_imap",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImapTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImapTestResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail-sources/{id}": {
+      "delete": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "delete_mail_source",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "source id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "patch_mail_source",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "source id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailSourcePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailSourceView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail-sources/{id}/sync": {
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "sync_mail_source",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "source id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "a sync job is queued"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
           }
         ]
       }
@@ -2071,6 +3673,129 @@
         ]
       }
     },
+    "/api/v1/members/{id}/enrollments": {
+      "get": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "list_enrollments",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "member id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/EnrollmentView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "create_enrollment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "member id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EnrollmentInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
     "/api/v1/members/{id}/notify-prefs": {
       "get": {
         "tags": [
@@ -2373,6 +4098,420 @@
         ]
       }
     },
+    "/api/v1/messages": {
+      "get": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "list_messages",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "description": "A `category.key`.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "member",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "source",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/ProcessingState"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Free text over sender and subject.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "include_ignored",
+            "in": "query",
+            "description": "Include categories whose behaviour is `ignore`.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "description": "RFC 3339 cursor: the `next_before` of the previous page.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "At most 100, default 50.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessagePage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/messages/{id}": {
+      "get": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "get_message",
+        "parameters": [
+          {
+            "name": "member",
+            "in": "query",
+            "description": "Fills the relevance of each section for this member.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "message id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/messages/{id}/actions": {
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "message_action",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "message id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MailActionInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailActionView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "the source is read-only or needs reconnecting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/messages/{id}/eval-sample": {
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "set_eval_sample",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "message id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvalSampleInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/messages/{id}/labels": {
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "label_message",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "message id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabelInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MessageDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/messages/{id}/task": {
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "message_task",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "message id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MakeTaskInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "a task is queued"
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
     "/api/v1/oauth/accounts": {
       "get": {
         "tags": [
@@ -2494,6 +4633,15 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "purpose",
+            "in": "query",
+            "description": "What the connection is for; adds that scope (`include_granted_scopes`). Default `calendar`.",
+            "required": false,
+            "schema": {
+              "$ref": "#/components/schemas/PurposeParam"
+            }
           }
         ],
         "responses": {
@@ -2549,6 +4697,483 @@
             "description": "this document"
           }
         }
+      }
+    },
+    "/api/v1/org-contacts/{id}": {
+      "delete": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "delete_org_contact",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "contact id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "patch_org_contact",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "contact id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgContactPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgContactView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/orgs": {
+      "get": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "list_orgs",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OrgView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "create_org",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/orgs/{id}": {
+      "delete": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "delete_org",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "org id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "patch_org",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "org id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/orgs/{id}/contacts": {
+      "post": {
+        "tags": [
+          "mail"
+        ],
+        "operationId": "add_org_contact",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "org id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrgContactInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrgContactView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
       }
     },
     "/api/v1/routine-runs/{id}/steps/{step_id}": {
@@ -3117,7 +5742,7 @@
         "operationId": "stream",
         "responses": {
           "200": {
-            "description": "`heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `resync`), bridged from `fa_change`; honours Last-Event-ID",
+            "description": "`heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `mail.updated` `{source?}`, `inbox.updated` `{}`, `bills.updated` `{}`, `resync`), bridged from `fa_change`; honours Last-Event-ID",
             "content": {
               "text/event-stream": {}
             }
@@ -5081,6 +7706,23 @@
           "all"
         ]
       },
+      "ApprovalMode": {
+        "type": "string",
+        "enum": [
+          "immediate",
+          "batched",
+          "digest",
+          "off"
+        ]
+      },
+      "AutoAction": {
+        "type": "string",
+        "enum": [
+          "label",
+          "archive",
+          "mark_read"
+        ]
+      },
       "BackupStatus": {
         "type": "object",
         "required": [
@@ -5096,6 +7738,183 @@
           },
           "ok": {
             "type": "boolean"
+          }
+        }
+      },
+      "BillId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "BillPatch": {
+        "type": "object",
+        "properties": {
+          "account_hint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amount_minor": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "due_on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`YYYY-MM-DD`; absent = keep, `null` = clear."
+          },
+          "payee": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "status": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BillPatchStatus"
+              }
+            ]
+          }
+        }
+      },
+      "BillPatchStatus": {
+        "type": "string",
+        "description": "The statuses a user may set on a bill.",
+        "enum": [
+          "open",
+          "dismissed"
+        ]
+      },
+      "BillStatus": {
+        "type": "string",
+        "enum": [
+          "proposed",
+          "open",
+          "paid",
+          "dismissed"
+        ]
+      },
+      "BillTemplate": {
+        "type": "object",
+        "description": "Per-organisation bill regexes (capture group 1 is the value).",
+        "properties": {
+          "account": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amount": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "due": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "BillView": {
+        "type": "object",
+        "required": [
+          "id",
+          "payee",
+          "amount_minor",
+          "currency",
+          "status",
+          "confidence",
+          "task_done",
+          "version"
+        ],
+        "properties": {
+          "account_hint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "amount_minor": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Minor currency units (cents)."
+          },
+          "confidence": {
+            "type": "number",
+            "format": "float"
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217."
+          },
+          "due_on": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "`YYYY-MM-DD`."
+          },
+          "external_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "$ref": "#/components/schemas/BillId"
+          },
+          "message": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MessageId"
+              }
+            ]
+          },
+          "payee": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BillStatus"
+          },
+          "task": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TaskId"
+              }
+            ]
+          },
+          "task_done": {
+            "type": "boolean",
+            "description": "The pay task is done."
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -5143,6 +7962,25 @@
           }
         }
       },
+      "CalendarPatchExt": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CalendarPatch"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "is_default_target": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              }
+            }
+          }
+        ],
+        "description": "`CalendarPatch` plus the default-target toggle."
+      },
       "CalendarSourceId": {
         "type": "string",
         "format": "uuid"
@@ -5188,6 +8026,219 @@
           }
         }
       },
+      "CalendarViewExt": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CalendarView"
+          },
+          {
+            "type": "object",
+            "required": [
+              "is_default_target"
+            ],
+            "properties": {
+              "is_default_target": {
+                "type": "boolean"
+              }
+            }
+          }
+        ],
+        "description": "A calendar plus whether it is a default target for extracted events."
+      },
+      "CategoryBehaviour": {
+        "type": "string",
+        "enum": [
+          "ignore",
+          "keep",
+          "extract"
+        ]
+      },
+      "CategoryId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "CategoryInput": {
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "behaviour"
+        ],
+        "properties": {
+          "auto_actions": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AutoAction"
+            },
+            "description": "Default `[label]`."
+          },
+          "behaviour": {
+            "$ref": "#/components/schemas/CategoryBehaviour"
+          },
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email_tasks": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/EmailTasksMode",
+                "description": "Default `suggest`."
+              }
+            ]
+          },
+          "key": {
+            "type": "string",
+            "description": "`^[a-z][a-z0-9_]{0,31}$`, unique per household."
+          },
+          "label": {
+            "type": "string"
+          },
+          "notify_time_sensitive": {
+            "type": "boolean"
+          },
+          "ord": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "CategoryPatch": {
+        "type": "object",
+        "description": "The key is immutable. Archive with `archived: true`.",
+        "properties": {
+          "archived": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "auto_actions": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AutoAction"
+            }
+          },
+          "behaviour": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CategoryBehaviour"
+              }
+            ]
+          },
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Absent = keep, `null` = clear."
+          },
+          "email_tasks": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/EmailTasksMode"
+              }
+            ]
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "notify_time_sensitive": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "ord": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "CategoryView": {
+        "type": "object",
+        "required": [
+          "id",
+          "key",
+          "label",
+          "behaviour",
+          "notify_time_sensitive",
+          "auto_actions",
+          "email_tasks",
+          "ord",
+          "archived",
+          "version"
+        ],
+        "properties": {
+          "archived": {
+            "type": "boolean"
+          },
+          "auto_actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AutoAction"
+            }
+          },
+          "behaviour": {
+            "$ref": "#/components/schemas/CategoryBehaviour"
+          },
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "email_tasks": {
+            "$ref": "#/components/schemas/EmailTasksMode"
+          },
+          "id": {
+            "$ref": "#/components/schemas/CategoryId"
+          },
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "notify_time_sensitive": {
+            "type": "boolean"
+          },
+          "ord": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "ChildCanAdd": {
         "type": "string",
         "enum": [
@@ -5209,6 +8260,122 @@
             ]
           }
         }
+      },
+      "ContactApproval": {
+        "type": "object",
+        "properties": {
+          "member": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MemberId"
+              }
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactRole"
+              }
+            ]
+          }
+        }
+      },
+      "ContactMode": {
+        "type": "string",
+        "enum": [
+          "suggest",
+          "auto",
+          "manual"
+        ]
+      },
+      "ContactRole": {
+        "type": "string",
+        "enum": [
+          "teacher",
+          "coach",
+          "admin",
+          "office",
+          "other"
+        ]
+      },
+      "ContactSuggestionId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "ContactSuggestionView": {
+        "type": "object",
+        "required": [
+          "id",
+          "org",
+          "org_name",
+          "email",
+          "created_at"
+        ],
+        "properties": {
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "$ref": "#/components/schemas/ContactSuggestionId"
+          },
+          "member": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MemberId"
+              }
+            ]
+          },
+          "message": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MessageId"
+              }
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "org": {
+            "$ref": "#/components/schemas/OrgId"
+          },
+          "org_name": {
+            "type": "string"
+          }
+        }
+      },
+      "ContentPolicy": {
+        "type": "string",
+        "enum": [
+          "purge_after_processing",
+          "keep_for_learning",
+          "keep_all"
+        ]
       },
       "CreateAccountReq": {
         "type": "object",
@@ -5232,6 +8399,13 @@
           "role"
         ],
         "properties": {
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Nicknames matched in mail (M3)."
+          },
           "avatar": {
             "type": [
               "string",
@@ -5254,6 +8428,13 @@
           "display_name": {
             "type": "string"
           },
+          "gender": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Optional; used only for mail relevance (D-055)."
+          },
           "grade": {
             "type": [
               "string",
@@ -5271,6 +8452,13 @@
             "items": {
               "type": "string"
             }
+          },
+          "relevance_tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Free-form relevance tags (D-055)."
           },
           "responsibilities": {
             "type": "array",
@@ -5391,6 +8579,10 @@
           "household": {
             "$ref": "#/components/schemas/DashboardHousehold"
           },
+          "inbox": {
+            "$ref": "#/components/schemas/InboxCounts",
+            "description": "Counts of items waiting for approval; the panel fetches `GET /inbox` for the items."
+          },
           "members": {
             "type": "array",
             "items": {
@@ -5440,6 +8632,65 @@
           "school_days"
         ]
       },
+      "DecisionPointKey": {
+        "type": "string",
+        "description": "The five decision points. `as_str` and the wire format are the dotted key.",
+        "enum": [
+          "email.category",
+          "email.time_sensitive",
+          "email.member_link",
+          "email.is_bill",
+          "event.calendar_route"
+        ]
+      },
+      "DecisionView": {
+        "type": "object",
+        "required": [
+          "decision_point",
+          "value",
+          "confidence",
+          "stage",
+          "is_final",
+          "at"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "confidence": {
+            "type": "number",
+            "format": "float"
+          },
+          "decided_by": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MemberId"
+              }
+            ]
+          },
+          "decision_point": {
+            "$ref": "#/components/schemas/DecisionPointKey"
+          },
+          "is_final": {
+            "type": "boolean"
+          },
+          "source": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "stage": {
+            "$ref": "#/components/schemas/StageKind"
+          },
+          "value": {}
+        }
+      },
       "DefinitionError": {
         "type": "object",
         "required": [
@@ -5459,6 +8710,50 @@
               "null"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "DerivedEvent": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "start_at",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/EventId"
+          },
+          "start_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "status": {
+            "$ref": "#/components/schemas/EventStatus"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "DerivedTask": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/TaskId"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TaskStatus"
+          },
+          "title": {
+            "type": "string"
           }
         }
       },
@@ -5590,9 +8885,376 @@
           }
         }
       },
+      "EmailTasksMode": {
+        "type": "string",
+        "enum": [
+          "suggest",
+          "create",
+          "off"
+        ]
+      },
+      "EnrollmentId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "EnrollmentInput": {
+        "type": "object",
+        "required": [
+          "org"
+        ],
+        "properties": {
+          "class_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgContactId"
+            }
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "`YYYY-MM-DD`."
+          },
+          "grade": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "org": {
+            "$ref": "#/components/schemas/OrgId"
+          },
+          "until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "`YYYY-MM-DD`."
+          }
+        }
+      },
+      "EnrollmentPatch": {
+        "type": "object",
+        "properties": {
+          "class_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contacts": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/OrgContactId"
+            }
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`YYYY-MM-DD`; absent = keep, `null` = clear."
+          },
+          "grade": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Absent = keep, `null` = clear."
+          },
+          "org": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OrgId"
+              }
+            ]
+          },
+          "until": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "EnrollmentView": {
+        "type": "object",
+        "required": [
+          "id",
+          "member",
+          "org",
+          "contacts",
+          "version"
+        ],
+        "properties": {
+          "class_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "contacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgContactId"
+            }
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "`YYYY-MM-DD`."
+          },
+          "grade": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "$ref": "#/components/schemas/EnrollmentId"
+          },
+          "member": {
+            "$ref": "#/components/schemas/MemberId"
+          },
+          "org": {
+            "$ref": "#/components/schemas/OrgId"
+          },
+          "until": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date",
+            "description": "`YYYY-MM-DD`."
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "EvalProgress": {
+        "type": "object",
+        "required": [
+          "in_sample",
+          "target",
+          "labelled"
+        ],
+        "properties": {
+          "in_sample": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "labelled": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "target": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "EvalSampleInput": {
+        "type": "object",
+        "required": [
+          "in_sample"
+        ],
+        "properties": {
+          "in_sample": {
+            "type": "boolean"
+          }
+        }
+      },
+      "EventApproval": {
+        "type": "object",
+        "properties": {
+          "all_day": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "calendar": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarId"
+              }
+            ]
+          },
+          "end_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "members": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "start_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "EventId": {
         "type": "string",
         "format": "uuid"
+      },
+      "EventProposalView": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "start_at",
+          "end_at",
+          "all_day",
+          "confidence",
+          "pending_cancel",
+          "members",
+          "version"
+        ],
+        "properties": {
+          "all_day": {
+            "type": "boolean"
+          },
+          "confidence": {
+            "type": "number",
+            "format": "float"
+          },
+          "end_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "external_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "from_label": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Sender display text."
+          },
+          "id": {
+            "$ref": "#/components/schemas/EventId"
+          },
+          "location": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "message": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MessageId"
+              }
+            ]
+          },
+          "pending_cancel": {
+            "type": "boolean",
+            "description": "The proposal is to delete an event we wrote (a cancellation arrived)."
+          },
+          "route_confidence": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "start_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "suggested_calendar": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarId"
+              }
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "write_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "EventStatus": {
+        "type": "string",
+        "enum": [
+          "proposed",
+          "approved",
+          "written",
+          "rejected",
+          "extracted",
+          "expired"
+        ]
       },
       "EventView": {
         "type": "object",
@@ -5682,6 +9344,60 @@
           }
         }
       },
+      "EventsSettings": {
+        "type": "object",
+        "required": [
+          "auto_write",
+          "extract_threshold",
+          "route_threshold"
+        ],
+        "properties": {
+          "auto_write": {
+            "type": "boolean",
+            "description": "Write approved-by-rule events without asking (default off, D-057)."
+          },
+          "extract_threshold": {
+            "type": "number",
+            "format": "float",
+            "description": "Extraction confidence needed for auto write, 0..1."
+          },
+          "route_threshold": {
+            "type": "number",
+            "format": "float",
+            "description": "Routing confidence needed for auto write, 0..1."
+          }
+        }
+      },
+      "Gender": {
+        "type": "string",
+        "enum": [
+          "female",
+          "male",
+          "other"
+        ]
+      },
+      "GenderTerms": {
+        "type": "object",
+        "description": "Words in mail that point at a gender-specific group (\"girls' soccer\").",
+        "required": [
+          "female",
+          "male"
+        ],
+        "properties": {
+          "female": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "male": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "HouseholdDto": {
         "type": "object",
         "required": [
@@ -5727,6 +9443,13 @@
       "HouseholdPatch": {
         "type": "object",
         "properties": {
+          "bill_lead_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
           "calendar_future_days": {
             "type": [
               "integer",
@@ -5741,10 +9464,46 @@
             ],
             "format": "int32"
           },
+          "currency": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "dashboard_completion_override": {
             "type": [
               "boolean",
               "null"
+            ]
+          },
+          "events": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/EventsSettings"
+              }
+            ]
+          },
+          "gender_terms": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GenderTerms"
+              }
+            ]
+          },
+          "inbox": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/InboxSettings"
+              }
             ]
           },
           "location": {
@@ -5800,6 +9559,16 @@
             ],
             "example": "07:00"
           },
+          "retention_mail": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MailRetention"
+              }
+            ]
+          },
           "tz": {
             "type": [
               "string",
@@ -5844,6 +9613,11 @@
           "version"
         ],
         "properties": {
+          "bill_lead_days": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Days before a bill's due date that its pay task is due (0..=60)."
+          },
           "calendar_future_days": {
             "type": "integer",
             "format": "int32"
@@ -5852,13 +9626,26 @@
             "type": "integer",
             "format": "int32"
           },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217, used for bills."
+          },
           "dashboard_completion_override": {
             "type": "boolean",
             "description": "Adults may let dashboards (devices) tick off tasks."
           },
+          "events": {
+            "$ref": "#/components/schemas/EventsSettings"
+          },
+          "gender_terms": {
+            "$ref": "#/components/schemas/GenderTerms"
+          },
           "google_oauth_enabled": {
             "type": "boolean",
             "description": "Read-only: true when the Google client is configured."
+          },
+          "inbox": {
+            "$ref": "#/components/schemas/InboxSettings"
           },
           "location": {
             "oneOf": [
@@ -5892,6 +9679,9 @@
             "type": "string",
             "example": "07:00"
           },
+          "retention_mail": {
+            "$ref": "#/components/schemas/MailRetention"
+          },
           "tz": {
             "type": "string"
           },
@@ -5905,6 +9695,278 @@
           "weather_retention_days": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "ImapSettings": {
+        "type": "object",
+        "description": "IMAP connection settings. Debug output omits the password.",
+        "required": [
+          "host",
+          "port",
+          "username"
+        ],
+        "properties": {
+          "archive_folder": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "folders": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "host": {
+            "type": "string"
+          },
+          "password": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Write-only; stored as a secret. Absent on a patch = keep."
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "ImapTestRequest": {
+        "type": "object",
+        "description": "Debug output omits the password.",
+        "required": [
+          "host",
+          "port",
+          "username",
+          "password"
+        ],
+        "properties": {
+          "host": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "username": {
+            "type": "string"
+          }
+        }
+      },
+      "ImapTestResult": {
+        "type": "object",
+        "required": [
+          "ok",
+          "gmail_ext",
+          "folders"
+        ],
+        "properties": {
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "folders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "gmail_ext": {
+            "type": "boolean"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        }
+      },
+      "InboxCounts": {
+        "type": "object",
+        "required": [
+          "event",
+          "bill",
+          "task",
+          "contact",
+          "total"
+        ],
+        "properties": {
+          "bill": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "contact": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "event": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "task": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "InboxItem": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "event",
+              "kind"
+            ],
+            "properties": {
+              "event": {
+                "$ref": "#/components/schemas/EventProposalView"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "event"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "bill",
+              "kind"
+            ],
+            "properties": {
+              "bill": {
+                "$ref": "#/components/schemas/BillView"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "bill"
+                ]
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "task",
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "task"
+                ]
+              },
+              "task": {
+                "$ref": "#/components/schemas/TaskView"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "contact",
+              "kind"
+            ],
+            "properties": {
+              "contact": {
+                "$ref": "#/components/schemas/ContactSuggestionView"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "contact"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "InboxSettings": {
+        "type": "object",
+        "required": [
+          "task_expiry_days",
+          "contact_expiry_days"
+        ],
+        "properties": {
+          "contact_expiry_days": {
+            "type": "integer",
+            "format": "int32",
+            "description": "1..=365."
+          },
+          "task_expiry_days": {
+            "type": "integer",
+            "format": "int32",
+            "description": "1..=365."
+          }
+        }
+      },
+      "InboxView": {
+        "type": "object",
+        "description": "Devices without elevation get `items: []` and the counts only.",
+        "required": [
+          "items",
+          "counts"
+        ],
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/InboxCounts"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InboxItem"
+            }
+          }
+        }
+      },
+      "LabelInput": {
+        "type": "object",
+        "required": [
+          "decision_point",
+          "value"
+        ],
+        "properties": {
+          "decision_point": {
+            "$ref": "#/components/schemas/DecisionPointKey"
+          },
+          "value": {
+            "description": "`email.member_link`: an array of member ids."
+          }
+        }
+      },
+      "LabelQueueItem": {
+        "type": "object",
+        "required": [
+          "message",
+          "progress"
+        ],
+        "properties": {
+          "message": {
+            "$ref": "#/components/schemas/MessageDetail"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/EvalProgress"
           }
         }
       },
@@ -5972,6 +10034,532 @@
           }
         }
       },
+      "MailActionId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "MailActionInput": {
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/MailActionKind"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Required for `label`."
+          }
+        }
+      },
+      "MailActionKind": {
+        "type": "string",
+        "enum": [
+          "archive",
+          "mark_read",
+          "label"
+        ]
+      },
+      "MailActionView": {
+        "type": "object",
+        "required": [
+          "id",
+          "action",
+          "automatic",
+          "done_at",
+          "undo_until"
+        ],
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/MailActionKind"
+          },
+          "automatic": {
+            "type": "boolean"
+          },
+          "done_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "done_by": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MemberId"
+              }
+            ]
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "$ref": "#/components/schemas/MailActionId"
+          },
+          "label": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "undo_until": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339; undo is refused after this instant (30 days, D-058)."
+          },
+          "undone_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "MailProvider": {
+        "type": "string",
+        "enum": [
+          "gmail",
+          "imap"
+        ]
+      },
+      "MailRetention": {
+        "type": "object",
+        "required": [
+          "content_policy",
+          "examples_per_category",
+          "max_pending_days"
+        ],
+        "properties": {
+          "content_policy": {
+            "$ref": "#/components/schemas/ContentPolicy"
+          },
+          "examples_per_category": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "max_pending_days": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "MailRuleId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "MailRuleInput": {
+        "type": "object",
+        "required": [
+          "decision_point",
+          "name",
+          "conditions",
+          "value"
+        ],
+        "properties": {
+          "conditions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleCondition"
+            }
+          },
+          "confidence": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float",
+            "description": "0..=1, default 0.9."
+          },
+          "decision_point": {
+            "$ref": "#/components/schemas/DecisionPointKey"
+          },
+          "enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Default true."
+          },
+          "name": {
+            "type": "string"
+          },
+          "priority": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Lower runs first; default 100."
+          },
+          "value": {}
+        }
+      },
+      "MailRulePatch": {
+        "type": "object",
+        "properties": {
+          "conditions": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/RuleCondition"
+            }
+          },
+          "confidence": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "enabled": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priority": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "value": {}
+        }
+      },
+      "MailRuleView": {
+        "type": "object",
+        "required": [
+          "id",
+          "decision_point",
+          "name",
+          "priority",
+          "conditions",
+          "value",
+          "confidence",
+          "enabled",
+          "version"
+        ],
+        "properties": {
+          "conditions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleCondition"
+            }
+          },
+          "confidence": {
+            "type": "number",
+            "format": "float"
+          },
+          "decision_point": {
+            "$ref": "#/components/schemas/DecisionPointKey"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "id": {
+            "$ref": "#/components/schemas/MailRuleId"
+          },
+          "name": {
+            "type": "string"
+          },
+          "priority": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "value": {},
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "MailSourceId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "MailSourcePatch": {
+        "type": "object",
+        "properties": {
+          "backfill_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "imap": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ImapSettings"
+              }
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "owners": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "poll_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "query": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Absent = keep, `null` = clear."
+          },
+          "read_only": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "state": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MailSourceState",
+                "description": "Only `paused` and `ok` are accepted: pause or resume."
+              }
+            ]
+          },
+          "visibility": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MailVisibility"
+              }
+            ]
+          }
+        }
+      },
+      "MailSourceState": {
+        "type": "string",
+        "enum": [
+          "ok",
+          "needs_reauth",
+          "error",
+          "paused"
+        ]
+      },
+      "MailSourceView": {
+        "type": "object",
+        "required": [
+          "id",
+          "provider",
+          "name",
+          "address",
+          "owners",
+          "visibility",
+          "read_only",
+          "backfill_days",
+          "poll_minutes",
+          "folders",
+          "gmail_ext",
+          "state",
+          "message_count",
+          "can_manage",
+          "version"
+        ],
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "archive_folder": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "backfill_days": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "can_manage": {
+            "type": "boolean",
+            "description": "The viewer may edit, pause or remove the source."
+          },
+          "folders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "gmail_ext": {
+            "type": "boolean"
+          },
+          "id": {
+            "$ref": "#/components/schemas/MailSourceId"
+          },
+          "imap_host": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "imap_port": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32"
+          },
+          "imap_username": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "last_synced_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "message_count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "name": {
+            "type": "string"
+          },
+          "oauth_account": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OAuthAccountId"
+              }
+            ]
+          },
+          "owners": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "poll_minutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/MailProvider"
+          },
+          "query": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "read_only": {
+            "type": "boolean"
+          },
+          "state": {
+            "$ref": "#/components/schemas/MailSourceState"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "visibility": {
+            "$ref": "#/components/schemas/MailVisibility"
+          }
+        }
+      },
+      "MailVisibility": {
+        "type": "string",
+        "enum": [
+          "owners",
+          "household"
+        ]
+      },
+      "MakeTaskInput": {
+        "type": "object",
+        "properties": {
+          "assignees": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "list": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TaskListId"
+              }
+            ]
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "MeResponse": {
         "type": "object",
         "required": [
@@ -6036,6 +10624,12 @@
           "has_account"
         ],
         "properties": {
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "avatar": {
             "type": [
               "string",
@@ -6064,6 +10658,16 @@
           "display_name": {
             "type": "string"
           },
+          "gender": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Gender"
+              }
+            ]
+          },
           "grade": {
             "type": [
               "string",
@@ -6086,6 +10690,12 @@
             "$ref": "#/components/schemas/MemberId"
           },
           "interests": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "relevance_tags": {
             "type": "array",
             "items": {
               "type": "string"
@@ -6175,6 +10785,187 @@
         ],
         "description": "Either member view, as returned by the members API (untagged)."
       },
+      "MessageDetail": {
+        "type": "object",
+        "required": [
+          "summary",
+          "content_purged",
+          "sections",
+          "decisions",
+          "events",
+          "tasks",
+          "bills",
+          "actions",
+          "can_act"
+        ],
+        "properties": {
+          "actions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MailActionView"
+            }
+          },
+          "bills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillView"
+            }
+          },
+          "body_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "can_act": {
+            "type": "boolean",
+            "description": "The viewer may apply mail actions (writable source, `GmailAction`)."
+          },
+          "content_purged": {
+            "type": "boolean",
+            "description": "The body was purged by the retention policy."
+          },
+          "decisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DecisionView"
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DerivedEvent"
+            }
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SectionView"
+            }
+          },
+          "summary": {
+            "$ref": "#/components/schemas/MessageSummary"
+          },
+          "tasks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DerivedTask"
+            }
+          }
+        }
+      },
+      "MessageId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "MessagePage": {
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MessageSummary"
+            }
+          },
+          "next_before": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "RFC 3339; pass as `before` for the next page."
+          }
+        }
+      },
+      "MessageSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "source",
+          "from_addr",
+          "subject",
+          "received_at",
+          "members",
+          "processing_state",
+          "has_attachments",
+          "in_eval_sample"
+        ],
+        "properties": {
+          "category": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "A `category.key`."
+          },
+          "external_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Computed link back to the original message (Gmail only)."
+          },
+          "from_addr": {
+            "type": "string"
+          },
+          "from_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "has_attachments": {
+            "type": "boolean"
+          },
+          "id": {
+            "$ref": "#/components/schemas/MessageId"
+          },
+          "in_eval_sample": {
+            "type": "boolean"
+          },
+          "is_bill": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "processing_state": {
+            "$ref": "#/components/schemas/ProcessingState"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "snippet": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source": {
+            "$ref": "#/components/schemas/MailSourceId"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "time_sensitive": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          }
+        }
+      },
       "NewAway": {
         "type": "object",
         "required": [
@@ -6195,6 +10986,94 @@
           "until": {
             "type": "string",
             "format": "date"
+          }
+        }
+      },
+      "NewMailSource": {
+        "type": "object",
+        "required": [
+          "provider",
+          "name"
+        ],
+        "properties": {
+          "address": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Defaults to the OAuth account's email (Gmail) or the IMAP username."
+          },
+          "backfill_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "1..=365, default 30."
+          },
+          "imap": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ImapSettings"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "oauth_account": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OAuthAccountId"
+              }
+            ]
+          },
+          "owners": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "poll_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "1..=1440, default 5."
+          },
+          "provider": {
+            "$ref": "#/components/schemas/MailProvider"
+          },
+          "query": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "read_only": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Default true."
+          },
+          "visibility": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MailVisibility",
+                "description": "Default `owners`."
+              }
+            ]
           }
         }
       },
@@ -6436,6 +11315,16 @@
       "NotifyPrefPatch": {
         "type": "object",
         "properties": {
+          "approval_mode": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ApprovalMode"
+              }
+            ]
+          },
           "copy_to_member": {
             "oneOf": [
               {
@@ -6495,6 +11384,9 @@
           "version"
         ],
         "properties": {
+          "approval_mode": {
+            "$ref": "#/components/schemas/ApprovalMode"
+          },
           "copy_to_member": {
             "oneOf": [
               {
@@ -6567,7 +11459,9 @@
           "digest",
           "due_soon",
           "routine_nudge",
-          "source_reauth"
+          "source_reauth",
+          "approval_needed",
+          "mail_time_sensitive"
         ]
       },
       "NowWeights": {
@@ -6645,6 +11539,337 @@
           "pile_up"
         ]
       },
+      "OrgContactId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "OrgContactInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "email"
+        ],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "role": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactRole",
+                "description": "Default `other`."
+              }
+            ]
+          }
+        }
+      },
+      "OrgContactPatch": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "role": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactRole"
+              }
+            ]
+          }
+        }
+      },
+      "OrgContactView": {
+        "type": "object",
+        "required": [
+          "id",
+          "org",
+          "name",
+          "email",
+          "role",
+          "version"
+        ],
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "id": {
+            "$ref": "#/components/schemas/OrgContactId"
+          },
+          "name": {
+            "type": "string"
+          },
+          "org": {
+            "$ref": "#/components/schemas/OrgId"
+          },
+          "role": {
+            "$ref": "#/components/schemas/ContactRole"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "OrgId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "OrgInput": {
+        "type": "object",
+        "required": [
+          "kind",
+          "name"
+        ],
+        "properties": {
+          "bill_template": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BillTemplate"
+              }
+            ]
+          },
+          "contact_mode": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactMode",
+                "description": "Default `suggest`."
+              }
+            ]
+          },
+          "default_calendar": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarId"
+              }
+            ]
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ics_calendar": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarId"
+              }
+            ]
+          },
+          "kind": {
+            "$ref": "#/components/schemas/OrgKind"
+          },
+          "name": {
+            "type": "string"
+          },
+          "senders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "OrgKind": {
+        "type": "string",
+        "enum": [
+          "school",
+          "daycare",
+          "club",
+          "biller",
+          "other"
+        ]
+      },
+      "OrgPatch": {
+        "type": "object",
+        "properties": {
+          "bill_template": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BillTemplate",
+                "description": "Absent = keep, `null` = clear."
+              }
+            ]
+          },
+          "contact_mode": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactMode"
+              }
+            ]
+          },
+          "default_calendar": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarId"
+              }
+            ]
+          },
+          "domains": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "ics_calendar": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarId",
+                "description": "Absent = keep, `null` = clear."
+              }
+            ]
+          },
+          "kind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OrgKind"
+              }
+            ]
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "senders": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "OrgView": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "domains",
+          "senders",
+          "contact_mode",
+          "contacts",
+          "version"
+        ],
+        "properties": {
+          "bill_template": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BillTemplate"
+              }
+            ]
+          },
+          "contact_mode": {
+            "$ref": "#/components/schemas/ContactMode"
+          },
+          "contacts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgContactView"
+            }
+          },
+          "default_calendar": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarId"
+              }
+            ]
+          },
+          "domains": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ics_calendar": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/CalendarId"
+              }
+            ]
+          },
+          "id": {
+            "$ref": "#/components/schemas/OrgId"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/OrgKind"
+          },
+          "name": {
+            "type": "string"
+          },
+          "senders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "Orientation": {
         "type": "string",
         "enum": [
@@ -6717,6 +11942,15 @@
       "PatchMemberReq": {
         "type": "object",
         "properties": {
+          "aliases": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
           "avatar": {
             "type": [
               "string",
@@ -6742,6 +11976,13 @@
               "null"
             ]
           },
+          "gender": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`null` clears it."
+          },
           "grade": {
             "type": [
               "string",
@@ -6758,6 +11999,15 @@
             }
           },
           "interests": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "relevance_tags": {
             "type": [
               "array",
               "null"
@@ -6852,6 +12102,23 @@
           }
         }
       },
+      "ProcessingState": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "processed",
+          "expired"
+        ]
+      },
+      "PurposeParam": {
+        "type": "string",
+        "enum": [
+          "calendar",
+          "gmail_read",
+          "gmail_modify",
+          "calendar_write"
+        ]
+      },
       "QueueStatus": {
         "type": "object",
         "required": [
@@ -6873,6 +12140,14 @@
             "format": "int64"
           }
         }
+      },
+      "Relevance": {
+        "type": "string",
+        "enum": [
+          "relevant",
+          "general",
+          "other"
+        ]
       },
       "RemoteCalendar": {
         "type": "object",
@@ -7263,6 +12538,34 @@
           "task"
         ]
       },
+      "RuleCondition": {
+        "type": "object",
+        "description": "`{field, op, header?, values}`; `header` names the header when `field = header`.",
+        "required": [
+          "field",
+          "op"
+        ],
+        "properties": {
+          "field": {
+            "$ref": "#/components/schemas/RuleField"
+          },
+          "header": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "op": {
+            "$ref": "#/components/schemas/RuleOp"
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "RuleError": {
         "type": "object",
         "required": [
@@ -7279,6 +12582,32 @@
             "minimum": 0
           }
         }
+      },
+      "RuleField": {
+        "type": "string",
+        "enum": [
+          "from_addr",
+          "from_domain",
+          "to",
+          "subject",
+          "body",
+          "gmail_label",
+          "header",
+          "has_attachment_type",
+          "org_kind",
+          "org",
+          "source"
+        ]
+      },
+      "RuleOp": {
+        "type": "string",
+        "enum": [
+          "is",
+          "in",
+          "contains_any",
+          "matches",
+          "exists"
+        ]
       },
       "RulePreview": {
         "type": "object",
@@ -7311,6 +12640,70 @@
           "suggested",
           "disabled"
         ]
+      },
+      "RuleTestMatch": {
+        "type": "object",
+        "required": [
+          "message",
+          "subject",
+          "from_addr",
+          "received_at"
+        ],
+        "properties": {
+          "from_addr": {
+            "type": "string"
+          },
+          "message": {
+            "$ref": "#/components/schemas/MessageId"
+          },
+          "received_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "subject": {
+            "type": "string"
+          }
+        }
+      },
+      "RuleTestRequest": {
+        "type": "object",
+        "required": [
+          "rule"
+        ],
+        "properties": {
+          "limit": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "Messages to scan, newest first.",
+            "minimum": 0
+          },
+          "rule": {
+            "$ref": "#/components/schemas/MailRuleInput"
+          }
+        }
+      },
+      "RuleTestResult": {
+        "type": "object",
+        "required": [
+          "matched",
+          "scanned"
+        ],
+        "properties": {
+          "matched": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RuleTestMatch"
+            }
+          },
+          "scanned": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
       },
       "RunStatus": {
         "type": "string",
@@ -7377,6 +12770,34 @@
           }
         }
       },
+      "SectionView": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "relevance": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Relevance",
+                "description": "Filled when the request carries `?member=`."
+              }
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "SessionView": {
         "type": "object",
         "required": [
@@ -7417,6 +12838,46 @@
           "warning",
           "severe"
         ]
+      },
+      "SignalPatch": {
+        "type": "object",
+        "required": [
+          "enabled"
+        ],
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SignalView": {
+        "type": "object",
+        "description": "A built-in signal (Ingest.md §6.2).",
+        "required": [
+          "key",
+          "decision_point",
+          "description",
+          "confidence",
+          "enabled"
+        ],
+        "properties": {
+          "confidence": {
+            "type": "number",
+            "format": "float"
+          },
+          "decision_point": {
+            "$ref": "#/components/schemas/DecisionPointKey"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          }
+        }
       },
       "SourceCreated": {
         "type": "object",
@@ -7496,6 +12957,26 @@
             "format": "int32"
           }
         }
+      },
+      "SourcePatchExt": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SourcePatch"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "writable": {
+                "type": [
+                  "boolean",
+                  "null"
+                ],
+                "description": "Google sources need the account to have granted calendar write access (else 422)."
+              }
+            }
+          }
+        ],
+        "description": "`SourcePatch` plus the write toggle."
       },
       "SourceState": {
         "type": "string",
@@ -7643,6 +13124,36 @@
           }
         }
       },
+      "SourceViewExt": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/SourceView"
+          },
+          {
+            "type": "object",
+            "required": [
+              "writable"
+            ],
+            "properties": {
+              "writable": {
+                "type": "boolean",
+                "description": "Extracted events may be written to this source's calendars."
+              }
+            }
+          }
+        ],
+        "description": "A calendar source plus whether the app may write events to it."
+      },
+      "StageKind": {
+        "type": "string",
+        "enum": [
+          "rules",
+          "human",
+          "knn",
+          "system_one",
+          "llm"
+        ]
+      },
       "StatusParam": {
         "type": "string",
         "enum": [
@@ -7715,6 +13226,34 @@
           "s2",
           "user"
         ]
+      },
+      "TaskApproval": {
+        "type": "object",
+        "properties": {
+          "assignees": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/MemberId"
+            }
+          },
+          "due_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "title": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
       },
       "TaskDefinitionId": {
         "type": "string",
@@ -8162,7 +13701,8 @@
         "enum": [
           "chores",
           "homework",
-          "general"
+          "general",
+          "email"
         ]
       },
       "TaskListPatch": {
@@ -8323,7 +13863,8 @@
         "enum": [
           "manual",
           "system",
-          "weather"
+          "weather",
+          "email"
         ]
       },
       "TaskPatch": {

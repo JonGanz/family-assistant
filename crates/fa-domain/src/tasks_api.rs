@@ -10,6 +10,7 @@ use utoipa::ToSchema;
 use crate::authz::ListCompletionPolicy;
 use crate::entities::*;
 use crate::ids::*;
+use crate::mail::ApprovalMode;
 use crate::timefmt;
 
 macro_rules! dto {
@@ -571,6 +572,8 @@ dto!(
         pub subscribe_url: Option<String>,
         /// False when the server has no `FA_NTFY_URL`.
         pub server_configured: bool,
+        #[serde(default)]
+        pub approval_mode: ApprovalMode,
         pub version: i32,
     }
 );
@@ -608,6 +611,9 @@ dto!(
         #[ts(type = "string | null", optional)]
         #[schema(value_type = Option<MemberId>)]
         pub copy_to_member: Option<Option<MemberId>>,
+        #[serde(default)]
+        #[ts(as = "Option<ApprovalMode>", optional = nullable)]
+        pub approval_mode: Option<ApprovalMode>,
     }
 );
 

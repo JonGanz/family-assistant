@@ -1,0 +1,236 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO household (id, name, tz, location_lat, location_lon, location_label,\n                                    meal_plan_horizon_weeks, dashboard_completion_override,\n                                    units, calendar_past_days, calendar_future_days,\n                                    weather_retention_days, private_events_as_busy,\n                                    now_list_size, now_weights, quiet_from, quiet_until,\n                                    currency, gender_terms, disabled_signals, events_auto_write,\n                                    events_extract_threshold, events_route_threshold, bill_lead_days,\n                                    inbox_task_expiry_days, inbox_contact_expiry_days,\n                                    mail_content_policy, mail_examples_per_category,\n                                    mail_max_pending_days)\n             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,\n                     $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)\n             RETURNING id, name, tz, location_lat, location_lon, location_label,\n                       meal_plan_horizon_weeks, dashboard_completion_override, units,\n                       calendar_past_days, calendar_future_days, weather_retention_days,\n                    private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, currency, gender_terms, disabled_signals, events_auto_write, events_extract_threshold,\n                       events_route_threshold, bill_lead_days, inbox_task_expiry_days, inbox_contact_expiry_days,\n                       mail_content_policy, mail_examples_per_category, mail_max_pending_days, version,\n                       created_at, updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 2,
+        "name": "tz",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "location_lat",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 4,
+        "name": "location_lon",
+        "type_info": "Float8"
+      },
+      {
+        "ordinal": 5,
+        "name": "location_label",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "meal_plan_horizon_weeks",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 7,
+        "name": "dashboard_completion_override",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 8,
+        "name": "units",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 9,
+        "name": "calendar_past_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 10,
+        "name": "calendar_future_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 11,
+        "name": "weather_retention_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 12,
+        "name": "private_events_as_busy",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 13,
+        "name": "now_list_size",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 14,
+        "name": "now_weights",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 15,
+        "name": "quiet_from",
+        "type_info": "Time"
+      },
+      {
+        "ordinal": 16,
+        "name": "quiet_until",
+        "type_info": "Time"
+      },
+      {
+        "ordinal": 17,
+        "name": "currency",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 18,
+        "name": "gender_terms",
+        "type_info": "Jsonb"
+      },
+      {
+        "ordinal": 19,
+        "name": "disabled_signals",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 20,
+        "name": "events_auto_write",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 21,
+        "name": "events_extract_threshold",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 22,
+        "name": "events_route_threshold",
+        "type_info": "Float4"
+      },
+      {
+        "ordinal": 23,
+        "name": "bill_lead_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 24,
+        "name": "inbox_task_expiry_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 25,
+        "name": "inbox_contact_expiry_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 26,
+        "name": "mail_content_policy",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 27,
+        "name": "mail_examples_per_category",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 28,
+        "name": "mail_max_pending_days",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 29,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 30,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 31,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Text",
+        "Float8",
+        "Float8",
+        "Text",
+        "Int4",
+        "Bool",
+        "Text",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Bool",
+        "Int4",
+        "Jsonb",
+        "Time",
+        "Time",
+        "Text",
+        "Jsonb",
+        "TextArray",
+        "Bool",
+        "Float4",
+        "Float4",
+        "Int4",
+        "Int4",
+        "Int4",
+        "Text",
+        "Int4",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "333e7be24d75c2ed47524db0a1507c8a234d1d2f049e334c97cd6bd7e4006d71"
+}

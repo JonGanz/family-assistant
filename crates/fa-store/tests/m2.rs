@@ -39,6 +39,13 @@ fn household(name: &str) -> Household {
         now_weights: fa_domain::tasks::NowWeights::default(),
         quiet_from: tm(21, 0),
         quiet_until: tm(7, 0),
+        currency: fa_domain::DEFAULT_CURRENCY.to_string(),
+        gender_terms: Default::default(),
+        disabled_signals: Vec::new(),
+        events: Default::default(),
+        inbox: Default::default(),
+        retention_mail: Default::default(),
+        bill_lead_days: fa_domain::DEFAULT_BILL_LEAD_DAYS,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     }
@@ -57,6 +64,9 @@ fn member(h: HouseholdId, name: &str, role: Role) -> Member {
         interests: vec![],
         hobbies: vec![],
         responsibilities: vec![],
+        aliases: Vec::new(),
+        gender: None,
+        relevance_tags: Vec::new(),
         pin_hash: None,
         archived_at: None,
         created_at: Utc::now(),
@@ -249,6 +259,9 @@ async fn migration_reverts_and_reapplies(pool: PgPool) {
         .unwrap()
     };
     assert_eq!(n(pool.clone()).await, 5);
+    let down3 = include_str!("../migrations/20261027000001_m3_ingest.down.sql");
+    let up3 = include_str!("../migrations/20261027000001_m3_ingest.up.sql");
+    pool.execute(down3).await.unwrap();
     pool.execute(down).await.unwrap();
     assert_eq!(n(pool.clone()).await, 0);
     let cols: i64 = sqlx::query_scalar(
@@ -259,6 +272,7 @@ async fn migration_reverts_and_reapplies(pool: PgPool) {
     .unwrap();
     assert_eq!(cols, 0);
     pool.execute(up).await.unwrap();
+    pool.execute(up3).await.unwrap();
     assert_eq!(n(pool).await, 5);
 }
 
@@ -426,6 +440,7 @@ async fn household_weather_and_pref_extensions(pool: PgPool) {
         quiet_from: Some(tm(20, 0)),
         quiet_until: None,
         copy_to_member_id: Some(s.adult),
+        approval_mode: Default::default(),
         archived_at: None,
     };
     let p = NotifyPrefRepo::upsert_for_member(&mut tx, &pref, None)

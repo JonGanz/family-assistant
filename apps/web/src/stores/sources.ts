@@ -1,20 +1,19 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { api, type NewSource, type OAuthAccountView } from '../api/client'
 import {
-  api,
-  type CalendarPatch,
-  type CalendarView,
-  type NewSource,
-  type OAuthAccountView,
-  type SourcePatch,
-  type SourceView,
-} from '../api/client'
+  mailApi,
+  type CalendarPatchExt,
+  type CalendarViewExt,
+  type SourcePatchExt,
+  type SourceViewExt,
+} from '../api/mailSettings'
 import { isConflict } from '../api/http'
 import type { LiveEventKind } from '../composables/useLiveStream'
 
 export const useSourcesStore = defineStore('sources', () => {
-  const sources = ref<SourceView[]>([])
-  const calendars = ref<CalendarView[]>([])
+  const sources = ref<SourceViewExt[]>([])
+  const calendars = ref<CalendarViewExt[]>([])
   const accounts = ref<OAuthAccountView[]>([])
   const error = ref<string | null>(null)
   const conflict = ref(false)
@@ -22,7 +21,11 @@ export const useSourcesStore = defineStore('sources', () => {
 
   async function load(): Promise<void> {
     try {
-      const [s, c, a] = await Promise.all([api.sources(), api.calendars(), api.oauthAccounts()])
+      const [s, c, a] = await Promise.all([
+        mailApi.calendarSources(),
+        mailApi.calendars(),
+        api.oauthAccounts(),
+      ])
       sources.value = s
       calendars.value = c
       accounts.value = a
@@ -55,14 +58,17 @@ export const useSourcesStore = defineStore('sources', () => {
     return r
   }
 
-  async function patchSource(s: SourceView, patch: SourcePatch): Promise<boolean> {
-    const r = await guarded(() => api.patchSource(s.id, s.version, patch))
+  async function patchSource(
+    s: Pick<SourceViewExt, 'id' | 'version'>,
+    patch: SourcePatchExt,
+  ): Promise<boolean> {
+    const r = await guarded(() => mailApi.patchCalendarSource(s.id, s.version, patch))
     if (r) await load()
     return !!r
   }
 
-  async function patchCalendar(c: CalendarView, patch: CalendarPatch): Promise<boolean> {
-    const r = await guarded(() => api.patchCalendar(c.id, c.version, patch))
+  async function patchCalendar(c: CalendarViewExt, patch: CalendarPatchExt): Promise<boolean> {
+    const r = await guarded(() => mailApi.patchCalendar(c.id, c.version, patch))
     if (r) await load()
     return !!r
   }

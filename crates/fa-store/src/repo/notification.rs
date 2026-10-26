@@ -104,6 +104,40 @@ impl NotificationRepo {
         Ok(rows > 0)
     }
 
+    /// One row per non-archived adult of the transaction's household (`app.household_id`, so use
+    /// `Store::tx_for`), dedupe key `{key_prefix}:{member}`. Returns how many rows were inserted.
+    #[allow(clippy::too_many_arguments)]
+    pub async fn insert_for_adults(
+        conn: &mut PgConnection,
+        trigger: NotifyTrigger,
+        subject_type: &str,
+        subject_id: Option<Uuid>,
+        title: &str,
+        body: &str,
+        click_path: Option<&str>,
+        key_prefix: &str,
+    ) -> Result<u64> {
+        Ok(sqlx::query(
+            "INSERT INTO notification (id, household_id, member_id, trigger, subject_type, subject_id,
+                                       title, body, click_path, priority, dedupe_key)
+             SELECT gen_random_uuid(), m.household_id, m.id, $1, $2, $3, $4, $5, $6, 3,
+                    $7 || ':' || m.id::text
+             FROM member m
+             WHERE m.role = 'adult' AND m.archived_at IS NULL AND m.household_id = app_household()
+             ON CONFLICT (household_id, dedupe_key) DO NOTHING",
+        )
+        .bind(enum_str(&trigger))
+        .bind(subject_type)
+        .bind(subject_id)
+        .bind(title)
+        .bind(body)
+        .bind(click_path)
+        .bind(key_prefix)
+        .execute(conn)
+        .await?
+        .rows_affected())
+    }
+
     pub async fn get(conn: &mut PgConnection, id: NotificationId) -> Result<Option<Notification>> {
         let row = sqlx::query_as!(
             Row,

@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
-import type { Member } from '../api/client'
+import type { Member, PatchMemberReq } from '../api/client'
+import type { Gender } from '../api/mailSettings'
+import ChipInput from './parts/settings-mail/ChipInput.vue'
 import Avatar from '../components/Avatar.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import { describeError } from './shared'
@@ -19,6 +21,9 @@ const form = reactive({
   interests: '',
   hobbies: '',
   responsibilities: '',
+  aliases: [] as string[],
+  gender: '' as Gender | '',
+  tags: [] as string[],
 })
 const preview = ref<string | null>(null)
 const pending = ref<File | null>(null)
@@ -45,6 +50,9 @@ function startEdit(m: Member) {
   form.interests = (m.interests ?? []).join(', ')
   form.hobbies = (m.hobbies ?? []).join(', ')
   form.responsibilities = (m.responsibilities ?? []).join(', ')
+  form.aliases = [...(m.aliases ?? [])]
+  form.gender = m.gender ?? ''
+  form.tags = [...(m.relevance_tags ?? [])]
 }
 
 function clearPending() {
@@ -79,7 +87,10 @@ async function save(m: Member) {
       interests: csv(form.interests),
       hobbies: csv(form.hobbies),
       responsibilities: csv(form.responsibilities),
-    })
+      // M3 fields; the generated patch type does not list them yet.
+      aliases: form.aliases,
+      ...(m.role === 'child' ? { gender: form.gender || null, relevance_tags: form.tags } : {}),
+    } as PatchMemberReq)
     if (ok) {
       if (pending.value) await members.uploadAvatar(m.id, pending.value)
       clearPending()
@@ -174,6 +185,22 @@ async function create() {
             Responsibilities (comma separated)
             <input v-model="form.responsibilities" name="responsibilities" />
           </label>
+          <ChipInput v-model="form.aliases" label="Also known as (names used in mail)" />
+          <template v-if="m.role === 'child'">
+            <label>
+              Gender (helps match girls' or boys' groups; optional)
+              <select v-model="form.gender" name="gender">
+                <option value="">Not set</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+            <ChipInput
+              v-model="form.tags"
+              label="Relevance tags (for example a sport or a class)"
+            />
+          </template>
           <ErrorBanner v-if="members.conflictId === m.id" conflict @reload="reload" />
           <ErrorBanner v-if="error" :message="error" />
           <button type="submit">Save</button>

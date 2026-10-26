@@ -5,6 +5,7 @@ use ts_rs::TS;
 
 use crate::entities::{ChildCanAdd, Role};
 use crate::ids::*;
+use crate::mail::MailVisibility;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Actor {
@@ -46,6 +47,12 @@ pub enum Action {
     AddGroceryItem,
     ApproveEvent,
     GmailAction,
+    // M3
+    ReadMail,
+    ManageMailSource,
+    ManageMailSetup,
+    ReadInbox,
+    ManageBills,
     // M1
     ManageCalendarSource,
     ReadCalendar,
@@ -62,7 +69,7 @@ pub enum Action {
 }
 
 impl Action {
-    pub const ALL: [Action; 28] = [
+    pub const ALL: [Action; 33] = [
         Action::ReadMemberPublic,
         Action::ReadMemberFull,
         Action::ManageMember,
@@ -80,6 +87,11 @@ impl Action {
         Action::AddGroceryItem,
         Action::ApproveEvent,
         Action::GmailAction,
+        Action::ReadMail,
+        Action::ManageMailSource,
+        Action::ManageMailSetup,
+        Action::ReadInbox,
+        Action::ManageBills,
         Action::ManageCalendarSource,
         Action::ReadCalendar,
         Action::ManageWeatherRules,
@@ -115,8 +127,10 @@ pub enum Resource {
     },
     GroceryItem,
     Event,
+    /// A mailbox: its owners and who else may read it.
     MailSource {
-        owner: MemberId,
+        owners: Vec<MemberId>,
+        visibility: MailVisibility,
     },
     /// A calendar source. `owner: None` is a household source; `owner_role` is the owner's role.
     Source {
@@ -168,6 +182,10 @@ impl std::str::FromStr for ListCompletionPolicy {
             }),
         }
     }
+}
+
+fn mail_readable(member: MemberId, owners: &[MemberId], visibility: MailVisibility) -> bool {
+    visibility == MailVisibility::Household || owners.contains(&member)
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -287,11 +305,33 @@ pub fn authorize(
             }
         }
         Action::ApproveEvent => allow(adult_member.is_some()),
+        // An adult who can read the source; whether it is writable is a service rule.
         Action::GmailAction => match resource {
-            // Another adult's personal sources are off limits.
-            Resource::MailSource { owner } => allow(adult_member == Some(*owner)),
+            Resource::MailSource { owners, visibility } => {
+                allow(adult_member.is_some_and(|m| mail_readable(m, owners, *visibility)))
+            }
             _ => allow(adult_member.is_some()),
         },
+        // Mail content: adults only (owners, or any adult on a household source). Never
+        // children or devices, elevated or not.
+        Action::ReadMail => match resource {
+            Resource::MailSource { owners, visibility } => {
+                allow(adult_user.is_some_and(|m| mail_readable(m, owners, *visibility)))
+            }
+            _ => allow(adult_user.is_some()),
+        },
+        // Owners edit their mailbox; any adult may add one (resource: household).
+        Action::ManageMailSource => match resource {
+            Resource::MailSource { owners, .. } => {
+                allow(adult_user.is_some_and(|m| owners.contains(&m)))
+            }
+            Resource::Household => allow(adult_user.is_some()),
+            _ => Err(Denied),
+        },
+        // Settings-like (D-019): not on the dashboard, not even elevated.
+        Action::ManageMailSetup | Action::ManageBills => allow(adult_user.is_some()),
+        // Devices see counts only (enforced in the service); elevated devices see the items.
+        Action::ReadInbox => allow(adult_user.is_some() || is_device),
         Action::ManageCalendarSource => match (adult_user, resource) {
             // Household sources, own and children's; never another adult's (D-006).
             (Some(me), Resource::Source { owner, owner_role }) => match owner {
@@ -881,10 +921,19 @@ mod tests {
                 (System, ALLOW),
             ],
         );
-        // Elevated actor is `f.adult`; a source owned by the other adult is off limits.
+        let only_system = [
+            (Adult, DENY),
+            (Child, DENY),
+            (Device, DENY),
+            (Elevated, DENY),
+            (System, ALLOW),
+        ];
+        let ms = |owners: Vec<MemberId>, visibility| Resource::MailSource { owners, visibility };
+        use MailVisibility::{Household as HhVis, Owners as OwnVis};
+        // Elevated actor is `f.adult`; a source owned only by the other adult is off limits.
         t(
             Action::GmailAction,
-            Resource::MailSource { owner: f.adult },
+            ms(vec![f.adult], OwnVis),
             c,
             [
                 (Adult, ALLOW),
@@ -896,13 +945,120 @@ mod tests {
         );
         t(
             Action::GmailAction,
-            Resource::MailSource { owner: f.adult2 },
+            ms(vec![f.adult2], OwnVis),
             c,
             [
                 (Adult, DENY),
                 (Child, DENY),
                 (Device, DENY),
                 (Elevated, DENY),
+                (System, ALLOW),
+            ],
+        );
+        t(
+            Action::GmailAction,
+            ms(vec![f.adult2], HhVis),
+            c,
+            [
+                (Adult, ALLOW),
+                (Child, DENY),
+                (Device, DENY),
+                (Elevated, ALLOW),
+                (System, ALLOW),
+            ],
+        );
+        // ReadMail: owners, or any adult on a household source; never a child or a device.
+        t(
+            Action::ReadMail,
+            ms(vec![f.adult, f.adult2], OwnVis),
+            c,
+            [
+                (Adult, ALLOW),
+                (Child, DENY),
+                (Device, DENY),
+                (Elevated, DENY),
+                (System, ALLOW),
+            ],
+        );
+        t(Action::ReadMail, ms(vec![f.adult2], OwnVis), c, only_system);
+        t(
+            Action::ReadMail,
+            ms(vec![f.adult2], HhVis),
+            c,
+            [
+                (Adult, ALLOW),
+                (Child, DENY),
+                (Device, DENY),
+                (Elevated, DENY),
+                (System, ALLOW),
+            ],
+        );
+        t(
+            Action::ReadMail,
+            ms(vec![f.child], HhVis),
+            c,
+            [
+                (Adult, ALLOW),
+                (Child, DENY),
+                (Device, DENY),
+                (Elevated, DENY),
+                (System, ALLOW),
+            ],
+        );
+        // ManageMailSource: an owner; any adult may create (household resource).
+        t(
+            Action::ManageMailSource,
+            ms(vec![f.adult], HhVis),
+            c,
+            [
+                (Adult, ALLOW),
+                (Child, DENY),
+                (Device, DENY),
+                (Elevated, DENY),
+                (System, ALLOW),
+            ],
+        );
+        t(
+            Action::ManageMailSource,
+            ms(vec![f.adult2], HhVis),
+            c,
+            only_system,
+        );
+        t(
+            Action::ManageMailSource,
+            Resource::Household,
+            c,
+            [
+                (Adult, ALLOW),
+                (Child, DENY),
+                (Device, DENY),
+                (Elevated, DENY),
+                (System, ALLOW),
+            ],
+        );
+        for action in [Action::ManageMailSetup, Action::ManageBills] {
+            t(
+                action,
+                Resource::Household,
+                c,
+                [
+                    (Adult, ALLOW),
+                    (Child, DENY),
+                    (Device, DENY),
+                    (Elevated, DENY),
+                    (System, ALLOW),
+                ],
+            );
+        }
+        t(
+            Action::ReadInbox,
+            Resource::Household,
+            c,
+            [
+                (Adult, ALLOW),
+                (Child, DENY),
+                (Device, ALLOW),
+                (Elevated, ALLOW),
                 (System, ALLOW),
             ],
         );
@@ -1175,6 +1331,11 @@ mod tests {
                 | Action::AddGroceryItem
                 | Action::ApproveEvent
                 | Action::GmailAction
+                | Action::ReadMail
+                | Action::ManageMailSource
+                | Action::ManageMailSetup
+                | Action::ReadInbox
+                | Action::ManageBills
                 | Action::ManageCalendarSource
                 | Action::ReadCalendar
                 | Action::ManageWeatherRules
@@ -1188,6 +1349,6 @@ mod tests {
                 | Action::ManageNotifyPrefs => {}
             }
         }
-        assert_eq!(Action::ALL.iter().collect::<HashSet<_>>().len(), 28);
+        assert_eq!(Action::ALL.iter().collect::<HashSet<_>>().len(), 33);
     }
 }

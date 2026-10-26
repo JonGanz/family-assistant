@@ -6,6 +6,7 @@ import { useAwayStore } from './away'
 import { useCalendarStore } from './calendar'
 import { useDefinitionsStore } from './definitions'
 import { useHouseholdStore } from './household'
+import { useInboxStore } from './inbox'
 import { useListsStore } from './lists'
 import { useMembersStore } from './members'
 import { useNotifyPrefsStore } from './notifyPrefs'
@@ -14,8 +15,8 @@ import { useSourcesStore } from './sources'
 import { useTasksStore } from './tasks'
 import { useWeatherStore } from './weather'
 
-/** The M2 kinds are added here (the shared `LiveEventKind` union is not part of this app's paths). */
-export type AppLiveKind = LiveEventKind | 'tasks.updated' | 'routines.updated'
+/** The M2 and M3 kinds are added here (the shared `LiveEventKind` union predates them). */
+export type AppLiveKind = LiveEventKind | 'tasks.updated' | 'routines.updated' | 'inbox.updated'
 
 const KINDS: AppLiveKind[] = [
   'calendar.updated',
@@ -27,6 +28,7 @@ const KINDS: AppLiveKind[] = [
   'member.updated',
   'tasks.updated',
   'routines.updated',
+  'inbox.updated',
   'resync',
 ]
 
@@ -46,6 +48,7 @@ export function dispatchLive(kind: AppLiveKind, data?: LiveEventData): Promise<u
     useRoutinesStore().invalidate(kind),
     useAwayStore().invalidate(kind),
     useNotifyPrefsStore().invalidate(kind),
+    useInboxStore().invalidate(kind),
   ])
 }
 

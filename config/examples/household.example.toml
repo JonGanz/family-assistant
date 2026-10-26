@@ -35,6 +35,16 @@ grade = "3"
 interests = ["dinosaurs", "soccer"]
 hobbies = ["drawing"]
 responsibilities = ["feed the cat", "pack school bag"]
+aliases = ["Ri"]
+gender = "female"
+relevance_tags = ["soccer"]
+
+[[members.enrollments]]
+org = "Example Elementary"
+grade = "3"
+class = "3B"
+from = "2026-09-01"
+contacts = ["teacher@example.edu"]
 
 [[members]]
 key = "jordan"
@@ -44,6 +54,7 @@ birthdate = "2022-02-18"
 interests = ["trucks", "music"]
 hobbies = []
 responsibilities = ["tidy toys"]
+gender = "male"
 
 # Secrets are never stored in this file. A source imported from here starts disabled with
 # state "needs_reauth"; add the ICS URL (e.g. https://calendar.example.com/school.ics),
@@ -70,3 +81,57 @@ action = "alert"
 severity = "info"
 message = "Frosty start: coats and hats for school."
 status = "active"
+
+# Fictional organisations (example.edu school, example.com biller). `ics_calendar` and
+# `default_calendar` name a calendar listed above as "<source key>/<calendar remote_id>".
+[[orgs]]
+name = "Example Elementary"
+kind = "school"
+domains = ["example.edu"]
+senders = ["office@example.edu"]
+ics_calendar = "school/ics"
+default_calendar = "school/ics"
+contact_mode = "suggest"
+
+[[orgs.contacts]]
+name = "Ms. Teacher"
+email = "teacher@example.edu"
+role = "teacher"
+
+[[orgs]]
+name = "Example Utilities"
+kind = "biller"
+domains = ["example.com"]
+senders = ["billing@example.com"]
+
+[orgs.bill_template]
+amount = "Amount due:\\s*(\\$[0-9.,]+)"
+due = "Due date:\\s*([A-Za-z]+ [0-9]{1,2}, [0-9]{4})"
+account = "Account ending in\\s*([0-9]{4})"
+
+# Mail sources hold no secrets: an IMAP source imported from here starts as `needs_reauth`
+# until its password is entered in Settings. Gmail sources are connected in Settings.
+# [[mail_sources]]
+# name = "Family inbox"
+# provider = "imap"
+# address = "family@example.com"
+# owners = ["alex"]
+# [mail_sources.imap]
+# host = "imap.example.com"
+# username = "family@example.com"
+
+# Categories are optional: the default set is seeded for every household. List one here to
+# change its label, behaviour or notifications (export always lists them all).
+# [[categories]]
+# key = "promotions"
+# label = "Promotions"
+# behaviour = "ignore"
+
+# A user mail rule (validated on import). For email.member_link the value is a list of member keys.
+# [[mail_rules]]
+# name = "Soccer club mail is for Riley"
+# decision_point = "email.member_link"
+# priority = 10
+# conditions = [{ field = "from_domain", op = "is", values = ["club.example.com"] }]
+# value = ["riley"]
+# confidence = 0.9

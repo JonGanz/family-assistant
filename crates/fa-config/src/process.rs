@@ -70,6 +70,14 @@ pub struct ProcessConfig {
     /// `FA_NTFY_TOKEN` (redacted in `Debug`).
     #[serde(default, deserialize_with = "empty_none")]
     pub ntfy_token: Option<SecretString>,
+    /// `FA_ALLOW_PLAIN_IMAP`: allow plain IMAP on port 143 without STARTTLS. Tests and e2e only.
+    pub allow_plain_imap: bool,
+    /// `FA_IMAP_TLS_INSECURE`: accept self-signed IMAPS certificates. Only for the greenmail test.
+    pub imap_tls_insecure: bool,
+    /// `FA_GOOGLE_API_BASE`: base URL of the Google APIs (default `https://www.googleapis.com`
+    /// when unset). For stubs.
+    #[serde(default, deserialize_with = "empty_none")]
+    pub google_api_base: Option<Url>,
 }
 
 /// Empty strings mean unset.
@@ -98,6 +106,8 @@ struct Defaults {
     web_dist_dir: &'static str,
     open_meteo_url: &'static str,
     allow_http_feeds: bool,
+    allow_plain_imap: bool,
+    imap_tls_insecure: bool,
 }
 
 const DEFAULTS: Defaults = Defaults {
@@ -109,6 +119,8 @@ const DEFAULTS: Defaults = Defaults {
     web_dist_dir: "/srv/web",
     open_meteo_url: "https://api.open-meteo.com",
     allow_http_feeds: false,
+    allow_plain_imap: false,
+    imap_tls_insecure: false,
 };
 
 impl ProcessConfig {
@@ -204,6 +216,21 @@ impl ProcessConfig {
             && !matches!(u.scheme(), "https" | "http")
         {
             errs.push("FA_NTFY_URL must be an http(s) URL".to_string());
+        }
+        if let Some(u) = &self.google_api_base
+            && !matches!(u.scheme(), "https" | "http")
+        {
+            errs.push("FA_GOOGLE_API_BASE must be an http(s) URL".to_string());
+        }
+        if self.allow_plain_imap {
+            tracing::warn!(
+                "FA_ALLOW_PLAIN_IMAP is set: IMAP without TLS is allowed (tests and e2e only)"
+            );
+        }
+        if self.imap_tls_insecure {
+            tracing::warn!(
+                "FA_IMAP_TLS_INSECURE is set: IMAPS certificates are not verified (tests only)"
+            );
         }
         if self.log_level.trim().is_empty() {
             errs.push("FA_LOG_LEVEL must not be empty".to_string());
@@ -303,6 +330,26 @@ mod tests {
         assert_eq!(c.ntfy_url.unwrap().host_str(), Some("ntfy.example.com"));
         assert!(!format!("{:?}", c.ntfy_token).contains("tk_s3cret"));
         assert!(ProcessConfig::from_figment(fig(&format!("{BASE}ntfy_url='nope'"))).is_err());
+    }
+
+    #[test]
+    fn m3_defaults_and_overrides() {
+        let c = ProcessConfig::from_figment(fig(BASE)).unwrap();
+        assert!(!c.allow_plain_imap && !c.imap_tls_insecure && c.google_api_base.is_none());
+        let c = ProcessConfig::from_figment(fig(&format!(
+            "{BASE}allow_plain_imap=true\nimap_tls_insecure=true\ngoogle_api_base='http://127.0.0.1:9999'"
+        )))
+        .unwrap();
+        assert!(c.allow_plain_imap && c.imap_tls_insecure);
+        assert_eq!(c.google_api_base.unwrap().host_str(), Some("127.0.0.1"));
+        let c = ProcessConfig::from_figment(fig(&format!("{BASE}google_api_base=''"))).unwrap();
+        assert!(c.google_api_base.is_none());
+        assert!(
+            ProcessConfig::from_figment(fig(&format!(
+                "{BASE}google_api_base='ftp://x.example.com'"
+            )))
+            .is_err()
+        );
     }
 
     #[test]

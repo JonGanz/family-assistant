@@ -4,8 +4,8 @@ use chrono::{NaiveDate, Utc};
 use fa_domain::Role;
 use fa_domain::timefmt::{format_hhmm, parse_hhmm};
 use fa_domain::{
-    AuditEntry, AuditEntryId, Household, HouseholdId, Location, Member, MemberId, RuleAction,
-    RuleStatus, Severity, SourceKind, Units,
+    AuditEntry, AuditEntryId, Gender, Household, HouseholdId, Location, Member, MemberId,
+    RuleAction, RuleStatus, Severity, SourceKind, Units,
 };
 use fa_store::{AuditRepo, HouseholdRepo, MemberRepo, Store, StoreError};
 use serde::{Deserialize, Serialize};
@@ -20,6 +20,11 @@ pub const SUPPORTED_SECTIONS: &[&str] = &[
     "task_lists",
     "task_definitions",
     "routines",
+    "retention",
+    "orgs",
+    "mail_sources",
+    "categories",
+    "mail_rules",
 ];
 
 pub const DEFAULT_UNITS: Units = Units::Metric;
@@ -50,6 +55,16 @@ pub struct HouseholdConfig {
     pub task_definitions: Vec<crate::tasks::TaskDefinitionConfig>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub routines: Vec<crate::tasks::RoutineConfig>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub retention: Option<crate::mail::RetentionConfig>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub orgs: Vec<crate::mail::OrgConfig>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub mail_sources: Vec<crate::mail::MailSourceConfig>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub categories: Vec<crate::mail::CategoryConfig>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub mail_rules: Vec<crate::mail::MailRuleConfig>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -83,6 +98,22 @@ pub struct HouseholdSection {
     /// `"HH:MM"`, default 07:00.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub quiet_until: Option<String>,
+    /// ISO 4217 code for bills, default `USD`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub currency: Option<String>,
+    /// Words that mean girls / boys in school mail (omitted: unchanged; new households: English).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gender_terms: Option<crate::mail::GenderTermsConfig>,
+    /// Keys of built-in classification signals to switch off.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub disabled_signals: Option<Vec<String>>,
+    /// Days before a bill's due date its pay task is due (0-60, default 3).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bill_lead_days: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub events: Option<crate::mail::EventsConfig>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub inbox: Option<crate::mail::InboxConfig>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -116,6 +147,16 @@ pub struct MemberConfig {
     pub responsibilities: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub notify: Option<crate::tasks::NotifyConfig>,
+    /// Other names the member goes by in mail (nicknames, short forms).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub aliases: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub gender: Option<Gender>,
+    /// Words that mark mail as relevant to this member (a team, an instrument).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub relevance_tags: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub enrollments: Vec<crate::mail::EnrollmentConfig>,
 }
 
 /// A calendar account. Secrets are never part of the file: Google needs reconnecting, a CalDAV
@@ -243,6 +284,23 @@ pub struct ImportReport {
     pub notify_created: Vec<String>,
     pub notify_updated: Vec<String>,
     pub notify_unchanged: Vec<String>,
+    pub orgs_created: Vec<String>,
+    pub orgs_updated: Vec<String>,
+    pub orgs_unchanged: Vec<String>,
+    pub enrollments_created: Vec<String>,
+    pub enrollments_updated: Vec<String>,
+    pub enrollments_unchanged: Vec<String>,
+    pub mail_sources_created: Vec<String>,
+    pub mail_sources_updated: Vec<String>,
+    pub mail_sources_unchanged: Vec<String>,
+    /// Gmail sources that need an OAuth connection made in the UI first.
+    pub mail_sources_skipped: Vec<String>,
+    pub categories_created: Vec<String>,
+    pub categories_updated: Vec<String>,
+    pub categories_unchanged: Vec<String>,
+    pub mail_rules_created: Vec<String>,
+    pub mail_rules_updated: Vec<String>,
+    pub mail_rules_unchanged: Vec<String>,
 }
 
 impl HouseholdConfig {
@@ -356,6 +414,7 @@ impl HouseholdConfig {
         }
         crate::feeds::validate_feeds(self, src, &mut errs);
         crate::tasks::validate_tasks(self, &mut errs);
+        crate::mail::validate_mail(self, &mut errs);
         if errs.is_empty() {
             Ok(())
         } else {
@@ -375,6 +434,9 @@ fn apply(m: &mut Member, c: &MemberConfig) -> bool {
         m.interests.clone(),
         m.hobbies.clone(),
         m.responsibilities.clone(),
+        m.aliases.clone(),
+        m.gender,
+        m.relevance_tags.clone(),
     );
     m.display_name = c.display_name.clone();
     m.role = c.role;
@@ -385,6 +447,9 @@ fn apply(m: &mut Member, c: &MemberConfig) -> bool {
     m.interests = c.interests.clone();
     m.hobbies = c.hobbies.clone();
     m.responsibilities = c.responsibilities.clone();
+    m.aliases = c.aliases.clone();
+    m.gender = c.gender;
+    m.relevance_tags = c.relevance_tags.clone();
     before
         != (
             m.display_name.clone(),
@@ -396,6 +461,9 @@ fn apply(m: &mut Member, c: &MemberConfig) -> bool {
             m.interests.clone(),
             m.hobbies.clone(),
             m.responsibilities.clone(),
+            m.aliases.clone(),
+            m.gender,
+            m.relevance_tags.clone(),
         )
 }
 
@@ -442,6 +510,22 @@ pub async fn import(
         notify_created: vec![],
         notify_updated: vec![],
         notify_unchanged: vec![],
+        orgs_created: vec![],
+        orgs_updated: vec![],
+        orgs_unchanged: vec![],
+        enrollments_created: vec![],
+        enrollments_updated: vec![],
+        enrollments_unchanged: vec![],
+        mail_sources_created: vec![],
+        mail_sources_updated: vec![],
+        mail_sources_unchanged: vec![],
+        mail_sources_skipped: vec![],
+        categories_created: vec![],
+        categories_updated: vec![],
+        categories_unchanged: vec![],
+        mail_rules_created: vec![],
+        mail_rules_updated: vec![],
+        mail_rules_unchanged: vec![],
     };
 
     match HouseholdRepo::get(&mut tx, hid).await? {
@@ -475,6 +559,18 @@ pub async fn import(
                     now_weights: sec.now_weights.unwrap_or_default(),
                     quiet_from: quiet(sec.quiet_from.as_deref(), 21),
                     quiet_until: quiet(sec.quiet_until.as_deref(), 7),
+                    currency: sec
+                        .currency
+                        .clone()
+                        .unwrap_or_else(|| fa_domain::DEFAULT_CURRENCY.to_string()),
+                    gender_terms: gender_terms(sec, Default::default()),
+                    disabled_signals: disabled_signals(sec),
+                    events: events(sec, Default::default()),
+                    inbox: inbox(sec, Default::default()),
+                    retention_mail: retention(cfg, Default::default()),
+                    bill_lead_days: sec
+                        .bill_lead_days
+                        .unwrap_or(fa_domain::DEFAULT_BILL_LEAD_DAYS),
                     created_at: now,
                     updated_at: now,
                 },
@@ -518,7 +614,27 @@ pub async fn import(
             if let Some(t) = sec.quiet_until.as_deref().and_then(parse_hhmm) {
                 h.quiet_until = t;
             }
-            let changed = h.now_list_size != before.now_list_size
+            if let Some(c) = &sec.currency {
+                h.currency = c.clone();
+            }
+            h.gender_terms = gender_terms(sec, h.gender_terms.clone());
+            if sec.disabled_signals.is_some() {
+                h.disabled_signals = disabled_signals(sec);
+            }
+            if let Some(n) = sec.bill_lead_days {
+                h.bill_lead_days = n;
+            }
+            h.events = events(sec, h.events.clone());
+            h.inbox = inbox(sec, h.inbox.clone());
+            h.retention_mail = retention(cfg, h.retention_mail.clone());
+            let changed = h.currency != before.currency
+                || h.gender_terms != before.gender_terms
+                || h.disabled_signals != before.disabled_signals
+                || h.bill_lead_days != before.bill_lead_days
+                || h.events != before.events
+                || h.inbox != before.inbox
+                || h.retention_mail != before.retention_mail
+                || h.now_list_size != before.now_list_size
                 || h.now_weights != before.now_weights
                 || h.quiet_from != before.quiet_from
                 || h.quiet_until != before.quiet_until
@@ -537,6 +653,16 @@ pub async fn import(
             }
         }
     }
+
+    // Scope the rest of the transaction to this household: the repos' list and by-name reads
+    // (calendar sources, orgs, rules, ...) must not see other households' rows.
+    sqlx::query(
+        "SELECT set_config('app.system', 'off', true), set_config('app.household_id', $1, true)",
+    )
+    .bind(hid.to_string())
+    .execute(&mut *tx)
+    .await
+    .map_err(StoreError::from)?;
 
     for c in &cfg.members {
         match MemberRepo::get_by_config_key(&mut tx, hid, &c.key).await? {
@@ -574,6 +700,9 @@ pub async fn import(
                     interests: c.interests.clone(),
                     hobbies: c.hobbies.clone(),
                     responsibilities: c.responsibilities.clone(),
+                    aliases: c.aliases.clone(),
+                    gender: c.gender,
+                    relevance_tags: c.relevance_tags.clone(),
                     pin_hash: None,
                     archived_at: None,
                     created_at: now,
@@ -612,6 +741,7 @@ pub async fn import(
     }
     crate::tasks::import_tasks(&mut tx, hid, tz, cfg, &member_ids, &mut report).await?;
     crate::tasks::import_rule_tasks(&mut tx, cfg, &mut report).await?;
+    crate::mail::import_mail(&mut tx, hid, cfg, &member_ids, &mut report).await?;
 
     AuditRepo::insert(
         &mut tx,
@@ -635,6 +765,51 @@ pub async fn import(
     tx.commit().await?;
     tracing::info!(household = %hid, ?mode, "household config imported");
     Ok(report)
+}
+
+fn gender_terms(sec: &HouseholdSection, current: fa_domain::GenderTerms) -> fa_domain::GenderTerms {
+    match &sec.gender_terms {
+        Some(g) => fa_domain::GenderTerms {
+            female: g.female.iter().map(|t| t.trim().to_string()).collect(),
+            male: g.male.iter().map(|t| t.trim().to_string()).collect(),
+        },
+        None => current,
+    }
+}
+
+fn disabled_signals(sec: &HouseholdSection) -> Vec<String> {
+    let mut v = sec.disabled_signals.clone().unwrap_or_default();
+    v.sort();
+    v.dedup();
+    v
+}
+
+fn events(sec: &HouseholdSection, cur: fa_domain::EventsSettings) -> fa_domain::EventsSettings {
+    let Some(e) = &sec.events else { return cur };
+    fa_domain::EventsSettings {
+        auto_write: e.auto_write.unwrap_or(cur.auto_write),
+        extract_threshold: e.extract_threshold.unwrap_or(cur.extract_threshold),
+        route_threshold: e.route_threshold.unwrap_or(cur.route_threshold),
+    }
+}
+
+fn inbox(sec: &HouseholdSection, cur: fa_domain::InboxSettings) -> fa_domain::InboxSettings {
+    let Some(i) = &sec.inbox else { return cur };
+    fa_domain::InboxSettings {
+        task_expiry_days: i.task_expiry_days.unwrap_or(cur.task_expiry_days),
+        contact_expiry_days: i.contact_expiry_days.unwrap_or(cur.contact_expiry_days),
+    }
+}
+
+fn retention(cfg: &HouseholdConfig, cur: fa_domain::MailRetention) -> fa_domain::MailRetention {
+    let Some(m) = cfg.retention.as_ref().and_then(|r| r.mail.as_ref()) else {
+        return cur;
+    };
+    fa_domain::MailRetention {
+        content_policy: m.content_policy.unwrap_or(cur.content_policy),
+        examples_per_category: m.examples_per_category.unwrap_or(cur.examples_per_category),
+        max_pending_days: m.max_pending_days.unwrap_or(cur.max_pending_days),
+    }
 }
 
 fn quiet(s: Option<&str>, default_hour: u32) -> chrono::NaiveTime {
@@ -690,8 +865,9 @@ pub async fn export(
     let id_to_key: std::collections::HashMap<MemberId, String> =
         members.iter().map(|(k, m)| (m.id, k.clone())).collect();
     let ex = crate::tasks::export_tasks(&mut tx, &id_to_key).await?;
-    let (calendar_sources, weather_rules) =
+    let (calendar_sources, weather_rules, cal_refs) =
         crate::feeds::export_feeds(&mut tx, &id_to_key, &ex).await?;
+    let mut mail = crate::mail::export_mail(&mut tx, &id_to_key, &cal_refs).await?;
     tx.rollback().await?;
 
     Ok(HouseholdConfig {
@@ -714,6 +890,22 @@ pub async fn export(
             now_weights: Some(h.now_weights),
             quiet_from: Some(format_hhmm(h.quiet_from)),
             quiet_until: Some(format_hhmm(h.quiet_until)),
+            currency: Some(h.currency),
+            gender_terms: Some(crate::mail::GenderTermsConfig {
+                female: h.gender_terms.female,
+                male: h.gender_terms.male,
+            }),
+            disabled_signals: Some(h.disabled_signals),
+            bill_lead_days: Some(h.bill_lead_days),
+            events: Some(crate::mail::EventsConfig {
+                auto_write: Some(h.events.auto_write),
+                extract_threshold: Some(h.events.extract_threshold),
+                route_threshold: Some(h.events.route_threshold),
+            }),
+            inbox: Some(crate::mail::InboxConfig {
+                task_expiry_days: Some(h.inbox.task_expiry_days),
+                contact_expiry_days: Some(h.inbox.contact_expiry_days),
+            }),
         },
         members: members
             .into_iter()
@@ -729,6 +921,10 @@ pub async fn export(
                 interests: m.interests,
                 hobbies: m.hobbies,
                 responsibilities: m.responsibilities,
+                aliases: m.aliases,
+                gender: m.gender,
+                relevance_tags: m.relevance_tags,
+                enrollments: mail.enrollments.remove(&m.id).unwrap_or_default(),
             })
             .collect(),
         calendar_sources,
@@ -736,5 +932,16 @@ pub async fn export(
         task_lists: ex.task_lists,
         task_definitions: ex.task_definitions,
         routines: ex.routines,
+        retention: Some(crate::mail::RetentionConfig {
+            mail: Some(crate::mail::MailRetentionConfig {
+                content_policy: Some(h.retention_mail.content_policy),
+                examples_per_category: Some(h.retention_mail.examples_per_category),
+                max_pending_days: Some(h.retention_mail.max_pending_days),
+            }),
+        }),
+        orgs: mail.orgs,
+        mail_sources: mail.mail_sources,
+        categories: mail.categories,
+        mail_rules: mail.mail_rules,
     })
 }

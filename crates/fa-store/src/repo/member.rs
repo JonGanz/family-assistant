@@ -3,7 +3,7 @@ use fa_domain::{HouseholdId, Member, MemberId};
 use sqlx::PgConnection;
 use uuid::Uuid;
 
-use super::{conflict_or_missing, parse_role, role_str};
+use super::{conflict_or_missing, enum_str, parse_enum, parse_role, role_str};
 use crate::{Result, StoreError, Versioned};
 
 pub struct MemberRepo;
@@ -27,6 +27,9 @@ struct Row {
     interests: Vec<String>,
     hobbies: Vec<String>,
     responsibilities: Vec<String>,
+    aliases: Vec<String>,
+    gender: Option<String>,
+    relevance_tags: Vec<String>,
     pin_hash: Option<String>,
     archived_at: Option<DateTime<Utc>>,
     version: i32,
@@ -51,6 +54,9 @@ impl TryFrom<Row> for Versioned<Member> {
                 interests: r.interests,
                 hobbies: r.hobbies,
                 responsibilities: r.responsibilities,
+                aliases: r.aliases,
+                gender: r.gender.as_deref().map(parse_enum).transpose()?,
+                relevance_tags: r.relevance_tags,
                 pin_hash: r.pin_hash,
                 archived_at: r.archived_at,
                 created_at: r.created_at,
@@ -71,10 +77,11 @@ impl MemberRepo {
         let row = sqlx::query_as!(
             Row,
             "INSERT INTO member (id, household_id, config_key, display_name, role, avatar, color,
-                                 birthdate, grade, interests, hobbies, responsibilities, pin_hash, created_by)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
+                                 birthdate, grade, interests, hobbies, responsibilities, pin_hash, created_by,
+                                 aliases, gender, relevance_tags)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
              RETURNING id, household_id, display_name, role, avatar, color, birthdate, grade,
-                       interests, hobbies, responsibilities, pin_hash, archived_at, version,
+                       interests, hobbies, responsibilities, aliases, gender, relevance_tags, pin_hash, archived_at, version,
                        created_at, updated_at",
             m.id.as_uuid(),
             m.household_id.as_uuid(),
@@ -89,7 +96,10 @@ impl MemberRepo {
             &m.hobbies,
             &m.responsibilities,
             m.pin_hash,
-            created_by.map(|c| c.as_uuid())
+            created_by.map(|c| c.as_uuid()),
+            &m.aliases,
+            m.gender.as_ref().map(enum_str),
+            &m.relevance_tags
         )
         .fetch_one(conn)
         .await?;
@@ -100,7 +110,7 @@ impl MemberRepo {
         let row = sqlx::query_as!(
             Row,
             "SELECT id, household_id, display_name, role, avatar, color, birthdate, grade,
-                    interests, hobbies, responsibilities, pin_hash, archived_at, version,
+                    interests, hobbies, responsibilities, aliases, gender, relevance_tags, pin_hash, archived_at, version,
                     created_at, updated_at
              FROM member WHERE id = $1",
             id.as_uuid()
@@ -118,7 +128,7 @@ impl MemberRepo {
         let row = sqlx::query_as!(
             Row,
             "SELECT id, household_id, display_name, role, avatar, color, birthdate, grade,
-                    interests, hobbies, responsibilities, pin_hash, archived_at, version,
+                    interests, hobbies, responsibilities, aliases, gender, relevance_tags, pin_hash, archived_at, version,
                     created_at, updated_at
              FROM member WHERE household_id = $1 AND config_key = $2",
             household_id.as_uuid(),
@@ -145,7 +155,7 @@ impl MemberRepo {
         let rows = sqlx::query_as!(
             Row,
             "SELECT id, household_id, display_name, role, avatar, color, birthdate, grade,
-                    interests, hobbies, responsibilities, pin_hash, archived_at, version,
+                    interests, hobbies, responsibilities, aliases, gender, relevance_tags, pin_hash, archived_at, version,
                     created_at, updated_at
              FROM member WHERE $1 OR archived_at IS NULL ORDER BY created_at, id",
             include_archived
@@ -160,8 +170,9 @@ impl MemberRepo {
         let v = sqlx::query_scalar!(
             "UPDATE member SET display_name = $2, role = $3, avatar = $4, color = $5, birthdate = $6,
                     grade = $7, interests = $8, hobbies = $9, responsibilities = $10,
+                    aliases = $11, gender = $12, relevance_tags = $13,
                     version = version + 1
-             WHERE id = $1 AND version = $11
+             WHERE id = $1 AND version = $14
              RETURNING version",
             m.id.as_uuid(),
             m.display_name,
@@ -173,6 +184,9 @@ impl MemberRepo {
             &m.interests,
             &m.hobbies,
             &m.responsibilities,
+            &m.aliases,
+            m.gender.as_ref().map(enum_str),
+            &m.relevance_tags,
             expected_version
         )
         .fetch_optional(&mut *conn)

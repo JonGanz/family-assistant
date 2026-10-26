@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import type { CalendarView, SourceView } from '../api/client'
 import { api } from '../api/client'
+import { mailApi, type CalendarViewExt, type SourceViewExt } from '../api/mailSettings'
+import { ApiError } from '../api/http'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import { formatTime } from '../lib/time'
 import { useHouseholdStore } from '../stores/household'
@@ -18,10 +19,11 @@ const household = useHouseholdStore()
 const members = useMembersStore()
 const error = ref('')
 const note = reactive<Record<string, string>>({})
+const needsWriteAccess = reactive<Record<string, boolean>>({})
 const editing = ref<string | null>(null)
 
 const googleEnabled = computed(() => household.view?.google_oauth_enabled ?? false)
-const calendarsOf = (s: SourceView) => sources.calendars.filter((c) => c.source === s.id)
+const calendarsOf = (s: SourceViewExt) => sources.calendars.filter((c) => c.source === s.id)
 
 onMounted(() => {
   void sources.load()
@@ -38,28 +40,41 @@ async function run(fn: () => Promise<unknown>, fallback: string) {
   }
 }
 
-async function syncNow(s: SourceView) {
+async function syncNow(s: SourceViewExt) {
   await run(async () => {
     await sources.sync(s.id)
     note[s.id] = 'Sync queued.'
   }, 'Could not start a sync.')
 }
 
-async function remove(s: SourceView) {
+async function remove(s: SourceViewExt) {
   if (!confirm(`Remove "${s.name}" and its events?`)) return
   await run(() => sources.remove(s.id), 'Could not remove the source.')
 }
 
-const toggleEnabled = (c: CalendarView, v: boolean) =>
+const toggleEnabled = (c: CalendarViewExt, v: boolean) =>
   run(() => sources.patchCalendar(c, { enabled: v }), 'Could not save.')
-const setColor = (c: CalendarView, v: string) =>
+const setColor = (c: CalendarViewExt, v: string) =>
   run(() => sources.patchCalendar(c, { color: v }), 'Could not save.')
-function toggleMember(c: CalendarView, id: string, on: boolean) {
+function toggleMember(c: CalendarViewExt, id: string, on: boolean) {
   const next = on ? [...c.members, id] : c.members.filter((m) => m !== id)
   return run(() => sources.patchCalendar(c, { members: next }), 'Could not save.')
 }
 const googleReconnect = () => api.googleStartUrl('/settings/calendars')
-const synced = (s: SourceView) =>
+const connectWrite = () => mailApi.googleStartUrl('calendar_write', '/settings/calendars')
+const toggleDefault = (c: CalendarViewExt, v: boolean) =>
+  run(() => sources.patchCalendar(c, { is_default_target: v }), 'Could not save.')
+async function toggleWritable(s: SourceViewExt, v: boolean) {
+  await run(async () => {
+    try {
+      await sources.patchSource(s, { writable: v })
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 422) needsWriteAccess[s.id] = true
+      else throw e
+    }
+  }, 'Could not save.')
+}
+const synced = (s: SourceViewExt) =>
   s.last_synced_at ? formatTime(s.last_synced_at, household.tz) : 'never'
 </script>
 
@@ -100,6 +115,27 @@ const synced = (s: SourceView) =>
           <button type="button" @click="remove(s)">Remove</button>
           <span v-if="note[s.id]" class="settings-ok" role="status">{{ note[s.id] }}</span>
         </div>
+        <div v-if="s.kind !== 'ics'" class="actions">
+          <label class="inline">
+            <input
+              type="checkbox"
+              :checked="s.writable"
+              :aria-label="`Allow writing approved events to ${s.name}`"
+              @change="toggleWritable(s, ($event.target as HTMLInputElement).checked)"
+            />
+            Allow writing (approved events)
+          </label>
+          <a
+            v-if="s.kind === 'google' && (needsWriteAccess[s.id] || (!s.writable && googleEnabled))"
+            class="button"
+            :href="connectWrite()"
+          >
+            Connect for writing
+          </a>
+          <span v-if="needsWriteAccess[s.id]" class="settings-error" role="alert">
+            Reconnect with calendar write access first.
+          </span>
+        </div>
         <SourceCredentials v-if="editing === s.id" :source="s" @done="editing = null" />
 
         <ul class="calendars">
@@ -112,6 +148,14 @@ const synced = (s: SourceView) =>
                 @change="toggleEnabled(c, ($event.target as HTMLInputElement).checked)"
               />
               <strong>{{ c.name }}</strong>
+            </label>
+            <label v-if="s.writable" class="inline">
+              <input
+                type="checkbox"
+                :checked="c.is_default_target"
+                @change="toggleDefault(c, ($event.target as HTMLInputElement).checked)"
+              />
+              Default target
             </label>
             <label class="inline">
               Colour

@@ -84,6 +84,38 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/bills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_bills"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/bills/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patch_bill"];
+        trace?: never;
+    };
     "/api/v1/calendar-sources": {
         parameters: {
             query?: never;
@@ -180,6 +212,38 @@ export interface paths {
         patch: operations["patch_calendar"];
         trace?: never;
     };
+    "/api/v1/categories": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_categories"];
+        put?: never;
+        post: operations["create_category"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/categories/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patch_category"];
+        trace?: never;
+    };
     "/api/v1/dashboard": {
         parameters: {
             query?: never;
@@ -244,6 +308,22 @@ export interface paths {
         patch: operations["patch_device"];
         trace?: never;
     };
+    "/api/v1/enrollments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_enrollment"];
+        options?: never;
+        head?: never;
+        patch: operations["patch_enrollment"];
+        trace?: never;
+    };
     "/api/v1/events": {
         parameters: {
             query?: never;
@@ -274,6 +354,230 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["patch_household"];
+        trace?: never;
+    };
+    "/api/v1/inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_inbox"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inbox/{kind}/{id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["approve_inbox"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inbox/{kind}/{id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["reject_inbox"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/labelling/next": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["labelling_next"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail-actions/{id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["undo_mail_action"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_mail_rules"];
+        put?: never;
+        post: operations["create_mail_rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail-rules/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["test_mail_rule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail-rules/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_mail_rule"];
+        options?: never;
+        head?: never;
+        patch: operations["patch_mail_rule"];
+        trace?: never;
+    };
+    "/api/v1/mail-signals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_mail_signals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail-signals/{key}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patch_mail_signal"];
+        trace?: never;
+    };
+    "/api/v1/mail-sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_mail_sources"];
+        put?: never;
+        post: operations["create_mail_source"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail-sources/imap/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["test_imap"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail-sources/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_mail_source"];
+        options?: never;
+        head?: never;
+        patch: operations["patch_mail_source"];
+        trace?: never;
+    };
+    "/api/v1/mail-sources/{id}/sync": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["sync_mail_source"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/me": {
@@ -388,6 +692,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/members/{id}/enrollments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_enrollments"];
+        put?: never;
+        post: operations["create_enrollment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/members/{id}/notify-prefs": {
         parameters: {
             query?: never;
@@ -430,6 +750,102 @@ export interface paths {
         get?: never;
         put: operations["set_pin"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_messages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/messages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_message"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/messages/{id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["message_action"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/messages/{id}/eval-sample": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["set_eval_sample"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/messages/{id}/labels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["label_message"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/messages/{id}/task": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["message_task"];
         delete?: never;
         options?: never;
         head?: never;
@@ -494,6 +910,70 @@ export interface paths {
         get: operations["openapi_json"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/org-contacts/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_org_contact"];
+        options?: never;
+        head?: never;
+        patch: operations["patch_org_contact"];
+        trace?: never;
+    };
+    "/api/v1/orgs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_orgs"];
+        put?: never;
+        post: operations["create_org"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/orgs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_org"];
+        options?: never;
+        head?: never;
+        patch: operations["patch_org"];
+        trace?: never;
+    };
+    "/api/v1/orgs/{id}/contacts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["add_org_contact"];
         delete?: never;
         options?: never;
         head?: never;
@@ -976,10 +1456,66 @@ export interface components {
         };
         /** @enum {string} */
         AllMarker: "all";
+        /** @enum {string} */
+        ApprovalMode: "immediate" | "batched" | "digest" | "off";
+        /** @enum {string} */
+        AutoAction: "label" | "archive" | "mark_read";
         BackupStatus: {
             /** Format: date-time */
             last_at?: string | null;
             ok: boolean;
+        };
+        /** Format: uuid */
+        BillId: string;
+        BillPatch: {
+            account_hint?: string | null;
+            /** Format: int64 */
+            amount_minor?: number | null;
+            currency?: string | null;
+            /** @description `YYYY-MM-DD`; absent = keep, `null` = clear. */
+            due_on?: string | null;
+            payee?: string | null;
+            status?: null | components["schemas"]["BillPatchStatus"];
+        };
+        /**
+         * @description The statuses a user may set on a bill.
+         * @enum {string}
+         */
+        BillPatchStatus: "open" | "dismissed";
+        /** @enum {string} */
+        BillStatus: "proposed" | "open" | "paid" | "dismissed";
+        /** @description Per-organisation bill regexes (capture group 1 is the value). */
+        BillTemplate: {
+            account?: string | null;
+            amount?: string | null;
+            due?: string | null;
+        };
+        BillView: {
+            account_hint?: string | null;
+            /**
+             * Format: int64
+             * @description Minor currency units (cents).
+             */
+            amount_minor: number;
+            /** Format: float */
+            confidence: number;
+            /** @description ISO 4217. */
+            currency: string;
+            /**
+             * Format: date
+             * @description `YYYY-MM-DD`.
+             */
+            due_on?: string | null;
+            external_url?: string | null;
+            id: components["schemas"]["BillId"];
+            message?: null | components["schemas"]["MessageId"];
+            payee: string;
+            status: components["schemas"]["BillStatus"];
+            task?: null | components["schemas"]["TaskId"];
+            /** @description The pay task is done. */
+            task_done: boolean;
+            /** Format: int32 */
+            version: number;
         };
         /** @enum {string} */
         CalendarDisplay: "hidden" | "until_done" | "always";
@@ -990,6 +1526,10 @@ export interface components {
             enabled?: boolean | null;
             members?: components["schemas"]["MemberId"][] | null;
             name?: string | null;
+        };
+        /** @description `CalendarPatch` plus the default-target toggle. */
+        CalendarPatchExt: components["schemas"]["CalendarPatch"] & {
+            is_default_target?: boolean | null;
         };
         /** Format: uuid */
         CalendarSourceId: string;
@@ -1003,24 +1543,106 @@ export interface components {
             /** Format: int32 */
             version: number;
         };
+        /** @description A calendar plus whether it is a default target for extracted events. */
+        CalendarViewExt: components["schemas"]["CalendarView"] & {
+            is_default_target: boolean;
+        };
+        /** @enum {string} */
+        CategoryBehaviour: "ignore" | "keep" | "extract";
+        /** Format: uuid */
+        CategoryId: string;
+        CategoryInput: {
+            /** @description Default `[label]`. */
+            auto_actions?: components["schemas"]["AutoAction"][] | null;
+            behaviour: components["schemas"]["CategoryBehaviour"];
+            color?: string | null;
+            email_tasks?: null | components["schemas"]["EmailTasksMode"];
+            /** @description `^[a-z][a-z0-9_]{0,31}$`, unique per household. */
+            key: string;
+            label: string;
+            notify_time_sensitive?: boolean;
+            /** Format: int32 */
+            ord?: number | null;
+        };
+        /** @description The key is immutable. Archive with `archived: true`. */
+        CategoryPatch: {
+            archived?: boolean | null;
+            auto_actions?: components["schemas"]["AutoAction"][] | null;
+            behaviour?: null | components["schemas"]["CategoryBehaviour"];
+            /** @description Absent = keep, `null` = clear. */
+            color?: string | null;
+            email_tasks?: null | components["schemas"]["EmailTasksMode"];
+            label?: string | null;
+            notify_time_sensitive?: boolean | null;
+            /** Format: int32 */
+            ord?: number | null;
+        };
+        CategoryView: {
+            archived: boolean;
+            auto_actions: components["schemas"]["AutoAction"][];
+            behaviour: components["schemas"]["CategoryBehaviour"];
+            color?: string | null;
+            email_tasks: components["schemas"]["EmailTasksMode"];
+            id: components["schemas"]["CategoryId"];
+            key: string;
+            label: string;
+            notify_time_sensitive: boolean;
+            /** Format: int32 */
+            ord: number;
+            /** Format: int32 */
+            version: number;
+        };
         /** @enum {string} */
         ChildCanAdd: "own" | "none";
         CompleteTask: {
             member?: null | components["schemas"]["MemberId"];
         };
+        ContactApproval: {
+            member?: null | components["schemas"]["MemberId"];
+            name?: string | null;
+            role?: null | components["schemas"]["ContactRole"];
+        };
+        /** @enum {string} */
+        ContactMode: "suggest" | "auto" | "manual";
+        /** @enum {string} */
+        ContactRole: "teacher" | "coach" | "admin" | "office" | "other";
+        /** Format: uuid */
+        ContactSuggestionId: string;
+        ContactSuggestionView: {
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            created_at: string;
+            email: string;
+            id: components["schemas"]["ContactSuggestionId"];
+            member?: null | components["schemas"]["MemberId"];
+            message?: null | components["schemas"]["MessageId"];
+            name?: string | null;
+            org: components["schemas"]["OrgId"];
+            org_name: string;
+        };
+        /** @enum {string} */
+        ContentPolicy: "purge_after_processing" | "keep_for_learning" | "keep_all";
         CreateAccountReq: {
             password: string;
             username: string;
         };
         CreateMemberReq: {
+            /** @description Nicknames matched in mail (M3). */
+            aliases?: string[];
             avatar?: string | null;
             /** Format: date */
             birthdate?: string | null;
             color?: string | null;
             display_name: string;
+            /** @description Optional; used only for mail relevance (D-055). */
+            gender?: string | null;
             grade?: string | null;
             hobbies?: string[];
             interests?: string[];
+            /** @description Free-form relevance tags (D-055). */
+            relevance_tags?: string[];
             responsibilities?: string[];
             role: string;
         };
@@ -1051,6 +1673,8 @@ export interface components {
             advisories: components["schemas"]["AdvisoryView"][];
             events: components["schemas"]["EventView"][];
             household: components["schemas"]["DashboardHousehold"];
+            /** @description Counts of items waiting for approval; the panel fetches `GET /inbox` for the items. */
+            inbox?: components["schemas"]["InboxCounts"];
             members: components["schemas"]["MemberPublicDto"][];
             routines: components["schemas"]["RoutineRunView"][];
             settings: components["schemas"]["DashboardSettings"];
@@ -1061,11 +1685,46 @@ export interface components {
         };
         /** @enum {string} */
         DayFilter: "daily" | "weekdays" | "weekends" | "school_days";
+        /**
+         * @description The five decision points. `as_str` and the wire format are the dotted key.
+         * @enum {string}
+         */
+        DecisionPointKey: "email.category" | "email.time_sensitive" | "email.member_link" | "email.is_bill" | "event.calendar_route";
+        DecisionView: {
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            at: string;
+            /** Format: float */
+            confidence: number;
+            decided_by?: null | components["schemas"]["MemberId"];
+            decision_point: components["schemas"]["DecisionPointKey"];
+            is_final: boolean;
+            source?: string | null;
+            stage: components["schemas"]["StageKind"];
+            value: unknown;
+        };
         DefinitionError: {
             field: string;
             message: string;
             /** Format: int32 */
             position?: number | null;
+        };
+        DerivedEvent: {
+            id: components["schemas"]["EventId"];
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            start_at: string;
+            status: components["schemas"]["EventStatus"];
+            title: string;
+        };
+        DerivedTask: {
+            id: components["schemas"]["TaskId"];
+            status: components["schemas"]["TaskStatus"];
+            title: string;
         };
         DeviceDto: {
             id: components["schemas"]["DeviceId"];
@@ -1103,8 +1762,118 @@ export interface components {
             /** Format: date-time */
             expires_at: string;
         };
+        /** @enum {string} */
+        EmailTasksMode: "suggest" | "create" | "off";
+        /** Format: uuid */
+        EnrollmentId: string;
+        EnrollmentInput: {
+            class_name?: string | null;
+            contacts?: components["schemas"]["OrgContactId"][];
+            /**
+             * Format: date
+             * @description `YYYY-MM-DD`.
+             */
+            from?: string | null;
+            grade?: string | null;
+            org: components["schemas"]["OrgId"];
+            /**
+             * Format: date
+             * @description `YYYY-MM-DD`.
+             */
+            until?: string | null;
+        };
+        EnrollmentPatch: {
+            class_name?: string | null;
+            contacts?: components["schemas"]["OrgContactId"][] | null;
+            /** @description `YYYY-MM-DD`; absent = keep, `null` = clear. */
+            from?: string | null;
+            /** @description Absent = keep, `null` = clear. */
+            grade?: string | null;
+            org?: null | components["schemas"]["OrgId"];
+            until?: string | null;
+        };
+        EnrollmentView: {
+            class_name?: string | null;
+            contacts: components["schemas"]["OrgContactId"][];
+            /**
+             * Format: date
+             * @description `YYYY-MM-DD`.
+             */
+            from?: string | null;
+            grade?: string | null;
+            id: components["schemas"]["EnrollmentId"];
+            member: components["schemas"]["MemberId"];
+            org: components["schemas"]["OrgId"];
+            /**
+             * Format: date
+             * @description `YYYY-MM-DD`.
+             */
+            until?: string | null;
+            /** Format: int32 */
+            version: number;
+        };
+        EvalProgress: {
+            /** Format: int64 */
+            in_sample: number;
+            /** Format: int64 */
+            labelled: number;
+            /** Format: int64 */
+            target: number;
+        };
+        EvalSampleInput: {
+            in_sample: boolean;
+        };
+        EventApproval: {
+            all_day?: boolean | null;
+            calendar?: null | components["schemas"]["CalendarId"];
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            end_at?: string | null;
+            members?: components["schemas"]["MemberId"][] | null;
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            start_at?: string | null;
+            title?: string | null;
+        };
         /** Format: uuid */
         EventId: string;
+        EventProposalView: {
+            all_day: boolean;
+            /** Format: float */
+            confidence: number;
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            end_at: string;
+            external_url?: string | null;
+            /** @description Sender display text. */
+            from_label?: string | null;
+            id: components["schemas"]["EventId"];
+            location?: string | null;
+            members: components["schemas"]["MemberId"][];
+            message?: null | components["schemas"]["MessageId"];
+            /** @description The proposal is to delete an event we wrote (a cancellation arrived). */
+            pending_cancel: boolean;
+            /** Format: float */
+            route_confidence?: number | null;
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            start_at: string;
+            suggested_calendar?: null | components["schemas"]["CalendarId"];
+            title: string;
+            /** Format: int32 */
+            version: number;
+            write_error?: string | null;
+        };
+        /** @enum {string} */
+        EventStatus: "proposed" | "approved" | "written" | "rejected" | "extracted" | "expired";
         EventView: {
             all_day: boolean;
             calendar?: null | components["schemas"]["CalendarId"];
@@ -1125,6 +1894,27 @@ export interface components {
             title: string;
             visibility: components["schemas"]["Visibility"];
         };
+        EventsSettings: {
+            /** @description Write approved-by-rule events without asking (default off, D-057). */
+            auto_write: boolean;
+            /**
+             * Format: float
+             * @description Extraction confidence needed for auto write, 0..1.
+             */
+            extract_threshold: number;
+            /**
+             * Format: float
+             * @description Routing confidence needed for auto write, 0..1.
+             */
+            route_threshold: number;
+        };
+        /** @enum {string} */
+        Gender: "female" | "male" | "other";
+        /** @description Words in mail that point at a gender-specific group ("girls' soccer"). */
+        GenderTerms: {
+            female: string[];
+            male: string[];
+        };
         HouseholdDto: {
             dashboard_completion_override: boolean;
             id: components["schemas"]["HouseholdId"];
@@ -1138,10 +1928,16 @@ export interface components {
         HouseholdId: string;
         HouseholdPatch: {
             /** Format: int32 */
+            bill_lead_days?: number | null;
+            /** Format: int32 */
             calendar_future_days?: number | null;
             /** Format: int32 */
             calendar_past_days?: number | null;
+            currency?: string | null;
             dashboard_completion_override?: boolean | null;
+            events?: null | components["schemas"]["EventsSettings"];
+            gender_terms?: null | components["schemas"]["GenderTerms"];
+            inbox?: null | components["schemas"]["InboxSettings"];
             location?: null | components["schemas"]["Location"];
             name?: string | null;
             /** Format: int32 */
@@ -1152,20 +1948,31 @@ export interface components {
             quiet_from?: string | null;
             /** @example 07:00 */
             quiet_until?: string | null;
+            retention_mail?: null | components["schemas"]["MailRetention"];
             tz?: string | null;
             units?: null | components["schemas"]["Units"];
             /** Format: int32 */
             weather_retention_days?: number | null;
         };
         HouseholdView: {
+            /**
+             * Format: int32
+             * @description Days before a bill's due date that its pay task is due (0..=60).
+             */
+            bill_lead_days?: number;
             /** Format: int32 */
             calendar_future_days: number;
             /** Format: int32 */
             calendar_past_days: number;
+            /** @description ISO 4217, used for bills. */
+            currency?: string;
             /** @description Adults may let dashboards (devices) tick off tasks. */
             dashboard_completion_override: boolean;
+            events?: components["schemas"]["EventsSettings"];
+            gender_terms?: components["schemas"]["GenderTerms"];
             /** @description Read-only: true when the Google client is configured. */
             google_oauth_enabled: boolean;
+            inbox?: components["schemas"]["InboxSettings"];
             location?: null | components["schemas"]["Location"];
             name: string;
             /** Format: int32 */
@@ -1179,12 +1986,93 @@ export interface components {
             quiet_from: string;
             /** @example 07:00 */
             quiet_until: string;
+            retention_mail?: components["schemas"]["MailRetention"];
             tz: string;
             units: components["schemas"]["Units"];
             /** Format: int32 */
             version: number;
             /** Format: int32 */
             weather_retention_days: number;
+        };
+        /** @description IMAP connection settings. Debug output omits the password. */
+        ImapSettings: {
+            archive_folder?: string | null;
+            folders?: string[] | null;
+            host: string;
+            /** @description Write-only; stored as a secret. Absent on a patch = keep. */
+            password?: string | null;
+            /** Format: int32 */
+            port: number;
+            username: string;
+        };
+        /** @description Debug output omits the password. */
+        ImapTestRequest: {
+            host: string;
+            password: string;
+            /** Format: int32 */
+            port: number;
+            username: string;
+        };
+        ImapTestResult: {
+            error?: string | null;
+            folders: string[];
+            gmail_ext: boolean;
+            ok: boolean;
+        };
+        InboxCounts: {
+            /** Format: int64 */
+            bill: number;
+            /** Format: int64 */
+            contact: number;
+            /** Format: int64 */
+            event: number;
+            /** Format: int64 */
+            task: number;
+            /** Format: int64 */
+            total: number;
+        };
+        InboxItem: {
+            event: components["schemas"]["EventProposalView"];
+            /** @enum {string} */
+            kind: "event";
+        } | {
+            bill: components["schemas"]["BillView"];
+            /** @enum {string} */
+            kind: "bill";
+        } | {
+            /** @enum {string} */
+            kind: "task";
+            task: components["schemas"]["TaskView"];
+        } | {
+            contact: components["schemas"]["ContactSuggestionView"];
+            /** @enum {string} */
+            kind: "contact";
+        };
+        InboxSettings: {
+            /**
+             * Format: int32
+             * @description 1..=365.
+             */
+            contact_expiry_days: number;
+            /**
+             * Format: int32
+             * @description 1..=365.
+             */
+            task_expiry_days: number;
+        };
+        /** @description Devices without elevation get `items: []` and the counts only. */
+        InboxView: {
+            counts: components["schemas"]["InboxCounts"];
+            items: components["schemas"]["InboxItem"][];
+        };
+        LabelInput: {
+            decision_point: components["schemas"]["DecisionPointKey"];
+            /** @description `email.member_link`: an array of member ids. */
+            value: unknown;
+        };
+        LabelQueueItem: {
+            message: components["schemas"]["MessageDetail"];
+            progress: components["schemas"]["EvalProgress"];
         };
         /** @enum {string} */
         ListCompletionPolicy: "assignee" | "adult_only";
@@ -1206,6 +2094,153 @@ export interface components {
             member_id: string;
             role: string;
         };
+        /** Format: uuid */
+        MailActionId: string;
+        MailActionInput: {
+            action: components["schemas"]["MailActionKind"];
+            /** @description Required for `label`. */
+            label?: string | null;
+        };
+        /** @enum {string} */
+        MailActionKind: "archive" | "mark_read" | "label";
+        MailActionView: {
+            action: components["schemas"]["MailActionKind"];
+            automatic: boolean;
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            done_at: string;
+            done_by?: null | components["schemas"]["MemberId"];
+            error?: string | null;
+            id: components["schemas"]["MailActionId"];
+            label?: string | null;
+            /**
+             * Format: date-time
+             * @description RFC 3339; undo is refused after this instant (30 days, D-058).
+             */
+            undo_until: string;
+            /** Format: date-time */
+            undone_at?: string | null;
+        };
+        /** @enum {string} */
+        MailProvider: "gmail" | "imap";
+        MailRetention: {
+            content_policy: components["schemas"]["ContentPolicy"];
+            /** Format: int32 */
+            examples_per_category: number;
+            /** Format: int32 */
+            max_pending_days: number;
+        };
+        /** Format: uuid */
+        MailRuleId: string;
+        MailRuleInput: {
+            conditions: components["schemas"]["RuleCondition"][];
+            /**
+             * Format: float
+             * @description 0..=1, default 0.9.
+             */
+            confidence?: number | null;
+            decision_point: components["schemas"]["DecisionPointKey"];
+            /** @description Default true. */
+            enabled?: boolean | null;
+            name: string;
+            /**
+             * Format: int32
+             * @description Lower runs first; default 100.
+             */
+            priority?: number | null;
+            value: unknown;
+        };
+        MailRulePatch: {
+            conditions?: components["schemas"]["RuleCondition"][] | null;
+            /** Format: float */
+            confidence?: number | null;
+            enabled?: boolean | null;
+            name?: string | null;
+            /** Format: int32 */
+            priority?: number | null;
+            value?: unknown;
+        };
+        MailRuleView: {
+            conditions: components["schemas"]["RuleCondition"][];
+            /** Format: float */
+            confidence: number;
+            decision_point: components["schemas"]["DecisionPointKey"];
+            enabled: boolean;
+            id: components["schemas"]["MailRuleId"];
+            name: string;
+            /** Format: int32 */
+            priority: number;
+            value: unknown;
+            /** Format: int32 */
+            version: number;
+        };
+        /** Format: uuid */
+        MailSourceId: string;
+        MailSourcePatch: {
+            /** Format: int32 */
+            backfill_days?: number | null;
+            imap?: null | components["schemas"]["ImapSettings"];
+            name?: string | null;
+            owners?: components["schemas"]["MemberId"][] | null;
+            /** Format: int32 */
+            poll_minutes?: number | null;
+            /** @description Absent = keep, `null` = clear. */
+            query?: string | null;
+            read_only?: boolean | null;
+            state?: null | components["schemas"]["MailSourceState"];
+            visibility?: null | components["schemas"]["MailVisibility"];
+        };
+        /** @enum {string} */
+        MailSourceState: "ok" | "needs_reauth" | "error" | "paused";
+        MailSourceView: {
+            address: string;
+            archive_folder?: string | null;
+            /** Format: int32 */
+            backfill_days: number;
+            /** @description The viewer may edit, pause or remove the source. */
+            can_manage: boolean;
+            folders: string[];
+            gmail_ext: boolean;
+            id: components["schemas"]["MailSourceId"];
+            imap_host?: string | null;
+            /** Format: int32 */
+            imap_port?: number | null;
+            imap_username?: string | null;
+            last_error?: string | null;
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            last_synced_at?: string | null;
+            /** Format: int64 */
+            message_count: number;
+            name: string;
+            oauth_account?: null | components["schemas"]["OAuthAccountId"];
+            owners: components["schemas"]["MemberId"][];
+            /** Format: int32 */
+            poll_minutes: number;
+            provider: components["schemas"]["MailProvider"];
+            query?: string | null;
+            read_only: boolean;
+            state: components["schemas"]["MailSourceState"];
+            /** Format: int32 */
+            version: number;
+            visibility: components["schemas"]["MailVisibility"];
+        };
+        /** @enum {string} */
+        MailVisibility: "owners" | "household";
+        MakeTaskInput: {
+            assignees?: components["schemas"]["MemberId"][] | null;
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            due_at?: string | null;
+            list?: null | components["schemas"]["TaskListId"];
+            title?: string | null;
+        };
         MeResponse: {
             actor: components["schemas"]["ActorView"];
             household: components["schemas"]["HouseholdDto"];
@@ -1223,18 +2258,21 @@ export interface components {
         };
         /** @description Full member view for adults. Never includes the PIN hash. */
         MemberDto: {
+            aliases?: string[];
             avatar?: string | null;
             avatar_url?: string | null;
             /** Format: date */
             birthdate?: string | null;
             color?: string | null;
             display_name: string;
+            gender?: null | components["schemas"]["Gender"];
             grade?: string | null;
             has_account: boolean;
             has_pin: boolean;
             hobbies: string[];
             id: components["schemas"]["MemberId"];
             interests: string[];
+            relevance_tags?: string[];
             responsibilities: string[];
             role: components["schemas"]["Role"];
             /**
@@ -1259,12 +2297,82 @@ export interface components {
         MemberSelection: components["schemas"]["AllMarker"] | components["schemas"]["MemberId"][];
         /** @description Either member view, as returned by the members API (untagged). */
         MemberView: components["schemas"]["MemberDto"] | components["schemas"]["MemberPublicDto"];
+        MessageDetail: {
+            actions: components["schemas"]["MailActionView"][];
+            bills: components["schemas"]["BillView"][];
+            body_text?: string | null;
+            /** @description The viewer may apply mail actions (writable source, `GmailAction`). */
+            can_act: boolean;
+            /** @description The body was purged by the retention policy. */
+            content_purged: boolean;
+            decisions: components["schemas"]["DecisionView"][];
+            events: components["schemas"]["DerivedEvent"][];
+            sections: components["schemas"]["SectionView"][];
+            summary: components["schemas"]["MessageSummary"];
+            tasks: components["schemas"]["DerivedTask"][];
+        };
+        /** Format: uuid */
+        MessageId: string;
+        MessagePage: {
+            items: components["schemas"]["MessageSummary"][];
+            /**
+             * Format: date-time
+             * @description RFC 3339; pass as `before` for the next page.
+             */
+            next_before?: string | null;
+        };
+        MessageSummary: {
+            /** @description A `category.key`. */
+            category?: string | null;
+            /** @description Computed link back to the original message (Gmail only). */
+            external_url?: string | null;
+            from_addr: string;
+            from_name?: string | null;
+            has_attachments: boolean;
+            id: components["schemas"]["MessageId"];
+            in_eval_sample: boolean;
+            is_bill?: boolean | null;
+            members: components["schemas"]["MemberId"][];
+            processing_state: components["schemas"]["ProcessingState"];
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            received_at: string;
+            snippet?: string | null;
+            source: components["schemas"]["MailSourceId"];
+            subject: string;
+            time_sensitive?: boolean | null;
+        };
         NewAway: {
             /** Format: date */
             from: string;
             note?: string | null;
             /** Format: date */
             until: string;
+        };
+        NewMailSource: {
+            /** @description Defaults to the OAuth account's email (Gmail) or the IMAP username. */
+            address?: string | null;
+            /**
+             * Format: int32
+             * @description 1..=365, default 30.
+             */
+            backfill_days?: number | null;
+            imap?: null | components["schemas"]["ImapSettings"];
+            name: string;
+            oauth_account?: null | components["schemas"]["OAuthAccountId"];
+            owners?: components["schemas"]["MemberId"][];
+            /**
+             * Format: int32
+             * @description 1..=1440, default 5.
+             */
+            poll_minutes?: number | null;
+            provider: components["schemas"]["MailProvider"];
+            query?: string | null;
+            /** @description Default true. */
+            read_only?: boolean | null;
+            visibility?: null | components["schemas"]["MailVisibility"];
         };
         /** @description New source. Debug output redacts passwords and URLs. */
         NewSource: {
@@ -1311,6 +2419,7 @@ export interface components {
             task_mode?: null | components["schemas"]["TaskMode"];
         };
         NotifyPrefPatch: {
+            approval_mode?: null | components["schemas"]["ApprovalMode"];
             copy_to_member?: null | components["schemas"]["MemberId"];
             /** Format: int32 */
             due_soon_minutes?: number | null;
@@ -1322,6 +2431,7 @@ export interface components {
             quiet_until?: string | null;
         };
         NotifyPrefView: {
+            approval_mode?: components["schemas"]["ApprovalMode"];
             copy_to_member?: null | components["schemas"]["MemberId"];
             /** Format: int32 */
             due_soon_minutes: number;
@@ -1342,7 +2452,7 @@ export interface components {
             version: number;
         };
         /** @enum {string} */
-        NotifyTrigger: "assigned" | "overdue" | "digest" | "due_soon" | "routine_nudge" | "source_reauth";
+        NotifyTrigger: "assigned" | "overdue" | "digest" | "due_soon" | "routine_nudge" | "source_reauth" | "approval_needed" | "mail_time_sensitive";
         /** @description Weights of the Now score (D-042), stored in `household.now_weights`. */
         NowWeights: {
             /** Format: double */
@@ -1365,6 +2475,65 @@ export interface components {
         };
         /** @enum {string} */
         OnMissed: "roll_over" | "auto_skip" | "pile_up";
+        /** Format: uuid */
+        OrgContactId: string;
+        OrgContactInput: {
+            email: string;
+            name: string;
+            role?: null | components["schemas"]["ContactRole"];
+        };
+        OrgContactPatch: {
+            email?: string | null;
+            name?: string | null;
+            role?: null | components["schemas"]["ContactRole"];
+        };
+        OrgContactView: {
+            email: string;
+            id: components["schemas"]["OrgContactId"];
+            name: string;
+            org: components["schemas"]["OrgId"];
+            role: components["schemas"]["ContactRole"];
+            /** Format: int32 */
+            version: number;
+        };
+        /** Format: uuid */
+        OrgId: string;
+        OrgInput: {
+            bill_template?: null | components["schemas"]["BillTemplate"];
+            contact_mode?: null | components["schemas"]["ContactMode"];
+            default_calendar?: null | components["schemas"]["CalendarId"];
+            domains?: string[];
+            ics_calendar?: null | components["schemas"]["CalendarId"];
+            kind: components["schemas"]["OrgKind"];
+            name: string;
+            senders?: string[];
+        };
+        /** @enum {string} */
+        OrgKind: "school" | "daycare" | "club" | "biller" | "other";
+        OrgPatch: {
+            bill_template?: null | components["schemas"]["BillTemplate"];
+            contact_mode?: null | components["schemas"]["ContactMode"];
+            default_calendar?: null | components["schemas"]["CalendarId"];
+            domains?: string[] | null;
+            ics_calendar?: null | components["schemas"]["CalendarId"];
+            kind?: null | components["schemas"]["OrgKind"];
+            name?: string | null;
+            senders?: string[] | null;
+        };
+        OrgView: {
+            bill_template?: null | components["schemas"]["BillTemplate"];
+            contact_mode: components["schemas"]["ContactMode"];
+            contacts: components["schemas"]["OrgContactView"][];
+            default_calendar?: null | components["schemas"]["CalendarId"];
+            domains: string[];
+            ics_calendar?: null | components["schemas"]["CalendarId"];
+            id: components["schemas"]["OrgId"];
+            kind: components["schemas"]["OrgKind"];
+            name: string;
+            senders: string[];
+            /** Format: int32 */
+            version: number;
+        };
         /** @enum {string} */
         Orientation: "landscape" | "portrait";
         PairDeviceReq: {
@@ -1385,14 +2554,18 @@ export interface components {
             password: string;
         };
         PatchMemberReq: {
+            aliases?: string[] | null;
             avatar?: string | null;
             /** Format: date */
             birthdate?: string | null;
             color?: string | null;
             display_name?: string | null;
+            /** @description `null` clears it. */
+            gender?: string | null;
             grade?: string | null;
             hobbies?: string[] | null;
             interests?: string[] | null;
+            relevance_tags?: string[] | null;
             responsibilities?: string[] | null;
             /**
              * Format: int32
@@ -1422,6 +2595,10 @@ export interface components {
             title: string;
             type: string;
         };
+        /** @enum {string} */
+        ProcessingState: "pending" | "processed" | "expired";
+        /** @enum {string} */
+        PurposeParam: "calendar" | "gmail_read" | "gmail_modify" | "calendar_write";
         QueueStatus: {
             /** Format: int64 */
             dead: number;
@@ -1430,6 +2607,8 @@ export interface components {
             /** Format: int64 */
             running: number;
         };
+        /** @enum {string} */
+        Relevance: "relevant" | "general" | "other";
         RemoteCalendar: {
             color?: string | null;
             name: string;
@@ -1527,11 +2706,22 @@ export interface components {
         };
         /** @enum {string} */
         RuleAction: "alert" | "task";
+        /** @description `{field, op, header?, values}`; `header` names the header when `field = header`. */
+        RuleCondition: {
+            field: components["schemas"]["RuleField"];
+            header?: string | null;
+            op: components["schemas"]["RuleOp"];
+            values?: string[];
+        };
         RuleError: {
             message: string;
             /** Format: int32 */
             position: number;
         };
+        /** @enum {string} */
+        RuleField: "from_addr" | "from_domain" | "to" | "subject" | "body" | "gmail_label" | "header" | "has_attachment_type" | "org_kind" | "org" | "source";
+        /** @enum {string} */
+        RuleOp: "is" | "in" | "contains_any" | "matches" | "exists";
         RulePreview: {
             matches: boolean;
             /** Format: double */
@@ -1540,6 +2730,29 @@ export interface components {
         };
         /** @enum {string} */
         RuleStatus: "active" | "suggested" | "disabled";
+        RuleTestMatch: {
+            from_addr: string;
+            message: components["schemas"]["MessageId"];
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            received_at: string;
+            subject: string;
+        };
+        RuleTestRequest: {
+            /**
+             * Format: int32
+             * @description Messages to scan, newest first.
+             */
+            limit?: number | null;
+            rule: components["schemas"]["MailRuleInput"];
+        };
+        RuleTestResult: {
+            matched: components["schemas"]["RuleTestMatch"][];
+            /** Format: int64 */
+            scanned: number;
+        };
         /** @enum {string} */
         RunStatus: "open" | "done" | "skipped";
         Schedule: {
@@ -1557,6 +2770,11 @@ export interface components {
             from: string;
             until: string;
         };
+        SectionView: {
+            relevance?: null | components["schemas"]["Relevance"];
+            text: string;
+            title?: string | null;
+        };
         SessionView: {
             /** Format: date-time */
             created_at: string;
@@ -1570,6 +2788,18 @@ export interface components {
         };
         /** @enum {string} */
         Severity: "info" | "warning" | "severe";
+        SignalPatch: {
+            enabled: boolean;
+        };
+        /** @description A built-in signal (Ingest.md §6.2). */
+        SignalView: {
+            /** Format: float */
+            confidence: number;
+            decision_point: components["schemas"]["DecisionPointKey"];
+            description: string;
+            enabled: boolean;
+            key: string;
+        };
         /** @description Source plus its discovered calendars (POST /calendar-sources). */
         SourceCreated: {
             calendars: components["schemas"]["CalendarView"][];
@@ -1588,6 +2818,11 @@ export interface components {
             name?: string | null;
             /** Format: int32 */
             poll_minutes?: number | null;
+        };
+        /** @description `SourcePatch` plus the write toggle. */
+        SourcePatchExt: components["schemas"]["SourcePatch"] & {
+            /** @description Google sources need the account to have granted calendar write access (else 422). */
+            writable?: boolean | null;
         };
         /** @enum {string} */
         SourceState: "ok" | "needs_reauth" | "error";
@@ -1625,6 +2860,13 @@ export interface components {
             /** Format: int32 */
             version: number;
         };
+        /** @description A calendar source plus whether the app may write events to it. */
+        SourceViewExt: components["schemas"]["SourceView"] & {
+            /** @description Extracted events may be written to this source's calendars. */
+            writable: boolean;
+        };
+        /** @enum {string} */
+        StageKind: "rules" | "human" | "knn" | "system_one" | "llm";
         /** @enum {string} */
         StatusParam: "open" | "done" | "skipped" | "suggested" | "any";
         StatusView: {
@@ -1641,6 +2883,15 @@ export interface components {
         Strategy: "fixed" | "rotation" | "pool";
         /** @enum {string} */
         SuggestedBy: "default" | "s2" | "user";
+        TaskApproval: {
+            assignees?: components["schemas"]["MemberId"][] | null;
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            due_at?: string | null;
+            title?: string | null;
+        };
         /** Format: uuid */
         TaskDefinitionId: string;
         TaskDefinitionInput: {
@@ -1737,7 +2988,7 @@ export interface components {
             visible_on_dashboard: boolean;
         };
         /** @enum {string} */
-        TaskListKind: "chores" | "homework" | "general";
+        TaskListKind: "chores" | "homework" | "general" | "email";
         TaskListPatch: {
             calendar_default?: null | components["schemas"]["CalendarDisplay"];
             child_can_add?: null | components["schemas"]["ChildCanAdd"];
@@ -1775,7 +3026,7 @@ export interface components {
         /** @enum {string} */
         TaskMode: "create" | "suggest";
         /** @enum {string} */
-        TaskOrigin: "manual" | "system" | "weather";
+        TaskOrigin: "manual" | "system" | "weather" | "email";
         TaskPatch: {
             assignees?: components["schemas"]["MemberId"][] | null;
             calendar_display?: null | components["schemas"]["CalendarDisplay"];
@@ -2084,6 +3335,105 @@ export interface operations {
             };
         };
     };
+    list_bills: {
+        parameters: {
+            query?: {
+                /** @description `proposed`, `open`, `paid` or `dismissed`; default all. */
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_bill: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description bill id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BillPatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BillView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_sources: {
         parameters: {
             query?: never;
@@ -2098,7 +3448,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SourceView"][];
+                    "application/json": components["schemas"]["SourceViewExt"][];
                 };
             };
             403: {
@@ -2248,7 +3598,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["SourcePatch"];
+                "application/json": components["schemas"]["SourcePatchExt"];
             };
         };
         responses: {
@@ -2257,7 +3607,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SourceView"];
+                    "application/json": components["schemas"]["SourceViewExt"];
                 };
             };
             403: {
@@ -2353,7 +3703,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CalendarView"][];
+                    "application/json": components["schemas"]["CalendarViewExt"][];
                 };
             };
             403: {
@@ -2381,7 +3731,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["CalendarPatch"];
+                "application/json": components["schemas"]["CalendarPatchExt"];
             };
         };
         responses: {
@@ -2390,7 +3740,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["CalendarView"];
+                    "application/json": components["schemas"]["CalendarViewExt"];
                 };
             };
             403: {
@@ -2410,6 +3760,152 @@ export interface operations {
                 };
             };
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_categories: {
+        parameters: {
+            query?: {
+                /** @description Include archived categories. */
+                archived?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_category: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryInput"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_category: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description category id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CategoryPatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2705,6 +4201,111 @@ export interface operations {
             };
         };
     };
+    delete_enrollment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description enrollment id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_enrollment: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description enrollment id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnrollmentPatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnrollmentView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_events: {
         parameters: {
             query: {
@@ -2815,6 +4416,748 @@ export interface operations {
                 };
             };
             428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_inbox: {
+        parameters: {
+            query?: {
+                /** @description `event`, `bill`, `task` or `contact`; default all. */
+                kind?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description a device without elevation gets `items: []` and the counts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InboxView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    approve_inbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description event, bill, task or contact */
+                kind: string;
+                /** @description item id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description `EventApproval`, `BillPatch`, `TaskApproval` or `ContactApproval` by kind; may be empty */
+        requestBody: {
+            content: {
+                "application/json": unknown;
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description the item is not awaiting a decision */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reject_inbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description event, bill, task or contact */
+                kind: string;
+                /** @description item id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description the item is not awaiting a decision */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    labelling_next: {
+        parameters: {
+            query?: {
+                /** @description Skip this message (the one just skipped or labelled). */
+                after?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelQueueItem"];
+                };
+            };
+            /** @description the queue is empty */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    undo_mail_action: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description mail action id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailActionView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description more than 30 days ago */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_mail_rules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailRuleView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_mail_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailRuleInput"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailRuleView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `{field, message}` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    test_mail_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleTestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleTestResult"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description `{field, message}` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_mail_rule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description rule id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_mail_rule: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description rule id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailRulePatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailRuleView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_mail_signals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_mail_signal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description signal key */
+                key: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignalPatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignalView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_mail_sources: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailSourceView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_mail_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewMailSource"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailSourceView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    test_imap: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ImapTestRequest"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImapTestResult"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_mail_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description source id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_mail_source: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description source id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailSourcePatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailSourceView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    sync_mail_source: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description source id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description a sync job is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3295,6 +5638,86 @@ export interface operations {
             };
         };
     };
+    list_enrollments: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description member id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnrollmentView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_enrollment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description member id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnrollmentInput"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EnrollmentView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_prefs: {
         parameters: {
             query?: never;
@@ -3497,6 +5920,246 @@ export interface operations {
             };
         };
     };
+    list_messages: {
+        parameters: {
+            query?: {
+                /** @description A `category.key`. */
+                category?: string;
+                member?: string;
+                source?: string;
+                state?: components["schemas"]["ProcessingState"];
+                /** @description Free text over sender and subject. */
+                q?: string;
+                /** @description Include categories whose behaviour is `ignore`. */
+                include_ignored?: boolean;
+                /** @description RFC 3339 cursor: the `next_before` of the previous page. */
+                before?: string;
+                /** @description At most 100, default 50. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessagePage"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_message: {
+        parameters: {
+            query?: {
+                /** @description Fills the relevance of each section for this member. */
+                member?: string;
+            };
+            header?: never;
+            path: {
+                /** @description message id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageDetail"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    message_action: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description message id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MailActionInput"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MailActionView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description the source is read-only or needs reconnecting */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    set_eval_sample: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description message id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EvalSampleInput"];
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    label_message: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description message id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabelInput"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessageDetail"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    message_task: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description message id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MakeTaskInput"];
+            };
+        };
+        responses: {
+            /** @description a task is queued */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_oauth_accounts: {
         parameters: {
             query?: never;
@@ -3568,6 +6231,8 @@ export interface operations {
             query?: {
                 /** @description A path on this site to return to afterwards. */
                 return_to?: string;
+                /** @description What the connection is for; adds that scope (`include_granted_scopes`). Default `calendar`. */
+                purpose?: components["schemas"]["PurposeParam"];
             };
             header?: never;
             path?: never;
@@ -3624,6 +6289,332 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    delete_org_contact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description contact id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_org_contact: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description contact id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrgContactPatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgContactView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_orgs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_org: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrgInput"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_org: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description org id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_org: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description org id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrgPatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    add_org_contact: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description org id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrgContactInput"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrgContactView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
             };
         };
     };
@@ -3993,7 +6984,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description `heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `resync`), bridged from `fa_change`; honours Last-Event-ID */
+            /** @description `heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `mail.updated` `{source?}`, `inbox.updated` `{}`, `bills.updated` `{}`, `resync`), bridged from `fa_change`; honours Last-Event-ID */
             200: {
                 headers: {
                     [name: string]: unknown;

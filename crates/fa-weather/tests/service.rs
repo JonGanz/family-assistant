@@ -39,6 +39,13 @@ async fn household(store: &Store, located: bool, units: Units) -> HouseholdId {
         now_weights: fa_domain::tasks::NowWeights::default(),
         quiet_from: chrono::NaiveTime::from_hms_opt(21, 0, 0).expect("time"),
         quiet_until: chrono::NaiveTime::from_hms_opt(7, 0, 0).expect("time"),
+        currency: fa_domain::DEFAULT_CURRENCY.to_string(),
+        gender_terms: Default::default(),
+        disabled_signals: Vec::new(),
+        events: Default::default(),
+        inbox: Default::default(),
+        retention_mail: Default::default(),
+        bill_lead_days: fa_domain::DEFAULT_BILL_LEAD_DAYS,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     };

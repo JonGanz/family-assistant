@@ -1,0 +1,18 @@
+From: Power Co <billing@power.example.com>
+To: parent@example.com
+Subject: Your statement is ready
+Date: Mon, 26 Oct 2026 07:00:00 -0400
+Message-ID: <bill-1@power.example.com>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+
+Hello,
+
+Your October statement is ready.
+
+Account number ending 4821
+Amount due: $123.45
+Due date: November 20, 2026
+
+Thank you,
+Power Co

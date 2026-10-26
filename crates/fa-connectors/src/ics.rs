@@ -140,3 +140,37 @@ pub fn parse(body: &str) -> Result<Vec<ParsedComponent>> {
     }
     Ok(out)
 }
+
+/// Builds a VCALENDAR with one VEVENT for a CalDAV `PUT`. Timed events are written in UTC;
+/// all-day events use the local dates of `ev.tz` (`DTEND` exclusive, at least one day).
+pub fn build_vevent(uid: &str, ev: &crate::EventWrite) -> Result<String> {
+    use icalendar::{Calendar, Component, Event, EventLike};
+    let mut e = Event::new();
+    e.uid(uid)
+        .summary(&ev.summary)
+        .timestamp(chrono::Utc::now());
+    if let Some(d) = &ev.description {
+        e.description(d);
+    }
+    if let Some(l) = &ev.location {
+        e.location(l);
+    }
+    if ev.all_day {
+        let tz: chrono_tz::Tz = ev
+            .tz
+            .parse()
+            .map_err(|_| ConnectorError::Parse("unknown time zone".into()))?;
+        let s = ev.start.with_timezone(&tz).date_naive();
+        let end = ev
+            .end
+            .with_timezone(&tz)
+            .date_naive()
+            .max(s + chrono::Days::new(1));
+        e.starts(s).ends(end);
+    } else {
+        e.starts(ev.start).ends(ev.end);
+    }
+    let mut cal = Calendar::new();
+    cal.push(e.done());
+    Ok(cal.done().to_string())
+}

@@ -8,6 +8,7 @@ export type PanelKind =
   | 'now'
   | 'member_tasks'
   | 'routine'
+  | 'inbox'
 export type Orientation = 'landscape' | 'portrait'
 
 export interface PanelConfig {
@@ -39,6 +40,7 @@ export const KNOWN_PANELS: readonly string[] = [
   'now',
   'member_tasks',
   'routine',
+  'inbox',
 ]
 
 const base = { orientation: 'landscape', theme: 'auto', members: 'all' } as const
@@ -80,7 +82,7 @@ export function defaultSettings(): DashboardSettings {
   return structuredClone(PRESETS[DEFAULT_PRESET]!)
 }
 
-const LEFT = new Set(['clock', 'weather', 'advisories', 'members', 'now'])
+const LEFT = new Set(['clock', 'weather', 'advisories', 'members', 'now', 'inbox'])
 
 /**
  * Landscape: 12-column grid, left 4 columns hold clock/weather/advisories/members/now,

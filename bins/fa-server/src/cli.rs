@@ -76,6 +76,11 @@ pub enum Command {
         #[command(subcommand)]
         action: TasksAction,
     },
+    /// Mail tools.
+    Mail {
+        #[command(subcommand)]
+        action: MailAction,
+    },
     /// Write the OpenAPI document.
     GenOpenapi {
         #[arg(long, default_value = "apps/web/src/gen/openapi.json")]
@@ -155,6 +160,18 @@ pub enum NotifyAction {
 pub enum TasksAction {
     /// Run one pass of tasks.materialize, tasks.tick and routines.materialize for the household.
     RunNow,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MailAction {
+    /// Run one sync pass (every source, or the one named) and then process the new messages.
+    SyncNow {
+        /// Source name, as shown in Settings -> Mail.
+        #[arg(long)]
+        source: Option<String>,
+    },
+    /// Process the household's pending messages in this process.
+    ProcessNow,
 }
 
 #[derive(Debug, Subcommand)]

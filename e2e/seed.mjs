@@ -3,6 +3,7 @@
 // FA_E2E_RADICALE (http://127.0.0.1:18092). Writes the ids to the file in argv[2].
 import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
+import { sendFixture } from "./mail-send.ts";
 
 const base = process.env.FA_E2E_BASE_URL;
 const fixtures = process.env.FA_E2E_FIXTURES;
@@ -135,6 +136,23 @@ const byday = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][
     new Date(`${today}T12:00:00Z`).getUTCDay()
 ];
 
+// The household's quiet hours (21:00 to 07:00 by default) would hold notifications back whenever
+// the suite runs at night: move them to a one-minute window twelve hours from now.
+const hhmmIn = (minutes) =>
+    new Intl.DateTimeFormat("en-GB", {
+        timeZone: NY,
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+    }).format(new Date(Date.now() + minutes * 60_000));
+const household = (await call("GET", "/api/v1/household")).json;
+await call(
+    "PATCH",
+    "/api/v1/household",
+    { quiet_from: hhmmIn(720), quiet_until: hhmmIn(721) },
+    { "if-match": `"${household.version}"` },
+);
+
 // Prefs first: notify.send drops rows of members that have none. Riley's assignments are copied to Alex.
 const prefs = {};
 for (const name of ["Alex", "Sam", "Riley", "Jordan"]) {
@@ -261,6 +279,92 @@ execFileSync(process.env.FA_E2E_BIN, ["tasks", "run-now"], {
     stdio: "inherit",
 });
 
+// ---- M3: writable CalDAV target, approval modes, a GreenMail mailbox with fixture mail ----
+// Approved events are written to Radicale: make that source writable and its calendar the default target.
+const famSource = (await call("GET", "/api/v1/calendar-sources")).json.find(
+    (x) => x.id === sources["Family CalDAV"],
+);
+await call(
+    "PATCH",
+    `/api/v1/calendar-sources/${famSource.id}`,
+    { writable: true },
+    { "if-match": `"${famSource.version}"` },
+);
+const famCals = (await call("GET", "/api/v1/calendars")).json.filter(
+    (c) => c.source === sources["Family CalDAV"],
+);
+if (famCals.length !== 1)
+    throw new Error(`expected one Family CalDAV calendar, got ${famCals.length}`);
+await call(
+    "PATCH",
+    `/api/v1/calendars/${famCals[0].id}`,
+    { is_default_target: true },
+    { "if-match": `"${famCals[0].version}"` },
+);
+
+// Alex keeps the default (batched); Sam only wants the digest.
+const samPrefs = (
+    await call("GET", `/api/v1/members/${id("Sam")}/notify-prefs`, undefined, {
+        cookie: samCookie,
+    })
+).json;
+await call(
+    "PUT",
+    `/api/v1/members/${id("Sam")}/notify-prefs`,
+    { approval_mode: "digest" },
+    { "if-match": `"${samPrefs.version}"`, cookie: samCookie },
+);
+
+const smtpPort = process.env.FA_E2E_SMTP_PORT;
+const imapPort = Number(process.env.FA_E2E_IMAP_PORT);
+const MAILBOX = "family@example.com";
+const fixtureMails = [
+    "newsletter",
+    "bill",
+    "payment-received",
+    "promotion",
+    "teacher-invite",
+    "permission-slip",
+    "unknown-teacher",
+];
+for (const name of fixtureMails)
+    await sendFixture(name, { port: smtpPort, to: MAILBOX });
+const mailSource = (
+    await call("POST", "/api/v1/mail-sources", {
+        provider: "imap",
+        name: "Family mailbox",
+        address: MAILBOX,
+        owners: [id("Alex")],
+        visibility: "household",
+        read_only: false,
+        backfill_days: 30,
+        imap: {
+            host: "127.0.0.1",
+            port: imapPort,
+            username: MAILBOX,
+            password: "pw",
+        },
+    })
+).json;
+// One sync pass and processing now (the worker would do it within a minute).
+execFileSync(process.env.FA_E2E_BIN, ["mail", "sync-now"], { stdio: "inherit" });
+execFileSync(process.env.FA_E2E_BIN, ["mail", "process-now"], {
+    stdio: "inherit",
+});
+for (;;) {
+    const page = (await call("GET", "/api/v1/messages?limit=100&include_ignored=true")).json;
+    if (
+        page.items.length >= fixtureMails.length &&
+        page.items.every((m) => m.processing_state === "processed")
+    )
+        break;
+    if (Date.now() > deadline + 60_000)
+        throw new Error(
+            `mail not processed: ${JSON.stringify(page.items.map((m) => [m.subject, m.processing_state]))}`,
+        );
+    await new Promise((r) => setTimeout(r, 1000));
+}
+
 const device = (await call("POST", "/api/v1/devices", { name: "e2e-kitchen" }))
     .json;
 writeFileSync(
@@ -275,6 +379,10 @@ writeFileSync(
         routine: routine.id,
         weatherRule: rule.id,
         today,
+        mailSource: mailSource.id ?? mailSource.source?.id,
+        mailbox: MAILBOX,
+        imapPort,
+        smtpPort: Number(smtpPort),
     }),
 );
 console.log("seeded", Object.keys(sources).join(", "));

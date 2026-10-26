@@ -89,7 +89,7 @@ pub async fn run(cfg: ProcessConfig, store: Store, mode: ServeMode) -> Result<()
         wiring::ensure_feature_schedules(&store).await?;
         let mut handlers: Vec<Arc<dyn JobHandler>> =
             vec![Arc::new(SessionCleanup), Arc::new(BackupVerify)];
-        handlers.extend(wiring::feature_handlers(&cfg, &services)?);
+        handlers.extend(wiring::feature_handlers(&cfg, &store, &services)?);
         let ctx = JobContext {
             store: store.clone(),
             backup_dir: cfg.backup_dir.clone(),

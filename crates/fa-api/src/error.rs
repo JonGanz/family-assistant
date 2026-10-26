@@ -43,6 +43,8 @@ pub enum ApiError {
     #[error("{0}")]
     Conflict(String),
     #[error("{0}")]
+    Gone(String),
+    #[error("{0}")]
     PreconditionRequired(String),
     #[error("{0}")]
     Unprocessable(String),
@@ -82,6 +84,7 @@ impl ApiError {
             Self::Forbidden(_) => StatusCode::FORBIDDEN,
             Self::NotFound => StatusCode::NOT_FOUND,
             Self::Conflict(_) => StatusCode::CONFLICT,
+            Self::Gone(_) => StatusCode::GONE,
             Self::PreconditionRequired(_) => StatusCode::PRECONDITION_REQUIRED,
             Self::Unprocessable(_) | Self::RuleInvalid { .. } | Self::FieldInvalid { .. } => {
                 StatusCode::UNPROCESSABLE_ENTITY
@@ -204,6 +207,7 @@ impl From<CalendarError> for ApiError {
             CalendarError::Remote(m) => Self::BadGateway(m),
             CalendarError::NotFound => Self::NotFound,
             CalendarError::Invalid(m) => Self::Unprocessable(m),
+            CalendarError::State(m) => Self::Conflict(m),
             e @ CalendarError::RangeTooLarge(_) => Self::BadRequest(e.to_string()),
         }
     }
@@ -250,6 +254,22 @@ impl From<fa_notify::NotifyError> for ApiError {
             N::Invalid(m) => Self::Unprocessable(m),
             N::NotFound => Self::NotFound,
             N::Store(s) => s.into(),
+        }
+    }
+}
+
+impl From<fa_mail::MailError> for ApiError {
+    fn from(e: fa_mail::MailError) -> Self {
+        use fa_mail::MailError as M;
+        match e {
+            M::NotFound => Self::NotFound,
+            M::Forbidden => Self::Forbidden("forbidden".into()),
+            M::Invalid(m) => Self::Unprocessable(m),
+            M::Conflict => Self::Conflict("the record was changed by someone else".into()),
+            e @ (M::ReadOnly | M::NeedsReauth) => Self::Conflict(e.to_string()),
+            M::Connector(m) => Self::BadGateway(m),
+            M::Store(s) => s.into(),
+            M::Pipeline(p) => Self::Internal(p.to_string()),
         }
     }
 }

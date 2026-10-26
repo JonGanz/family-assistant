@@ -4,6 +4,7 @@ import type { PanelProps } from '../types'
 import AdvisoriesPanel from './AdvisoriesPanel.vue'
 import AgendaPanel from './AgendaPanel.vue'
 import ClockPanel from './ClockPanel.vue'
+import InboxPanel from './InboxPanel.vue'
 import MemberTasksPanel from './MemberTasksPanel.vue'
 import MembersPanel from './MembersPanel.vue'
 import NowPanel from './NowPanel.vue'
@@ -30,6 +31,7 @@ const REGISTRY: Record<string, Component> = {
   now: NowPanel,
   member_tasks: MemberTasksPanel,
   routine: RoutinePanel,
+  inbox: InboxPanel,
 }
 /** Unknown kinds resolve to nothing, so an older client survives a newer layout. */
 const comp = computed(() => REGISTRY[props.panel.kind] ?? null)

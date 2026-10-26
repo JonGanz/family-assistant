@@ -1,7 +1,9 @@
 use base64::Engine;
 use base64::engine::general_purpose::URL_SAFE_NO_PAD;
 use chrono::{Duration, Utc};
-use fa_auth::{AccountService, AuthConfig, AuthError, AuthService, DeviceService, OAuthService};
+use fa_auth::{
+    AccountService, AuthConfig, AuthError, AuthService, DeviceService, OAuthPurpose, OAuthService,
+};
 use fa_connectors::Http;
 use fa_connectors::google::oauth::GoogleOAuth;
 use fa_domain::*;
@@ -32,6 +34,9 @@ fn member(h: HouseholdId, name: &str, role: Role) -> Member {
         interests: vec![],
         hobbies: vec![],
         responsibilities: vec![],
+        aliases: Vec::new(),
+        gender: None,
+        relevance_tags: Vec::new(),
         pin_hash: None,
         archived_at: None,
         created_at: Utc::now(),
@@ -63,6 +68,13 @@ async fn seed(pool: PgPool) -> Fx {
             now_weights: fa_domain::tasks::NowWeights::default(),
             quiet_from: chrono::NaiveTime::from_hms_opt(21, 0, 0).expect("time"),
             quiet_until: chrono::NaiveTime::from_hms_opt(7, 0, 0).expect("time"),
+            currency: fa_domain::DEFAULT_CURRENCY.to_string(),
+            gender_terms: Default::default(),
+            disabled_signals: Vec::new(),
+            events: Default::default(),
+            inbox: Default::default(),
+            retention_mail: Default::default(),
+            bill_lead_days: fa_domain::DEFAULT_BILL_LEAD_DAYS,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         },
@@ -145,7 +157,12 @@ async fn start_callback_happy_path(pool: PgPool) {
     assert!(s.enabled());
 
     let url = s
-        .start(&adult(&fx), "sess-1", Some("/settings"))
+        .start(
+            &adult(&fx),
+            "sess-1",
+            Some("/settings"),
+            OAuthPurpose::Calendar,
+        )
         .await
         .unwrap();
     let u = url::Url::parse(&url).unwrap();
@@ -211,7 +228,10 @@ async fn bad_states_are_rejected(pool: PgPool) {
     let a = adult(&fx);
 
     // Reuse.
-    let url = s.start(&a, "sess-1", None).await.unwrap();
+    let url = s
+        .start(&a, "sess-1", None, OAuthPurpose::Calendar)
+        .await
+        .unwrap();
     let st = state_of(&url);
     s.callback(&a, "sess-1", "c", &st).await.unwrap();
     assert!(matches!(
@@ -220,7 +240,10 @@ async fn bad_states_are_rejected(pool: PgPool) {
     ));
 
     // Wrong session; the state is burnt even so.
-    let url = s.start(&a, "sess-1", None).await.unwrap();
+    let url = s
+        .start(&a, "sess-1", None, OAuthPurpose::Calendar)
+        .await
+        .unwrap();
     let st = state_of(&url);
     assert!(matches!(
         s.callback(&a, "other-session", "c", &st).await,
@@ -258,7 +281,8 @@ async fn bad_states_are_rejected(pool: PgPool) {
         household_id: fx.h,
     };
     assert!(matches!(
-        s.start(&child, "sess-2", None).await,
+        s.start(&child, "sess-2", None, OAuthPurpose::Calendar)
+            .await,
         Err(AuthError::Forbidden(_))
     ));
 }
@@ -288,7 +312,10 @@ async fn cleanup_removes_expired_pending(pool: PgPool) {
 async fn connected(fx: &Fx, server: &MockServer) -> OAuthAccountId {
     mock_exchange(server).await;
     let s = svc(fx, Some(server));
-    let url = s.start(&adult(fx), "s", None).await.unwrap();
+    let url = s
+        .start(&adult(fx), "s", None, OAuthPurpose::Calendar)
+        .await
+        .unwrap();
     s.callback(&adult(fx), "s", "c", &state_of(&url))
         .await
         .unwrap()
@@ -352,7 +379,8 @@ async fn not_configured(pool: PgPool) {
     let s = svc(&fx, None);
     assert!(!s.enabled());
     assert!(matches!(
-        s.start(&adult(&fx), "s", None).await,
+        s.start(&adult(&fx), "s", None, OAuthPurpose::Calendar)
+            .await,
         Err(AuthError::NotConfigured)
     ));
     assert!(matches!(
@@ -408,4 +436,57 @@ async fn account_service_system_paths(pool: PgPool) {
     let auth = AuthService::new(fx.store.clone(), AuthConfig::default());
     let session = auth.login("sam", "wxyz", None, None).await;
     assert!(session.is_ok(), "{session:?}");
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn reconnect_with_purpose_unions_scopes(pool: PgPool) {
+    let fx = seed(pool).await;
+    let first = MockServer::start().await;
+    mock_exchange(&first).await;
+    let s1 = svc(&fx, Some(&first));
+    let url = s1
+        .start(&adult(&fx), "s", None, OAuthPurpose::Calendar)
+        .await
+        .unwrap();
+    let (id1, _) = s1
+        .callback(&adult(&fx), "s", "c", &state_of(&url))
+        .await
+        .unwrap();
+
+    let second = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .and(body_string_contains("authorization_code"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(serde_json::json!({
+            "access_token": "access-2", "refresh_token": REFRESH, "expires_in": 3600,
+            "scope": "openid email https://www.googleapis.com/auth/gmail.readonly",
+            "id_token": id_token("alex@example.com"),
+        })))
+        .mount(&second)
+        .await;
+    let s2 = svc(&fx, Some(&second));
+    let url = s2
+        .start(&adult(&fx), "s", None, OAuthPurpose::GmailModify)
+        .await
+        .unwrap();
+    let q: std::collections::HashMap<_, _> = url::Url::parse(&url)
+        .unwrap()
+        .query_pairs()
+        .into_owned()
+        .collect();
+    assert!(q["scope"].contains("auth/gmail.modify"));
+    assert_eq!(q["include_granted_scopes"], "true");
+    let (id2, _) = s2
+        .callback(&adult(&fx), "s", "c", &state_of(&url))
+        .await
+        .unwrap();
+    assert_eq!(id1, id2);
+    let accounts = s2.list_accounts(&adult(&fx)).await.unwrap();
+    assert_eq!(accounts.len(), 1);
+    for want in ["calendar.readonly", "gmail.readonly"] {
+        assert!(
+            accounts[0].scopes.iter().any(|x| x.ends_with(want)),
+            "{want}"
+        );
+    }
 }

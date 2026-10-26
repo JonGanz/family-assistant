@@ -48,6 +48,38 @@ This is the one-time setup (human step H-05) that lets the app read Google calen
 
 The app asks only for the read-only calendar scope. While the consent screen is in **Testing** mode, Google expires the refresh token after **7 days**. The source then shows *needs reauth*: use Reconnect. Moving the consent screen to *In production* avoids this (Google may require verification for sensitive scopes), and so does adding the calendar through its secret iCal address as an ICS source (slower to refresh, no OAuth).
 
+## Mail
+Mail ingest (M3) reads one or more mailboxes, sorts the mail, and proposes events, bills and tasks that wait for approval in the **Inbox**. Add a mailbox in **Settings, Mail**, either through the Gmail API or over IMAP. Nothing is written to a mailbox or a calendar until a person approves it, and a source is **read only** unless you switch that off.
+
+### Gmail API (human step H-10)
+Reuses the Google OAuth client of [Google OAuth client](#google-oauth-client). Do this once, then connect each account.
+1. In the same Google Cloud project, enable the **Gmail API** (APIs & Services, Library).
+2. OAuth consent screen, **Data access / Scopes**: add `https://www.googleapis.com/auth/gmail.readonly` (read only mail) or `https://www.googleapis.com/auth/gmail.modify` (needed to label, archive or mark mail read), and `https://www.googleapis.com/auth/calendar.events` (only if approved events should be written to a Google calendar). The app asks for them one at a time (*incremental consent*), only when you press the matching button, so granting `gmail.readonly` first and `gmail.modify` later works.
+3. Keep every account you will connect listed as a **test user**.
+4. In the app, **Settings, Mail, Add a mail source, Gmail**: if the account has no Gmail access yet, press **Connect Gmail (read only)** or **Connect Gmail (read and archive)**, approve in Google, then pick the account and add the source.
+5. **Testing mode re-consent:** the Gmail scopes are *restricted* scopes. While the consent screen is in *Testing* mode, Google expires the refresh token after **7 days**: the source then shows *needs reauth*. Reconnect the Google account (**Settings, Calendars, Reconnect** next to the account; it is the same account as for calendars). The *needs reconnecting* notification (Settings, Notifications) tells the owners. Publishing the app avoids this but needs Google's verification and a security assessment for restricted scopes, which a private household project normally does not want; use IMAP with an app password instead if the weekly reconnect is a burden.
+
+### IMAP with an app password
+Works with any provider, never expires, and needs no Google client.
+1. For Gmail: turn on **2-step verification** on the Google account, then create an **app password** (Google Account, Security, 2-Step Verification, App passwords). Other providers: create an app-specific password if the provider offers one.
+2. **Settings, Mail, Add a mail source, IMAP.** Server `imap.gmail.com`, port `993` (typing a `@gmail.com` address pre-fills both), the full address as user name, the app password.
+3. **Folder to read:** `INBOX` by default. For Gmail, set the archive folder to `[Gmail]/All Mail` so archived mail is still read (and the archive action has somewhere to go). Press **Test connection**: it logs in, lists the folders and says whether Gmail extensions (real labels) are available.
+4. IMAP on Gmail uses real Gmail labels (`FA/School` and so on). On other servers labels are stored as IMAP keywords (`FA_...`), which some mail apps show as tags.
+5. The password is encrypted with the master key and never shown again, and a TOML export never contains it. Plain (unencrypted) IMAP is refused: the app connects with TLS (port 993) or STARTTLS. Only tests may turn that off (`FA_ALLOW_PLAIN_IMAP`, `FA_IMAP_TLS_INSECURE`, see `.env.example`; compose does not pass them through).
+
+### Read only or writable
+A source starts **read only**: the app only reads. Turn *Read only* off on the source to let it act, and, for Gmail, reconnect with *read and archive* (`gmail.modify`). Writable sources get the automatic **labels** (`FA/<category>`, `FA/<member>`) and whatever else a category's *automatic actions* list says (archive, mark read), and manual actions on a message. Every action can be **undone for 30 days**. Approving an event writes to the calendar you pick, which must be on a writable calendar source: a CalDAV source with *Allow writing (approved events)* on, or a Google source connected with calendar write access. Mark one calendar per member (or one for the household) as **Default target**.
+
+### Privacy and retention
+- Message metadata is always kept. Message **content** follows **Settings, Household, Mail and approvals, Keeping email content**: keep everything, keep for learning (the default: bodies are purged after processing except for messages kept as labelling examples), or purge after processing. Unprocessed mail is marked expired after the maximum pending days.
+- Sources are visible to their **owners**, or to every adult (*household*). **Children and dashboards never list or read mail.** A dashboard shows only the counts of what waits in the inbox, and approving from a dashboard needs an adult's PIN elevation.
+- Mail never leaves your machines: classification is rule based in M3, nothing is sent to a third party. Mail text is not written to the logs.
+- Everything extracted waits for approval in M3: events, bills that are not clearly bills, suggested tasks and new contacts. *Household, Mail and approvals* has the switches (automatic writes of high-confidence events are off by default).
+
+### Steps to do after deploying M3 (H-10, H-11)
+1. **H-10:** the Gmail setup above, or an IMAP source with an app password. Update the stack first (`docker compose ... pull && ... up -d`; the migration runs when the api starts).
+2. **H-11:** add the household's schools, clubs and billers under **Settings, Organizations** (domains, teachers or coaches, bill patterns), each child's **enrollments** (grade, class, teachers, also under Organizations), connect one mailbox **read only**, then look at the **Inbox** and the **Mail, Label mail** view for a week and label about 200 messages. Those labels become the evaluation sample for the later AI milestone.
+
 ## ntfy notifications
 Notifications (assigned tasks, overdue, the daily digest, routine nudges, calendar re-connect) go through [ntfy](https://ntfy.sh/), a self-hosted push service. The default profile runs it as the `ntfy` service (pinned to `binwiederhier/ntfy:v2.17.0`), and `api` and `worker` publish to it over the compose network.
 

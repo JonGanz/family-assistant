@@ -7,6 +7,10 @@ compose := "docker compose -f deploy/compose.dev.yaml"
 dev-db:
     {{compose}} up -d --wait postgres ntfy
 
+# Start a local GreenMail (IMAP 127.0.0.1:13143, SMTP 127.0.0.1:13025) for trying the mail features
+dev-mail:
+    {{compose}} up -d greenmail
+
 # Dev DB, api/worker with auto-reload, and the Vite dev server
 dev: dev-db dev-key
     #!/usr/bin/env bash

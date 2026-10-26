@@ -4,7 +4,7 @@ import { parseSimple, type SimpleRule, type Weekday } from './rrule'
 export type TaskStatus = 'open' | 'done' | 'skipped' | 'suggested'
 export type PriorityFlag = 'normal' | 'high'
 export type CalendarDisplay = 'hidden' | 'until_done' | 'always'
-export type TaskOrigin = 'manual' | 'system' | 'weather'
+export type TaskOrigin = 'manual' | 'system' | 'weather' | 'email'
 
 export interface MemberRef {
   id: string

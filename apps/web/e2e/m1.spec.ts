@@ -110,10 +110,10 @@ test('settings: add an ICS source and enable its calendar', async ({ page }) => 
     )
   let saved = patched()
   await show.uncheck()
-  expect((await saved).ok()).toBeTruthy()
+  expect((await saved).status()).toBe(200)
   saved = patched()
   await show.check()
-  expect((await saved).ok()).toBeTruthy()
+  expect((await saved).status()).toBe(200)
   await page.reload()
   await expect(
     page.getByTestId('source-UI Added Feed').getByRole('checkbox', { name: /^Show / }),

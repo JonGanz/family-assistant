@@ -41,6 +41,7 @@ pub fn list_defaults(kind: TaskListKind) -> ListDefaults {
         TaskListKind::Chores => (ChildCanAdd::None, false, CalendarDisplay::Hidden),
         TaskListKind::Homework => (ChildCanAdd::Own, false, CalendarDisplay::UntilDone),
         TaskListKind::General => (ChildCanAdd::None, true, CalendarDisplay::Hidden),
+        TaskListKind::Email => (ChildCanAdd::None, false, CalendarDisplay::UntilDone),
     };
     ListDefaults {
         completion_policy: ListCompletionPolicy::Assignee,

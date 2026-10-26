@@ -12,9 +12,9 @@ use fa_domain::tasks::{
 use fa_domain::tasks_api::*;
 use fa_domain::*;
 use fa_store::{
-    ChangeBus, HouseholdRepo, MemberAwayRepo, MemberRepo, NewTaskRow, RoutineFull, RoutineRepo,
-    RoutineRunRepo, RoutineStepSpec, RunRow, Store, TaskDefinitionRepo, TaskFilter, TaskListRepo,
-    TaskRepo, TaskRow, Tx, Versioned,
+    BillRepo, ChangeBus, HouseholdRepo, MemberAwayRepo, MemberRepo, NewTaskRow, RoutineFull,
+    RoutineRepo, RoutineRunRepo, RoutineStepSpec, RunRow, Store, TaskDefinitionRepo, TaskFilter,
+    TaskListRepo, TaskRepo, TaskRow, Tx, Versioned,
 };
 
 use crate::error::{Result, TaskError};
@@ -87,6 +87,11 @@ pub(crate) async fn household_of(tx: &mut Tx, id: HouseholdId) -> Result<Househo
 
 pub(crate) async fn publish_tasks(tx: &mut Tx, h: HouseholdId) -> Result<()> {
     ChangeBus::publish(tx, h, "tasks.updated", &serde_json::json!({})).await?;
+    Ok(())
+}
+
+pub(crate) async fn publish_bills(tx: &mut Tx, h: HouseholdId) -> Result<()> {
+    ChangeBus::publish(tx, h, "bills.updated", &serde_json::json!({})).await?;
     Ok(())
 }
 
@@ -581,6 +586,9 @@ impl TaskService {
         }
         TaskRepo::set_status(&mut tx, task, TaskStatus::Done, member, device, undo).await?;
         TaskRepo::set_completed_at(&mut tx, task, now).await?;
+        if BillRepo::set_paid_by_task(&mut tx, task).await? {
+            publish_bills(&mut tx, household).await?;
+        }
         self.finish(tx, household, task).await
     }
 
@@ -686,6 +694,9 @@ impl TaskService {
             TaskRepo::delete_created_after(&mut tx, did, done_at).await?;
         }
         TaskRepo::reopen(&mut tx, task).await?;
+        if BillRepo::reopen_by_task(&mut tx, task).await? {
+            publish_bills(&mut tx, household).await?;
+        }
         self.finish(tx, household, task).await
     }
 

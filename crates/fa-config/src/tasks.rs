@@ -162,6 +162,9 @@ pub struct NotifyConfig {
     /// Member key of an adult who gets a copy.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub copy_to: Option<String>,
+    /// How approval requests reach this member: `immediate`, `batched` (default), `digest`, `off`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub approval_mode: Option<fa_domain::ApprovalMode>,
 }
 
 fn normalized_triggers(t: &Option<Vec<NotifyTrigger>>) -> Vec<NotifyTrigger> {
@@ -466,6 +469,10 @@ pub(crate) async fn import_tasks(
             quiet_from: qf,
             quiet_until: qu,
             copy_to_member_id: n.copy_to.as_deref().and_then(resolve),
+            approval_mode: n
+                .approval_mode
+                .or(existing.as_ref().map(|e| e.value.approval_mode))
+                .unwrap_or_default(),
             archived_at: None,
         };
         let changed = match &existing {
@@ -484,6 +491,7 @@ pub(crate) async fn import_tasks(
                     || e.quiet_from != pref.quiet_from
                     || e.quiet_until != pref.quiet_until
                     || e.copy_to_member_id != pref.copy_to_member_id
+                    || e.approval_mode != pref.approval_mode
             }
             None => true,
         };
@@ -839,6 +847,7 @@ pub(crate) async fn export_tasks(
                     quiet_from: p.quiet_from.map(format_hhmm),
                     quiet_until: p.quiet_until.map(format_hhmm),
                     copy_to: p.copy_to_member_id.and_then(key_of),
+                    approval_mode: Some(p.approval_mode),
                 },
             );
         }

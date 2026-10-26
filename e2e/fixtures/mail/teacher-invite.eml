@@ -1,0 +1,33 @@
+From: "Ms. Teacher" <teacher@example.edu>
+To: family@example.com
+Subject: Science fair for grade 3 (class 3B)
+Date: Mon, 26 Oct 2026 09:00:00 +0000
+Message-ID: <invite-1@example.edu>
+MIME-Version: 1.0
+Content-Type: multipart/alternative; boundary="b1"
+
+--b1
+Content-Type: text/plain; charset=utf-8
+
+Dear families of grade 3, class 3B,
+
+Our science fair is coming up. The calendar invite is attached.
+
+Ms. Teacher
+--b1
+Content-Type: text/calendar; charset=utf-8; method=REQUEST
+
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//example.edu//EN
+METHOD:REQUEST
+BEGIN:VEVENT
+UID:sciencefair-1@example.edu
+DTSTAMP:20261026T090000Z
+DTSTART:{{d+5}}T150000Z
+DTEND:{{d+5}}T170000Z
+SUMMARY:Grade 3 Science Fair
+LOCATION:School gym
+END:VEVENT
+END:VCALENDAR
+--b1--

@@ -85,3 +85,28 @@ pub struct Forecast {
     pub timezone: Option<String>,
     pub utc_offset_seconds: i32,
 }
+
+/// An event to create or patch on a remote calendar.
+///
+/// `start` and `end` are instants. For `all_day`, the dates are the local dates of `start` and
+/// `end` in `tz` (`end` exclusive; forced to at least one day after `start`).
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct EventWrite {
+    pub summary: String,
+    pub description: Option<String>,
+    pub location: Option<String>,
+    pub start: DateTime<Utc>,
+    pub end: DateTime<Utc>,
+    pub all_day: bool,
+    /// IANA time zone name (household zone).
+    pub tz: String,
+}
+
+/// Result of a Google Calendar write.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct Written {
+    pub id: String,
+    pub ical_uid: Option<String>,
+    pub etag: Option<String>,
+    pub html_link: Option<String>,
+}

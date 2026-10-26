@@ -321,4 +321,68 @@ impl CaldavClient {
             .filter(|t| !t.trim().is_empty())
             .collect())
     }
+
+    /// Collection URL with a trailing slash; `calendar_url` is a stored remote id or absolute URL.
+    fn collection(&self, calendar_url: &str) -> Result<Url> {
+        let mut u = self.resolve(&self.base, calendar_url)?;
+        if !u.path().ends_with('/') {
+            let p = format!("{}/", u.path());
+            u.set_path(&p);
+        }
+        Ok(u)
+    }
+
+    /// `PUT {calendar}/{uid}.ics`. Returns the new ETag when the server sends one.
+    /// A failed precondition (`If-None-Match: *` on an existing event, stale `If-Match`) is
+    /// `Http(412)`.
+    pub async fn put_event(
+        &self,
+        calendar_url: &str,
+        uid: &str,
+        ics_text: &str,
+        if_none_match: bool,
+        if_match: Option<&str>,
+    ) -> Result<Option<String>> {
+        let mut url = self.collection(calendar_url)?;
+        url.path_segments_mut()
+            .map_err(|_| ConnectorError::Parse("bad calendar url".into()))?
+            .pop_if_empty()
+            .push(&format!("{uid}.ics"));
+        let mut rb = self
+            .http
+            .request(Method::PUT, &url)?
+            .basic_auth(&self.user, Some(&self.pass))
+            .header("Content-Type", "text/calendar; charset=utf-8")
+            .body(ics_text.to_owned());
+        if if_none_match {
+            rb = rb.header("If-None-Match", "*");
+        }
+        if let Some(m) = if_match {
+            rb = rb.header("If-Match", m);
+        }
+        let resp = self.http.send(rb).await?;
+        Http::check_status(resp.status())?;
+        Ok(resp
+            .headers()
+            .get(reqwest::header::ETAG)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_owned))
+    }
+
+    /// `DELETE` of an event resource; an already-missing event (404/410) counts as done.
+    pub async fn delete_event(&self, href: &str, etag: Option<&str>) -> Result<()> {
+        let url = self.resolve(&self.base, href)?;
+        let mut rb = self
+            .http
+            .request(Method::DELETE, &url)?
+            .basic_auth(&self.user, Some(&self.pass));
+        if let Some(e) = etag {
+            rb = rb.header("If-Match", e);
+        }
+        let resp = self.http.send(rb).await?;
+        if matches!(resp.status().as_u16(), 404 | 410) {
+            return Ok(());
+        }
+        Http::check_status(resp.status())
+    }
 }

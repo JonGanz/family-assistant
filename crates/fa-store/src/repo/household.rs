@@ -13,6 +13,10 @@ fn weights(w: &fa_domain::tasks::NowWeights) -> Result<serde_json::Value> {
     serde_json::to_value(w).map_err(|e| StoreError::Corrupt(format!("now_weights: {e}")))
 }
 
+fn gender_terms(g: &fa_domain::GenderTerms) -> Result<serde_json::Value> {
+    serde_json::to_value(g).map_err(|e| StoreError::Corrupt(format!("gender_terms: {e}")))
+}
+
 struct Row {
     id: Uuid,
     name: String,
@@ -31,6 +35,18 @@ struct Row {
     now_weights: serde_json::Value,
     quiet_from: chrono::NaiveTime,
     quiet_until: chrono::NaiveTime,
+    currency: String,
+    gender_terms: serde_json::Value,
+    disabled_signals: Vec<String>,
+    events_auto_write: bool,
+    events_extract_threshold: f32,
+    events_route_threshold: f32,
+    bill_lead_days: i32,
+    inbox_task_expiry_days: i32,
+    inbox_contact_expiry_days: i32,
+    mail_content_policy: String,
+    mail_examples_per_category: i32,
+    mail_max_pending_days: i32,
     version: i32,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -62,6 +78,25 @@ impl TryFrom<Row> for Versioned<Household> {
                     .map_err(|e| StoreError::Corrupt(format!("now_weights: {e}")))?,
                 quiet_from: r.quiet_from,
                 quiet_until: r.quiet_until,
+                currency: r.currency,
+                gender_terms: serde_json::from_value(r.gender_terms)
+                    .map_err(|e| StoreError::Corrupt(format!("gender_terms: {e}")))?,
+                disabled_signals: r.disabled_signals,
+                events: fa_domain::EventsSettings {
+                    auto_write: r.events_auto_write,
+                    extract_threshold: r.events_extract_threshold,
+                    route_threshold: r.events_route_threshold,
+                },
+                inbox: fa_domain::InboxSettings {
+                    task_expiry_days: r.inbox_task_expiry_days,
+                    contact_expiry_days: r.inbox_contact_expiry_days,
+                },
+                retention_mail: fa_domain::MailRetention {
+                    content_policy: parse_enum(&r.mail_content_policy)?,
+                    examples_per_category: r.mail_examples_per_category,
+                    max_pending_days: r.mail_max_pending_days,
+                },
+                bill_lead_days: r.bill_lead_days,
                 created_at: r.created_at,
                 updated_at: r.updated_at,
             },
@@ -81,12 +116,20 @@ impl HouseholdRepo {
                                     meal_plan_horizon_weeks, dashboard_completion_override,
                                     units, calendar_past_days, calendar_future_days,
                                     weather_retention_days, private_events_as_busy,
-                                    now_list_size, now_weights, quiet_from, quiet_until)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+                                    now_list_size, now_weights, quiet_from, quiet_until,
+                                    currency, gender_terms, disabled_signals, events_auto_write,
+                                    events_extract_threshold, events_route_threshold, bill_lead_days,
+                                    inbox_task_expiry_days, inbox_contact_expiry_days,
+                                    mail_content_policy, mail_examples_per_category,
+                                    mail_max_pending_days)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
+                     $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
              RETURNING id, name, tz, location_lat, location_lon, location_label,
                        meal_plan_horizon_weeks, dashboard_completion_override, units,
                        calendar_past_days, calendar_future_days, weather_retention_days,
-                    private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, version,
+                    private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, currency, gender_terms, disabled_signals, events_auto_write, events_extract_threshold,
+                       events_route_threshold, bill_lead_days, inbox_task_expiry_days, inbox_contact_expiry_days,
+                       mail_content_policy, mail_examples_per_category, mail_max_pending_days, version,
                        created_at, updated_at",
             h.id.as_uuid(),
             h.name,
@@ -104,7 +147,19 @@ impl HouseholdRepo {
             h.now_list_size,
             weights(&h.now_weights)?,
             h.quiet_from,
-            h.quiet_until
+            h.quiet_until,
+            h.currency,
+            gender_terms(&h.gender_terms)?,
+            &h.disabled_signals,
+            h.events.auto_write,
+            h.events.extract_threshold,
+            h.events.route_threshold,
+            h.bill_lead_days,
+            h.inbox.task_expiry_days,
+            h.inbox.contact_expiry_days,
+            enum_str(&h.retention_mail.content_policy),
+            h.retention_mail.examples_per_category,
+            h.retention_mail.max_pending_days
         )
         .fetch_one(conn)
         .await?;
@@ -120,7 +175,9 @@ impl HouseholdRepo {
             "SELECT id, name, tz, location_lat, location_lon, location_label,
                     meal_plan_horizon_weeks, dashboard_completion_override, units,
                        calendar_past_days, calendar_future_days, weather_retention_days,
-                    private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, version,
+                    private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, currency, gender_terms, disabled_signals, events_auto_write, events_extract_threshold,
+                       events_route_threshold, bill_lead_days, inbox_task_expiry_days, inbox_contact_expiry_days,
+                       mail_content_policy, mail_examples_per_category, mail_max_pending_days, version,
                     created_at, updated_at
              FROM household WHERE id = $1",
             id.as_uuid()
@@ -137,7 +194,9 @@ impl HouseholdRepo {
             "SELECT id, name, tz, location_lat, location_lon, location_label,
                     meal_plan_horizon_weeks, dashboard_completion_override, units,
                        calendar_past_days, calendar_future_days, weather_retention_days,
-                    private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, version,
+                    private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, currency, gender_terms, disabled_signals, events_auto_write, events_extract_threshold,
+                       events_route_threshold, bill_lead_days, inbox_task_expiry_days, inbox_contact_expiry_days,
+                       mail_content_policy, mail_examples_per_category, mail_max_pending_days, version,
                     created_at, updated_at
              FROM household ORDER BY created_at, id"
         )
@@ -162,8 +221,13 @@ impl HouseholdRepo {
                     dashboard_completion_override = $8, units = $9, calendar_past_days = $10,
                     calendar_future_days = $11, weather_retention_days = $12,
                     private_events_as_busy = $13, now_list_size = $14, now_weights = $15,
-                    quiet_from = $16, quiet_until = $17, version = version + 1
-             WHERE id = $1 AND version = $18
+                    quiet_from = $16, quiet_until = $17, currency = $18, gender_terms = $19,
+                    disabled_signals = $20, events_auto_write = $21, events_extract_threshold = $22,
+                    events_route_threshold = $23, bill_lead_days = $24, inbox_task_expiry_days = $25,
+                    inbox_contact_expiry_days = $26, mail_content_policy = $27,
+                    mail_examples_per_category = $28, mail_max_pending_days = $29,
+                    version = version + 1
+             WHERE id = $1 AND version = $30
              RETURNING version",
             h.id.as_uuid(),
             h.name,
@@ -182,6 +246,18 @@ impl HouseholdRepo {
             weights(&h.now_weights)?,
             h.quiet_from,
             h.quiet_until,
+            h.currency,
+            gender_terms(&h.gender_terms)?,
+            &h.disabled_signals,
+            h.events.auto_write,
+            h.events.extract_threshold,
+            h.events.route_threshold,
+            h.bill_lead_days,
+            h.inbox.task_expiry_days,
+            h.inbox.contact_expiry_days,
+            enum_str(&h.retention_mail.content_policy),
+            h.retention_mail.examples_per_category,
+            h.retention_mail.max_pending_days,
             expected_version
         )
         .fetch_optional(&mut *conn)
@@ -217,8 +293,18 @@ impl HouseholdRepo {
                     quiet_from = COALESCE($14, quiet_from),
                     quiet_until = COALESCE($15, quiet_until),
                     dashboard_completion_override = COALESCE($16, dashboard_completion_override),
+                    currency = COALESCE($17, currency), gender_terms = COALESCE($18, gender_terms),
+                    events_auto_write = COALESCE($19, events_auto_write),
+                    events_extract_threshold = COALESCE($20, events_extract_threshold),
+                    events_route_threshold = COALESCE($21, events_route_threshold),
+                    bill_lead_days = COALESCE($22, bill_lead_days),
+                    inbox_task_expiry_days = COALESCE($23, inbox_task_expiry_days),
+                    inbox_contact_expiry_days = COALESCE($24, inbox_contact_expiry_days),
+                    mail_content_policy = COALESCE($25, mail_content_policy),
+                    mail_examples_per_category = COALESCE($26, mail_examples_per_category),
+                    mail_max_pending_days = COALESCE($27, mail_max_pending_days),
                     version = version + 1
-             WHERE id = $1 AND version = $17
+             WHERE id = $1 AND version = $28
              RETURNING version",
             id.as_uuid(),
             p.name,
@@ -236,6 +322,17 @@ impl HouseholdRepo {
             p.quiet_from,
             p.quiet_until,
             p.dashboard_completion_override,
+            p.currency,
+            p.gender_terms.as_ref().map(gender_terms).transpose()?,
+            p.events.as_ref().map(|e| e.auto_write),
+            p.events.as_ref().map(|e| e.extract_threshold),
+            p.events.as_ref().map(|e| e.route_threshold),
+            p.bill_lead_days,
+            p.inbox.as_ref().map(|i| i.task_expiry_days),
+            p.inbox.as_ref().map(|i| i.contact_expiry_days),
+            p.retention_mail.as_ref().map(|r| enum_str(&r.content_policy)),
+            p.retention_mail.as_ref().map(|r| r.examples_per_category),
+            p.retention_mail.as_ref().map(|r| r.max_pending_days),
             expected_version
         )
         .fetch_optional(&mut *conn)
@@ -243,6 +340,37 @@ impl HouseholdRepo {
         match v {
             Some(v) => Ok(v),
             None => Err(conflict_or_missing(conn, "household", id.as_uuid()).await),
+        }
+    }
+
+    /// Built-in signal keys switched off for the household.
+    pub async fn disabled_signals(conn: &mut PgConnection, id: HouseholdId) -> Result<Vec<String>> {
+        sqlx::query_scalar!(
+            "SELECT disabled_signals FROM household WHERE id = $1",
+            id.as_uuid()
+        )
+        .fetch_optional(conn)
+        .await?
+        .ok_or(StoreError::NotFound)
+    }
+
+    pub async fn set_disabled_signals(
+        conn: &mut PgConnection,
+        id: HouseholdId,
+        keys: &[String],
+    ) -> Result<()> {
+        let n = sqlx::query!(
+            "UPDATE household SET disabled_signals = $2, version = version + 1 WHERE id = $1",
+            id.as_uuid(),
+            keys
+        )
+        .execute(conn)
+        .await?
+        .rows_affected();
+        if n == 0 {
+            Err(StoreError::NotFound)
+        } else {
+            Ok(())
         }
     }
 }

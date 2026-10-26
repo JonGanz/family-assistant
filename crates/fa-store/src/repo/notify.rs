@@ -1,9 +1,9 @@
 use chrono::{DateTime, NaiveTime, Utc};
-use fa_domain::{HouseholdId, MemberId};
+use fa_domain::{ApprovalMode, HouseholdId, MemberId};
 use sqlx::PgConnection;
 use uuid::Uuid;
 
-use super::conflict_or_missing;
+use super::{conflict_or_missing, enum_str, parse_enum};
 use crate::{Result, StoreError, Versioned};
 
 #[derive(Debug, Clone)]
@@ -21,6 +21,8 @@ pub struct NotifyPref {
     pub quiet_from: Option<NaiveTime>,
     pub quiet_until: Option<NaiveTime>,
     pub copy_to_member_id: Option<MemberId>,
+    /// How `approval_needed` notifications are delivered.
+    pub approval_mode: ApprovalMode,
     pub archived_at: Option<DateTime<Utc>>,
 }
 
@@ -38,12 +40,15 @@ struct Row {
     quiet_from: Option<NaiveTime>,
     quiet_until: Option<NaiveTime>,
     copy_to_member_id: Option<Uuid>,
+    approval_mode: String,
     archived_at: Option<DateTime<Utc>>,
     version: i32,
 }
 
 impl From<Row> for Versioned<NotifyPref> {
     fn from(r: Row) -> Self {
+        // The column is CHECK-constrained to the enum's values.
+        let approval_mode = parse_enum(&r.approval_mode).unwrap_or_default();
         Versioned {
             version: r.version,
             value: NotifyPref {
@@ -58,6 +63,7 @@ impl From<Row> for Versioned<NotifyPref> {
                 quiet_from: r.quiet_from,
                 quiet_until: r.quiet_until,
                 copy_to_member_id: r.copy_to_member_id.map(Into::into),
+                approval_mode,
                 archived_at: r.archived_at,
             },
         }
@@ -70,9 +76,9 @@ impl NotifyPrefRepo {
             Row,
             "INSERT INTO notify_pref (id, household_id, member_id, channel, topic, triggers,
                                       due_soon_minutes, nudge_minutes, quiet_from, quiet_until,
-                                      copy_to_member_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-             RETURNING id, household_id, member_id, channel, topic, triggers, due_soon_minutes, nudge_minutes, quiet_from, quiet_until, copy_to_member_id, archived_at, version",
+                                      copy_to_member_id, approval_mode)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+             RETURNING id, household_id, member_id, channel, topic, triggers, due_soon_minutes, nudge_minutes, quiet_from, quiet_until, copy_to_member_id, approval_mode, archived_at, version",
             p.id,
             p.household_id.as_uuid(),
             p.member_id.as_uuid(),
@@ -83,7 +89,8 @@ impl NotifyPrefRepo {
             p.nudge_minutes,
             p.quiet_from,
             p.quiet_until,
-            p.copy_to_member_id.map(|m| m.as_uuid())
+            p.copy_to_member_id.map(|m| m.as_uuid()),
+            enum_str(&p.approval_mode)
         )
         .fetch_one(conn)
         .await?;
@@ -93,7 +100,7 @@ impl NotifyPrefRepo {
     pub async fn get(conn: &mut PgConnection, id: Uuid) -> Result<Option<Versioned<NotifyPref>>> {
         let row = sqlx::query_as!(
             Row,
-            "SELECT id, household_id, member_id, channel, topic, triggers, due_soon_minutes, nudge_minutes, quiet_from, quiet_until, copy_to_member_id, archived_at, version
+            "SELECT id, household_id, member_id, channel, topic, triggers, due_soon_minutes, nudge_minutes, quiet_from, quiet_until, copy_to_member_id, approval_mode, archived_at, version
              FROM notify_pref WHERE id = $1",
             id
         )
@@ -108,7 +115,7 @@ impl NotifyPrefRepo {
     ) -> Result<Vec<Versioned<NotifyPref>>> {
         let rows = sqlx::query_as!(
             Row,
-            "SELECT id, household_id, member_id, channel, topic, triggers, due_soon_minutes, nudge_minutes, quiet_from, quiet_until, copy_to_member_id, archived_at, version
+            "SELECT id, household_id, member_id, channel, topic, triggers, due_soon_minutes, nudge_minutes, quiet_from, quiet_until, copy_to_member_id, approval_mode, archived_at, version
              FROM notify_pref WHERE member_id = $1 AND archived_at IS NULL ORDER BY created_at, id",
             member.as_uuid()
         )
@@ -125,8 +132,8 @@ impl NotifyPrefRepo {
         let v = sqlx::query_scalar!(
             "UPDATE notify_pref SET channel = $2, topic = $3, triggers = $4, due_soon_minutes = $5,
                     nudge_minutes = $6, quiet_from = $7, quiet_until = $8, copy_to_member_id = $9,
-                    version = version + 1
-             WHERE id = $1 AND version = $10 RETURNING version",
+                    approval_mode = $10, version = version + 1
+             WHERE id = $1 AND version = $11 RETURNING version",
             p.id,
             p.channel,
             p.topic,
@@ -136,6 +143,7 @@ impl NotifyPrefRepo {
             p.quiet_from,
             p.quiet_until,
             p.copy_to_member_id.map(|m| m.as_uuid()),
+            enum_str(&p.approval_mode),
             expected_version
         )
         .fetch_optional(&mut *conn)
@@ -168,7 +176,7 @@ impl NotifyPrefRepo {
     ) -> Result<Option<Versioned<NotifyPref>>> {
         let row = sqlx::query_as!(
             Row,
-            "SELECT id, household_id, member_id, channel, topic, triggers, due_soon_minutes, nudge_minutes, quiet_from, quiet_until, copy_to_member_id, archived_at, version
+            "SELECT id, household_id, member_id, channel, topic, triggers, due_soon_minutes, nudge_minutes, quiet_from, quiet_until, copy_to_member_id, approval_mode, archived_at, version
              FROM notify_pref WHERE member_id = $1 AND archived_at IS NULL",
             member.as_uuid()
         )
@@ -188,15 +196,16 @@ impl NotifyPrefRepo {
             Row,
             "INSERT INTO notify_pref (id, household_id, member_id, channel, topic, triggers,
                                       due_soon_minutes, nudge_minutes, quiet_from, quiet_until,
-                                      copy_to_member_id)
-             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+                                      copy_to_member_id, approval_mode)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $13)
              ON CONFLICT (member_id) WHERE archived_at IS NULL DO UPDATE SET
                  channel = EXCLUDED.channel, topic = EXCLUDED.topic, triggers = EXCLUDED.triggers,
                  due_soon_minutes = EXCLUDED.due_soon_minutes, nudge_minutes = EXCLUDED.nudge_minutes,
                  quiet_from = EXCLUDED.quiet_from, quiet_until = EXCLUDED.quiet_until,
-                 copy_to_member_id = EXCLUDED.copy_to_member_id, version = notify_pref.version + 1
+                 copy_to_member_id = EXCLUDED.copy_to_member_id, approval_mode = EXCLUDED.approval_mode,
+                 version = notify_pref.version + 1
              WHERE $12::int IS NULL OR notify_pref.version = $12
-             RETURNING id, household_id, member_id, channel, topic, triggers, due_soon_minutes, nudge_minutes, quiet_from, quiet_until, copy_to_member_id, archived_at, version",
+             RETURNING id, household_id, member_id, channel, topic, triggers, due_soon_minutes, nudge_minutes, quiet_from, quiet_until, copy_to_member_id, approval_mode, archived_at, version",
             p.id,
             p.household_id.as_uuid(),
             p.member_id.as_uuid(),
@@ -208,7 +217,8 @@ impl NotifyPrefRepo {
             p.quiet_from,
             p.quiet_until,
             p.copy_to_member_id.map(|m| m.as_uuid()),
-            expected_version
+            expected_version,
+            enum_str(&p.approval_mode)
         )
         .fetch_optional(conn)
         .await?;
@@ -219,7 +229,7 @@ impl NotifyPrefRepo {
     pub async fn list_all(conn: &mut PgConnection) -> Result<Vec<Versioned<NotifyPref>>> {
         let rows = sqlx::query_as!(
             Row,
-            "SELECT id, household_id, member_id, channel, topic, triggers, due_soon_minutes, nudge_minutes, quiet_from, quiet_until, copy_to_member_id, archived_at, version
+            "SELECT id, household_id, member_id, channel, topic, triggers, due_soon_minutes, nudge_minutes, quiet_from, quiet_until, copy_to_member_id, approval_mode, archived_at, version
              FROM notify_pref WHERE archived_at IS NULL ORDER BY created_at, id"
         )
         .fetch_all(conn)

@@ -84,9 +84,12 @@ const people = computed(() =>
 )
 const sourceLabel = computed(
   () =>
-    ({ manual: 'Added by hand', system: 'Repeating task', weather: 'From the weather' })[
-      task.value?.origin ?? 'manual'
-    ],
+    ({
+      manual: 'Added by hand',
+      system: 'Repeating task',
+      weather: 'From the weather',
+      email: 'From an email',
+    })[task.value?.origin ?? 'manual'],
 )
 
 function moveStep(i: number, d: number) {

@@ -2,6 +2,7 @@
 import QRCode from 'qrcode'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import type { NotifyTrigger } from '../api/client'
+import type { ApprovalMode } from '../api/mailSettings'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import { useHouseholdStore } from '../stores/household'
 import { useMembersStore } from '../stores/members'
@@ -22,6 +23,14 @@ const TRIGGERS: { key: NotifyTrigger; label: string; adultOnly?: boolean }[] = [
   { key: 'digest', label: 'Morning digest' },
   { key: 'routine_nudge', label: 'A routine is running late' },
   { key: 'source_reauth', label: 'A calendar needs to be reconnected', adultOnly: true },
+  { key: 'approval_needed', label: 'Something is waiting for my approval', adultOnly: true },
+  { key: 'mail_time_sensitive', label: 'A time-sensitive email arrived', adultOnly: true },
+]
+const APPROVAL_MODES: { key: ApprovalMode; label: string }[] = [
+  { key: 'immediate', label: 'Immediately' },
+  { key: 'batched', label: 'Batched (a short wait, then one message)' },
+  { key: 'digest', label: 'Only in the morning digest' },
+  { key: 'off', label: 'Never' },
 ]
 
 const selected = ref('')
@@ -33,6 +42,7 @@ const form = reactive({
   from: '21:00',
   until: '07:00',
   copyTo: '',
+  approval: 'batched' as ApprovalMode,
 })
 const message = ref('')
 const error = ref('')
@@ -60,6 +70,7 @@ function fill() {
   form.from = p.quiet_from ?? household.quiet.from
   form.until = p.quiet_until ?? household.quiet.until
   form.copyTo = p.copy_to_member ?? ''
+  form.approval = p.approval_mode ?? 'batched'
 }
 
 async function pick(id: string) {
@@ -107,6 +118,7 @@ async function save() {
       quiet_from: form.override ? form.from : null,
       quiet_until: form.override ? form.until : null,
       copy_to_member: form.copyTo || null,
+      approval_mode: isChild.value ? undefined : form.approval,
     })
     if (ok) message.value = 'Saved.'
   } catch (e) {
@@ -183,6 +195,12 @@ async function sendTest() {
             <label>Until <input v-model="form.until" name="quiet_until" type="time" /></label>
           </template>
         </fieldset>
+        <label v-if="!isChild">
+          Approval reminders
+          <select v-model="form.approval" name="approval_mode">
+            <option v-for="a in APPROVAL_MODES" :key="a.key" :value="a.key">{{ a.label }}</option>
+          </select>
+        </label>
         <label>
           Also send a copy to
           <select v-model="form.copyTo" name="copy_to">

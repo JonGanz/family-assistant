@@ -3,13 +3,14 @@
 use std::sync::Arc;
 
 use anyhow::{Context, Result};
-use fa_api::Services;
+use fa_api::{MailServices, Services};
 use fa_auth::OAuthService;
 use fa_calendar::{CalendarService, ConnectorConfig};
 use fa_config::ProcessConfig;
 use fa_connectors::Http;
 use fa_connectors::google::oauth::GoogleOAuth;
 use fa_jobs::JobHandler;
+use fa_mail::{MailConfig, MailDeps};
 use fa_store::{HouseholdRepo, MasterKey, ScheduleRepo, Store};
 use fa_weather::{WeatherConfig, WeatherService};
 
@@ -55,6 +56,38 @@ fn public_url(cfg: &ProcessConfig) -> String {
         .to_owned()
 }
 
+/// `FA_GOOGLE_API_BASE` without a trailing slash, or the default.
+fn google_api_base(cfg: &ProcessConfig) -> String {
+    cfg.google_api_base.as_ref().map_or_else(
+        || fa_connectors::google::DEFAULT_API_BASE.to_owned(),
+        |u| u.as_str().trim_end_matches('/').to_owned(),
+    )
+}
+
+/// Everything the fa-mail services and jobs share. Gmail calls go through `Http`, which only
+/// allows plain http when feeds do or when the Google API base is an http stub.
+pub fn mail_deps(
+    cfg: &ProcessConfig,
+    store: &Store,
+    oauth: &OAuthService,
+) -> Result<Arc<MailDeps>> {
+    let stub = cfg
+        .google_api_base
+        .as_ref()
+        .is_some_and(|u| u.scheme() == "http");
+    Ok(Arc::new(MailDeps {
+        store: store.clone(),
+        http: Http::new(cfg.allow_http_feeds || stub)?,
+        tokens: Arc::new(oauth.clone()),
+        key: Arc::new(load_key(cfg)?),
+        cfg: MailConfig {
+            gmail_api_base: google_api_base(cfg),
+            allow_plain_imap: cfg.allow_plain_imap,
+            imap_tls_insecure: cfg.imap_tls_insecure,
+        },
+    }))
+}
+
 pub fn build_services(cfg: &ProcessConfig, store: &Store) -> Result<Services> {
     let oauth = OAuthService::new(
         store.clone(),
@@ -68,12 +101,14 @@ pub fn build_services(cfg: &ProcessConfig, store: &Store) -> Result<Services> {
         load_key(cfg)?,
         ConnectorConfig {
             allow_http: cfg.allow_http_feeds,
-            ..ConnectorConfig::default()
+            google_api_base: google_api_base(cfg),
         },
         Arc::new(oauth.clone()),
     )?;
     let weather = WeatherService::new(store.clone(), weather_config(cfg))?;
+    let mail = MailServices::new(mail_deps(cfg, store, &oauth)?);
     Ok(Services {
+        mail,
         calendar: Arc::new(calendar),
         weather,
         oauth,
@@ -85,6 +120,7 @@ pub fn build_services(cfg: &ProcessConfig, store: &Store) -> Result<Services> {
 /// Job handlers of the feature crates (the M0 handlers are added by the caller).
 pub fn feature_handlers(
     cfg: &ProcessConfig,
+    store: &Store,
     services: &Services,
 ) -> Result<Vec<Arc<dyn JobHandler>>> {
     let mut all = fa_calendar::handlers(services.calendar.clone());
@@ -92,6 +128,11 @@ pub fn feature_handlers(
     all.extend(fa_auth::handlers());
     all.extend(fa_tasks::handlers(services.tasks.clone()));
     all.extend(fa_notify::handlers(services.notify.clone()));
+    all.extend(crate::mail::handlers(&mail_deps(
+        cfg,
+        store,
+        &services.oauth,
+    )?));
     Ok(all)
 }
 
@@ -102,7 +143,8 @@ pub async fn ensure_feature_schedules(store: &Store) -> Result<()> {
         .chain(fa_weather::default_schedules())
         .chain(fa_auth::default_schedules())
         .chain(fa_tasks::default_schedules())
-        .chain(fa_notify::default_schedules());
+        .chain(fa_notify::default_schedules())
+        .chain(fa_mail::default_schedules());
     let mut tx = store.tx_system().await?;
     for (kind, cron) in schedules {
         ScheduleRepo::upsert(&mut tx, kind, cron, kind, &serde_json::json!({}), true).await?;

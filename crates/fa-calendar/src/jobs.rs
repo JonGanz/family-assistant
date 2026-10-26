@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use chrono::{DateTime, Duration, Utc};
-use fa_domain::{CalendarSourceId, HouseholdId};
+use fa_domain::{CalendarSourceId, EventId, HouseholdId};
 use fa_jobs::{BoxFuture, JobContext, JobError, JobHandler};
 use fa_store::{CalendarSourceRepo, EventRepo, HouseholdRepo, Store};
 
@@ -114,8 +114,65 @@ impl JobHandler for Sync {
     }
 }
 
+#[derive(Clone, Copy)]
+enum EventJob {
+    Route,
+    Write,
+    Delete,
+}
+
+struct EventJobHandler(Arc<CalendarService>, EventJob);
+
+fn event_payload(payload: &serde_json::Value) -> Result<(HouseholdId, EventId), JobError> {
+    let get = |k: &str| {
+        payload
+            .get(k)
+            .and_then(|v| v.as_str())
+            .ok_or_else(|| JobError::Handler(format!("payload lacks `{k}`")))
+    };
+    let h = get("household")?
+        .parse()
+        .map_err(|_| JobError::Handler("bad household id".into()))?;
+    let e = get("event")?
+        .parse()
+        .map_err(|_| JobError::Handler("bad event id".into()))?;
+    Ok((h, e))
+}
+
+impl JobHandler for EventJobHandler {
+    fn kind(&self) -> &'static str {
+        match self.1 {
+            EventJob::Route => "calendar.route",
+            EventJob::Write => "calendar.write",
+            EventJob::Delete => "calendar.delete",
+        }
+    }
+    fn run<'a>(
+        &'a self,
+        _: &'a JobContext,
+        payload: serde_json::Value,
+    ) -> BoxFuture<'a, Result<(), JobError>> {
+        Box::pin(async move {
+            let (h, e) = event_payload(&payload)?;
+            match self.1 {
+                EventJob::Route => self.0.route_event(h, e).await?,
+                EventJob::Write => self.0.write_event(h, e).await?,
+                EventJob::Delete => self.0.delete_event(h, e).await?,
+            }
+            Ok(())
+        })
+    }
+}
+
 pub fn handlers(service: Arc<CalendarService>) -> Vec<Arc<dyn JobHandler>> {
-    vec![Arc::new(SyncDue), Arc::new(Sync(service)), Arc::new(Prune)]
+    vec![
+        Arc::new(SyncDue),
+        Arc::new(Sync(service.clone())),
+        Arc::new(Prune),
+        Arc::new(EventJobHandler(service.clone(), EventJob::Route)),
+        Arc::new(EventJobHandler(service.clone(), EventJob::Write)),
+        Arc::new(EventJobHandler(service, EventJob::Delete)),
+    ]
 }
 
 /// `(job kind, cron)`; `calendar.sync` is only ever enqueued.

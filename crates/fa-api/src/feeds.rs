@@ -27,7 +27,7 @@ use fa_store::{
 use serde::Deserialize;
 use serde_json::json;
 use sha2::{Digest, Sha256};
-use utoipa::IntoParams;
+use utoipa::{IntoParams, ToSchema};
 
 use crate::error::Problem;
 use crate::extract::{ApiJson, ApiPath, ApiQuery};
@@ -77,6 +77,12 @@ fn household_view(h: &Household, version: i32, google: bool) -> HouseholdView {
         quiet_from: h.quiet_from,
         quiet_until: h.quiet_until,
         google_oauth_enabled: google,
+        currency: h.currency.clone(),
+        gender_terms: h.gender_terms.clone(),
+        events: h.events.clone(),
+        inbox: h.inbox.clone(),
+        retention_mail: h.retention_mail.clone(),
+        bill_lead_days: h.bill_lead_days,
         version,
     }
 }
@@ -156,6 +162,51 @@ fn validate_household_patch(p: &mut HouseholdPatch) -> ApiResult<()> {
     range(p.calendar_future_days, 1, 800, "calendar_future_days")?;
     range(p.weather_retention_days, 1, 365, "weather_retention_days")?;
     range(p.now_list_size, 1, 50, "now_list_size")?;
+    range(p.bill_lead_days, 0, 60, "bill_lead_days")?;
+    if let Some(c) = &p.currency {
+        let c = c.trim().to_uppercase();
+        if c.len() != 3 || !c.chars().all(|ch| ch.is_ascii_alphabetic()) {
+            return Err(ApiError::Unprocessable(
+                "currency must be a 3-letter ISO 4217 code".into(),
+            ));
+        }
+        p.currency = Some(c);
+    }
+    if let Some(e) = &p.events {
+        for (v, what) in [
+            (e.extract_threshold, "extract_threshold"),
+            (e.route_threshold, "route_threshold"),
+        ] {
+            if !(0.0..=1.0).contains(&v) {
+                return Err(ApiError::Unprocessable(format!(
+                    "events.{what} must be 0 to 1"
+                )));
+            }
+        }
+    }
+    if let Some(i) = &p.inbox {
+        range(Some(i.task_expiry_days), 1, 365, "inbox.task_expiry_days")?;
+        range(
+            Some(i.contact_expiry_days),
+            1,
+            365,
+            "inbox.contact_expiry_days",
+        )?;
+    }
+    if let Some(r) = &p.retention_mail {
+        range(
+            Some(r.examples_per_category),
+            0,
+            100_000,
+            "retention_mail.examples_per_category",
+        )?;
+        range(
+            Some(r.max_pending_days),
+            1,
+            365,
+            "retention_mail.max_pending_days",
+        )?;
+    }
     if let Some(w) = &p.now_weights {
         for (v, what) in [(w.due, "due"), (w.flag, "flag"), (w.weather, "weather")] {
             if !(0.0..=10.0).contains(&v) {
@@ -422,6 +473,28 @@ fn done_redirect(pairs: &[(&str, &str)]) -> ApiResult<Response> {
 pub struct StartQuery {
     /// A path on this site to return to afterwards.
     return_to: Option<String>,
+    /// What the connection is for; adds that scope (`include_granted_scopes`). Default `calendar`.
+    purpose: Option<PurposeParam>,
+}
+
+#[derive(Deserialize, ToSchema, Clone, Copy)]
+#[serde(rename_all = "snake_case")]
+pub enum PurposeParam {
+    Calendar,
+    GmailRead,
+    GmailModify,
+    CalendarWrite,
+}
+
+impl From<PurposeParam> for fa_auth::OAuthPurpose {
+    fn from(p: PurposeParam) -> Self {
+        match p {
+            PurposeParam::Calendar => Self::Calendar,
+            PurposeParam::GmailRead => Self::GmailRead,
+            PurposeParam::GmailModify => Self::GmailModify,
+            PurposeParam::CalendarWrite => Self::CalendarWrite,
+        }
+    }
 }
 
 #[utoipa::path(get, path = "/api/v1/oauth/google/start", tag = "oauth", params(StartQuery),
@@ -449,7 +522,12 @@ pub async fn oauth_start(
     let url = s
         .services
         .oauth
-        .start(&auth.actor, session, return_to)
+        .start(
+            &auth.actor,
+            session,
+            return_to,
+            q.purpose.unwrap_or(PurposeParam::Calendar).into(),
+        )
         .await?;
     found(&url)
 }
@@ -603,20 +681,61 @@ async fn manageable_source(
     Ok((hid, src.version))
 }
 
+/// A calendar source plus whether the app may write events to it.
+#[derive(serde::Serialize, ToSchema)]
+pub struct SourceViewExt {
+    #[serde(flatten)]
+    pub source: SourceView,
+    /// Extracted events may be written to this source's calendars.
+    pub writable: bool,
+}
+
+/// `SourcePatch` plus the write toggle.
+#[derive(Deserialize, ToSchema)]
+pub struct SourcePatchExt {
+    #[serde(flatten)]
+    pub patch: SourcePatch,
+    /// Google sources need the account to have granted calendar write access (else 422).
+    #[serde(default)]
+    pub writable: Option<bool>,
+}
+
+/// A calendar plus whether it is a default target for extracted events.
+#[derive(serde::Serialize, ToSchema)]
+pub struct CalendarViewExt {
+    #[serde(flatten)]
+    pub calendar: CalendarView,
+    pub is_default_target: bool,
+}
+
+/// `CalendarPatch` plus the default-target toggle.
+#[derive(Deserialize, ToSchema)]
+pub struct CalendarPatchExt {
+    #[serde(flatten)]
+    pub patch: CalendarPatch,
+    #[serde(default)]
+    pub is_default_target: Option<bool>,
+}
+
 #[utoipa::path(get, path = "/api/v1/calendar-sources", tag = "calendar",
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 200, body = Vec<SourceView>), (status = 403, body = Problem)))]
+    responses((status = 200, body = Vec<SourceViewExt>), (status = 403, body = Problem)))]
 pub async fn list_sources(
     State(s): State<AppState>,
     auth: Auth,
-) -> ApiResult<Json<Vec<SourceView>>> {
+) -> ApiResult<Json<Vec<SourceViewExt>>> {
     require_adult_sources(&auth.actor)?;
     let hid = household(&auth.actor)?;
     let roles = member_roles(&s, hid).await?;
     let list = s.services.calendar.list_sources(hid).await?;
+    let writable = s.services.calendar.writable_sources(hid).await?;
     Ok(Json(
         list.into_iter()
             .filter(|v| may_manage(&auth.actor, v.owner, &roles))
+            .map(|source| SourceViewExt {
+                writable: writable.contains(&source.id),
+                source,
+            })
             .collect(),
     ))
 }
@@ -704,7 +823,7 @@ pub async fn create_source(
 }
 
 /// Audit rows for service-level mutations are written after the fact; a failure is logged only.
-async fn audit_after(
+pub(crate) async fn audit_after(
     s: &AppState,
     actor: &Actor,
     action: &str,
@@ -747,11 +866,11 @@ pub async fn test_source(
     Ok(Json(res))
 }
 
-#[utoipa::path(patch, path = "/api/v1/calendar-sources/{id}", tag = "calendar", request_body = SourcePatch,
+#[utoipa::path(patch, path = "/api/v1/calendar-sources/{id}", tag = "calendar", request_body = SourcePatchExt,
     params(("id" = String, Path, description = "source id"),
            ("If-Match" = Option<String>, Header, description = "record version")),
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 200, body = SourceView), (status = 403, body = Problem),
+    responses((status = 200, body = SourceViewExt), (status = 403, body = Problem),
               (status = 404, body = Problem), (status = 409, body = Problem),
               (status = 422, body = Problem), (status = 428, body = Problem)))]
 pub async fn patch_source(
@@ -759,7 +878,10 @@ pub async fn patch_source(
     auth: Auth,
     ApiPath(id): ApiPath<CalendarSourceId>,
     headers: HeaderMap,
-    ApiJson(mut patch): ApiJson<SourcePatch>,
+    ApiJson(SourcePatchExt {
+        mut patch,
+        writable,
+    }): ApiJson<SourcePatchExt>,
 ) -> ApiResult<Response> {
     require_adult_sources(&auth.actor)?;
     let expected = parse_version(&headers, None)?;
@@ -777,6 +899,29 @@ pub async fn patch_source(
         .calendar
         .update_source(hid, id, &patch, expected)
         .await?;
+    let view = if let Some(w) = writable {
+        s.services.calendar.set_source_writable(hid, id, w).await?;
+        // The toggle bumped the version again: answer with the row as it is now.
+        s.services
+            .calendar
+            .list_sources(hid)
+            .await?
+            .into_iter()
+            .find(|v| v.id == id)
+            .ok_or(ApiError::NotFound)?
+    } else {
+        view
+    };
+    let version = view.version;
+    let view = SourceViewExt {
+        writable: s
+            .services
+            .calendar
+            .writable_sources(hid)
+            .await?
+            .contains(&id),
+        source: view,
+    };
     audit_after(
         &s,
         &auth.actor,
@@ -785,7 +930,7 @@ pub async fn patch_source(
         id.to_string(),
     )
     .await;
-    Ok(([(ETAG, etag(view.version))], Json(view)).into_response())
+    Ok(([(ETAG, etag(version))], Json(view)).into_response())
 }
 
 #[utoipa::path(delete, path = "/api/v1/calendar-sources/{id}", tag = "calendar",
@@ -829,11 +974,11 @@ pub async fn sync_source(
 
 #[utoipa::path(get, path = "/api/v1/calendars", tag = "calendar",
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 200, body = Vec<CalendarView>), (status = 403, body = Problem)))]
+    responses((status = 200, body = Vec<CalendarViewExt>), (status = 403, body = Problem)))]
 pub async fn list_calendars(
     State(s): State<AppState>,
     auth: Auth,
-) -> ApiResult<Json<Vec<CalendarView>>> {
+) -> ApiResult<Json<Vec<CalendarViewExt>>> {
     require_adult_sources(&auth.actor)?;
     let hid = household(&auth.actor)?;
     let roles = member_roles(&s, hid).await?;
@@ -847,18 +992,23 @@ pub async fn list_calendars(
         .map(|v| v.id)
         .collect();
     let list = s.services.calendar.list_calendars(hid).await?;
+    let defaults = s.services.calendar.default_calendars(hid).await?;
     Ok(Json(
         list.into_iter()
             .filter(|c| allowed.contains(&c.source))
+            .map(|calendar| CalendarViewExt {
+                is_default_target: defaults.contains(&calendar.id),
+                calendar,
+            })
             .collect(),
     ))
 }
 
-#[utoipa::path(patch, path = "/api/v1/calendars/{id}", tag = "calendar", request_body = CalendarPatch,
+#[utoipa::path(patch, path = "/api/v1/calendars/{id}", tag = "calendar", request_body = CalendarPatchExt,
     params(("id" = String, Path, description = "calendar id"),
            ("If-Match" = Option<String>, Header, description = "record version")),
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 200, body = CalendarView), (status = 403, body = Problem),
+    responses((status = 200, body = CalendarViewExt), (status = 403, body = Problem),
               (status = 404, body = Problem), (status = 409, body = Problem),
               (status = 428, body = Problem)))]
 pub async fn patch_calendar(
@@ -866,7 +1016,10 @@ pub async fn patch_calendar(
     auth: Auth,
     ApiPath(id): ApiPath<CalendarId>,
     headers: HeaderMap,
-    ApiJson(mut patch): ApiJson<CalendarPatch>,
+    ApiJson(CalendarPatchExt {
+        mut patch,
+        is_default_target,
+    }): ApiJson<CalendarPatchExt>,
 ) -> ApiResult<Response> {
     require_adult_sources(&auth.actor)?;
     let expected = parse_version(&headers, None)?;
@@ -908,7 +1061,29 @@ pub async fn patch_calendar(
         .calendar
         .update_calendar(hid, id, &patch, expected)
         .await?;
-    Ok(([(ETAG, etag(view.version))], Json(view)).into_response())
+    let view = if let Some(d) = is_default_target {
+        s.services.calendar.set_default_target(hid, id, d).await?;
+        s.services
+            .calendar
+            .list_calendars(hid)
+            .await?
+            .into_iter()
+            .find(|c| c.id == id)
+            .ok_or(ApiError::NotFound)?
+    } else {
+        view
+    };
+    let version = view.version;
+    let view = CalendarViewExt {
+        is_default_target: s
+            .services
+            .calendar
+            .default_calendars(hid)
+            .await?
+            .contains(&id),
+        calendar: view,
+    };
+    Ok(([(ETAG, etag(version))], Json(view)).into_response())
 }
 
 // ---- events ----
@@ -1475,6 +1650,7 @@ pub async fn get_dashboard(
         tasks,
         routines,
         task_lists: s.services.tasks.list_task_lists(hid).await?,
+        inbox: crate::mail::inbox_counts(&s, hid).await?,
         weather,
         advisories,
         settings,

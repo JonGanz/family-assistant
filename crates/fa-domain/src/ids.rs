@@ -87,6 +87,20 @@ id_type!(RoutineStepId);
 id_type!(RoutineRunId);
 id_type!(MemberAwayId);
 id_type!(NotificationId);
+id_type!(OrgId);
+id_type!(OrgContactId);
+id_type!(EnrollmentId);
+id_type!(ContactSuggestionId);
+id_type!(MailSourceId);
+id_type!(MessageId);
+id_type!(DecisionPointId);
+id_type!(PipelineVersionId);
+id_type!(PipelineStageId);
+id_type!(DecisionId);
+id_type!(MailRuleId);
+id_type!(CategoryId);
+id_type!(BillId);
+id_type!(MailActionId);
 
 #[cfg(test)]
 mod tests {

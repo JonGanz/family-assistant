@@ -7,18 +7,20 @@ on a wall dashboard and on everyone's phone.
 Everything runs locally. Deterministic rules do most of the work, and local AI models help only
 where rules can't decide.
 
-> **Status:** M2 (tasks) is code-complete. On top of the M0 platform (login, members, dashboard
-> device pairing with PIN elevation, the job queue, backups, CI) and M1 (calendars: Google, CalDAV,
-> ICS; the weather forecast with rule-based advisories; a real dashboard) it adds task lists,
-> recurring chores with fixed, rotating or pooled assignment, routines, the "Now" list, weather
-> and season tasks, tasks on the calendar, and ntfy push notifications. Feature milestones come
-> next (see [Roadmap](#roadmap)).
+> **Status:** M3 (mail ingest) is code-complete. On top of the M0 platform (login, members, dashboard
+> device pairing with PIN elevation, the job queue, backups, CI), M1 (calendars: Google, CalDAV,
+> ICS; the weather forecast with rule-based advisories; a real dashboard) and M2 (task lists,
+> recurring chores, routines, the "Now" list, weather tasks, ntfy push notifications) it reads
+> email (Gmail API or IMAP), sorts it with deterministic rules, links it to family members, and
+> proposes events, bills and tasks that wait for your approval in an inbox. Smart assistance with
+> local AI models comes next (see [Roadmap](#roadmap)).
 
 ## Contents
 - [Run it locally](#run-it-locally)
 - [Connecting calendars](#connecting-calendars)
 - [Weather and the household location](#weather-and-the-household-location)
 - [Tasks, routines and notifications](#tasks-routines-and-notifications)
+- [Mail, inbox and bills](#mail-inbox-and-bills)
 - [The dashboard layout](#the-dashboard-layout)
 - [Configuration reference](#configuration-reference)
 - [Day-to-day development](#day-to-day-development)
@@ -162,6 +164,41 @@ cargo run -p fa-server -- notify test --member alex
 assigned to you, overdue, the morning digest) are sent by the worker every minute, and are
 grouped and held during quiet hours, see [below](#notifications). On a phone, install the ntfy app
 and subscribe to the address on the same network or tailnet.
+
+### 10. Mail
+To try mail without a real mailbox, start the local [GreenMail](https://greenmail-mail-test.github.io/greenmail/)
+server from the dev compose file. It listens only on this machine: IMAP on `127.0.0.1:13143`, SMTP
+on `127.0.0.1:13025`, and any login works.
+```bash
+docker compose -f deploy/compose.dev.yaml up -d greenmail
+# with just: just dev-mail
+```
+The app refuses IMAP without TLS unless you allow it: uncomment `FA_ALLOW_PLAIN_IMAP=true` in
+[`.env.dev`](.env.dev) and restart `serve`. (Real mailboxes use TLS; this switch is for this local
+server only.) Then, as `alex@example.com`:
+1. Open **Settings, Mail**, **Add a mail source**: type *IMAP*, name `Local test`, email address
+   `family@example.com`, server `127.0.0.1`, port `13143`, any app password. Press **Test
+   connection**: it says "Connected". Leave *Read only* ticked and press **Add source**.
+2. Send it a few fictional mails. The ones in [`e2e/fixtures/mail/`](e2e/fixtures/mail/) are written
+   for the example household (they come from the school and the biller of
+   `config/examples/household.example.toml`):
+   ```bash
+   for m in teacher-invite newsletter bill permission-slip unknown-teacher; do
+     node e2e/send-mail.mjs --port 13025 --to family@example.com --fixture "$m"
+   done
+   node e2e/send-mail.mjs --port 13025 --to family@example.com --subject "Hello" --body "A plain test mail"
+   ```
+   (Node 22.18 or later runs the helper directly.)
+3. Fetch and sort them now instead of waiting for the five-minute poll:
+   ```bash
+   cargo run -p fa-server -- mail sync-now
+   ```
+   It prints how many messages arrived and were processed.
+4. Open **Mail** (the list, with filters for category, member and source), **Inbox** (the event
+   from the teacher's invite, the suggested task from the permission slip, the new-teacher contact)
+   and **Bills** (the utility bill and its "Pay" task). Approving the event needs a calendar that can
+   be written to: in **Settings, Calendars** switch on *Allow writing (approved events)* for a CalDAV
+   source and mark a calendar as *Default target*.
 
 When you are done, stop the processes (`kill %1 %2 %3` or Ctrl-C) and the containers with
 `docker compose -f deploy/compose.dev.yaml stop`.
@@ -371,10 +408,183 @@ task_definition = "Take out the bins" # title, or "List/Title" if ambiguous
 Import is idempotent by name or title within a list. `weather_rules` may point at a chore
 (`task_definition`) from the same file.
 
+## Mail, inbox and bills
+Mail ingest turns the household's email into a short list of things that need a decision. The
+M3 pipeline is **rules only**: deterministic rules, headers, parsers and schema.org data decide,
+nothing is sent to a cloud service, and no AI model runs yet (M4 adds those, and what you label now
+becomes their evaluation set).
+
+### Sources
+**Settings, Mail** adds mailboxes: **Gmail** (Google sign-in with the Gmail API) or **IMAP** (any
+provider, an app password). Each source has owners, a visibility (*owners* or the whole
+*household*), the number of days of history to read first (30), an optional Gmail search filter, a
+poll interval (5 minutes) and a **read only** switch (on by default). Setup, including the Google
+scopes and the 7-day re-consent while Google's consent screen is in *Testing* mode, is in
+[`deploy/README.md`, Mail](deploy/README.md#mail). Sources sync incrementally (Gmail history, IMAP
+UIDs), and **Sync now** forces a pass. IMAP passwords and Google tokens are stored encrypted and
+never exported.
+
+### What is read, and who sees it
+The app stores each message's metadata and, depending on **Settings, Household, Mail and
+approvals**, its text (keep it all, keep it for labelling examples only, or purge it after
+processing). Adults see the messages of the sources they own, or of *household* sources.
+**Children and dashboards never list or read mail**; a dashboard only shows the inbox counts.
+Message text is never written to the logs.
+
+### Categories and how mail is sorted
+Every message gets a **category**, whether it is **time-sensitive**, whether it is a **bill**, and
+which **members** it is about. Categories (**Settings, Mail, Categories**) decide what happens
+next. The defaults:
+
+| Behaviour | Categories | What it does |
+|---|---|---|
+| *extract* | school, daycare, activities, appointments, bills, household | looks for events, bills, tasks and contacts; time-sensitive ones notify adults |
+| *keep* | personal, newsletters, other | filed and searchable, nothing extracted |
+| *ignore* | promotions, social, junk | hidden from the Mail list unless "Show ignored categories" is ticked |
+
+Built-in **signals** (Settings, Mail, Built-in signals) do the sorting: the sender matching an
+organization, spam and promotion labels, `List-Unsubscribe` headers, ICS attachments, grade and
+class mentions, names and aliases, gender words ("girls"), and so on. Turn off a signal that
+guesses wrong for your household. Your own **rules** (Settings, Mail, Rules: sender, domain,
+subject or body text, header, organization... then a category, member or flag) run first, can be
+tried on past mail before saving, and win over the signals.
+
+### Organizations, contacts and enrollments
+**Settings, Organizations** lists schools, daycares, clubs and billers: their domains (subdomains
+match) and sender addresses, an optional ICS feed and default calendar, a **contact mode**
+(*suggest* new senders at the domain for confirmation, add them *automatically*, or *manual*), and
+for billers a **bill template** (regular expressions for the amount, the due date and the account).
+Contacts are the teachers, coaches and offices. A child's **enrollment** (on **Settings, Organizations**, or
+`[[members.enrollments]]` in the TOML) records the organization, grade, class and the contacts
+there, which is how "grade 3 families" mail from the school reaches the right child. Members (on **Members**) also
+have aliases (nicknames), a gender and relevance tags (such as `soccer`) that help the linking.
+
+### The inbox: why everything waits for approval
+Nothing extracted is trusted blindly in M3: **every extracted event becomes a proposal**, as do
+bills that are not clearly bills, tasks the mail suggests and new contacts. **Inbox** lists them
+under Events, Bills, Tasks and Contacts, each editable before you approve (change the title, time,
+calendar or assignees). **Approve** an event and it is written to the chosen calendar (Google or
+CalDAV), once: a later sync of that calendar does not duplicate it, and a repeat mention in another
+mail only adds provenance. A cancellation withdraws a pending proposal, or proposes removing the
+event it wrote. Proposals that are not decided expire (events when they start; tasks and
+contacts after 14 days). Adults get an **approval needed** notification, sent immediately, batched
+(the default) or only in the morning digest, or switched off, per member under **Settings,
+Notifications**. The wall **dashboard** has an `inbox` panel (add it in the layout editor) with the
+counts; after PIN elevation it can approve or reject items. **Settings, Household, Mail and
+approvals** holds the thresholds, the expiry days and an automatic-write switch for
+high-confidence events (off by default).
+
+### Bills and pay tasks
+A bill is recognised from an organization's template or from generic patterns (and PDF text). A
+clear one (confidence 0.8 or more) becomes an open **bill** and a **Pay <payee>** task on the
+*Bills* list for any adult, due a few days before the due date (`bill_lead_days`, 3). Completing the
+task marks the bill **paid**; reopening the task reopens the bill. **Bills** shows them by status.
+Money is kept in minor units with a currency (`currency` in the household, `USD` by default).
+
+### Actions and undo
+On a **writable** source, each category's *automatic actions* run: by default a label
+`FA/<category>` and `FA/<member>` (real Gmail labels, or IMAP keywords); *archive* and *mark read*
+are optional per category. A message page also has manual actions and **Make task**. Every
+action can be **undone for 30 days**; a read-only source refuses them.
+
+### Labelling
+**Mail, Label mail** serves messages one by one (balanced across categories) with the four
+decisions as chips: category, time-sensitive, who it is about and is-it-a-bill. **Looks right**
+records your confirmation, and fixing a chip records your answer as a human decision. Tick *In the
+evaluation sample* to count a message toward the held-out set; the progress bar counts labelled
+messages of that sample (200 by default).
+
+### Household TOML
+The mail settings are in the household TOML too (`config import`/`export`); secrets are never
+included, an IMAP source imported from a file starts as *needs reauth* until its password is typed
+in the UI, and **Gmail sources are not created by import** (connect them in Settings, Mail; the
+import prints which it skipped). Calendar references are `"<calendar source key>/<remote id>"`.
+See [`config/examples/household.example.toml`](config/examples/household.example.toml). The new
+tables, next to the existing ones:
+```toml
+[household]
+currency = "USD"
+bill_lead_days = 3
+disabled_signals = []                  # built-in signal keys to switch off
+gender_terms = { female = ["girls", "girl's"], male = ["boys", "boy's"] }
+
+[household.events]                     # extracted events
+auto_write = false                     # true: write high-confidence events without asking
+extract_threshold = 0.9
+route_threshold = 0.9
+
+[household.inbox]
+task_expiry_days = 14
+contact_expiry_days = 14
+
+[retention.mail]
+content_policy = "keep_for_learning"   # purge_after_processing | keep_for_learning | keep_all
+examples_per_category = 200
+max_pending_days = 14
+
+[[members]]
+key = "riley"
+display_name = "Riley"
+role = "child"
+aliases = ["Ri"]
+gender = "female"                      # female | male | other
+relevance_tags = ["soccer"]
+[members.notify]
+approval_mode = "batched"              # immediate | batched | digest | off
+
+[[members.enrollments]]
+org = "Example Elementary"
+grade = "3"
+class = "3B"
+from = "2026-09-01"
+contacts = ["teacher@example.edu"]
+
+[[orgs]]
+name = "Example Elementary"
+kind = "school"                        # school | daycare | club | biller | other
+domains = ["example.edu"]
+senders = ["office@example.edu"]
+default_calendar = "school/ics"
+contact_mode = "suggest"               # suggest | auto | manual
+
+[[orgs.contacts]]
+name = "Ms. Teacher"
+email = "teacher@example.edu"
+role = "teacher"
+
+[[mail_sources]]
+name = "Family inbox"
+provider = "imap"                      # gmail sources are connected in the UI instead
+address = "family@example.com"
+owners = ["alex"]
+visibility = "household"               # owners | household
+read_only = true
+backfill_days = 30
+poll_minutes = 5
+[mail_sources.imap]
+host = "imap.example.com"
+username = "family@example.com"
+folders = ["INBOX"]
+
+[[categories]]                         # only those that differ from the defaults
+key = "promotions"
+label = "Promotions"
+behaviour = "ignore"                   # ignore | keep | extract
+auto_actions = ["label"]               # label | archive | mark_read
+
+[[mail_rules]]
+name = "Soccer club mail is for Riley"
+decision_point = "email.member_link"
+priority = 10
+conditions = [{ field = "from_domain", op = "is", values = ["club.example.com"] }]
+value = ["riley"]
+confidence = 0.9
+```
+
 ## The dashboard layout
 Each paired device has its own layout: **Settings, Devices, Edit layout** lets you pick a preset,
 orientation, theme, agenda length, and add, remove and reorder panels (clock, weather, advisories,
-agenda, week, members, now, member tasks, routine), with a live preview of the device. The layout is stored on the server, so
+agenda, week, members, now, member tasks, routine, inbox), with a live preview of the device. The layout is stored on the server, so
 the screen picks it up on its next refresh.
 
 ## Configuration reference
@@ -395,9 +605,12 @@ Settings come from environment variables (`FA_*` and `DATABASE_URL`). Local defa
 | `FA_ALLOW_HTTP_FEEDS` | `false` | Allow plain `http` feeds (LAN CalDAV, local fixtures) |
 | `FA_NTFY_URL` | unset | ntfy server that notifications are published to (`http` or `https`; plain `http` is allowed and independent of `FA_ALLOW_HTTP_FEEDS`). Unset (or empty) turns notifications off, and the UI says so. The worker sends every minute |
 | `FA_NTFY_TOKEN` | unset | Optional bearer token (a secret) for an ntfy server with access control. Never logged |
+| `FA_GOOGLE_API_BASE` | `https://www.googleapis.com` | Base URL of the Gmail and Google Calendar calls. For stubs and tests, not for production |
+| `FA_ALLOW_PLAIN_IMAP` | `false` | Allow IMAP without TLS. **Tests, e2e and the local GreenMail only**; the compose file does not pass it through |
+| `FA_IMAP_TLS_INSECURE` | `false` | Accept self-signed IMAPS certificates. **The GreenMail tests only** |
 | `FA_LOG_LEVEL`, `FA_LOG_FORMAT` | `info`, `pretty` | `trace` to `error`; `pretty` or `json` |
 
-**Ports:** the app serves `8080` (`FA_BIND_ADDR`); the dev database is `55432`; the dev ntfy is `18090`; ntfy in the deployment is `8090`; the e2e stack uses `55499`, `18080`, `18091`, `18092` and `18093` (ntfy).
+**Ports:** the app serves `8080` (`FA_BIND_ADDR`); the dev database is `55432`; the dev ntfy is `18090`; the dev GreenMail is `13143` (IMAP) and `13025` (SMTP); ntfy in the deployment is `8090`; the e2e stack uses `55499`, `18080`, `18091`, `18092`, `18093` (ntfy), `18143` (GreenMail IMAP) and `18025` (GreenMail SMTP); `scripts/ci-local.sh` uses `55496`, `55497` and `55498`.
 
 **`fa-server` commands:**
 | Command | What it does |
@@ -410,6 +623,8 @@ Settings come from environment variables (`FA_*` and `DATABASE_URL`). Local defa
 | `user add --member <key> --username <u>` / `user reset-password` | Accounts (add `--password-stdin` to script it) |
 | `pin set --member <key>` | An adult's PIN |
 | `device pair --name <n>` / `device revoke <id>` | Dashboard devices |
+| `mail sync-now [--source <name>]` | One sync pass of every mail source (or the named one), then processes the new messages, in this process. Needs `FA_ALLOW_PLAIN_IMAP` for a plain-IMAP server |
+| `mail process-now` | Process the household's pending messages in this process |
 | `calendar sync <source-id>` | Sync one calendar source now, in this process, and print what changed |
 | `weather fetch` | Fetch the forecast now, evaluate the rules and print the result |
 | `gen-openapi` | Write the OpenAPI document |
@@ -422,8 +637,23 @@ Settings come from environment variables (`FA_*` and `DATABASE_URL`). Local defa
 | Tests (Rust and web) | `just test` | `cargo test --workspace` and `cd apps/web && corepack pnpm@9 test` (the Rust tests need `DATABASE_URL`) |
 | Lint | `just lint` | `cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings` |
 | Server CLI help | n/a | `cargo run -p fa-server -- --help` |
+| IMAP integration tests (a real GreenMail) | n/a | see below |
 
 Vite (`corepack pnpm@9 dev`) serves the UI on its own port and proxies `/api` to `127.0.0.1:8080`.
+
+**IMAP integration tests** (`fa-connectors`, `fa-mail`) need a throwaway GreenMail and are ignored
+unless `FA_TEST_GREENMAIL=host:imap_port:imaps_port` is set. `scripts/ci-local.sh` and CI run them.
+By hand:
+```bash
+docker run -d --name fa-t02-greenmail -p 33143:3143 -p 33993:3993 \
+  -e GREENMAIL_OPTS='-Dgreenmail.setup.test.imap -Dgreenmail.setup.test.imaps \
+  -Dgreenmail.hostname=0.0.0.0 -Dgreenmail.auth.disabled' greenmail/standalone:2.1.8
+sleep 10   # GreenMail needs a few seconds before it answers
+FA_TEST_GREENMAIL=127.0.0.1:33143:33993 cargo test -p fa-connectors --test imap -- --include-ignored
+FA_TEST_GREENMAIL=127.0.0.1:33143:33993 cargo test -p fa-mail --test sync_imap -- --include-ignored
+docker rm -f -v fa-t02-greenmail
+```
+(`fa-mail`'s tests also need `DATABASE_URL`.)
 
 **Database queries** are checked at compile time by sqlx. After adding or changing a `query!`,
 regenerate the offline data with `cargo sqlx prepare --workspace` (install it with
@@ -443,11 +673,11 @@ just e2e         # = scripts/e2e.sh
 ```
 | Script | What it does |
 |---|---|
-| [`scripts/ci-local.sh`](scripts/ci-local.sh) | Mirrors `.github/workflows/ci.yml`: fmt, clippy, tests against a **fresh throwaway Postgres** with `SQLX_OFFLINE=true`, cargo-deny (if installed), the example-data hygiene check, and web lint, typecheck, test and build. `--no-web` skips the web part |
-| [`scripts/e2e.sh`](scripts/e2e.sh) | The end-to-end suite. Starts a throwaway Postgres, `serve api` and `serve worker` as **separate processes**, a fixture server (ICS calendars and an Open-Meteo stub, [`e2e/stubs/`](e2e/stubs/) and [`e2e/fixtures/`](e2e/fixtures/)), Radicale (CalDAV, `tomsquest/docker-radicale`) and a real ntfy (`binwiederhier/ntfy`), seeds the example household, sources, a device, task lists, chores, a routine and a weather rule through the API, runs `tasks run-now`, then runs the Playwright API specs (`e2e/`) and UI specs (`apps/web/e2e/`). Everything is torn down on exit. `FA_E2E_HOLD=<seconds>` keeps the seeded stack up for debugging |
+| [`scripts/ci-local.sh`](scripts/ci-local.sh) | Mirrors `.github/workflows/ci.yml`: fmt, clippy, tests against a **fresh throwaway Postgres** with `SQLX_OFFLINE=true`, the GreenMail-gated IMAP tests (a throwaway GreenMail), cargo-deny (if installed), the example-data hygiene check, and web lint, typecheck, test and build. `--no-web` skips the web part |
+| [`scripts/e2e.sh`](scripts/e2e.sh) | The end-to-end suite. Starts a throwaway Postgres, `serve api` and `serve worker` as **separate processes**, a fixture server (ICS calendars and an Open-Meteo stub, [`e2e/stubs/`](e2e/stubs/) and [`e2e/fixtures/`](e2e/fixtures/)), Radicale (CalDAV, `tomsquest/docker-radicale`, also the writable calendar for approved events), a real ntfy (`binwiederhier/ntfy`) and a GreenMail (`greenmail/standalone`, fictional fixture mails from [`e2e/fixtures/mail/`](e2e/fixtures/mail/)), seeds the example household, sources, a device, task lists, chores, a routine, a weather rule and an IMAP mailbox through the API, runs `tasks run-now` and `mail sync-now`, then runs the Playwright API specs (`e2e/`) and UI specs (`apps/web/e2e/`). Everything is torn down on exit. `FA_E2E_HOLD=<seconds>` keeps the seeded stack up for debugging |
 | [`scripts/compose-smoke.sh`](scripts/compose-smoke.sh) | Builds the image, starts `deploy/compose.example.yaml` and takes an on-demand backup |
 | [`scripts/restore-rehearsal.sh`](scripts/restore-rehearsal.sh) | Restores a backup dump into a fresh Postgres and checks the app comes up with the same data |
-| [`scripts/check-example-data.sh`](scripts/check-example-data.sh) | Fails if example data, fixtures or e2e files contain non-reserved email domains |
+| [`scripts/check-example-data.sh`](scripts/check-example-data.sh) | Fails if example data, fixtures or e2e files contain email domains other than `example.com`, `example.org`, `example.net`, `example.edu` (the fictional school) and `.test`/`.invalid` |
 
 The e2e suite stays **local** and is not in CI: it needs Docker, a browser download and a full debug
 build, which would not fit the CI time budget (10 minutes). CI runs everything else.
@@ -470,6 +700,7 @@ The app is meant to be reachable **only over Tailscale**. Never expose it to the
 2. **Configure.** `cp deploy/.env.example deploy/.env` and fill in every value: strong
    `POSTGRES_PASSWORD`, `BACKUP_DIR` (your NAS mount), `FA_PUBLIC_BASE_URL`, and optionally the
    feed, Google and ntfy variables (table in [Configuration reference](#configuration-reference)).
+   Mail needs no extra variables (see [Mail](deploy/README.md#mail)).
    The compose file already runs ntfy and points `FA_NTFY_URL` at it; set `NTFY_BASE_URL` to its
    tailnet address ([ntfy notifications](deploy/README.md#ntfy-notifications)).
    Both `api` and `worker` need outbound HTTPS (calendars, weather, Google).
@@ -510,10 +741,14 @@ crates/          Rust libraries: fa-domain (types and permissions), fa-store (DB
                  Google, CalDAV, ICS, Open-Meteo, ntfy), fa-calendar (sync, recurrence, queries),
                  fa-weather (forecast, rule language, advisories), fa-tasks (schedules, rotation
                  and pools, completion, routines, the Now list), fa-notify (the outbox, quiet
-                 hours, batching, ntfy delivery)
+                 hours, batching, ntfy delivery), fa-rules (pure mail rules: parsing, signals,
+                 extractors), fa-pipeline (the decision pipeline engine and its decision log),
+                 fa-mail (sources, Gmail and IMAP sync, processing, the inbox, bills and
+                 actions, labelling)
 bins/            fa-server (server and operator CLI), fa-gpu-agent (GPU node helper, M4)
 apps/web/        Vue 3 + TypeScript PWA, including the /dashboard kiosk view
-e2e/             Playwright API specs, the fixture server and ICS fixtures (e2e/stubs, e2e/fixtures)
+e2e/             Playwright API specs, the fixture server, ICS and mail fixtures (e2e/stubs, e2e/fixtures),
+                 the mail sender (e2e/mail-send.ts, e2e/send-mail.mjs)
 apps/web/e2e/    Playwright UI specs
 deploy/          Compose sample, env example, systemd unit, runbooks
 scripts/         Dev, CI and ops scripts
@@ -543,7 +778,7 @@ repository**. Examples use `example.com`.
 | M0 | Skeleton: workspace, DB with RLS, config, auth and RBAC, devices and PIN, jobs, Vue shell, compose, backups, CI | ✅ code-complete |
 | M1 | Members, weather, calendar read (Google, CalDAV, ICS), real dashboard | ✅ code-complete ([plan](plan/M1.md)) |
 | M2 | Tasks and chores (rotation, pools), routines, the Now list, ntfy notifications | ✅ code-complete ([plan](plan/M2.md)) |
-| M3 | Email ingest (Gmail API or IMAP), rules pipeline, bills, school and teacher linking, event approvals | |
+| M3 | Email ingest (Gmail API or IMAP), rules pipeline, bills, school and teacher linking, event approvals | ✅ code-complete ([plan](plan/M3.md)) |
 | M4 | AI: System One decision models, local LLM, GPU node wake, eval harness | |
 | M5 | Recipes, meal plan, grocery list | |
 | M6 | Smart assignment, learned calendar routing | |

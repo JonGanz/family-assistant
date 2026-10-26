@@ -6,7 +6,10 @@ version = 2
 yanked = "deny"
 # zip 3.0.0 is a build-time dep of utoipa-swagger-ui, extracting the pinned
 # Swagger UI release zip (trusted input). Revisit when utoipa-swagger-ui bumps zip.
-ignore = ["RUSTSEC-2026-0367", "RUSTSEC-2026-0368", "RUSTSEC-2026-0369"]
+# ttf-parser 0.25.1 is flagged unmaintained (no vulnerability, no safe upgrade). It is a transitive
+# dep of pdf-extract (lopdf), which fa-rules uses to read the text of PDF bills; the PDF text is
+# extracted off the async runtime with a time limit. Revisit when pdf-extract/lopdf move to skrifa.
+ignore = ["RUSTSEC-2026-0367", "RUSTSEC-2026-0368", "RUSTSEC-2026-0369", "RUSTSEC-2026-0192"]
 
 [licenses]
 version = 2

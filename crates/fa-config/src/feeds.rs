@@ -409,7 +409,15 @@ pub(crate) async fn export_feeds(
     conn: &mut PgConnection,
     id_to_key: &HashMap<MemberId, String>,
     ex: &crate::tasks::ExportedTasks,
-) -> Result<(Vec<CalendarSourceConfig>, Vec<WeatherRuleConfig>), ImportError> {
+) -> Result<
+    (
+        Vec<CalendarSourceConfig>,
+        Vec<WeatherRuleConfig>,
+        HashMap<fa_domain::CalendarId, String>,
+    ),
+    ImportError,
+> {
+    let mut cal_refs: HashMap<fa_domain::CalendarId, String> = HashMap::new();
     let key_of = |m: MemberId| id_to_key.get(&m).cloned();
     let mut used = HashSet::new();
     let mut sources = Vec::new();
@@ -432,6 +440,7 @@ pub(crate) async fn export_feeds(
                 .filter_map(key_of)
                 .collect();
             members.sort();
+            cal_refs.insert(c.id, format!("{key}/{}", c.remote_id));
             calendars.push(CalendarConfig {
                 remote_id: c.remote_id,
                 name: Some(c.name),
@@ -476,5 +485,5 @@ pub(crate) async fn export_feeds(
             }
         })
         .collect();
-    Ok((sources, rules))
+    Ok((sources, rules, cal_refs))
 }

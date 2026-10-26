@@ -7,8 +7,8 @@ use fa_domain::notify::{effective_quiet, in_quiet};
 use fa_domain::tasks::due_instant;
 use fa_domain::*;
 use fa_store::{
-    MemberRepo, NewNotification, NotificationRepo, NotifyPref, NotifyPrefRepo, RoutineRunRepo,
-    TaskFilter, TaskRepo, Versioned,
+    InboxRepo, MemberRepo, NewNotification, NotificationRepo, NotifyPref, NotifyPrefRepo,
+    RoutineRunRepo, TaskFilter, TaskRepo, Versioned,
 };
 
 use crate::error::Result;
@@ -166,6 +166,7 @@ impl TaskService {
             Some(NaiveTime::from_hms_opt(23, 59, 59).unwrap_or(NaiveTime::MIN)),
             tz,
         );
+        let inbox_total = InboxRepo::counts(&mut tx).await?.total;
         for p in NotifyPrefRepo::list_all(&mut tx).await? {
             if p.value.archived_at.is_some() || !enabled(&p, NotifyTrigger::Digest) {
                 continue;
@@ -180,12 +181,12 @@ impl TaskService {
             if local.time() < until || in_quiet(local.time(), from, until) {
                 continue;
             }
-            if MemberRepo::get(&mut tx, m)
+            let Some(member) = MemberRepo::get(&mut tx, m)
                 .await?
-                .is_none_or(|x| x.value.archived_at.is_some())
-            {
+                .filter(|x| x.value.archived_at.is_none())
+            else {
                 continue;
-            }
+            };
             let tasks = TaskRepo::get_view_rows(
                 &mut tx,
                 &TaskFilter {
@@ -202,10 +203,18 @@ impl TaskService {
                 .into_iter()
                 .filter(|r| r.run.status == RunStatus::Open)
                 .collect();
-            if tasks.is_empty() && runs.is_empty() {
+            let waiting =
+                if p.value.approval_mode == ApprovalMode::Off || member.value.role != Role::Adult {
+                    0
+                } else {
+                    inbox_total
+                };
+            if tasks.is_empty() && runs.is_empty() && waiting == 0 {
                 continue;
             }
-            let title = if tasks.is_empty() {
+            let title = if tasks.is_empty() && runs.is_empty() {
+                "Good morning".to_owned()
+            } else if tasks.is_empty() {
                 format!(
                     "Good morning: {} today",
                     plural(runs.len(), "routine", "routines")
@@ -218,6 +227,9 @@ impl TaskService {
             };
             let mut lines: Vec<String> = tasks.iter().map(|t| t.task.value.title.clone()).collect();
             lines.extend(runs.iter().map(|r| format!("Routine: {}", r.routine_name)));
+            if waiting > 0 {
+                lines.push(format!("{waiting} items waiting for approval"));
+            }
             NotificationRepo::insert_dedupe(
                 &mut tx,
                 &NewNotification {
@@ -229,7 +241,9 @@ impl TaskService {
                     title,
                     body: lines.join("\n"),
                     click_path: Some(
-                        if tasks.is_empty() {
+                        if tasks.is_empty() && runs.is_empty() && waiting > 0 {
+                            "/inbox"
+                        } else if tasks.is_empty() {
                             "/routines"
                         } else {
                             "/tasks"

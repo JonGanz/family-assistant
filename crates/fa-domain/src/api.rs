@@ -9,6 +9,8 @@ use utoipa::ToSchema;
 use crate::dashboard::DashboardSettings;
 use crate::entities::*;
 use crate::ids::*;
+use crate::mail::{EventsSettings, GenderTerms, InboxSettings, MailRetention};
+use crate::mail_api::InboxCounts;
 use crate::tasks::NowWeights;
 use crate::tasks_api::{RoutineRunView, TaskListView, TaskView};
 use crate::timefmt;
@@ -38,7 +40,29 @@ pub struct HouseholdView {
     #[serde(with = "timefmt::hhmm")]
     #[schema(value_type = String, example = "07:00")]
     pub quiet_until: NaiveTime,
+    /// ISO 4217, used for bills.
+    #[serde(default = "default_currency")]
+    pub currency: String,
+    #[serde(default)]
+    pub gender_terms: GenderTerms,
+    #[serde(default)]
+    pub events: EventsSettings,
+    #[serde(default)]
+    pub inbox: InboxSettings,
+    #[serde(default)]
+    pub retention_mail: MailRetention,
+    /// Days before a bill's due date that its pay task is due (0..=60).
+    #[serde(default = "default_bill_lead_days")]
+    pub bill_lead_days: i32,
     pub version: i32,
+}
+
+fn default_currency() -> String {
+    crate::mail::DEFAULT_CURRENCY.to_string()
+}
+
+fn default_bill_lead_days() -> i32 {
+    crate::mail::DEFAULT_BILL_LEAD_DAYS
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, ToSchema)]
@@ -60,6 +84,12 @@ pub struct HouseholdPatch {
     #[serde(default, with = "timefmt::hhmm_opt")]
     #[schema(value_type = Option<String>, example = "07:00")]
     pub quiet_until: Option<NaiveTime>,
+    pub currency: Option<String>,
+    pub gender_terms: Option<GenderTerms>,
+    pub events: Option<EventsSettings>,
+    pub inbox: Option<InboxSettings>,
+    pub retention_mail: Option<MailRetention>,
+    pub bill_lead_days: Option<i32>,
 }
 
 // ---- calendar sources ----
@@ -354,6 +384,9 @@ pub struct DashboardView {
     pub routines: Vec<RoutineRunView>,
     /// Active task lists (the add form offers those with `dashboard_add`).
     pub task_lists: Vec<TaskListView>,
+    /// Counts of items waiting for approval; the panel fetches `GET /inbox` for the items.
+    #[serde(default)]
+    pub inbox: InboxCounts,
 }
 
 // ---- status ----

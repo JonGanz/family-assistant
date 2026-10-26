@@ -1,0 +1,146 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO member (id, household_id, config_key, display_name, role, avatar, color,\n                                 birthdate, grade, interests, hobbies, responsibilities, pin_hash, created_by,\n                                 aliases, gender, relevance_tags)\n             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)\n             RETURNING id, household_id, display_name, role, avatar, color, birthdate, grade,\n                       interests, hobbies, responsibilities, aliases, gender, relevance_tags, pin_hash, archived_at, version,\n                       created_at, updated_at",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 1,
+        "name": "household_id",
+        "type_info": "Uuid"
+      },
+      {
+        "ordinal": 2,
+        "name": "display_name",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 3,
+        "name": "role",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 4,
+        "name": "avatar",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 5,
+        "name": "color",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 6,
+        "name": "birthdate",
+        "type_info": "Date"
+      },
+      {
+        "ordinal": 7,
+        "name": "grade",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 8,
+        "name": "interests",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 9,
+        "name": "hobbies",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 10,
+        "name": "responsibilities",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 11,
+        "name": "aliases",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 12,
+        "name": "gender",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 13,
+        "name": "relevance_tags",
+        "type_info": "TextArray"
+      },
+      {
+        "ordinal": 14,
+        "name": "pin_hash",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 15,
+        "name": "archived_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 16,
+        "name": "version",
+        "type_info": "Int4"
+      },
+      {
+        "ordinal": 17,
+        "name": "created_at",
+        "type_info": "Timestamptz"
+      },
+      {
+        "ordinal": 18,
+        "name": "updated_at",
+        "type_info": "Timestamptz"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Text",
+        "Date",
+        "Text",
+        "TextArray",
+        "TextArray",
+        "TextArray",
+        "Text",
+        "Uuid",
+        "TextArray",
+        "Text",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      true,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "f14467eb0feb0c6c568a325bfc42130fcfc4ebef40eb9fcd3ada859dadc2705f"
+}

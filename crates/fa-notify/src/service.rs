@@ -41,6 +41,12 @@ const DEFAULT_TRIGGERS: [NotifyTrigger; 3] = [
     NotifyTrigger::Digest,
 ];
 
+/// Extra defaults for new adult preferences (D-044, D-061).
+const ADULT_EXTRA_TRIGGERS: [NotifyTrigger; 2] = [
+    NotifyTrigger::ApprovalNeeded,
+    NotifyTrigger::MailTimeSensitive,
+];
+
 fn new_topic() -> String {
     const CHARS: &[u8] = b"abcdefghijklmnopqrstuvwxyz0123456789";
     let mut rng = rand::rng();
@@ -98,6 +104,7 @@ impl NotifyService {
                 .as_ref()
                 .map(|u| format!("{}/{}", u.trim_end_matches('/'), v.topic)),
             server_configured: self.configured(),
+            approval_mode: v.approval_mode,
             version: p.version,
         }
     }
@@ -108,9 +115,10 @@ impl NotifyService {
         household: HouseholdId,
         member: MemberId,
     ) -> Result<Versioned<NotifyPref>, NotifyError> {
-        if MemberRepo::get(conn, member).await?.is_none() {
+        let Some(m) = MemberRepo::get(conn, member).await? else {
             return Err(NotifyError::NotFound);
-        }
+        };
+        let is_adult = m.value.role == Role::Adult;
         if let Some(p) = NotifyPrefRepo::get_for_member(conn, member).await? {
             return Ok(p);
         }
@@ -120,12 +128,17 @@ impl NotifyService {
             member_id: member,
             channel: "ntfy".into(),
             topic: new_topic(),
-            triggers: DEFAULT_TRIGGERS.iter().map(|t| t.as_str().into()).collect(),
+            triggers: DEFAULT_TRIGGERS
+                .iter()
+                .chain(ADULT_EXTRA_TRIGGERS.iter().filter(|_| is_adult))
+                .map(|t| t.as_str().into())
+                .collect(),
             due_soon_minutes: 120,
             nudge_minutes: 10,
             quiet_from: None,
             quiet_until: None,
             copy_to_member_id: None,
+            approval_mode: Default::default(),
             archived_at: None,
         };
         Ok(NotifyPrefRepo::insert(conn, &pref).await?)
@@ -175,6 +188,9 @@ impl NotifyService {
                 return Err(NotifyError::Invalid("nudge_minutes must be 1..=120".into()));
             }
             p.nudge_minutes = m;
+        }
+        if let Some(m) = patch.approval_mode {
+            p.approval_mode = m;
         }
         if let Some(t) = patch.quiet_from {
             p.quiet_from = t;

@@ -17,8 +17,8 @@ use fa_store::{
 };
 
 use crate::cli::{
-    CalendarAction, ConfigAction, DeviceAction, NotifyAction, PinAction, TasksAction, UserAction,
-    WeatherAction,
+    CalendarAction, ConfigAction, DeviceAction, MailAction, NotifyAction, PinAction, TasksAction,
+    UserAction, WeatherAction,
 };
 use crate::wiring;
 
@@ -106,6 +106,12 @@ pub async fn config(
             let seeded = fa_weather::ensure_default_rules(&mut tx).await?;
             tx.commit().await?;
             println!("{}", serde_json::to_string_pretty(&report)?);
+            if !report.mail_sources_skipped.is_empty() {
+                println!(
+                    "connect these in Settings -> Mail (Gmail sources need a Google sign-in): {}",
+                    report.mail_sources_skipped.join(", ")
+                );
+            }
             if seeded > 0 {
                 println!("default weather rules added: {seeded}");
             }
@@ -455,6 +461,23 @@ pub async fn tasks(
     println!("tasks.tick: done");
     println!("routines.materialize: {runs} run(s) created");
     Ok(())
+}
+
+pub async fn mail(
+    cfg: &ProcessConfig,
+    store: &Store,
+    household: Option<HouseholdId>,
+    action: MailAction,
+) -> Result<()> {
+    let hid = require_household(store, household).await?;
+    let services = wiring::build_services(cfg, store)?;
+    crate::mail::run(
+        store,
+        wiring::mail_deps(cfg, store, &services.oauth)?,
+        hid,
+        action,
+    )
+    .await
 }
 
 pub async fn pin(store: &Store, household: Option<HouseholdId>, action: PinAction) -> Result<()> {

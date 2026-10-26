@@ -1,6 +1,7 @@
 //! fa-server: the Family Assistant server and its operator CLI.
 
 mod cli;
+mod mail;
 mod ops;
 mod serve;
 mod wiring;
@@ -45,6 +46,7 @@ async fn main() -> Result<()> {
                     ops::notify(&cfg, &store, cli.household, action).await
                 }
                 Command::Tasks { action } => ops::tasks(&store, cli.household, action).await,
+                Command::Mail { action } => ops::mail(&cfg, &store, cli.household, action).await,
                 Command::GenOpenapi { .. } => unreachable!("handled above"),
             }
         }

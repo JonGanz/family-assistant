@@ -48,6 +48,9 @@ macro_rules! db_enum {
     };
 }
 
+pub(crate) use db_enum;
+pub(crate) use text_enum;
+
 text_enum!(Role { Adult, Child });
 text_enum!(DeviceKind { Dashboard });
 text_enum!(SecretKind { OauthToken, Other });
@@ -75,7 +78,9 @@ text_enum!(EventStatus {
     Proposed,
     Approved,
     Written,
-    Rejected
+    Rejected,
+    Extracted,
+    Expired
 });
 text_enum!(RuleAction { Alert, Task });
 text_enum!(Severity {
@@ -91,7 +96,7 @@ text_enum!(RuleStatus {
 text_enum!(SuggestedBy { Default, S2, User });
 text_enum!(AdvisorySource { Rule, S2 });
 
-db_enum!(TaskListKind { Chores => "chores", Homework => "homework", General => "general" });
+db_enum!(TaskListKind { Chores => "chores", Homework => "homework", General => "general", Email => "email" });
 db_enum!(ChildCanAdd { Own => "own", None => "none" });
 db_enum!(CalendarDisplay { Hidden => "hidden", UntilDone => "until_done", Always => "always" });
 db_enum!(ScheduleKind { AfterDone => "after_done", Rrule => "rrule" });
@@ -100,7 +105,7 @@ db_enum!(Strategy { Fixed => "fixed", Rotation => "rotation", Pool => "pool" });
 db_enum!(AdvanceOn { AnyCompletion => "any_completion", AssigneeCompletion => "assignee_completion" });
 db_enum!(PriorityFlag { Normal => "normal", High => "high" });
 db_enum!(TaskStatus { Open => "open", Done => "done", Skipped => "skipped", Suggested => "suggested" });
-db_enum!(TaskOrigin { Manual => "manual", System => "system", Weather => "weather" });
+db_enum!(TaskOrigin { Manual => "manual", System => "system", Weather => "weather", Email => "email" });
 db_enum!(DayFilter { Daily => "daily", Weekdays => "weekdays", Weekends => "weekends", SchoolDays => "school_days" });
 db_enum!(RunStatus { Open => "open", Done => "done", Skipped => "skipped" });
 db_enum!(NotifyTrigger {
@@ -110,6 +115,8 @@ db_enum!(NotifyTrigger {
     DueSoon => "due_soon",
     RoutineNudge => "routine_nudge",
     SourceReauth => "source_reauth",
+    ApprovalNeeded => "approval_needed",
+    MailTimeSensitive => "mail_time_sensitive",
 });
 db_enum!(NotificationStatus { Pending => "pending", Sent => "sent", Dropped => "dropped", Failed => "failed" });
 db_enum!(TaskMode { Create => "create", Suggest => "suggest" });
@@ -172,6 +179,15 @@ pub struct Household {
     pub now_weights: NowWeights,
     pub quiet_from: NaiveTime,
     pub quiet_until: NaiveTime,
+    /// ISO 4217.
+    pub currency: String,
+    pub gender_terms: crate::mail::GenderTerms,
+    /// Built-in signal keys switched off.
+    pub disabled_signals: Vec<String>,
+    pub events: crate::mail::EventsSettings,
+    pub inbox: crate::mail::InboxSettings,
+    pub retention_mail: crate::mail::MailRetention,
+    pub bill_lead_days: i32,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -189,6 +205,10 @@ pub struct Member {
     pub interests: Vec<String>,
     pub hobbies: Vec<String>,
     pub responsibilities: Vec<String>,
+    /// Extra names the member goes by in mail (nicknames).
+    pub aliases: Vec<String>,
+    pub gender: Option<crate::mail::Gender>,
+    pub relevance_tags: Vec<String>,
     /// Argon2id hash, adults only.
     pub pin_hash: Option<String>,
     pub archived_at: Option<DateTime<Utc>>,
@@ -319,6 +339,14 @@ pub struct MemberDto {
     pub responsibilities: Vec<String>,
     pub has_pin: bool,
     pub has_account: bool,
+    #[serde(default)]
+    pub aliases: Vec<String>,
+    #[serde(default)]
+    #[ts(as = "Option<crate::mail::Gender>", optional = nullable)]
+    #[schema(value_type = Option<crate::mail::Gender>)]
+    pub gender: Option<crate::mail::Gender>,
+    #[serde(default)]
+    pub relevance_tags: Vec<String>,
     /// Optimistic-concurrency version for `If-Match` (0 when not loaded).
     #[serde(default)]
     pub version: i32,
@@ -353,6 +381,9 @@ impl MemberDto {
             responsibilities: m.responsibilities.clone(),
             has_pin: m.pin_hash.is_some(),
             has_account,
+            aliases: m.aliases.clone(),
+            gender: m.gender,
+            relevance_tags: m.relevance_tags.clone(),
             version: 0,
         }
     }

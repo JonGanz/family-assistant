@@ -350,6 +350,27 @@ pub struct CreateMemberReq {
     pub hobbies: Vec<String>,
     #[serde(default)]
     pub responsibilities: Vec<String>,
+    /// Nicknames matched in mail (M3).
+    #[serde(default)]
+    pub aliases: Vec<String>,
+    /// Optional; used only for mail relevance (D-055).
+    #[schema(value_type = Option<String>)]
+    pub gender: Option<fa_domain::Gender>,
+    /// Free-form relevance tags (D-055).
+    #[serde(default)]
+    pub relevance_tags: Vec<String>,
+}
+
+/// Trimmed, non-empty, de-duplicated (case-insensitive), first spelling kept.
+fn clean_list(v: Vec<String>) -> Vec<String> {
+    let mut out: Vec<String> = Vec::new();
+    for s in v {
+        let s = s.trim().to_string();
+        if !s.is_empty() && !out.iter().any(|o| o.eq_ignore_ascii_case(&s)) {
+            out.push(s);
+        }
+    }
+    out
 }
 
 fn clean_name(name: &str) -> ApiResult<String> {
@@ -386,6 +407,9 @@ pub async fn create_member(
         interests: req.interests,
         hobbies: req.hobbies,
         responsibilities: req.responsibilities,
+        aliases: clean_list(req.aliases),
+        gender: req.gender,
+        relevance_tags: clean_list(req.relevance_tags),
         pin_hash: None,
         archived_at: None,
         created_at: now,
@@ -451,6 +475,12 @@ pub struct PatchMemberReq {
     pub interests: Option<Vec<String>>,
     pub hobbies: Option<Vec<String>>,
     pub responsibilities: Option<Vec<String>>,
+    pub aliases: Option<Vec<String>>,
+    /// `null` clears it.
+    #[serde(default, deserialize_with = "double_option")]
+    #[schema(value_type = Option<String>)]
+    pub gender: Option<Option<fa_domain::Gender>>,
+    pub relevance_tags: Option<Vec<String>>,
     /// Alternative to the `If-Match` header.
     pub version: Option<i32>,
 }
@@ -504,6 +534,15 @@ pub async fn patch_member(
     }
     if let Some(v) = req.responsibilities {
         m.responsibilities = v;
+    }
+    if let Some(v) = req.aliases {
+        m.aliases = clean_list(v);
+    }
+    if let Some(v) = req.gender {
+        m.gender = v;
+    }
+    if let Some(v) = req.relevance_tags {
+        m.relevance_tags = clean_list(v);
     }
     let version = MemberRepo::update(&mut tx, &m, expected).await?;
     audit(
@@ -868,7 +907,7 @@ fn to_event(e: &HubEvent) -> Event {
 
 #[utoipa::path(get, path = "/api/v1/stream", tag = "stream", security(("cookie" = []), ("bearer" = [])),
     responses((status = 200, content_type = "text/event-stream",
-               description = "`heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `resync`), bridged from `fa_change`; honours Last-Event-ID")))]
+               description = "`heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `mail.updated` `{source?}`, `inbox.updated` `{}`, `bills.updated` `{}`, `resync`), bridged from `fa_change`; honours Last-Event-ID")))]
 pub async fn stream(
     State(s): State<AppState>,
     auth: Auth,

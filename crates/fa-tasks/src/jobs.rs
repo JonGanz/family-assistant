@@ -3,10 +3,11 @@
 use std::sync::Arc;
 
 use chrono::NaiveDate;
-use fa_domain::{HouseholdId, WeatherRuleId};
+use fa_domain::{BillId, HouseholdId, WeatherRuleId};
 use fa_jobs::{BoxFuture, JobContext, JobError, JobHandler};
 
 use crate::error::TaskError;
+use crate::ingest::MailTaskRequest;
 use crate::service::TaskService;
 
 impl From<TaskError> for JobError {
@@ -25,6 +26,8 @@ enum Kind {
     Digest,
     Routines,
     FromWeather,
+    FromMail,
+    FromBill,
 }
 
 struct Handler(Kind, Arc<TaskService>);
@@ -44,6 +47,8 @@ impl JobHandler for Handler {
             Kind::Digest => "tasks.digest",
             Kind::Routines => "routines.materialize",
             Kind::FromWeather => "tasks.from_weather",
+            Kind::FromMail => "tasks.from_mail",
+            Kind::FromBill => "tasks.from_bill",
         }
     }
 
@@ -73,6 +78,16 @@ impl JobHandler for Handler {
                     let d: NaiveDate = field(&payload, "date")?;
                     svc.from_weather(h, r, d).await?;
                 }
+                Kind::FromMail => {
+                    let req: MailTaskRequest = serde_json::from_value(payload)
+                        .map_err(|e| JobError::Handler(format!("bad payload: {e}")))?;
+                    svc.from_mail(req).await?;
+                }
+                Kind::FromBill => {
+                    let bill: BillId = field(&payload, "bill")?;
+                    let h = field::<HouseholdId>(&payload, "household").ok();
+                    svc.from_bill(h, bill).await?;
+                }
             }
             Ok(())
         })
@@ -86,13 +101,15 @@ pub fn handlers(service: Arc<TaskService>) -> Vec<Arc<dyn JobHandler>> {
         Kind::Digest,
         Kind::Routines,
         Kind::FromWeather,
+        Kind::FromMail,
+        Kind::FromBill,
     ]
     .into_iter()
     .map(|k| Arc::new(Handler(k, service.clone())) as Arc<dyn JobHandler>)
     .collect()
 }
 
-/// `(job kind, cron)`; `tasks.from_weather` is only ever enqueued.
+/// `(job kind, cron)`; `tasks.from_weather`, `tasks.from_mail` and `tasks.from_bill` are only ever enqueued.
 pub fn default_schedules() -> Vec<(&'static str, &'static str)> {
     vec![
         ("tasks.materialize", "* * * * *"),

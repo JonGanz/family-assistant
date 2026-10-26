@@ -51,6 +51,42 @@ export type NewAway = S['NewAway']
 export type NotifyPrefView = S['NotifyPrefView']
 export type NotifyPrefPatch = S['NotifyPrefPatch']
 export type NotifyTrigger = S['NotifyTrigger']
+export type CalendarViewExt = S['CalendarViewExt']
+export type SourceViewExt = S['SourceViewExt']
+export type MessageSummary = S['MessageSummary']
+export type DecisionView = S['DecisionView']
+export type LabelInput = S['LabelInput']
+export type MessageDetail = S['MessageDetail']
+export type SectionView = S['SectionView']
+export type MessagePage = S['MessagePage']
+export type MailActionInput = S['MailActionInput']
+export type MailActionView = S['MailActionView']
+export type MailSourceView = S['MailSourceView']
+export type CategoryView = S['CategoryView']
+export type DecisionPointKey = S['DecisionPointKey']
+export type LabelQueueItem = S['LabelQueueItem']
+export type MakeTaskInput = S['MakeTaskInput']
+export type InboxView = S['InboxView']
+export type InboxItem = S['InboxItem']
+export type InboxCounts = S['InboxCounts']
+export type InboxKind = 'event' | 'bill' | 'task' | 'contact'
+export type EventProposalView = S['EventProposalView']
+export type EventApproval = S['EventApproval']
+export type TaskApproval = S['TaskApproval']
+export type ContactApproval = S['ContactApproval']
+export type ContactSuggestionView = S['ContactSuggestionView']
+export type BillView = S['BillView']
+export type BillPatch = S['BillPatch']
+
+export interface MessageQuery {
+  category?: string
+  member?: string
+  source?: string
+  q?: string
+  include_ignored?: boolean
+  before?: string
+  limit?: number
+}
 
 export interface TaskQuery {
   view?: 'now' | 'mine' | 'all'
@@ -133,7 +169,7 @@ export const api = {
       ...U,
     }),
 
-  sources: () => request<SourceView[]>('/api/v1/calendar-sources', U),
+  sources: () => request<SourceViewExt[]>('/api/v1/calendar-sources', U),
   createSource: (b: NewSource) =>
     request<SourceCreated>('/api/v1/calendar-sources', { method: 'POST', body: b, ...U }),
   testSource: (b: NewSource) =>
@@ -149,7 +185,7 @@ export const api = {
     request<void>(`/api/v1/calendar-sources/${id}`, { method: 'DELETE', ...U }),
   syncSource: (id: string) =>
     request<void>(`/api/v1/calendar-sources/${id}/sync`, { method: 'POST', ...U }),
-  calendars: () => request<CalendarView[]>('/api/v1/calendars', U),
+  calendars: () => request<CalendarViewExt[]>('/api/v1/calendars', U),
   patchCalendar: (id: string, version: number, b: CalendarPatch) =>
     request<CalendarView>(`/api/v1/calendars/${id}`, {
       method: 'PATCH',
@@ -159,8 +195,14 @@ export const api = {
     }),
   oauthAccounts: () => request<OAuthAccountView[]>('/api/v1/oauth/accounts', U),
   /** Full-page navigation target: the server answers with a 302 to Google. */
-  googleStartUrl: (returnTo: string) =>
-    `/api/v1/oauth/google/start?${new URLSearchParams({ return_to: returnTo })}`,
+  googleStartUrl: (
+    returnTo: string,
+    purpose?: 'calendar' | 'gmail_read' | 'gmail_modify' | 'calendar_write',
+  ) => {
+    const p = new URLSearchParams({ return_to: returnTo })
+    if (purpose) p.set('purpose', purpose)
+    return `/api/v1/oauth/google/start?${p}`
+  },
 
   rules: () => request<WeatherRuleView[]>('/api/v1/weather-rules', U),
   createRule: (b: NewWeatherRule) =>
@@ -299,4 +341,55 @@ export const api = {
     }),
   testNotify: (member: string) =>
     request<void>(`/api/v1/members/${member}/notify-prefs/test`, { method: 'POST', ...U }),
+
+  messages: (q: MessageQuery = {}) => {
+    const p = new URLSearchParams()
+    for (const [k, v] of Object.entries(q))
+      if (v !== undefined && v !== '' && v !== false) p.set(k, String(v))
+    const qs = p.toString()
+    return request<MessagePage>(`/api/v1/messages${qs ? `?${qs}` : ''}`, U)
+  },
+  message: (id: string, member?: string) =>
+    request<MessageDetail>(`/api/v1/messages/${id}${member ? `?member=${member}` : ''}`, U),
+  mailSources: () => request<MailSourceView[]>('/api/v1/mail-sources', U),
+  categories: () => request<CategoryView[]>('/api/v1/categories', U),
+  messageAction: (id: string, b: MailActionInput) =>
+    request<MailActionView>(`/api/v1/messages/${id}/actions`, { method: 'POST', body: b, ...U }),
+  undoMailAction: (id: string) =>
+    request<MailActionView>(`/api/v1/mail-actions/${id}/undo`, { method: 'POST', ...U }),
+  labelMessage: (id: string, b: LabelInput) =>
+    request<MessageDetail>(`/api/v1/messages/${id}/labels`, { method: 'POST', body: b, ...U }),
+  setEvalSample: (id: string, inSample: boolean) =>
+    request<void>(`/api/v1/messages/${id}/eval-sample`, {
+      method: 'POST',
+      body: { in_sample: inSample },
+      ...U,
+    }),
+  makeTask: (id: string, b: MakeTaskInput = {}) =>
+    request<void>(`/api/v1/messages/${id}/task`, { method: 'POST', body: b, ...U }),
+  /** Resolves to `undefined` when the queue is empty (204). */
+  labellingNext: (after?: string) =>
+    request<LabelQueueItem | undefined>(
+      `/api/v1/labelling/next${after ? `?after=${after}` : ''}`,
+      U,
+    ),
+
+  inbox: (kind?: InboxKind) => request<InboxView>(`/api/v1/inbox${kind ? `?kind=${kind}` : ''}`, U),
+  approveInbox: (
+    kind: InboxKind,
+    id: string,
+    b: EventApproval | BillPatch | TaskApproval | ContactApproval = {},
+  ) => request<void>(`/api/v1/inbox/${kind}/${id}/approve`, { method: 'POST', body: b, ...U }),
+  rejectInbox: (kind: InboxKind, id: string) =>
+    request<void>(`/api/v1/inbox/${kind}/${id}/reject`, { method: 'POST', ...U }),
+
+  bills: (status?: string) =>
+    request<BillView[]>(`/api/v1/bills${status ? `?status=${status}` : ''}`, U),
+  patchBill: (id: string, version: number, b: BillPatch) =>
+    request<BillView>(`/api/v1/bills/${id}`, {
+      method: 'PATCH',
+      body: b,
+      headers: ifMatch(version),
+      ...U,
+    }),
 }
