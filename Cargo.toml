@@ -90,7 +90,7 @@ clap = { version = "4.6.7", features = ["derive", "env"] }
 argon2 = "0.5.3"
 rand = "0.9.5"
 aes-gcm = "0.10.3"
-sha2 = "0.10.9"
+sha2 = "0.11.1"
 base64 = "0.22.1"
 hex = "0.4.3"
 subtle = "2.6.1"
