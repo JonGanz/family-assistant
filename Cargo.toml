@@ -98,7 +98,7 @@ subtle = "2.6.1"
 # API and types
 utoipa = { version = "5.5.0", features = ["axum_extras", "uuid", "chrono"] }
 utoipa-swagger-ui = { version = "9.0.2", features = ["axum"] }
-ts-rs = { version = "11.1.0", features = ["uuid-impl", "chrono-impl", "serde-compat"] }
+ts-rs = { version = "12.0.1", features = ["uuid-impl", "chrono-impl", "serde-compat"] }
 futures = "0.3.34"
 async-stream = "0.3.6"
 
