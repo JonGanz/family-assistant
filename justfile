@@ -63,3 +63,7 @@ ci:
 # End-to-end tests (throwaway Postgres, api + worker, fixture feeds, Radicale, Playwright)
 e2e:
     scripts/e2e.sh
+
+# Wipe the dev DB and rebuild the example household, fixtures and a paired device, then serve
+demo-reset:
+    scripts/demo-reset.sh

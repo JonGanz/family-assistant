@@ -99,3 +99,123 @@ def edit(path, pairs):
         assert a in s, (path, a[:80])
         s = s.replace(a, b)
     open(path, "w").write(s)
+
+
+# ---------------------------------------------------------------- check (CLI)
+import os
+
+
+def parse_fm(path):
+    """Return dict of front-matter keys (raw string values) or None if there is none."""
+    lines = open(path, encoding="utf-8").read().split("\n")
+    if not lines or lines[0].strip() != "---":
+        return None
+    d = {}
+    for ln in lines[1:]:
+        if ln.strip() == "---":
+            return d
+        m = re.match(r"^([A-Za-z_][\w-]*):\s*(.*)$", ln)
+        if m:
+            d[m.group(1)] = m.group(2).strip().strip("\"'")
+    return None
+
+
+_REQ = {
+    "Q": "id title status batch area created resolved decisions",
+    "D": "id title status date source_questions supersedes superseded_by affects",
+    "arch": "title scope status updated drawio depends_on",
+    "log": "date topics",
+    "R": "id title date method verified informs",
+    "plan": "title milestone status updated arch decisions",
+    "T": "id title milestone wave depends_on agent status owns",
+}
+
+
+def check():
+    errs = []
+    ids = {"Q": {}, "D": {}}
+
+    def err(p, m):
+        errs.append(f"{p}: {m}")
+
+    def need(p, kind, enum=None):
+        fm = parse_fm(p)
+        if fm is None:
+            err(p, "missing front-matter")
+            return None
+        for k in _REQ[kind].split():
+            if k not in fm:
+                err(p, f"missing key '{k}'")
+        if enum and fm.get("status") not in enum:
+            err(p, f"status '{fm.get('status')}' not in {sorted(enum)}")
+        return fm
+
+    base = lambda p: os.path.basename(p)
+    for p in sorted(glob.glob("design/Q-*.md") + glob.glob("design/resolved/Q-*.md")):
+        fm = need(p, "Q", {"open", "answered", "resolved"})
+        m = re.match(r"(Q-\d+)", base(p))
+        if fm:
+            if "/resolved/" in p and fm.get("status") != "resolved":
+                err(p, "file under resolved/ must have status resolved")
+            if m and fm.get("id") != m.group(1):
+                err(p, f"id '{fm.get('id')}' does not match filename")
+        if m:
+            ids["Q"].setdefault(m.group(1), []).append(p)
+    for p in sorted(glob.glob("decisions/D-*.md")):
+        fm = need(p, "D", {"accepted", "superseded"})
+        m = re.match(r"(D-\d+)", base(p))
+        if fm:
+            if m and fm.get("id") != m.group(1):
+                err(p, f"id '{fm.get('id')}' does not match filename")
+            if fm.get("status") == "superseded" and not fm.get("superseded_by"):
+                err(p, "superseded decision has empty superseded_by")
+        if m:
+            ids["D"].setdefault(m.group(1), []).append(p)
+    for p in sorted(glob.glob("arch/*.md")):
+        if base(p) == "_index.md":
+            continue
+        fm = need(p, "arch", {"draft", "accepted"})
+        if fm and fm.get("drawio") and not os.path.exists(os.path.join(os.path.dirname(p), fm["drawio"])) \
+                and not os.path.exists(fm["drawio"]):
+            err(p, f"drawio file '{fm['drawio']}' not found")
+    for p in sorted(glob.glob("log/*.md")):
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}\.md", base(p)):
+            need(p, "log")
+    for p in sorted(glob.glob("research/R-*.md")):
+        need(p, "R")
+    for p in sorted(glob.glob("plan/M*.md")):
+        need(p, "plan")
+    for p in sorted(glob.glob("plan/M*/T-*.md")):
+        need(p, "T", {"todo", "running", "done", "blocked"})
+
+    for k, d in ids.items():
+        for i, ps in d.items():
+            if len(ps) > 1:
+                err(ps[0], f"duplicate {i}: {', '.join(ps)}")
+
+    for kind, idx in (("Q", "design/_index.md"), ("D", "decisions/_index.md")):
+        txt = open(idx, encoding="utf-8").read() if os.path.exists(idx) else ""
+        linked = set(re.findall(rf"\[({kind}-\d+)\]", txt))
+        for i in sorted(ids[kind]):
+            if i not in linked:
+                err(idx, f"{i} not listed in index")
+        for i in sorted(linked - set(ids[kind])):
+            err(idx, f"{i} listed in index but no file on disk")
+    for idx in sorted(glob.glob("*/_index.md")):
+        fm = parse_fm(idx)
+        if fm is None or "updated" not in fm:
+            err(idx, "missing 'updated' key")
+    return errs
+
+
+if __name__ == "__main__":
+    import argparse, sys
+    ap = argparse.ArgumentParser(prog="fa.py")
+    ap.add_argument("cmd", choices=["check"])
+    ap.parse_args()
+    os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+    e = check()
+    for line in e:
+        print(line)
+    print(f"{len(e)} failure(s)" if e else "docs check OK")
+    sys.exit(1 if e else 0)

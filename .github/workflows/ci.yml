@@ -67,6 +67,12 @@ jobs:
           done
           cargo nextest run -p fa-connectors -p fa-mail --run-ignored only -E 'binary(imap) | binary(sync_imap)'
 
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: python3 tools/fa.py check
+
   deny:
     runs-on: ubuntu-latest
     steps:

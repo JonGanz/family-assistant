@@ -1,6 +1,6 @@
 ---
 title: Decisions Index
-updated: 2026-10-25
+updated: 2026-10-26
 ---
 
 # Decisions

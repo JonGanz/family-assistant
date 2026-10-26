@@ -4,6 +4,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+echo "== docs: front-matter and index check"
+python3 tools/fa.py check
+
 PORT=55496
 IMAP_PORT=55497
 IMAPS_PORT=55498

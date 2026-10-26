@@ -127,7 +127,7 @@ We ship `deploy/compose.example.yaml`, which has every service. **How it is depl
 
 ## 9. Backups & restore
 - The DB is backed up nightly as described above. The worker raises an alert if the newest dump in the backup directory is older than 26 hours.
-- Backups contain whatever email content the retention policy keeps. Under `keep_for_learning` that is the bounded set of learning examples. Email bodies are not encrypted at rest, and the backup location is trusted (D-034).
+- Backups contain whatever email content the retention policy keeps. Under `keep_for_learning` that is the bounded set of learning examples. Email bodies are not encrypted at rest, and the backup location is trusted (D-034, superseding D-030).
 - **The master key must be backed up separately and offline**, for example in a password manager or printed. Without it, the encrypted secrets (OAuth tokens) are unrecoverable, although that only means re-authorising each account.
 - `deploy/runbooks/restore.md`: stop api and worker → `pg_restore` into a fresh DB → put the master key back → start → `/readyz`. **It is rehearsed once during M0**.
 

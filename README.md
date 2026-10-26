@@ -44,6 +44,8 @@ copied as-is, from the repository root.
 | Docker + Compose v2 | recent | dev Postgres, e2e tests, deployment |
 | [`just`](https://github.com/casey/just) | optional | shortcuts only. Every recipe is a thin wrapper, so each step also shows the plain command |
 
+**One-shot path:** `just demo-reset` (or `scripts/demo-reset.sh`) rebuilds the example household, fixtures and a paired device and serves it. It deletes the dev database volume, so it asks you to type `wipe` first.
+
 ### 1. Start the database and create a dev master key
 ```bash
 docker compose -f deploy/compose.dev.yaml up -d --wait postgres ntfy
@@ -683,6 +685,7 @@ just e2e         # = scripts/e2e.sh
 ```
 | Script | What it does |
 |---|---|
+| `python3 tools/fa.py check` | Lints the design tree (`arch/`, `design/`, `decisions/`, `log/`, `plan/`, `research/`): front-matter keys, status values, id/filename parity, duplicate numbers, index ⇄ file parity. CI runs it |
 | [`scripts/ci-local.sh`](scripts/ci-local.sh) | Mirrors `.github/workflows/ci.yml`: fmt, clippy, tests against a **fresh throwaway Postgres** with `SQLX_OFFLINE=true`, the GreenMail-gated IMAP tests (a throwaway GreenMail), cargo-deny (if installed), the example-data hygiene check, and web lint, typecheck, test and build. `--no-web` skips the web part |
 | [`scripts/e2e.sh`](scripts/e2e.sh) | The end-to-end suite. Starts a throwaway Postgres, `serve api` and `serve worker` as **separate processes**, a fixture server (ICS calendars and an Open-Meteo stub, [`e2e/stubs/`](e2e/stubs/) and [`e2e/fixtures/`](e2e/fixtures/)), Radicale (CalDAV, `tomsquest/docker-radicale`, also the writable calendar for approved events), a real ntfy (`binwiederhier/ntfy`) and a GreenMail (`greenmail/standalone`, fictional fixture mails from [`e2e/fixtures/mail/`](e2e/fixtures/mail/)), seeds the example household, sources, a device, task lists, chores, a routine, a weather rule and an IMAP mailbox through the API, runs `tasks run-now` and `mail sync-now`, then runs the Playwright API specs (`e2e/`) and UI specs (`apps/web/e2e/`). Everything is torn down on exit. `FA_E2E_HOLD=<seconds>` keeps the seeded stack up for debugging |
 | [`scripts/compose-smoke.sh`](scripts/compose-smoke.sh) | Builds the image, starts `deploy/compose.example.yaml` and takes an on-demand backup |
