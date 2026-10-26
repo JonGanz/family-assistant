@@ -45,6 +45,9 @@ export function daysToFetch(settings: DashboardData['settings'] | undefined): nu
   return Math.min(14, Math.max(1, agenda, needsWeek ? 7 : 1))
 }
 
+/** Retry delay while the first load keeps failing. */
+export const RETRY_MS = 10_000
+
 export const useDashboardStore = defineStore('dashboard', () => {
   const snapshot = ref<DashboardData | null>(null)
   const savedAt = ref<number | null>(null)
@@ -53,9 +56,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const lastHeartbeat = ref<string | null>(null)
   /** True while showing cached data because the API could not be reached. */
   const stale = ref(false)
+  /** Why the last fetch failed (shown while there is nothing to render), or null. */
+  const loadError = ref<string | null>(null)
   let handle: SseHandle | null = null
   let midnight: ReturnType<typeof setTimeout> | undefined
   let inflight: Promise<void> | null = null
+  let retry: ReturnType<typeof setTimeout> | undefined
 
   const householdName = computed(() => snapshot.value?.household.name ?? '')
   const members = computed(() => snapshot.value?.members ?? [])
@@ -176,10 +182,20 @@ export const useDashboardStore = defineStore('dashboard', () => {
       }
       savedAt.value = Date.now()
       stale.value = false
+      loadError.value = null
       writeCache(snapshot.value, savedAt.value)
-    } catch {
+    } catch (e) {
       applyCache()
       stale.value = true
+      loadError.value =
+        e instanceof ApiError
+          ? `HTTP ${e.status}: ${e.message}`
+          : String((e as Error)?.message ?? e)
+      // Nothing to show yet: keep trying instead of waiting for an SSE event that may never come.
+      if (!snapshot.value) {
+        clearTimeout(retry)
+        retry = setTimeout(() => void refresh(), RETRY_MS)
+      }
     }
   }
 
@@ -291,6 +307,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     handle?.stop()
     handle = null
     clearTimeout(midnight)
+    clearTimeout(retry)
   }
 
   return {
@@ -302,6 +319,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     connection,
     lastHeartbeat,
     stale,
+    loadError,
     showStaleBadge,
     refresh,
     handleEvent,

@@ -113,7 +113,12 @@ const mmss = computed(
       @tick="(r: string, st: string, d: boolean) => store.tickStep(r, st, d)"
       @add="flow?.beginAdd()"
     />
-    <p v-else class="loading">{{ S.loading }}</p>
+    <div v-else class="loading">
+      <p>{{ S.loading }}</p>
+      <p v-if="store.loadError" role="alert" data-testid="load-error">
+        {{ S.loadFailed(store.loadError) }}
+      </p>
+    </div>
     <TaskFlow ref="flow" />
 
     <div v-if="showElevation" class="elevation" role="dialog" aria-label="Elevation">

@@ -313,6 +313,12 @@ async fn device_pair_authenticate_revoke(pool: PgPool) {
         auth.resolve_actor(None, Some(&paired.token)).await.unwrap(),
         Actor::Device { device_id, .. } if device_id == paired.device.id
     ));
+    // A dashboard opened in a logged-in browser sends both: the bearer wins.
+    let session = auth.login("alex", ADULT_PW, None, None).await.unwrap();
+    assert!(matches!(
+        auth.resolve_actor(Some(&session.session_id), Some(&paired.token)).await.unwrap(),
+        Actor::Device { device_id, .. } if device_id == paired.device.id
+    ));
     auth.revoke_device(&adult_actor(&fx), paired.device.id)
         .await
         .unwrap();

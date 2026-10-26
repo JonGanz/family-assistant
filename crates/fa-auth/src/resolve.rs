@@ -6,14 +6,12 @@ use crate::error::{AuthError, Result};
 use crate::service::AuthService;
 
 impl AuthService {
-    /// Session cookie first (an adult or child user), then bearer token (a device, elevated when a
-    /// PIN elevation is active). Rolls the session expiry forward. `Unauthenticated` otherwise.
+    /// Bearer token first (a device, elevated when a PIN elevation is active), then the session
+    /// cookie (an adult or child user). The bearer wins because the client sends it only on purpose
+    /// (kiosk calls), while the cookie rides along on every request: a dashboard opened in a browser
+    /// that is also logged in must still act as the device. Rolls the session expiry forward.
+    /// `Unauthenticated` otherwise.
     pub async fn resolve_actor(&self, cookie: Option<&str>, bearer: Option<&str>) -> Result<Actor> {
-        if let Some(id) = cookie
-            && let Some(actor) = self.resolve_session(id).await?
-        {
-            return Ok(actor);
-        }
         if let Some(token) = bearer {
             let device = self.authenticate_bearer(token).await?;
             let mut tx = self.store.tx_for(device.household_id).await?;
@@ -30,6 +28,11 @@ impl AuthService {
                     household_id: device.household_id,
                 },
             });
+        }
+        if let Some(id) = cookie
+            && let Some(actor) = self.resolve_session(id).await?
+        {
+            return Ok(actor);
         }
         Err(AuthError::Unauthenticated)
     }

@@ -428,7 +428,9 @@ Vite (`corepack pnpm@9 dev`) serves the UI on its own port and proxies `/api` to
 **Database queries** are checked at compile time by sqlx. After adding or changing a `query!`,
 regenerate the offline data with `cargo sqlx prepare --workspace` (install it with
 `cargo install sqlx-cli --no-default-features --features rustls,postgres --locked`), and commit
-`.sqlx/`. CI compiles with `SQLX_OFFLINE=true`.
+`.sqlx/`. Builds use that offline data by default (`SQLX_OFFLINE=true` in `.cargo/config.toml`),
+so compiling never needs a running or migrated database. To check queries against a live database
+instead, run with `SQLX_OFFLINE=false`.
 
 **Migrations** live in `crates/fa-store/migrations/` and run automatically when the API starts.
 Never edit a migration once it has been deployed anywhere. Add a new one instead.

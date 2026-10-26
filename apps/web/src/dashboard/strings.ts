@@ -2,6 +2,7 @@ export const S = {
   pairTitle: 'Pair this screen',
   pairBody: 'Ask an adult to open Devices and pair this screen.',
   loading: 'Loading…',
+  loadFailed: (why: string) => `Could not load the dashboard (${why}). Retrying…`,
   lastUpdated: (hhmm: string) => `Last updated ${hhmm}`,
   offline: 'Offline',
   busy: 'Busy',

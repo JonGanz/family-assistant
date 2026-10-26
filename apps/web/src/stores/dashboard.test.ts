@@ -18,7 +18,7 @@ vi.mock('../kiosk/taskApi', () => ({
 import { api } from '../api/client'
 import { ApiError } from '../api/http'
 import { taskApi } from '../kiosk/taskApi'
-import { CACHE_KEY, daysToFetch, readCache, useDashboardStore } from './dashboard'
+import { CACHE_KEY, RETRY_MS, daysToFetch, readCache, useDashboardStore } from './dashboard'
 
 const dash = vi.mocked(api.dashboard)
 
@@ -88,6 +88,23 @@ describe('dashboard store', () => {
     expect(s.showStaleBadge).toBe(true)
     expect(s.householdName).toBe('Example Household')
     expect(s.savedAt).toBeTypeOf('number')
+  })
+
+  it('with no cache, shows why the load failed and retries until it succeeds', async () => {
+    vi.useFakeTimers()
+    try {
+      dash.mockResolvedValue(snap())
+      dash.mockRejectedValueOnce(new ApiError(500, { status: 500, title: 'Internal error' }))
+      const s = useDashboardStore()
+      await s.refresh()
+      expect(s.snapshot).toBeNull()
+      expect(s.loadError).toBe('HTTP 500: Internal error')
+      await vi.advanceTimersByTimeAsync(RETRY_MS)
+      expect(s.snapshot).not.toBeNull()
+      expect(s.loadError).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('ignores a cache from an older format', () => {
