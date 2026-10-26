@@ -28,4 +28,4 @@ These go to a list of kind `email`.
 
 ## Answer
 <!-- answer below this line -->
-
+Option C.

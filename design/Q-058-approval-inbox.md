@@ -26,4 +26,4 @@ Proposals (events, bills, suggested tasks, suggested contacts) wait in the appro
 
 ## Answer
 <!-- answer below this line -->
-
+Option C.

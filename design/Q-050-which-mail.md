@@ -27,4 +27,4 @@ The backfill window on first connect is set per source (D-007, default 30 days).
 
 ## Answer
 <!-- answer below this line -->
-
+Option C.

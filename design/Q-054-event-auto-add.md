@@ -29,4 +29,4 @@ Routing in M3 uses rules only: the org's default calendar, then the linked child
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

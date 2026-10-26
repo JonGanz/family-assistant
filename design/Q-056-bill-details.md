@@ -27,4 +27,4 @@ D-009: a bill is itemised and gets a "Pay <payee>" task. Three details are open:
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

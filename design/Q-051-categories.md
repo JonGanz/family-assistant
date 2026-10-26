@@ -47,4 +47,4 @@ Proposed defaults:
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

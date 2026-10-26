@@ -25,4 +25,4 @@ D-007: sources are read-only by default. Turning that off grants `gmail.modify` 
 
 ## Answer
 <!-- answer below this line -->
-
+Option C.

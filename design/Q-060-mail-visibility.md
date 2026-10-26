@@ -26,4 +26,4 @@ Email is more personal than calendars. Today the plan says: **adults see message
 
 ## Answer
 <!-- answer below this line -->
-
+Option B.

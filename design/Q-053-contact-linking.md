@@ -24,4 +24,4 @@ A teacher's email reaches the right child through an **enrollment** (child ↔ s
 
 ## Answer
 <!-- answer below this line -->
-
+Option C.

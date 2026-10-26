@@ -30,4 +30,4 @@ The alternative is **IMAP with a Google app password** (needs 2-step verificatio
 
 ## Answer
 <!-- answer below this line -->
-
+Option C.

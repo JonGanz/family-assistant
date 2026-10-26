@@ -29,4 +29,4 @@ In M3, filtering is deterministic: a section of a newsletter is shown for a chil
 
 ## Answer
 <!-- answer below this line -->
-
+Option D.

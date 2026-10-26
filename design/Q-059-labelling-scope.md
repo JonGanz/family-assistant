@@ -28,4 +28,4 @@ The view is phone-friendly: one message at a time, with the current guess pre-fi
 
 ## Answer
 <!-- answer below this line -->
-
+Option B.
