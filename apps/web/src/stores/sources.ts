@@ -69,8 +69,11 @@ export const useSourcesStore = defineStore('sources', () => {
 
   async function patchCalendar(c: CalendarViewExt, patch: CalendarPatchExt): Promise<boolean> {
     const r = await guarded(() => mailApi.patchCalendar(c.id, c.version, patch))
-    if (r) await load()
-    return !!r
+    if (!r) return false
+    // Take the new version at once: a second toggle before the reload would otherwise be a 409.
+    calendars.value = calendars.value.map((x) => (x.id === r.id ? r : x))
+    await load()
+    return true
   }
 
   async function remove(id: string): Promise<void> {

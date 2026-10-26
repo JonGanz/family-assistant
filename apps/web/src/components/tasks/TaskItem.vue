@@ -99,7 +99,7 @@ const overdue = computed(() => !done.value && isOverdue(props.task.dueAt, props.
   padding: 0 0.45em;
   border-radius: 999px;
   background: var(--color-danger);
-  color: #fff;
+  color: var(--color-bg);
   font-weight: 700;
 }
 .meta {

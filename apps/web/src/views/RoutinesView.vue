@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ErrorBanner from '../components/ErrorBanner.vue'
 import { computed, onMounted, ref } from 'vue'
 import type { RoutineRunView } from '../api/client'
 import MemberChip from '../components/MemberChip.vue'
@@ -44,8 +45,8 @@ async function tick(run: RoutineRunView, stepId: string, done: boolean) {
 <template>
   <section>
     <h1>Routines</h1>
-    <p v-if="routines.error" class="settings-error" role="alert">{{ routines.error }}</p>
-    <p v-if="error" class="settings-error" role="alert">{{ error }}</p>
+    <ErrorBanner v-if="routines.error" :message="routines.error" />
+    <ErrorBanner v-if="error" :message="error" />
     <p v-if="routines.todayLoaded && groups.length === 0" class="settings-note">
       No routines today.
     </p>

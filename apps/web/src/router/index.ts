@@ -140,7 +140,7 @@ export const routes: RouteRecordRaw[] = [
   },
   {
     path: '/settings/devices',
-    name: 'devices',
+    name: 'settings-devices',
     component: () => import('../views/DevicesView.vue'),
     meta: { auth: 'adult' },
   },

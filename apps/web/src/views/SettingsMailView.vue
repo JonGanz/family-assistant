@@ -43,7 +43,7 @@ async function create(b: NewMailSource) {
 
 <template>
   <section>
-    <h1>Mail</h1>
+    <h1>Mail settings</h1>
     <p class="settings-note">
       Approval, expiry, currency and retention settings are under
       <RouterLink to="/settings/household">Household</RouterLink>. Schools and clubs are under

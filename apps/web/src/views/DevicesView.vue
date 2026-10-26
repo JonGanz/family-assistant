@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ErrorBanner from '../components/ErrorBanner.vue'
 import QRCode from 'qrcode'
 import { onMounted, ref } from 'vue'
 import { api, type DeviceDto, type PairDeviceResp } from '../api/client'
@@ -113,7 +114,7 @@ async function revoke(d: DeviceDto) {
 <template>
   <section>
     <h1>Devices</h1>
-    <p v-if="error" class="error" role="alert">{{ error }}</p>
+    <ErrorBanner v-if="error" :message="error" />
 
     <form @submit.prevent="pair">
       <label>Device name <input v-model="name" name="device_name" required /></label>
@@ -187,9 +188,6 @@ label {
 }
 code {
   word-break: break-all;
-}
-.error {
-  color: #c0392b;
 }
 .split {
   display: grid;

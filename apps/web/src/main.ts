@@ -3,5 +3,6 @@ import { createApp } from 'vue'
 import App from './App.vue'
 import { router } from './router'
 import './styles/base.css'
+import './views/parts/settings.css'
 
 createApp(App).use(createPinia()).use(router).mount('#app')

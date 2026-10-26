@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { watch } from 'vue'
-import { useRouter } from 'vue-router'
+import { computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useInboxStore } from '../stores/inbox'
 import { useSessionStore } from '../stores/session'
 
 const session = useSessionStore()
 const router = useRouter()
+const route = useRoute()
+const inSettings = computed(() => route.path.startsWith('/settings'))
 const inbox = useInboxStore()
 
 // Adults only: the inbox badge loads once and then follows SSE `inbox.updated` (stores/live.ts).
@@ -27,13 +29,12 @@ async function logout() {
   <div class="app-layout">
     <header class="app-header">
       <strong>Family Assistant</strong>
-      <nav v-if="session.isUser">
+      <nav v-if="session.isUser" aria-label="Primary" class="nav-primary">
         <RouterLink to="/">Today</RouterLink>
         <RouterLink to="/calendar">Calendar</RouterLink>
         <RouterLink to="/tasks">Tasks</RouterLink>
         <RouterLink to="/routines">Routines</RouterLink>
         <RouterLink to="/members">Members</RouterLink>
-        <RouterLink to="/settings/notifications">Notifications</RouterLink>
         <template v-if="session.isAdult">
           <RouterLink to="/mail">Mail</RouterLink>
           <RouterLink to="/inbox">
@@ -43,18 +44,33 @@ async function logout() {
             }}</span>
           </RouterLink>
           <RouterLink to="/bills">Bills</RouterLink>
-          <RouterLink to="/settings/mail">Mail settings</RouterLink>
-          <RouterLink to="/settings/orgs">Organizations</RouterLink>
-          <RouterLink to="/settings/household">Household</RouterLink>
-          <RouterLink to="/settings/tasks">Task settings</RouterLink>
-          <RouterLink to="/settings/calendars">Calendars</RouterLink>
-          <RouterLink to="/settings/weather">Weather</RouterLink>
-          <RouterLink to="/settings/devices">Devices</RouterLink>
-          <RouterLink to="/settings/status">Status</RouterLink>
         </template>
       </nav>
-      <button v-if="session.isUser" class="logout" @click="logout">Log out</button>
+      <div v-if="session.isUser" class="header-end">
+        <RouterLink
+          class="settings-link"
+          :to="session.isAdult ? '/settings/household' : '/settings/notifications'"
+          :class="{ 'router-link-active': inSettings }"
+          >Settings</RouterLink
+        >
+        <button class="logout" @click="logout">Log out</button>
+      </div>
     </header>
+    <nav v-if="session.isUser && inSettings" aria-label="Settings" class="nav-sub">
+      <template v-if="session.isAdult">
+        <RouterLink to="/settings/household">Household</RouterLink>
+        <RouterLink to="/settings/calendars">Calendars</RouterLink>
+        <RouterLink to="/settings/mail">Mail</RouterLink>
+        <RouterLink to="/settings/orgs">Organizations</RouterLink>
+        <RouterLink to="/settings/tasks">Tasks</RouterLink>
+        <RouterLink to="/settings/weather">Weather</RouterLink>
+      </template>
+      <RouterLink to="/settings/notifications">Notifications</RouterLink>
+      <template v-if="session.isAdult">
+        <RouterLink to="/settings/devices">Devices</RouterLink>
+        <RouterLink to="/settings/status">Status</RouterLink>
+      </template>
+    </nav>
     <main class="app-main"><slot /></main>
   </div>
 </template>
@@ -62,15 +78,29 @@ async function logout() {
 <style scoped>
 .app-header {
   display: flex;
-  gap: 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
   align-items: center;
-  padding: 0.75rem 1rem;
+  padding: 0.5rem 1rem;
   border-bottom: 1px solid var(--color-border);
 }
-.app-header nav {
+.header-end {
   display: flex;
-  flex-wrap: wrap;
-  gap: 1rem;
+  gap: 0.75rem;
+  align-items: center;
+  margin-left: auto;
+}
+.settings-link {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 0 0.9rem;
+  text-decoration: none;
+}
+.settings-link.router-link-active {
+  border-color: var(--color-accent);
+}
+.header-end button {
+  min-height: 40px;
 }
 .nav-badge {
   display: inline-block;
@@ -81,9 +111,6 @@ async function logout() {
   color: var(--color-bg);
   font-size: 0.8em;
   text-align: center;
-}
-.logout {
-  margin-left: auto;
 }
 .app-main {
   padding: 1rem;

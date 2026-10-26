@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ErrorBanner from '../components/ErrorBanner.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import DateRangeNav from '../components/DateRangeNav.vue'
 import EventCard from '../components/EventCard.vue'
@@ -137,7 +138,7 @@ const dayNumber = (k: string) => Number(k.slice(8))
         </select>
       </label>
     </div>
-    <p v-if="calendar.error" class="error" role="alert">{{ calendar.error }}</p>
+    <ErrorBanner v-if="calendar.error" :message="calendar.error" />
 
     <AgendaList
       v-if="view === 'agenda'"
@@ -269,9 +270,6 @@ button[aria-pressed='true'] {
   display: flex;
   gap: var(--space-2);
   align-items: center;
-}
-.error {
-  color: var(--color-danger);
 }
 .week {
   display: grid;

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ErrorBanner from '../components/ErrorBanner.vue'
 import { onMounted, watch } from 'vue'
 import { fmtDay } from '../components/mail/format'
 import { formatMoney, useBillsStore, type BillFilter } from '../stores/bills'
@@ -28,7 +29,7 @@ watch(
         <option v-for="f in FILTERS" :key="f.v" :value="f.v">{{ f.label }}</option>
       </select>
     </label>
-    <p v-if="bills.error" class="settings-error" role="alert">{{ bills.error }}</p>
+    <ErrorBanner v-if="bills.error" :message="bills.error" />
     <p v-if="!bills.loading && !bills.items.length" class="settings-note">No bills.</p>
     <ul class="settings-list">
       <li v-for="b in bills.items" :key="b.id">

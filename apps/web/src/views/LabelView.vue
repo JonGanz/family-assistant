@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ErrorBanner from '../components/ErrorBanner.vue'
 import { computed, onMounted, ref } from 'vue'
 import type { DecisionPointKey } from '../api/client'
 import DecisionFix from '../components/mail/DecisionFix.vue'
@@ -67,8 +68,8 @@ const toggleSample = (e: Event) =>
   <section>
     <p><RouterLink to="/mail">Back to mail</RouterLink></p>
     <h1>Label mail</h1>
-    <p v-if="mail.labelError" class="settings-error" role="alert">{{ mail.labelError }}</p>
-    <p v-if="error" class="settings-error" role="alert">{{ error }}</p>
+    <ErrorBanner v-if="mail.labelError" :message="mail.labelError" />
+    <ErrorBanner v-if="error" :message="error" />
     <p v-if="mail.labelEmpty" class="settings-ok">Nothing left to label right now.</p>
     <template v-if="msg && cur">
       <label class="progress">

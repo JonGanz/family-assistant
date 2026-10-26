@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ErrorBanner from '../components/ErrorBanner.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import type { DecisionPointKey } from '../api/client'
@@ -54,7 +55,7 @@ const makeTask = () => guard(() => mail.makeTask(id.value, {}, childId.value || 
 <template>
   <section>
     <p><RouterLink to="/mail">Back to mail</RouterLink></p>
-    <p v-if="mail.detailError" class="settings-error" role="alert">{{ mail.detailError }}</p>
+    <ErrorBanner v-if="mail.detailError" :message="mail.detailError" />
     <template v-if="d">
       <h1>{{ d.summary.subject }}</h1>
       <p class="settings-note">
@@ -67,7 +68,7 @@ const makeTask = () => guard(() => mail.makeTask(id.value, {}, childId.value || 
           >
         </template>
       </p>
-      <p v-if="error" class="settings-error" role="alert">{{ error }}</p>
+      <ErrorBanner v-if="error" :message="error" />
 
       <h2>Content</h2>
       <label v-if="children.length" class="inline">

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ErrorBanner from '../components/ErrorBanner.vue'
 import { computed, onMounted, watch } from 'vue'
 import { addDays, dayKey } from '../lib/time'
 import { useCalendarStore } from '../stores/calendar'
@@ -52,7 +53,7 @@ watch(tz, loadRange)
       >
       to enable it.
     </p>
-    <p v-if="calendar.error" class="error" role="alert">{{ calendar.error }}</p>
+    <ErrorBanner v-if="calendar.error" :message="calendar.error" />
     <AgendaList :events="events" :tz="tz" :from="today" :days="2" :members="likes" />
   </section>
 </template>
@@ -60,8 +61,5 @@ watch(tz, loadRange)
 <style scoped>
 .muted {
   color: var(--color-muted);
-}
-.error {
-  color: var(--color-danger);
 }
 </style>

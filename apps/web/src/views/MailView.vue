@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ErrorBanner from '../components/ErrorBanner.vue'
 import { onMounted, watch } from 'vue'
 import MessageRow from '../components/mail/MessageRow.vue'
 import { useHouseholdStore } from '../stores/household'
@@ -62,7 +63,7 @@ watch(
         <button type="submit">Search</button> <RouterLink to="/mail/label">Label mail</RouterLink>
       </div>
     </form>
-    <p v-if="mail.error" class="settings-error" role="alert">{{ mail.error }}</p>
+    <ErrorBanner v-if="mail.error" :message="mail.error" />
     <p v-if="!mail.loading && !mail.items.length && !mail.error" class="settings-note">
       No messages.
     </p>

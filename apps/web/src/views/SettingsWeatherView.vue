@@ -32,7 +32,7 @@ const remove = (r: WeatherRuleView) => {
 
 <template>
   <section>
-    <h1>Weather rules</h1>
+    <h1>Weather</h1>
     <ErrorBanner v-if="rules.error" :message="rules.error" />
     <ErrorBanner v-if="rules.conflict && editing === null" conflict @reload="rules.load()" />
     <ErrorBanner v-if="error" :message="error" />

@@ -65,7 +65,7 @@ button {
 }
 .ok {
   background: var(--color-accent);
-  color: #fff;
+  color: var(--color-on-accent);
 }
 button:disabled {
   opacity: 0.4;

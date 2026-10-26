@@ -221,20 +221,20 @@ footer button {
   pointer-events: auto;
 }
 .conn.open {
-  color: #27ae60;
+  color: var(--color-success);
 }
 .conn.reconnecting,
 .conn.connecting {
-  color: #e67e22;
+  color: var(--color-warning);
 }
 .conn.closed {
-  color: #c0392b;
+  color: var(--color-danger);
 }
 .stale {
   padding: 0 var(--space-3);
   border-radius: 999px;
   background: var(--color-warning);
-  color: #000;
+  color: var(--color-bg);
   font-size: var(--font-size-sm);
   font-weight: 600;
 }

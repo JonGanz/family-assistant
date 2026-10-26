@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ErrorBanner from '../components/ErrorBanner.vue'
 import { computed, onMounted, ref } from 'vue'
 import type { InboxItem, InboxKind } from '../api/client'
 import { useHouseholdStore } from '../stores/household'
@@ -51,7 +52,7 @@ const approve = (kind: InboxKind, id: string, edits: Approval) => inbox.approve(
         {{ t.label }} ({{ inbox.counts[t.kind] }})
       </button>
     </div>
-    <p v-if="inbox.error" class="settings-error" role="alert">{{ inbox.error }}</p>
+    <ErrorBanner v-if="inbox.error" :message="inbox.error" />
     <p v-if="inbox.loaded && !shown.length" class="settings-note">Nothing waiting here.</p>
     <ul class="settings-list">
       <template v-for="i in shown" :key="key(i)">

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ErrorBanner from '../components/ErrorBanner.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import type { TaskView } from '../api/client'
@@ -105,8 +106,8 @@ const undo = () => act(() => tasks.undoLast())
       </button>
     </div>
 
-    <p v-if="tasks.error" class="settings-error" role="alert">{{ tasks.error }}</p>
-    <p v-if="error" class="settings-error" role="alert">{{ error }}</p>
+    <ErrorBanner v-if="tasks.error" :message="tasks.error" />
+    <ErrorBanner v-if="error" :message="error" />
 
     <template v-if="tab === 'now'">
       <h2>Mine</h2>

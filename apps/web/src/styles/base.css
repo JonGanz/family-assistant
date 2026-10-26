@@ -64,6 +64,8 @@ a {
     --color-warning: #b26a00;
     --color-success: #2e7d32;
     --color-focus: #1a4fc4;
+    --color-on-accent: #ffffff;
+    --min-touch: 44px;
 }
 
 :root[data-theme='light'] {
@@ -86,11 +88,17 @@ a {
     --color-border: #2a3140;
     --color-accent: #6b9bff;
     --color-focus: #9dbbff;
+    --color-danger: #ff6b6b;
+    --color-warning: #ffb74d;
+    --color-success: #66bb6a;
 }
 
 @media (prefers-color-scheme: dark) {
     :root:not([data-theme='light']) {
         --color-focus: #9dbbff;
+        --color-danger: #ff6b6b;
+        --color-warning: #ffb74d;
+        --color-success: #66bb6a;
     }
 }
 
@@ -113,4 +121,37 @@ a {
 :focus-visible {
     outline: 3px solid var(--color-focus);
     outline-offset: 2px;
+}
+
+/* ---- Navigation (primary + settings sub-nav) ---- */
+.nav-primary,
+.nav-sub {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0 1rem;
+}
+.nav-sub {
+    padding: 0 1rem;
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+}
+.nav-primary a,
+.nav-sub a,
+.settings-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 40px;
+    color: var(--color-text);
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+}
+.nav-primary a:hover,
+.nav-sub a:hover {
+    color: var(--color-accent);
+}
+.nav-primary a.router-link-active,
+.nav-sub a.router-link-active {
+    color: var(--color-accent);
+    border-bottom-color: var(--color-accent);
+    font-weight: 600;
 }

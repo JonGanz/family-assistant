@@ -25,7 +25,7 @@ const go = (key: Key) => router.replace({ query: { tab: key } })
 
 <template>
   <section>
-    <h1>Tasks</h1>
+    <h1>Task settings</h1>
     <div class="tabs" role="tablist">
       <button
         v-for="t in TABS"

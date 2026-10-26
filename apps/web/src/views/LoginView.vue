@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import ErrorBanner from '../components/ErrorBanner.vue'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ApiError } from '../api/http'
@@ -55,7 +56,7 @@ async function submit() {
           required
         />
       </label>
-      <p v-if="error" class="error" role="alert">{{ error }}</p>
+      <ErrorBanner v-if="error" :message="error" />
       <button type="submit" :disabled="busy">Log in</button>
     </form>
   </section>
@@ -73,9 +74,5 @@ form {
 label {
   display: grid;
   gap: 0.25rem;
-}
-.error {
-  color: #c0392b;
-  margin: 0;
 }
 </style>
