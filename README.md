@@ -210,7 +210,7 @@ Events of a calendar with no members are shown for the whole household.
 
 | Kind | How | Notes |
 |---|---|---|
-| **Google (OAuth)** | **Connect a Google account**, then pick the calendars | Needs a Google OAuth client set up once: [`deploy/README.md`, Google OAuth client](deploy/README.md#google-oauth-client). Hidden in the UI until `FA_GOOGLE_CLIENT_ID` is set. While the Google consent screen is in *Testing* mode the refresh token expires after **7 days** and you must reconnect |
+| **Google (OAuth)** | **Connect a Google account**, then pick the calendars | Needs a Google OAuth client set up once: [`deploy/README.md`, Google sign-in](deploy/README.md#74-google-sign-in-optional). Hidden in the UI until `FA_GOOGLE_CLIENT_ID` is set. While the Google consent screen is in *Testing* mode the refresh token expires after **7 days** and you must reconnect |
 | **Google secret iCal address** | Add it as an **ICS link** | An alternative that needs no OAuth and no 7-day re-consent: in Google Calendar, Settings for the calendar, *Secret address in iCal format*. Google refreshes these slowly |
 | **CalDAV** | **CalDAV**, server URL, username and password | Discovers the calendars of the account (Radicale, Nextcloud, iCloud and others). A LAN server over plain `http` needs `FA_ALLOW_HTTP_FEEDS=true` |
 | **ICS link** | **ICS link**, then the URL | Any `.ics` URL (school calendars, sports clubs, public holidays) |
@@ -420,7 +420,7 @@ provider, an app password). Each source has owners, a visibility (*owners* or th
 *household*), the number of days of history to read first (30), an optional Gmail search filter, a
 poll interval (5 minutes) and a **read only** switch (on by default). Setup, including the Google
 scopes and the 7-day re-consent while Google's consent screen is in *Testing* mode, is in
-[`deploy/README.md`, Mail](deploy/README.md#mail). Sources sync incrementally (Gmail history, IMAP
+[`deploy/README.md`, Mail](deploy/README.md#73-mail). Sources sync incrementally (Gmail history, IMAP
 UIDs), and **Sync now** forces a pass. IMAP passwords and Google tokens are stored encrypted and
 never exported.
 
@@ -608,7 +608,13 @@ Settings come from environment variables (`FA_*` and `DATABASE_URL`). Local defa
 | `FA_GOOGLE_API_BASE` | `https://www.googleapis.com` | Base URL of the Gmail and Google Calendar calls. For stubs and tests, not for production |
 | `FA_ALLOW_PLAIN_IMAP` | `false` | Allow IMAP without TLS. **Tests, e2e and the local GreenMail only**; the compose file does not pass it through |
 | `FA_IMAP_TLS_INSECURE` | `false` | Accept self-signed IMAPS certificates. **The GreenMail tests only** |
+| `FA_TRUSTED_PROXIES` | `127.0.0.0/8,::1/128,172.16.0.0/12` | Comma-separated CIDRs whose `X-Forwarded-For` is trusted for the client IP (login rate limiting); empty trusts none. The default fits `tailscale serve` on the host |
 | `FA_LOG_LEVEL`, `FA_LOG_FORMAT` | `info`, `pretty` | `trace` to `error`; `pretty` or `json` |
+
+The deployment's `deploy/.env` also sets values for the compose file itself: `COMPOSE_FILE`,
+`COMPOSE_PROJECT_NAME`, `POSTGRES_*`, `FA_MASTER_KEY_FILE`, `BACKUP_DIR`, `FA_IMAGE_OWNER`,
+`FA_VERSION`, `NTFY_BASE_URL`, `NTFY_UPSTREAM_BASE_URL`, `FA_HOST_API_PORT`, `FA_HOST_NTFY_PORT`
+and `OLLAMA_BIND`. They are described in [`deploy/.env.example`](deploy/.env.example).
 
 **Ports:** the app serves `8080` (`FA_BIND_ADDR`); the dev database is `55432`; the dev ntfy is `18090`; the dev GreenMail is `13143` (IMAP) and `13025` (SMTP); ntfy in the deployment is `8090`; the e2e stack uses `55499`, `18080`, `18091`, `18092`, `18093` (ntfy), `18143` (GreenMail IMAP) and `18025` (GreenMail SMTP); `scripts/ci-local.sh` uses `55496`, `55497` and `55498`.
 
@@ -686,53 +692,27 @@ Always test against a **fresh** database. The long-lived dev DB holds state (rol
 migrations) that can hide failures CI will hit.
 
 ## Deploying
-Deployment is up to whoever hosts it (D-033). We ship versioned images (`ghcr.io/<owner>/fa-server`)
-and a sample [`deploy/compose.example.yaml`](deploy/compose.example.yaml). The details live in
-[`deploy/README.md`](deploy/README.md) and the runbooks in [`deploy/runbooks/`](deploy/runbooks/).
-The app is meant to be reachable **only over Tailscale**. Never expose it to the public internet.
+**Follow the step-by-step guide: [Install on a home server](deploy/README.md).** It assumes no prior
+Docker knowledge. It goes from an empty Linux machine to the app running in Docker, on your phones,
+with calendars, mail and notifications connected, and explains for each provider where to get what
+the app asks for.
 
-**Guidelines**
-1. **Pick the layout.** The compose file has profiles: the default profile is Postgres, `api`,
-   `worker`, ntfy and nightly backups; `ai-cpu` (small AI models on the core node, from M4) and
-   `gpu` (Ollama on a GPU machine) are optional. One machine can run everything; two machines run
-   the default profile on the always-on core node and `gpu` on the GPU node
-   ([layouts](deploy/README.md#layouts)).
-2. **Configure.** `cp deploy/.env.example deploy/.env` and fill in every value: strong
-   `POSTGRES_PASSWORD`, `BACKUP_DIR` (your NAS mount), `FA_PUBLIC_BASE_URL`, and optionally the
-   feed, Google and ntfy variables (table in [Configuration reference](#configuration-reference)).
-   Mail needs no extra variables (see [Mail](deploy/README.md#mail)).
-   The compose file already runs ntfy and points `FA_NTFY_URL` at it; set `NTFY_BASE_URL` to its
-   tailnet address ([ntfy notifications](deploy/README.md#ntfy-notifications)).
-   Both `api` and `worker` need outbound HTTPS (calendars, weather, Google).
-3. **Create the master key and back it up offline.**
-   `head -c 32 /dev/urandom > fa_master_key && chmod 400 fa_master_key`, then keep a copy in a
-   password manager or on paper, **separately** from the database backups. It is never in the
-   database or the dumps; without it the stored secrets (calendar links and passwords, OAuth
-   tokens) cannot be recovered and every source must be reconnected.
-4. **Start.** `docker compose --env-file deploy/.env -f deploy/compose.example.yaml up -d`
-   (add `--build` to build the image locally). The api runs the migrations on start.
-5. **HTTPS on the tailnet.** On the host: `tailscale serve --bg --https=443 http://127.0.0.1:8080`
-   (and `--https=8443 ... :8090` for ntfy). Set `FA_PUBLIC_BASE_URL` to that URL.
-6. **Google OAuth client (optional).** Follow
-   [Google OAuth client](deploy/README.md#google-oauth-client) (human step H-05), set
-   `FA_GOOGLE_CLIENT_ID`, `FA_GOOGLE_CLIENT_SECRET` and, if different, `FA_PUBLIC_URL`. Skip it
-   to use ICS and CalDAV only.
-7. **First run.** Import your household TOML, create accounts, set the location and connect
-   calendars, as in [First run](deploy/README.md#first-run).
-8. **Pair the Echo Show.** In **Settings, Devices** pair a device and open the pairing link in the
-   Echo Show browser (or `fa-server device pair --name echo-show` and open the printed URL). Pick
-   and preview its layout under **Edit layout**.
-9. **Backups and restore.** The `backup` service writes nightly dumps (7 daily, 4 weekly, 6
-   monthly) to `BACKUP_DIR` on the NAS. Rehearse a restore with
-   [`scripts/restore-rehearsal.sh`](scripts/restore-rehearsal.sh); the steps are in
-   [`deploy/runbooks/restore.md`](deploy/runbooks/restore.md). Rotating the key:
-   [`deploy/runbooks/rotate-key.md`](deploy/runbooks/rotate-key.md).
-10. **Update.** Pin `FA_VERSION` to a release tag, read the release notes, then
-    `docker compose --env-file deploy/.env -f deploy/compose.example.yaml pull && ... up -d`.
-    Migrations run when the api starts and stay backward compatible within a minor version.
-    Take a backup first (`docker compose ... exec backup /backup.sh`).
+In short:
 
-Install in one page: [`deploy/runbooks/install.md`](deploy/runbooks/install.md).
+| Step | What happens |
+|---|---|
+| 1–3 | Install Docker and [Tailscale](https://tailscale.com/), and give the server an HTTPS tailnet address with `tailscale serve` |
+| 4 | `git clone`, then in `deploy/`: `cp .env.example .env`. Fill in three values: a database password, the tailnet address, and the ntfy address. Create the master key in `deploy/secrets/` and back it up offline |
+| 5 | `docker compose up -d --build` from `deploy/`. The `.env` names the compose file, so no flags are needed |
+| 6 | Load a small household file and create logins: `fa-server config import`, `user add`, `pin set` |
+| 7 | In the app, connect phones (Tailscale + ntfy), calendars (ICS, CalDAV or Google), mail (IMAP app password or Gmail) and the wall screen |
+| 8 | Backups (nightly, to a NAS), updates (`git pull && docker compose up -d --build`), troubleshooting |
+
+The app is reachable **only over Tailscale**. Never expose it to the public internet. The compose
+file ([`deploy/compose.example.yaml`](deploy/compose.example.yaml)) runs Postgres, `api`,
+`worker`, ntfy and nightly backups. The optional `gpu` profile runs Ollama, and `ai-cpu` arrives
+with M4. The runbooks for restoring a backup and rotating the key are in
+[`deploy/runbooks/`](deploy/runbooks/).
 
 ## Repository layout
 ```

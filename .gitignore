@@ -21,3 +21,9 @@ apps/web/playwright/.cache/
 
 # Local dev secrets (master key)
 .dev/
+
+# A deployment made from this checkout (deploy/README.md): master key, household file, backups
+deploy/secrets/
+deploy/household.toml
+deploy/backups/
+fa_master_key*
