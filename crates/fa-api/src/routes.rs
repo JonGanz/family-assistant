@@ -744,6 +744,8 @@ pub struct PairDeviceResp {
     /// Shown once.
     pub token: String,
     pub pair_url: String,
+    /// The same link on the home-network dashboard address, when that is on (D-064).
+    pub lan_pair_url: Option<String>,
 }
 
 #[utoipa::path(post, path = "/api/v1/devices", tag = "devices", request_body = PairDeviceReq,
@@ -764,6 +766,13 @@ pub async fn pair_device(
         StatusCode::CREATED,
         Json(PairDeviceResp {
             id: paired.device.id,
+            lan_pair_url: s.cfg.lan_base_url.as_deref().map(|b| {
+                format!(
+                    "{}/dashboard?device={}",
+                    b.trim_end_matches('/'),
+                    paired.token
+                )
+            }),
             token: paired.token,
             pair_url: paired.pair_url,
         }),

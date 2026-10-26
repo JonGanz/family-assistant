@@ -59,6 +59,42 @@ fn trusted_proxies() -> Result<Vec<fa_api::IpNet>> {
     }
 }
 
+/// `FA_LAN_DASHBOARD_URL`: the dashboard's address on the home network (D-064). Unset or empty
+/// leaves the listener off.
+pub fn lan_base_url() -> Option<String> {
+    std::env::var("FA_LAN_DASHBOARD_URL")
+        .ok()
+        .map(|v| v.trim().trim_end_matches('/').to_owned())
+        .filter(|v| !v.is_empty())
+}
+
+fn env_flag(name: &str) -> Result<bool> {
+    match std::env::var(name).unwrap_or_default().trim() {
+        "" | "0" | "false" => Ok(false),
+        "1" | "true" => Ok(true),
+        v => anyhow::bail!("{name}: expected true or false, got {v:?}"),
+    }
+}
+
+/// Listen address and guard settings of the home-network dashboard listener.
+fn lan_config() -> Result<(String, fa_api::LanConfig)> {
+    let bind = std::env::var("FA_LAN_DASHBOARD_BIND")
+        .ok()
+        .filter(|v| !v.trim().is_empty())
+        .unwrap_or_else(|| "0.0.0.0:8081".into());
+    let allowed = match std::env::var("FA_LAN_ALLOWED_CIDRS") {
+        Ok(v) if !v.trim().is_empty() => v
+            .split(',')
+            .filter(|s| !s.trim().is_empty())
+            .map(|s| s.parse().map_err(anyhow::Error::msg))
+            .collect::<Result<_>>()
+            .context("FA_LAN_ALLOWED_CIDRS")?,
+        _ => fa_api::LanConfig::default_allowed(),
+    };
+    let allow_pin = env_flag("FA_LAN_ALLOW_PIN")?;
+    Ok((bind, fa_api::LanConfig { allowed, allow_pin }))
+}
+
 fn docs_enabled() -> bool {
     cfg!(debug_assertions)
         || std::env::var("FA_API_DOCS").is_ok_and(|v| matches!(v.as_str(), "1" | "true"))
@@ -124,6 +160,7 @@ pub async fn run(cfg: ProcessConfig, store: Store, mode: ServeMode) -> Result<()
                 web_dist_dir: web_dist,
                 enable_docs: docs_enabled(),
                 trusted_proxies: trusted_proxies()?,
+                lan_base_url: lan_base_url(),
                 ..ApiConfig::default()
             },
             cancel.clone(),
@@ -134,6 +171,26 @@ pub async fn run(cfg: ProcessConfig, store: Store, mode: ServeMode) -> Result<()
             state.hub.clone(),
             cancel.clone(),
         ));
+        if lan_base_url().is_some() {
+            let (bind, lan) = lan_config()?;
+            let listener = tokio::net::TcpListener::bind(&bind)
+                .await
+                .with_context(|| format!("binding {bind} (FA_LAN_DASHBOARD_BIND)"))?;
+            tracing::info!(addr = %bind, pin = lan.allow_pin, "home-network dashboard listening");
+            let app = fa_api::lan_router(state.clone(), lan);
+            let c = cancel.clone();
+            tasks.spawn(async move {
+                if let Err(e) = axum::serve(
+                    listener,
+                    app.into_make_service_with_connect_info::<SocketAddr>(),
+                )
+                .with_graceful_shutdown(async move { c.cancelled().await })
+                .await
+                {
+                    tracing::error!(error = %e, "home-network dashboard listener failed");
+                }
+            });
+        }
         let app = fa_api::router(state);
         let listener = tokio::net::TcpListener::bind(&cfg.bind_addr)
             .await

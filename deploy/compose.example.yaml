@@ -38,6 +38,10 @@ x-fa-server: &fa-server
     # Set FA_NTFY_URL= (empty) in deploy/.env to turn notifications off. FA_NTFY_TOKEN is needed only with ntfy access control.
     FA_NTFY_URL: ${FA_NTFY_URL-http://ntfy:80}
     FA_NTFY_TOKEN: ${FA_NTFY_TOKEN:-}
+    # Home-network dashboard (D-064), off unless FA_LAN_DASHBOARD_URL is set. See deploy/README.md, 7.5.
+    FA_LAN_DASHBOARD_URL: ${FA_LAN_DASHBOARD_URL:-}
+    FA_LAN_ALLOWED_CIDRS: ${FA_LAN_ALLOWED_CIDRS:-}
+    FA_LAN_ALLOW_PIN: ${FA_LAN_ALLOW_PIN:-false}
   volumes:
     - ${BACKUP_DIR:?set BACKUP_DIR}:/backups:ro
 
@@ -63,6 +67,8 @@ services:
     command: ["serve", "api"]
     ports:
       - "127.0.0.1:${FA_HOST_API_PORT:-8080}:8080"   # for `tailscale serve`
+      # Home-network dashboard: dashboards only, device tokens only. 127.0.0.1 keeps it unreachable.
+      - "${FA_LAN_DASHBOARD_HOST_IP:-127.0.0.1}:${FA_LAN_DASHBOARD_PORT:-8081}:8081"
     depends_on:
       postgres:
         condition: service_healthy

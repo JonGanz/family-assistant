@@ -91,6 +91,7 @@ async function submitPin(pin: string) {
     store.elevatedUntil = null
     if (e instanceof ApiError && e.status === 423) elevMsg.value = S.locked
     else if (e instanceof ApiError && e.status === 401) elevMsg.value = S.wrongPin
+    else if (e instanceof ApiError && e.status === 403) elevMsg.value = S.pinOffOnLan
     else elevMsg.value = S.elevationFailed
   }
 }

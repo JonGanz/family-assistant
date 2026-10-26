@@ -2542,6 +2542,8 @@ export interface components {
         PairDeviceResp: {
             /** Format: uuid */
             id: string;
+            /** @description The same link on the home-network dashboard address, when that is on (D-064). */
+            lan_pair_url?: string | null;
             pair_url: string;
             /** @description Shown once. */
             token: string;

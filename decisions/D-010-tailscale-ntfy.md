@@ -9,6 +9,8 @@ superseded_by:
 affects: [arch/Overall.md]
 ---
 
+> Extended by D-064 (2026-10-26): an optional dashboard-only listener on the home network for screens that cannot run Tailscale. Everything else stays tailnet-only.
+
 # D-010: Remote access via Tailscale; Android notifications via self-hosted ntfy
 
 ## Context

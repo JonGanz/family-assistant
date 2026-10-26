@@ -264,6 +264,9 @@ pub async fn device(
             println!("device id: {}", paired.device.id);
             println!("token:     {}", paired.token);
             println!("pair url:  {}", paired.pair_url);
+            if let Some(lan) = crate::serve::lan_base_url() {
+                println!("home network: {lan}/dashboard?device={}", paired.token);
+            }
             println!("The token is shown once.");
         }
         DeviceAction::Revoke { id } => {

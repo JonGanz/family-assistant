@@ -19,6 +19,7 @@ const CHILD_PW: &str = "kid1";
 
 struct Fx {
     app: Router,
+    state: AppState,
     adult: MemberId,
     child: MemberId,
     adult2: MemberId,
@@ -176,7 +177,8 @@ async fn seed(pool: PgPool) -> Fx {
         .await
         .expect("the bridge starts listening");
     Fx {
-        app: router(state),
+        app: router(state.clone()),
+        state,
         adult: adult.id,
         child: child.id,
         adult2: adult2.id,
@@ -738,4 +740,137 @@ async fn health_and_openapi(pool: PgPool) {
     assert!(r.json()["paths"]["/api/v1/members/{id}"].is_object());
     let r = send(&fx.app, Method::GET, "/api/v1/nope", &[], None).await;
     assert_eq!(r.status, StatusCode::NOT_FOUND);
+}
+
+/// The home-network dashboard listener as seen from `peer` (D-064).
+fn lan_app(fx: &Fx, peer: &str, allow_pin: bool) -> Router {
+    let cfg = fa_api::LanConfig {
+        allowed: fa_api::LanConfig::default_allowed(),
+        allow_pin,
+    };
+    fa_api::lan_router(fx.state.clone(), cfg).layer(axum::extract::connect_info::MockConnectInfo(
+        peer.parse::<std::net::SocketAddr>().unwrap(),
+    ))
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn lan_listener_serves_devices_only(pool: PgPool) {
+    let fx = seed(pool).await;
+    let adult = login(&fx, "alex", ADULT_PW).await;
+    let pin = send(
+        &fx.app,
+        Method::PUT,
+        &format!("/api/v1/members/{}/pin", fx.adult),
+        &[("cookie", &adult)],
+        Some(json!({"pin": "4321"})),
+    )
+    .await;
+    assert_eq!(pin.status, StatusCode::NO_CONTENT);
+    let paired = send(
+        &fx.app,
+        Method::POST,
+        "/api/v1/devices",
+        &[("cookie", &adult)],
+        Some(json!({"name": "Kitchen"})),
+    )
+    .await;
+    // Without FA_LAN_DASHBOARD_URL there is no second link.
+    assert!(paired.json()["lan_pair_url"].is_null());
+    let bearer = format!("Bearer {}", paired.json()["token"].as_str().unwrap());
+    let dev = [("authorization", bearer.as_str())];
+    let lan = lan_app(&fx, "192.168.1.50:40000", false);
+
+    // A device reads its dashboard.
+    let dash = send(&lan, Method::GET, "/api/v1/dashboard?days=3", &dev, None).await;
+    assert_eq!(
+        dash.status,
+        StatusCode::OK,
+        "{}",
+        String::from_utf8_lossy(&dash.body)
+    );
+    let me = send(&lan, Method::GET, "/api/v1/me", &dev, None).await;
+    assert_eq!(me.json()["actor"]["kind"], "device");
+    assert_eq!(
+        send(&lan, Method::GET, "/healthz", &[], None).await.status,
+        StatusCode::OK
+    );
+
+    // Anything a dashboard doesn't call is not routed, even for a device.
+    for path in [
+        "/api/v1/members",
+        "/api/v1/devices",
+        "/api/v1/messages",
+        "/api/v1/openapi.json",
+    ] {
+        let r = send(&lan, Method::GET, path, &dev, None).await;
+        assert_eq!(r.status, StatusCode::NOT_FOUND, "{path}");
+    }
+    let login_lan = send(
+        &lan,
+        Method::POST,
+        "/api/v1/auth/login",
+        &[],
+        Some(json!({"username": "alex", "password": ADULT_PW})),
+    )
+    .await;
+    assert_eq!(login_lan.status, StatusCode::NOT_FOUND);
+
+    // A user's session works neither as a cookie nor as a bearer token.
+    let r = send(&lan, Method::GET, "/api/v1/me", &[("cookie", &adult)], None).await;
+    assert_eq!(r.status, StatusCode::UNAUTHORIZED);
+    let session = format!("Bearer {}", adult.split_once('=').unwrap().1);
+    let r = send(
+        &lan,
+        Method::GET,
+        "/api/v1/me",
+        &[("authorization", &session)],
+        None,
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::UNAUTHORIZED);
+
+    // PIN elevation is off unless allowed.
+    let el = Some(json!({"member_id": fx.adult, "pin": "4321"}));
+    let r = send(
+        &lan,
+        Method::POST,
+        "/api/v1/device/elevate",
+        &dev,
+        el.clone(),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::FORBIDDEN);
+    let lan_pin = lan_app(&fx, "192.168.1.50:40000", true);
+    let r = send(&lan_pin, Method::POST, "/api/v1/device/elevate", &dev, el).await;
+    assert_eq!(
+        r.status,
+        StatusCode::OK,
+        "{}",
+        String::from_utf8_lossy(&r.body)
+    );
+
+    // Clients outside the allowed networks are refused, and X-Forwarded-For is ignored.
+    let outside = lan_app(&fx, "203.0.113.9:40000", false);
+    let r = send(
+        &outside,
+        Method::GET,
+        "/api/v1/dashboard?days=3",
+        &dev,
+        None,
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::FORBIDDEN);
+    let spoof = [
+        ("authorization", bearer.as_str()),
+        ("x-forwarded-for", "192.168.1.5"),
+    ];
+    let r = send(
+        &outside,
+        Method::GET,
+        "/api/v1/dashboard?days=3",
+        &spoof,
+        None,
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::FORBIDDEN);
 }

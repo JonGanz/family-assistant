@@ -5,7 +5,7 @@
 # Playwright API specs (e2e/) and UI specs (apps/web/e2e/).
 # Env: FA_E2E_PG_PORT (55499), FA_E2E_PORT (18080), FA_E2E_STUB_PORT (18091),
 #      FA_E2E_RADICALE_PORT (18092), FA_E2E_NTFY_PORT (18093),
-#      FA_E2E_IMAP_PORT (18143), FA_E2E_SMTP_PORT (18025), FA_E2E_SKIP_BUILD=1 to reuse apps/web/dist,
+#      FA_E2E_IMAP_PORT (18143), FA_E2E_SMTP_PORT (18025), FA_E2E_LAN_PORT (18081), FA_E2E_SKIP_BUILD=1 to reuse apps/web/dist,
 #      FA_E2E_HOLD=<seconds> to keep the seeded stack up for that long before the specs (debugging).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -18,6 +18,7 @@ RAD_PORT=${FA_E2E_RADICALE_PORT:-18092}
 NTFY_PORT=${FA_E2E_NTFY_PORT:-18093}
 IMAP_PORT=${FA_E2E_IMAP_PORT:-18143}
 SMTP_PORT=${FA_E2E_SMTP_PORT:-18025}
+LAN_PORT=${FA_E2E_LAN_PORT:-18081}
 PROJECT=fa-e2e-$$
 WORK=$(mktemp -d)
 PIDS=()
@@ -46,6 +47,9 @@ export FA_OPEN_METEO_URL="http://127.0.0.1:$STUB_PORT"
 export FA_ALLOW_HTTP_FEEDS=true
 export FA_NTFY_URL="http://127.0.0.1:$NTFY_PORT"
 export FA_ALLOW_PLAIN_IMAP=true # test-only: GreenMail speaks plain IMAP
+# The home-network dashboard listener (D-064); loopback is in its default allowed ranges.
+export FA_LAN_DASHBOARD_URL="http://127.0.0.1:$LAN_PORT"
+export FA_LAN_DASHBOARD_BIND="127.0.0.1:$LAN_PORT"
 head -c 32 /dev/urandom > "$FA_MASTER_KEY_PATH"
 chmod 400 "$FA_MASTER_KEY_PATH"
 
@@ -127,6 +131,7 @@ export FA_E2E_SEED=$WORK/seed.json
 export FA_E2E_BIN=$BIN
 export FA_E2E_IMAP_PORT=$IMAP_PORT FA_E2E_SMTP_PORT=$SMTP_PORT
 export FA_E2E_NTFY=$FA_NTFY_URL FA_E2E_PG_CONTAINER=$PROJECT-pg
+export FA_E2E_LAN_URL=$FA_LAN_DASHBOARD_URL
 echo "== seed sources, wait for first sync and weather"
 node e2e/seed.mjs "$FA_E2E_SEED" || { dump_logs; exit 1; }
 

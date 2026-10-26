@@ -5,8 +5,9 @@ your family's phones, with calendars, mail and notifications connected. You don'
 Docker. You type the commands shown, and fill in a few values along the way.
 
 The app is private: it's reachable only through [Tailscale](https://tailscale.com/), a free private
-network between your own devices. **Never expose it to the public internet** (no port forwarding on
-your router).
+network between your own devices. The one exception is optional: a wall screen that can't run
+Tailscale can show the dashboard over your home network ([7.5](#75-the-wall-screen-dashboard)).
+**Never expose it to the public internet** (no port forwarding on your router).
 
 **Contents**
 1. [What you need](#1-what-you-need)
@@ -327,9 +328,44 @@ device** and open the pairing link (or scan the QR code) on the screen. The scre
 and **Edit layout** picks its panels, orientation and theme. Approving or ticking off something on the
 screen asks for an adult's PIN (step 6).
 
-The screen opens the same tailnet address, so **it must run Tailscale**: an Android tablet, or a small
-PC or Raspberry Pi showing a browser in full-screen (kiosk) mode. A device that can't install
-Tailscale, such as an Amazon Echo Show, can't reach the app yet.
+A screen that runs **Tailscale** (an Android tablet, or a small PC or Raspberry Pi showing a browser in
+full-screen "kiosk" mode) just opens the pairing link. That's the most secure setup.
+
+**A screen without Tailscale (an Amazon Echo Show)** can use a separate **home-network address**
+instead. It's off until you turn it on, and it serves the dashboard and nothing else:
+- no login page, settings or mail;
+- only screens you paired;
+- only devices on your home network.
+
+To turn it on:
+1. **Give the server a fixed address on your home network.** In your router's settings, find the
+   server in the list of connected devices and reserve its IP address (often called *DHCP
+   reservation* or *static lease*). On the server, `hostname -I` prints the address. The first one is
+   usually the LAN address, such as `192.168.1.10`.
+2. **Add two lines to `deploy/.env`** with that address:
+   ```sh
+   FA_LAN_DASHBOARD_HOST_IP=192.168.1.10
+   FA_LAN_DASHBOARD_URL=http://192.168.1.10:8081
+   ```
+   Then run `docker compose up -d`.
+3. **Pair the screen.** Under **Settings, Devices**, pairing now also shows a *home-network address*
+   and its QR code. On the Echo Show, open the **Silk** browser, type that address (it's long, so
+   type carefully, or pair with `fa device pair --name echo-show`, which prints it), and
+   bookmark the page that opens.
+
+What stays protected, and what to know:
+- **Who can connect.** Only devices on private home-network addresses can connect. To allow only the
+  screen, set `FA_LAN_ALLOWED_CIDRS=<screen's IP>/32`, after giving the screen a fixed address in the
+  router too.
+- **No encryption.** The connection isn't encrypted (plain `http`). Someone already on your Wi-Fi who
+  watches the traffic could copy the screen's token, and see what the screen shows. If a screen is
+  lost or you suspect that, **Revoke** it under **Settings, Devices**.
+- **PIN entry is off** on this address, because a PIN typed there would cross the network
+  unencrypted. Approvals and other adult actions are then done from a phone. Ticking off tasks on the
+  screen still works, if the household allows it (**Settings, Household**). To allow PIN entry
+  anyway, set `FA_LAN_ALLOW_PIN=true`.
+- **Firewall.** Docker opens the port itself, and a host firewall such as `ufw` does not block it.
+  Never forward port 8081 on your router.
 
 ## 8. Backups, updates and troubleshooting
 ### Backups
@@ -372,6 +408,9 @@ you use published images instead of building, set `FA_VERSION` to the new releas
 | A Google source shows *needs reauth* every week | The 7-day sign-out of Testing mode; press **Reconnect**, or switch to the iCal address or IMAP |
 | IMAP **Test connection** fails | Check the server and port `993`, use the full email as user name, and use an **app password**, not your normal password |
 | No notifications on a phone | The phone needs Tailscale on; `NTFY_BASE_URL` must be the `:8443` address; press **Send test**. On iPhone see [7.1](#71-phones-and-notifications) |
+| The Echo Show can't open the home-network address | Check `FA_LAN_DASHBOARD_HOST_IP` is the server's current LAN address (`hostname -I`) and you ran `docker compose up -d`. *This address is not allowed* means the screen is outside `FA_LAN_ALLOWED_CIDRS` |
+| `api` won't start: *cannot assign requested address* | The server's LAN address changed: reserve it in the router, or update `FA_LAN_DASHBOARD_HOST_IP` |
+| The wall screen says *PIN entry is turned off* | Expected on the home-network address; approve from a phone, or see [7.5](#75-the-wall-screen-dashboard) |
 | The backup command fails with *permission denied* | Make `BACKUP_DIR` writable (see [Backups](#backups)) |
 
 Logs: `docker compose logs -f api worker` (Ctrl+C stops following). Restart everything:
@@ -385,7 +424,7 @@ versioned, and migrations run on start and stay backward compatible within a min
 
 | Profile | Services |
 |---|---|
-| default | `postgres` (not reachable from outside), `api` (web app, on `127.0.0.1:8080`), `worker` (background jobs: syncing, mail, notifications), `ntfy` (on `127.0.0.1:8090`), `backup` |
+| default | `postgres` (not reachable from outside), `api` (web app, on `127.0.0.1:8080`; the optional home-network dashboard on `FA_LAN_DASHBOARD_HOST_IP:8081`), `worker` (background jobs: syncing, mail, notifications), `ntfy` (on `127.0.0.1:8090`), `backup` |
 | `ai-cpu` | `s1-small`, `embed` (placeholders until M4) |
 | `gpu` | `ollama`, `s1-large` (placeholder until M4); needs an NVIDIA GPU, its driver and nvidia-container-toolkit |
 

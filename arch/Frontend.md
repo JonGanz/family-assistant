@@ -2,10 +2,10 @@
 title: Frontend
 scope: Vue PWA structure, routes, dashboard (kiosk) design and layout config, settings screens, data flow (REST + SSE), offline behaviour
 status: draft
-updated: 2026-10-25
+updated: 2026-10-26
 drawio: Frontend.drawio
 drawio_src: src/Frontend.py
-depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063]
+depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064]
 milestone: M3
 ---
 
@@ -42,7 +42,7 @@ apps/web/src/
 | `/settings/household` | app | adult | name, tz, location (lat/lon + label, with a "use this device's location" button), units, calendar window, `private_events_as_busy` (D-036) |
 | `/settings/calendars` | app | adult | sources (add Google / CalDAV / ICS, state, last sync, sync now, reconnect), calendars (enable, colour, members) |
 | `/settings/weather` | app | adult | rules list, editor with live validation and preview, enable or disable |
-| `/settings/devices` | app | adult | M0 pairing + **dashboard layout editor** (§4) |
+| `/settings/devices` | app | adult | M0 pairing (plus a home-network link and QR code when the LAN dashboard is on, D-064) + **dashboard layout editor** (§4) |
 | `/settings/status` | app | adult | System status: sources, last weather fetch, backup age, queue depth and dead jobs |
 | `/oauth/done` | app | user | landing page after the Google callback. It shows the result and continues to `return_to` |
 | `/dashboard` | kiosk | device | §4 |

@@ -4,7 +4,7 @@
 # Leaves $FA_SMOKE_OUT (default /tmp/fa-smoke-out) with fa.dump, master.key and members.count
 # for scripts/restore-rehearsal.sh.
 # Env: FA_SMOKE_IMAGE=<local image> to skip the build (it is tagged as the compose image).
-# Host ports: FA_SMOKE_API_PORT (18180) and FA_SMOKE_NTFY_PORT (18190), so a dev server on 8080 is left alone.
+# Host ports: FA_SMOKE_API_PORT (18180), FA_SMOKE_NTFY_PORT (18190) and FA_SMOKE_LAN_PORT (18182), so a dev server on 8080 is left alone.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
@@ -30,6 +30,7 @@ BACKUP_DIR=$BACKUP_DIR
 FA_PUBLIC_BASE_URL=http://127.0.0.1:$API_PORT
 FA_HOST_API_PORT=$API_PORT
 FA_HOST_NTFY_PORT=$NTFY_PORT
+FA_LAN_DASHBOARD_PORT=${FA_SMOKE_LAN_PORT:-18182}
 FA_COOKIE_SECURE=false
 FA_LOG_FORMAT=pretty
 NTFY_BASE_URL=http://localhost:$NTFY_PORT

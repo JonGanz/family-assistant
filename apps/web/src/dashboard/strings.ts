@@ -19,6 +19,7 @@ export const S = {
   wrongPin: 'Wrong PIN.',
   locked: 'Locked. Try again later.',
   elevationFailed: 'Elevation failed.',
+  pinOffOnLan: 'PIN entry is turned off on the home-network address.',
   // tasks
   nothingToDo: 'Nothing to do',
   addTask: 'Add a task',

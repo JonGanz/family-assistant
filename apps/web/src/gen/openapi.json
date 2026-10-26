@@ -11900,6 +11900,13 @@
             "type": "string",
             "format": "uuid"
           },
+          "lan_pair_url": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "The same link on the home-network dashboard address, when that is on (D-064)."
+          },
           "pair_url": {
             "type": "string"
           },

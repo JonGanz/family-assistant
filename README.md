@@ -609,14 +609,18 @@ Settings come from environment variables (`FA_*` and `DATABASE_URL`). Local defa
 | `FA_ALLOW_PLAIN_IMAP` | `false` | Allow IMAP without TLS. **Tests, e2e and the local GreenMail only**; the compose file does not pass it through |
 | `FA_IMAP_TLS_INSECURE` | `false` | Accept self-signed IMAPS certificates. **The GreenMail tests only** |
 | `FA_TRUSTED_PROXIES` | `127.0.0.0/8,::1/128,172.16.0.0/12` | Comma-separated CIDRs whose `X-Forwarded-For` is trusted for the client IP (login rate limiting); empty trusts none. The default fits `tailscale serve` on the host |
+| `FA_LAN_DASHBOARD_URL` | unset | The dashboard's address on the home network, such as `http://192.168.1.10:8081`. Setting it turns on a **dashboard-only listener** for screens that can't run Tailscale (D-064): device tokens only, only the dashboard's own API calls, no cookies. Pairing then also returns this link |
+| `FA_LAN_DASHBOARD_BIND` | `0.0.0.0:8081` | Where that listener binds (inside the container; compose publishes it on `FA_LAN_DASHBOARD_HOST_IP`) |
+| `FA_LAN_ALLOWED_CIDRS` | private and loopback ranges | Comma-separated CIDRs allowed to use that listener, by peer address (`X-Forwarded-For` is ignored there) |
+| `FA_LAN_ALLOW_PIN` | `false` | Allow PIN elevation on that listener. It is plain HTTP, so a PIN would cross the LAN unencrypted |
 | `FA_LOG_LEVEL`, `FA_LOG_FORMAT` | `info`, `pretty` | `trace` to `error`; `pretty` or `json` |
 
 The deployment's `deploy/.env` also sets values for the compose file itself: `COMPOSE_FILE`,
 `COMPOSE_PROJECT_NAME`, `POSTGRES_*`, `FA_MASTER_KEY_FILE`, `BACKUP_DIR`, `FA_IMAGE_OWNER`,
-`FA_VERSION`, `NTFY_BASE_URL`, `NTFY_UPSTREAM_BASE_URL`, `FA_HOST_API_PORT`, `FA_HOST_NTFY_PORT`
-and `OLLAMA_BIND`. They are described in [`deploy/.env.example`](deploy/.env.example).
+`FA_VERSION`, `NTFY_BASE_URL`, `NTFY_UPSTREAM_BASE_URL`, `FA_HOST_API_PORT`, `FA_HOST_NTFY_PORT`,
+`FA_LAN_DASHBOARD_HOST_IP`, `FA_LAN_DASHBOARD_PORT` and `OLLAMA_BIND`. They are described in [`deploy/.env.example`](deploy/.env.example).
 
-**Ports:** the app serves `8080` (`FA_BIND_ADDR`); the dev database is `55432`; the dev ntfy is `18090`; the dev GreenMail is `13143` (IMAP) and `13025` (SMTP); ntfy in the deployment is `8090`; the e2e stack uses `55499`, `18080`, `18091`, `18092`, `18093` (ntfy), `18143` (GreenMail IMAP) and `18025` (GreenMail SMTP); `scripts/ci-local.sh` uses `55496`, `55497` and `55498`.
+**Ports:** the app serves `8080` (`FA_BIND_ADDR`); the dev database is `55432`; the dev ntfy is `18090`; the dev GreenMail is `13143` (IMAP) and `13025` (SMTP); ntfy in the deployment is `8090`; the optional home-network dashboard is `8081`; the e2e stack uses `55499`, `18080`, `18081` (home-network dashboard), `18091`, `18092`, `18093` (ntfy), `18143` (GreenMail IMAP) and `18025` (GreenMail SMTP); `scripts/ci-local.sh` uses `55496`, `55497` and `55498`; `scripts/compose-smoke.sh` uses `18180`, `18182` and `18190`.
 
 **`fa-server` commands:**
 | Command | What it does |
@@ -628,7 +632,7 @@ and `OLLAMA_BIND`. They are described in [`deploy/.env.example`](deploy/.env.exa
 | `notify test --member <key>` | Publishes a test notification to a member's topic and prints the subscribe address. Fails clearly if `FA_NTFY_URL` is unset |
 | `user add --member <key> --username <u>` / `user reset-password` | Accounts (add `--password-stdin` to script it) |
 | `pin set --member <key>` | An adult's PIN |
-| `device pair --name <n>` / `device revoke <id>` | Dashboard devices |
+| `device pair --name <n>` / `device revoke <id>` | Dashboard devices. Pairing prints the home-network link too when `FA_LAN_DASHBOARD_URL` is set |
 | `mail sync-now [--source <name>]` | One sync pass of every mail source (or the named one), then processes the new messages, in this process. Needs `FA_ALLOW_PLAIN_IMAP` for a plain-IMAP server |
 | `mail process-now` | Process the household's pending messages in this process |
 | `calendar sync <source-id>` | Sync one calendar source now, in this process, and print what changed |
@@ -708,7 +712,7 @@ In short:
 | 7 | In the app, connect phones (Tailscale + ntfy), calendars (ICS, CalDAV or Google), mail (IMAP app password or Gmail) and the wall screen |
 | 8 | Backups (nightly, to a NAS), updates (`git pull && docker compose up -d --build`), troubleshooting |
 
-The app is reachable **only over Tailscale**. Never expose it to the public internet. The compose
+The app is reachable **only over Tailscale**. The one opt-in exception is a dashboard-only address on the home network, for wall screens that can't run Tailscale ([7.5](deploy/README.md#75-the-wall-screen-dashboard)). Never expose it to the public internet. The compose
 file ([`deploy/compose.example.yaml`](deploy/compose.example.yaml)) runs Postgres, `api`,
 `worker`, ntfy and nightly backups. The optional `gpu` profile runs Ollama, and `ai-cpu` arrives
 with M4. The runbooks for restoring a backup and rotating the key are in

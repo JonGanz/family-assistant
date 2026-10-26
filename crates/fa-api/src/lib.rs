@@ -5,6 +5,7 @@ mod error;
 mod extract;
 mod feeds;
 mod hub;
+mod lan;
 mod mail;
 mod notify;
 mod openapi;
@@ -38,6 +39,7 @@ pub use error::{ApiError, Problem};
 pub use extract::IpNet;
 pub use extract::{Auth, require};
 pub use hub::{Hub, HubEvent};
+pub use lan::{LanConfig, LanOrigin, lan_router};
 pub use mail::MailServices;
 pub use openapi::openapi;
 
@@ -55,6 +57,9 @@ pub struct ApiConfig {
     /// from inside Docker as the bridge gateway); for them the client IP is the rightmost
     /// `X-Forwarded-For` entry, which the proxy appended.
     pub trusted_proxies: Vec<IpNet>,
+    /// Base URL of the home-network dashboard listener, when it is on (D-064); pairing then
+    /// returns a second link.
+    pub lan_base_url: Option<String>,
 }
 
 impl Default for ApiConfig {
@@ -66,6 +71,7 @@ impl Default for ApiConfig {
             request_timeout: Duration::from_secs(30),
             heartbeat_interval: Duration::from_secs(15),
             trusted_proxies: IpNet::default_trusted(),
+            lan_base_url: None,
         }
     }
 }

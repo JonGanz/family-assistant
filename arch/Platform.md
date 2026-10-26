@@ -2,10 +2,10 @@
 title: Platform
 scope: code layout, runtime, security, deployment, backups, dev workflow
 status: draft
-updated: 2026-10-24
+updated: 2026-10-26
 drawio: Platform.drawio
 drawio_src: src/Platform.py
-depends_on: [D-002, D-003, D-004, D-005, D-006, D-010, D-018, D-019, D-020, D-023, D-025, D-026, D-031, D-032, D-033, D-034, D-035]
+depends_on: [D-002, D-003, D-004, D-005, D-006, D-010, D-018, D-019, D-020, D-023, D-025, D-026, D-031, D-032, D-033, D-034, D-035, D-064]
 milestone: M0
 ---
 
@@ -83,6 +83,7 @@ The platform that M0 builds and every later milestone depends on. Items marked *
 | Area | Design |
 |---|---|
 | Network | No public exposure. `tailscale serve` (on the host) terminates HTTPS on `https://<host>.<tailnet>.ts.net` and proxies to `api:8080`, which binds to localhost or the compose network only (D-010) |
+| Home-network dashboard | Opt-in (D-064), for wall screens that cannot run Tailscale. `serve api` opens a second listener (`:8081` in the container) when `FA_LAN_DASHBOARD_URL` is set, and compose publishes it on the host address in `FA_LAN_DASHBOARD_HOST_IP` (default `127.0.0.1`, which keeps it unreachable). A guard in front of the normal router: (1) refuses clients outside `FA_LAN_ALLOWED_CIDRS` (default private and loopback ranges), using the peer address and ignoring `X-Forwarded-For`; (2) routes only the dashboard's own calls (an allowlist of about 15 method and path pairs, plus static files and health checks), so everything else is 404; (3) drops cookies and accepts only device tokens, so user sessions are refused; (4) refuses PIN elevation unless `FA_LAN_ALLOW_PIN=true`, because the listener is plain HTTP. Pairing returns a second `lan_pair_url`. Residual risk: the device token crosses the LAN unencrypted, and revoking the device ends it |
 | User auth | Sessions live in our own `session` table (household- and member-aware, so RLS and child-session revocation work), behind a custom tower-sessions store. Username and password (argon2id, OWASP parameters). Adults need 12+ characters, children 4+, and adults set up child accounts. Session cookie is `HttpOnly; Secure; SameSite=Lax`, stored in Postgres, rolling 30 days for adults and 180 days for children. Login is rate-limited for each account and each IP, with lockout. An adult can reset a child's password and revoke a child's sessions, which is audited (D-031) |
 | Client IP | Login rate limiting keys on the client IP. Peers in `FA_TRUSTED_PROXIES` (default: loopback plus Docker's 172.16.0.0/12, which is how `tailscale serve` on the host appears) are proxies, so the rightmost `X-Forwarded-For` entry is used for them |
 | CSRF | SameSite=Lax, plus a required `X-FA-Request: 1` header on mutating requests (the JS client sets it) |
@@ -113,7 +114,7 @@ We ship `deploy/compose.example.yaml`, which has every service. **How it is depl
 | Profile | Service | Image | Notes |
 |---|---|---|---|
 | default | `postgres` | `pgvector/pgvector:pg16` | volume `pgdata`. Not published to the host |
-| default | `api` | `ghcr.io/<owner>/fa-server:<tag>` (+ `build:`) | `serve api`. Publishes `127.0.0.1:8080` for tailscale serve |
+| default | `api` | `ghcr.io/<owner>/fa-server:<tag>` (+ `build:`) | `serve api`. Publishes `127.0.0.1:8080` for tailscale serve, and `${FA_LAN_DASHBOARD_HOST_IP:-127.0.0.1}:8081` for the opt-in home-network dashboard (D-064) |
 | default | `worker` | same image | `serve worker` |
 | default | `ntfy` | `binwiederhier/ntfy` | `127.0.0.1:8090`, exposed through `tailscale serve` on its own path or port (D-010) |
 | default | `backup` | `prodrigestivill/postgres-backup-local` | Nightly, keeping 7 daily, 4 weekly, and 6 monthly, to `${BACKUP_DIR}` (for example an NFS/SMB mount of the NAS) (D-005) |

@@ -17,8 +17,12 @@ impl FromRequestParts<AppState> for Auth {
     type Rejection = ApiError;
 
     async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, ApiError> {
+        let lan = parts.extensions.get::<crate::LanOrigin>().is_some();
         let jar = CookieJar::from_headers(&parts.headers);
-        let session_id = jar.get(SESSION_COOKIE).map(|c| c.value().to_owned());
+        let session_id = jar
+            .get(SESSION_COOKIE)
+            .map(|c| c.value().to_owned())
+            .filter(|_| !lan);
         let bearer = parts
             .headers
             .get(AUTHORIZATION)
@@ -29,6 +33,10 @@ impl FromRequestParts<AppState> for Auth {
             .auth
             .resolve_actor(session_id.as_deref(), bearer)
             .await?;
+        // The home-network listener serves dashboards only (D-064).
+        if lan && !matches!(actor, Actor::Device { .. } | Actor::ElevatedDevice { .. }) {
+            return Err(ApiError::Unauthenticated);
+        }
         Ok(Auth { actor, session_id })
     }
 }

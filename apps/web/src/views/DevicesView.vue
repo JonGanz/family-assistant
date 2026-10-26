@@ -14,6 +14,7 @@ const devices = ref<DeviceDto[]>([])
 const name = ref('')
 const paired = ref<PairDeviceResp | null>(null)
 const qr = ref('')
+const lanQr = ref('')
 const error = ref('')
 
 async function load() {
@@ -36,6 +37,9 @@ async function pair() {
     const r = await api.pairDevice(name.value)
     paired.value = { ...r, pair_url: absolute(r.pair_url) }
     qr.value = await QRCode.toDataURL(paired.value.pair_url, { margin: 1, width: 240 })
+    lanQr.value = r.lan_pair_url
+      ? await QRCode.toDataURL(r.lan_pair_url, { margin: 1, width: 240 })
+      : ''
     name.value = ''
     await load()
   } catch (e) {
@@ -122,6 +126,19 @@ async function revoke(d: DeviceDto) {
         <code data-testid="pair-url">{{ paired.pair_url }}</code>
       </p>
       <img v-if="qr" :src="qr" alt="QR code for the pair URL" width="240" height="240" />
+      <template v-if="paired.lan_pair_url">
+        <p>
+          On a screen without Tailscale, open this home-network address instead (shown once):
+          <code data-testid="lan-pair-url">{{ paired.lan_pair_url }}</code>
+        </p>
+        <img
+          v-if="lanQr"
+          :src="lanQr"
+          alt="QR code for the home-network pair URL"
+          width="240"
+          height="240"
+        />
+      </template>
     </div>
 
     <h2>Paired devices</h2>
