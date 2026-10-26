@@ -1,12 +1,12 @@
 ---
 id: Q-058
 title: The approval inbox: notifications and expiry
-status: open
+status: resolved
 batch: 16
 area: ingest
 created: 2026-10-25
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-061]
 ---
 
 # Q-058: The approval inbox: notifications and expiry

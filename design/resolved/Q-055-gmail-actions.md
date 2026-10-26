@@ -1,12 +1,12 @@
 ---
 id: Q-055
 title: What may the system do in Gmail when a source isn't read-only?
-status: open
+status: resolved
 batch: 16
 area: ingest
 created: 2026-10-25
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-058]
 ---
 
 # Q-055: What may the system do in Gmail when a source isn't read-only?

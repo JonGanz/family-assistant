@@ -1,12 +1,12 @@
 ---
 id: Q-060
 title: Who can see which messages?
-status: open
+status: resolved
 batch: 16
 area: ingest
 created: 2026-10-25
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-063]
 ---
 
 # Q-060: Who can see which messages?

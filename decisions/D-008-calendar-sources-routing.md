@@ -9,6 +9,8 @@ superseded_by:
 affects: [arch/Overall.md, arch/Ingest.md (future)]
 ---
 
+> M3 default set by [D-057](D-057-event-auto-add-m3.md): auto-write off, every extracted event is proposed.
+
 # D-008: Multiple calendar sources; confidence-gated auto-add; configurable + learned target routing
 
 ## Context

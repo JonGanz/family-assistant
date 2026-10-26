@@ -1,12 +1,12 @@
 ---
 id: Q-056
 title: Bills: who pays, autopay, and detecting payment
-status: open
+status: resolved
 batch: 16
 area: ingest
 created: 2026-10-25
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-059]
 ---
 
 # Q-056: Bills: who pays, autopay, and detecting payment

@@ -9,6 +9,8 @@ superseded_by:
 affects: [arch/Overall.md, arch/Ingest.md (future)]
 ---
 
+> Extended by [D-052](D-052-mail-connectors.md) (IMAP as a per-source alternative) and [D-053](D-053-mail-scope.md) (default scope).
+
 # D-007: Multiple Gmail accounts mapped to members; read-only by default with opt-in actions
 
 ## Context

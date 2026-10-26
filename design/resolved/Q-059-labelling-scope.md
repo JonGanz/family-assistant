@@ -1,12 +1,12 @@
 ---
 id: Q-059
 title: The labelling view: what you label and how messages are picked
-status: open
+status: resolved
 batch: 16
 area: ingest
 created: 2026-10-25
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-062]
 ---
 
 # Q-059: The labelling view: what you label and how messages are picked

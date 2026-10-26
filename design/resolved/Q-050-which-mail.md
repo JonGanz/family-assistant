@@ -1,12 +1,12 @@
 ---
 id: Q-050
 title: Which mail does the system read?
-status: open
+status: resolved
 batch: 16
 area: ingest
 created: 2026-10-25
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-053]
 ---
 
 # Q-050: Which mail does the system read?

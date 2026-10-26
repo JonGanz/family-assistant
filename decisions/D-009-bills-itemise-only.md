@@ -9,6 +9,8 @@ superseded_by:
 affects: [arch/Overall.md]
 ---
 
+> Details settled by [D-059](D-059-bills-simple.md): adult pool, no autopay, paid on task completion.
+
 # D-009: Bills: itemise + create pay task only
 
 ## Context

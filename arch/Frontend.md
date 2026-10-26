@@ -5,11 +5,11 @@ status: draft
 updated: 2026-10-25
 drawio: Frontend.drawio
 drawio_src: src/Frontend.py
-depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046]
-milestone: M2
+depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063]
+milestone: M3
 ---
 
-# Frontend (DRAFT v2)
+# Frontend (DRAFT v3)
 
 This doc describes the Vue 3 PWA in `apps/web`: one app with two shells. The **app shell** is for signed-in people on phones and desktops. The **kiosk shell** is `/dashboard` on the Echo Show and other wall screens. This version covers what M1 builds. Later milestones add screens (tasks M2, inbox and labelling M3, pipelines and backends M4, meals M5). Backend data comes from [Feeds.md](Feeds.md).
 
@@ -74,6 +74,18 @@ Children see `/`, `/calendar`, and `/members` (public fields). Settings are adul
 - **Settings → Household** gains the Now list size and weights, and the default quiet hours.
 - **Calendar page:** tasks with `until_done` or `always` show as task chips (checkbox and member colour) on their due day; `always` stays after completion, shown as done (D-046).
 
+## 3b. App shell screens (M3, [Ingest.md](Ingest.md))
+New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/inbox`, `/bills`, `/settings/mail`, `/settings/orgs`. Children get none of them (D-063); they see derived events and tasks in the existing screens.
+- **Mail** (`/mail`): messages from visible sources (D-063), filtered by category, member, source and state; ignored categories hidden behind a toggle. Each row: sender, subject, category chip, member chips, time-sensitive marker.
+- **Message** (`/mail/:id`): metadata, body (when content is kept), and for a child filter the relevant and general sections first with the others collapsed (D-055); the decisions with one-tap "Fix"; derived items; "Make task"; mail actions with an Undo list for 30 days (D-058; hidden on read-only sources); "open in Gmail ↗" when an external link exists.
+- **Inbox** (`/inbox`): tabs for events, bills, tasks and contacts (D-056, D-057, D-060). Events show the suggested calendar with a picker and editable title and time; tasks show assignees and due; contacts show org, child and the triggering message. Approve and reject buttons, a nav badge with the count, and SSE `inbox.updated`.
+- **Labelling** (`/mail/label`, D-062): phone-first, one message per screen, the four decision points pre-filled as chips (one tap confirms all, tapping a chip fixes it), "in eval sample" toggle, progress toward ~200, and "next" from the suggested balanced queue.
+- **Bills** (`/bills`): open, proposed and paid bills with payee, amount, due date and the pay task's state (D-059).
+- **Settings → Mail:** sources (add **Gmail** via Google sign-in or **IMAP** with host, port, username and app password plus a "Test connection" button, D-052; owners, visibility, read-only, backfill, filter, folders, poll, state and reconnect), categories (behaviour, notify, auto actions, email tasks; D-054, D-058, D-060), rules (condition builder with a dry run on recent mail), and household mail settings (event auto-write off by default with its thresholds, inbox expiry, gender term lists; D-055, D-057, D-061).
+- **Settings → Organizations:** orgs (kind, domains, senders, ICS feed, default calendar, contact mode), contacts, and enrollments per child.
+- **Member editor** gains aliases, and for children an optional gender and relevance tags (D-055).
+- **Settings → Notifications** gains the `approval_needed` trigger (batched by default, immediate, digest only, off; D-061) and `mail_time_sensitive`.
+
 ## 4. Dashboard (kiosk shell)
 ### 4.1 Layout model
 The layout is data held in `device.settings` and edited by adults in Settings → Devices. It is never edited on the dashboard itself (D-019).
@@ -86,6 +98,7 @@ The layout is data held in `device.settings` and edited by adults in Settings �
               {"kind": "advisories"}, {"kind": "agenda"}, {"kind": "week"}, {"kind": "members"} ] }
 ```
 - **Panels in M2:** `now` (the Now list, D-042, with optional `members` and `lists` filters), `member_tasks` (one column per member with their open tasks for today), and `routine` (D-041: shown automatically during a routine window, one column per member with large step buttons and a progress bar; `pinned: true` keeps it visible outside the window). `agenda` also shows key-date tasks (`always`), and `week` shows `until_done` and `always` task chips (D-046). Completing anything on the dashboard opens the member picker ("who did it?", preselecting the assignee) and needs no PIN while the override is on (D-013, D-019).
+- **Panel in M3:** `inbox` shows the pending count; when the device is elevated with an adult PIN (D-019), it lists the items with approve and reject.
 - **Panels in M1:** `clock` (time, date), `weather` (now, the next 12 h, and 5–7 days), `advisories` (coloured by severity, dismissable without a PIN), `agenda` (today plus the next N days, grouped by day, with member chips), `week` (a 7-day column grid), `members` (avatars, which is also the entry point for M2 per-member task views and the PIN step-up).
 - **Presets** ("Family hub", "Calendar wall", "Minimal") fill `panels`. Unknown panel kinds are ignored, so an older client survives a newer layout.
 - **Landscape 1920×1080:** a 12-column grid. The left column (4) holds clock, weather, and advisories, and the right (8) holds agenda or week. **Portrait** stacks them. Type is sized for 2–3 m (base 28 px on the kiosk scale).

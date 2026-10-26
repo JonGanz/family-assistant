@@ -1,12 +1,12 @@
 ---
 id: Q-049
 title: Gmail API only, or also IMAP?
-status: open
+status: resolved
 batch: 16
 area: ingest
 created: 2026-10-25
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-052]
 ---
 
 # Q-049: Gmail API only, or also IMAP?

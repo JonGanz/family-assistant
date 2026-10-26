@@ -1,12 +1,12 @@
 ---
 id: Q-052
 title: Filtering school and daycare mail per child: grade, age, gender?
-status: open
+status: resolved
 batch: 16
 area: ingest
 created: 2026-10-25
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-055]
 ---
 
 # Q-052: Filtering school and daycare mail per child: grade, age, gender?

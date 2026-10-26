@@ -1,12 +1,12 @@
 ---
 id: Q-054
 title: Which extracted events are added to calendars without asking?
-status: open
+status: resolved
 batch: 16
 area: ingest
 created: 2026-10-25
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-057]
 ---
 
 # Q-054: Which extracted events are added to calendars without asking?

@@ -60,3 +60,15 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-049](D-049-missed-schedule-default.md) | Missed schedule-anchored tasks auto-skip by default | accepted | Q-046 | arch/Tasks.md |
 | [D-050](D-050-roadmap-goals.md) | Roadmap: M6 smart assignment, M7 goals, M8 TUI | accepted | Q-047 | arch/Overall.md, README.md |
 | [D-051](D-051-goals-model.md) | Goals: count or quantity measures, weekly cadence with reset, set by adults, progress bars | accepted | Q-048 | arch/Domain.md, arch/Overall.md, arch/Goals.md (future) |
+| [D-052](D-052-mail-connectors.md) | Mail connectors: Gmail API and IMAP, chosen per source, default Gmail API | accepted | Q-049 | arch/Ingest.md, arch/Domain.md |
+| [D-053](D-053-mail-scope.md) | Each source reads everything except Spam and Trash, narrowed by an optional filter | accepted | Q-050 | arch/Ingest.md |
+| [D-054](D-054-mail-categories.md) | Default mail categories and behaviours, all editable | accepted | Q-051 | arch/Ingest.md |
+| [D-055](D-055-child-gender-and-tags.md) | Children get an optional gender and free-form relevance tags | accepted | Q-052 | arch/Ingest.md, arch/Domain.md |
+| [D-056](D-056-contact-suggestions.md) | New org contacts are suggested by default, configurable per org | accepted | Q-053 | arch/Ingest.md |
+| [D-057](D-057-event-auto-add-m3.md) | M3 adds no extracted event automatically; every event waits for approval | accepted | Q-054 | arch/Ingest.md |
+| [D-058](D-058-gmail-auto-actions.md) | Automatic mail actions are configurable per category, default labels only | accepted | Q-055 | arch/Ingest.md |
+| [D-059](D-059-bills-simple.md) | Bills: pay tasks go to the adult pool, no autopay handling, paid when the task is done | accepted | Q-056 | arch/Ingest.md |
+| [D-060](D-060-email-tasks.md) | Email tasks are suggested by default, configurable per category | accepted | Q-057 | arch/Ingest.md |
+| [D-061](D-061-approval-inbox-defaults.md) | Approval notifications batched plus digest, configurable per adult; proposals expire by kind | accepted | Q-058 | arch/Ingest.md, arch/Frontend.md |
+| [D-062](D-062-labelling-defaults.md) | Labelling covers all four email decision points with a suggested balanced queue | accepted | Q-059 | arch/Ingest.md, arch/Frontend.md |
+| [D-063](D-063-mail-visibility.md) | Messages are visible to source owners, or all adults for household sources | accepted | Q-060 | arch/Ingest.md, arch/Domain.md |

@@ -1,12 +1,12 @@
 ---
 id: Q-051
 title: Email categories and what each one does
-status: open
+status: resolved
 batch: 16
 area: ingest
 created: 2026-10-25
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-054]
 ---
 
 # Q-051: Email categories and what each one does

@@ -1,12 +1,12 @@
 ---
 id: Q-057
 title: Tasks from email: 'reply', 'sign', 'RSVP'
-status: open
+status: resolved
 batch: 16
 area: ingest
 created: 2026-10-25
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-060]
 ---
 
 # Q-057: Tasks from email: 'reply', 'sign', 'RSVP'

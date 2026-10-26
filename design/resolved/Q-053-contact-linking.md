@@ -1,12 +1,12 @@
 ---
 id: Q-053
 title: How do teachers and coaches get linked to a child?
-status: open
+status: resolved
 batch: 16
 area: ingest
 created: 2026-10-25
-resolved:
-decisions: []
+resolved: 2026-10-25
+decisions: [D-056]
 ---
 
 # Q-053: How do teachers and coaches get linked to a child?

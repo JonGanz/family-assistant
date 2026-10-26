@@ -14,7 +14,7 @@ research: [R-001]
 v7 re-derives the design from PROJECT.md and all accepted decisions (D-001 to D-035). D-016, D-022, and D-030 are superseded. **No questions are open. The M0 design is complete.**
 
 ## Scope
-**In:** members and roles; Gmail ingest and classification; bills; school, daycare, and teacher linking; calendars (Google, CalDAV, ICS) with event extraction; weather with rules and advisories; tasks and routines; goals with progress; meal plan, recipes, the living grocery list; configurable AI decision pipelines; dashboard, PWA, TUI (stretch); ntfy.
+**In:** members and roles; email ingest (Gmail API or IMAP, D-052) and classification; bills; school, daycare, and teacher linking; calendars (Google, CalDAV, ICS) with event extraction; weather with rules and advisories; tasks and routines; goals with progress; meal plan, recipes, the living grocery list; configurable AI decision pipelines; dashboard, PWA, TUI (stretch); ntfy.
 
 **Out:** deals (D-012), school portal APIs (D-014), budgeting (D-009), grocery exports (D-015), Alexa (D-011), gamification (D-013), dietary preferences (deferred, D-021).
 
@@ -46,7 +46,7 @@ The final model choices come from `fa-eval` on the household's labelled sample (
 | `fa-config` | Versioned TOML import and export. Includes pipelines and backends (D-018, D-029) |
 | `fa-auth` | Passwords, sessions, devices, PIN step-up, `Policy::authorize` (see Platform.md §5) |
 | `fa-jobs` | Postgres job queue and cron schedule (see Platform.md §7) |
-| `fa-connectors` | Gmail, Google Calendar, CalDAV, ICS, Open-Meteo |
+| `fa-connectors` | Gmail, IMAP, Google Calendar, CalDAV, ICS, Open-Meteo |
 | `fa-pipeline` | **Decision pipeline engine** (D-029): runs each decision point's stage list with thresholds and `on_unavailable` handling. Also handles versioning and dry-run. Email ingest uses it, followed by S2 extraction → emit events, tasks, and bills |
 | `fa-rules` | Deterministic rulesets (sender and Org maps, headers, keywords, biller templates) and extractors (ICS, dates, PDF) |
 | `fa-decide` | `DecisionBackend` trait with a `/v1/systemone` client (`choice`, `score`, `noul`) and the kNN stage over pgvector (D-024, D-028) |

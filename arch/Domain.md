@@ -5,11 +5,11 @@ status: draft
 updated: 2026-10-25
 drawio: Domain.drawio
 drawio_src: src/Domain.py
-depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-037, D-038, D-039, D-040, D-041, D-044, D-045, D-046, D-050, D-051, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034, D-036]
+depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-037, D-038, D-039, D-040, D-041, D-044, D-045, D-046, D-050, D-051, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034, D-036, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063]
 milestone: M0
 ---
 
-# Domain Model (DRAFT v4)
+# Domain Model (DRAFT v5)
 
 This is the full UML class model, split into packages (bounded contexts). Each package below matches a page in `Domain.drawio`. The model covers every milestone, but **M0 only implements Identity and Audit**. The other packages appear in migrations when their milestone arrives. Items marked **[Q-0xx]** depend on an open question.
 
@@ -31,7 +31,7 @@ This is the full UML class model, split into packages (bounded contexts). Each p
 | Class | Key attributes | Notes |
 |---|---|---|
 | `Household` | name, tz, location{lat, lon, label}, meal_plan_horizon_weeks, dashboard_completion_override | One per install by default. The schema allows several (D-004) |
-| `Member` | display_name, role: `adult\|child`, avatar, color, birthdate?, grade?, interests[], hobbies[], responsibilities[], pin_hash? (adults only) | The central entity. Has no login unless it has a `UserAccount` |
+| `Member` | display_name, role: `adult\|child`, avatar, color, birthdate?, grade?, aliases[] (M3), gender? `female\|male\|other` (M3, optional, used only for mail relevance, D-055), relevance_tags[] (M3, D-055), interests[], hobbies[], responsibilities[], pin_hash? (adults only) | The central entity. Has no login unless it has a `UserAccount` |
 | `UserAccount` | 0..1 per Member. username, password_hash (argon2id), disabled_at? | Adults set up and reset child accounts. Child passwords need 4+ characters, adults 12+ (D-031) |
 | `Session` | account, created/last_seen, user_agent, expires_at | Stored in Postgres. Rolls for 180 days for children and 30 days for adults. Adults can revoke child sessions (D-031) |
 | `Device` | kind: `dashboard`, name, token_hash, last_seen, revoked_at? | A shared kiosk identity, not a user (D-006) |
@@ -49,28 +49,35 @@ This is the full UML class model, split into packages (bounded contexts). Each p
 | Add a one-off task | own, on lists with `child_can_add = own` (D-045) | ✓ | on lists with `dashboard_add` | ✓ |
 | Manage lists, definitions, routines, absences; skip | ✗ | ✓ | ✗ | ✗ |
 | Add a grocery item | ✓ | ✓ | ✓ | ✓ |
-| Approve an event, Gmail actions | ✗ | ✓ | ✗ | ✓ |
+| Approve inbox items, mail actions | ✗ | ✓ | ✗ | ✓ |
 | Household and child settings, pipelines | ✗ | ✓ | ✗ | ✗ |
 | Another adult's personal settings and sources | ✗ | ✗ | ✗ | ✗ |
 
 ## Package: Organizations & Mail (M3)
+Table-level detail is in [Ingest.md](Ingest.md) §3.
+
 | Class | Key attributes |
 |---|---|
-| `Org` | type: `school\|daycare\|club\|biller\|other`, name, domains[], senders[], ics_urls[] |
-| `OrgContact` | org, name, email, role: `teacher\|coach\|admin\|other` |
-| `Enrollment` | member ↔ org, grade?, class?, contacts[] (OrgContact). This is how a teacher's email gets linked to a child |
-| `MailSource` | provider: `gmail`, address, owners: Member[1..*], read_only=true, backfill_days, history_id, state: `ok\|needs_reauth\|error` (D-007) |
-| `Message` | source, gmail_id, thread_id, external_url, received_at, gmail_labels[], from, subject (**metadata, always kept**), embedding? (kept while kNN is enabled), **policy-governed content:** body_text?, snippet?, headers jsonb?, is_learning_example, processing_state: `pending\|processed\|expired`, content_purged_at? (D-034) |
-| `Attachment` | message, filename, mime, size, text_extract? (**transient**, purged with the message's content) |
-| `Bill` | source_ref, payee, amount, currency, due_on, account_hint?, status: `open\|paid`, task (D-009) |
-| `CategoryLabel` | message, decision_point, value, source: `rule\|s2\|user`, in_eval_sample. A message with a user label or `in_eval_sample` is a learning example (D-028, D-034) |
+| `Org` | kind: `school\|daycare\|club\|biller\|other`, name, domains[], senders[], calendar_source? (ICS, D-014), default_calendar?, contact_mode: `suggest\|auto\|manual` (D-056) |
+| `OrgContact` | org, name, email, role: `teacher\|coach\|admin\|office\|other` |
+| `ContactSuggestion` | org, email, name?, member?, message, status: `proposed\|accepted\|rejected\|expired` (D-056) |
+| `Enrollment` | member ↔ org, grade?, class?, from?, until?, contacts[] (OrgContact). This is how a teacher's email gets linked to a child |
+| `MailSource` | provider: `gmail\|imap` (D-052), address, owners: Member[1..*], visibility: `owners\|household` (D-063), read_only=true, backfill_days, query?, poll_minutes, Gmail: oauth_account, history_id?; IMAP: host, port, username, secret, folders[], archive_folder?; state: `ok\|needs_reauth\|error\|paused` (D-007) |
+| `Message` | source, remote_id, thread_id?, external_url?, received_at, gmail_labels[], from, to[], subject (**metadata, always kept**), category?, time_sensitive?, is_bill?, embedding? (kept while kNN is enabled), **policy-governed content:** body_text?, snippet?, headers jsonb?, attachments jsonb?, is_learning_example, in_eval_sample, processing_state: `pending\|processed\|expired`, content_purged_at? (D-034) |
+| `MessageMember` | message ↔ member, decided_by: `rule\|user` |
+| `Category` | key, label, behaviour: `ignore\|keep\|extract`, notify_time_sensitive, auto_actions[], email_tasks: `suggest\|create\|off` (D-054, D-058, D-060) |
+| `MailRule` | decision_point, priority, conditions[], value, confidence, origin: `builtin\|user` |
+| `Bill` | message?, org?, payee, amount_minor, currency, due_on?, account_hint?, status: `proposed\|open\|paid\|dismissed`, confidence, task (adult pool, D-059), source_ref |
+| `GmailAction` | message, action: `archive\|mark_read\|label`, automatic, done_by?, done_at, undone_at? (D-058; also used for IMAP) |
+
+The eval sample and user labels are `Decision` rows from the `human` stage plus `Message.in_eval_sample` (D-028, D-062). A message with a user decision or `in_eval_sample` is a learning example (D-034).
 
 **Message lifecycle (D-034):** `pending` (content held) → all decision points are final and S2 extraction is done → `processed`. The daily `mail.retention` job then applies `retention.mail.content_policy`:
 - `purge_after_processing`: purge all content.
 - `keep_for_learning` (the default while kNN or eval is enabled): keep content for learning examples (user-corrected messages, the eval sample, and the newest N rule/S2-labelled messages per category), and purge the rest.
 - `keep_all`.
 
-A message still pending after `retention.mail.max_pending_days` (default 14) becomes `expired`, its pending stages are skipped, and then the policy applies. Purged content is re-fetched from Gmail when needed. Embeddings are dropped when kNN is disabled.
+A message still pending after `retention.mail.max_pending_days` (default 14) becomes `expired`, its pending stages are skipped, and then the policy applies. Purged content is re-fetched from the mailbox when needed. Embeddings are dropped when kNN is disabled.
 
 `Household.settings.retention.mail{content_policy, examples_per_category=200, max_pending_days=14}`
 
