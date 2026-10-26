@@ -50,9 +50,9 @@ impl AuthService {
         ip: Option<IpAddr>,
         user_agent: Option<&str>,
     ) -> Result<LoginOutcome> {
-        if let Some(ip) = ip
-            && !self.ip_limiter.check(ip)
-        {
+        // Unknown peer address shares one global bucket instead of skipping limiting.
+        let key = ip.unwrap_or(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED));
+        if !self.ip_limiter.check(key) {
             return Err(AuthError::RateLimited);
         }
 

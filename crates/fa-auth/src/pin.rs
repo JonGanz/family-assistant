@@ -1,3 +1,6 @@
+use std::sync::OnceLock;
+use std::time::Duration;
+
 use chrono::Utc;
 use fa_domain::{
     Action, Actor, Device, DeviceElevation, MemberId, PolicyCtx, Resource, Role, authorize,
@@ -6,8 +9,15 @@ use fa_domain::{
 use fa_store::{DeviceElevationRepo, MemberRepo};
 
 use crate::error::{AuthError, Result};
+use crate::limiter::KeyedRateLimiter;
 use crate::password::{self, PasswordCheck};
 use crate::service::{ActorIds, AuthService, actor_ids, audit};
+
+/// PIN attempts per device: 5 per 15 minutes.
+fn device_limiter() -> &'static KeyedRateLimiter<fa_domain::DeviceId> {
+    static L: OnceLock<KeyedRateLimiter<fa_domain::DeviceId>> = OnceLock::new();
+    L.get_or_init(|| KeyedRateLimiter::new(5, Duration::from_secs(180)))
+}
 
 impl AuthService {
     /// An adult sets their own PIN (4-6 digits, argon2id).
@@ -49,6 +59,9 @@ impl AuthService {
         member: MemberId,
         pin: &str,
     ) -> Result<DeviceElevation> {
+        if !device_limiter().check(device.id) {
+            return Err(AuthError::RateLimited);
+        }
         let dev_actor = Actor::Device {
             device_id: device.id,
             household_id: device.household_id,

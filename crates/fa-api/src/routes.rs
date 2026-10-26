@@ -943,7 +943,8 @@ pub async fn stream(
                 }
                 r = rx.recv() => match r {
                     Ok(e) if e.household == hid => yield Ok(to_event(&e)),
-                    Ok(_) | Err(RecvError::Lagged(_)) => {}
+                    Ok(_) => {}
+                    Err(RecvError::Lagged(_)) => yield Ok(Event::default().event("resync").data("{}")),
                     Err(RecvError::Closed) => break,
                 },
             }

@@ -1,17 +1,21 @@
 use std::collections::HashMap;
+use std::hash::Hash;
 use std::net::IpAddr;
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 
-/// In-memory per-IP token bucket. One token per login attempt.
+/// Per-IP limiter for login.
+pub type IpRateLimiter = KeyedRateLimiter<IpAddr>;
+
+/// In-memory per-key token bucket. One token per attempt.
 #[derive(Debug)]
-pub struct IpRateLimiter {
+pub struct KeyedRateLimiter<K> {
     burst: f64,
     refill: Duration,
-    buckets: Mutex<HashMap<IpAddr, (f64, Instant)>>,
+    buckets: Mutex<HashMap<K, (f64, Instant)>>,
 }
 
-impl IpRateLimiter {
+impl<K: Hash + Eq + Clone> KeyedRateLimiter<K> {
     pub fn new(burst: u32, refill: Duration) -> Self {
         Self {
             burst: f64::from(burst.max(1)),
@@ -21,22 +25,20 @@ impl IpRateLimiter {
     }
 
     /// Takes a token; false when the IP is out of budget.
-    pub fn check(&self, ip: IpAddr) -> bool {
-        self.check_at(ip, Instant::now())
+    pub fn check(&self, key: K) -> bool {
+        self.check_at(key, Instant::now())
     }
 
-    fn check_at(&self, ip: IpAddr, now: Instant) -> bool {
+    fn check_at(&self, key: K, now: Instant) -> bool {
         let per_sec = 1.0 / self.refill.as_secs_f64().max(f64::EPSILON);
-        let Ok(mut map) = self.buckets.lock() else {
-            return true;
-        };
+        let mut map = self.buckets.lock().unwrap_or_else(|p| p.into_inner());
         if map.len() > 10_000 {
             let burst = self.burst;
             map.retain(|_, (t, at)| {
                 (*t + now.saturating_duration_since(*at).as_secs_f64() * per_sec) < burst
             });
         }
-        let (tokens, at) = map.entry(ip).or_insert((self.burst, now));
+        let (tokens, at) = map.entry(key).or_insert((self.burst, now));
         let elapsed = now.saturating_duration_since(*at).as_secs_f64();
         *tokens = (*tokens + elapsed * per_sec).min(self.burst);
         *at = now;
@@ -65,5 +67,14 @@ mod tests {
         assert!(l.check_at(other, t0));
         assert!(l.check_at(ip, t0 + Duration::from_secs(10)));
         assert!(!l.check_at(ip, t0 + Duration::from_secs(10)));
+    }
+
+    #[test]
+    fn keyed_by_arbitrary_key() {
+        let l: KeyedRateLimiter<u32> = KeyedRateLimiter::new(1, Duration::from_secs(60));
+        let t0 = Instant::now();
+        assert!(l.check_at(1, t0));
+        assert!(!l.check_at(1, t0));
+        assert!(l.check_at(2, t0));
     }
 }

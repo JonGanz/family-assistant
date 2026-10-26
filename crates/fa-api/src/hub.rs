@@ -70,15 +70,26 @@ impl Hub {
     ) -> (Vec<HubEvent>, broadcast::Receiver<HubEvent>) {
         let g = self.inner.lock().unwrap_or_else(|p| p.into_inner());
         let rx = self.tx.subscribe();
-        let replay = match after {
-            Some(a) => g
-                .ring
-                .iter()
-                .filter(|e| e.id > a && e.household == household)
-                .cloned()
-                .collect(),
-            None => Vec::new(),
-        };
+        let mut replay = Vec::new();
+        if let Some(a) = after {
+            // Ids restart after a server restart, and old ids fall out of the ring.
+            let too_new = a >= g.next_id;
+            let too_old = g.ring.front().is_some_and(|f| a.saturating_add(1) < f.id);
+            if too_new || too_old {
+                replay.push(HubEvent {
+                    id: g.next_id.saturating_sub(1),
+                    household,
+                    kind: "resync".to_owned(),
+                    data: serde_json::json!({}),
+                });
+            }
+            replay.extend(
+                g.ring
+                    .iter()
+                    .filter(|e| e.id > a && e.household == household)
+                    .cloned(),
+            );
+        }
         (replay, rx)
     }
 }
@@ -106,5 +117,31 @@ mod tests {
         );
         let (old, _rx) = hub.subscribe(h, Some(0));
         assert!(old.len() <= RING && old.iter().all(|e| e.id > 44));
+        assert_eq!(old[0].kind, "resync");
+    }
+
+    #[test]
+    fn resync_when_id_is_ahead_of_server() {
+        let hub = Hub::default();
+        let h = HouseholdId::new();
+        hub.publish(h, "x", serde_json::json!(1));
+        let (r, _rx) = hub.subscribe(h, Some(500));
+        assert_eq!(r.len(), 1);
+        assert_eq!(r[0].kind, "resync");
+        let (r, _rx) = hub.subscribe(h, Some(1));
+        assert!(r.is_empty());
+    }
+
+    #[test]
+    fn resync_when_id_older_than_ring() {
+        let hub = Hub::default();
+        let h = HouseholdId::new();
+        for i in 0..300 {
+            hub.publish(h, "x", serde_json::json!(i));
+        }
+        let (r, _rx) = hub.subscribe(h, Some(10));
+        assert_eq!(r[0].kind, "resync");
+        let (r, _rx) = hub.subscribe(h, Some(250));
+        assert!(r.iter().all(|e| e.kind != "resync"));
     }
 }
