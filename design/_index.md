@@ -27,8 +27,21 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Open
-_None. The next question number is Q-049._
+## Batch 16, open
+| ID | Title | Area |
+|---|---|---|
+| [Q-049](Q-049-mail-connector.md) | Gmail API only, or also IMAP? | ingest |
+| [Q-050](Q-050-which-mail.md) | Which mail does the system read? | ingest |
+| [Q-051](Q-051-categories.md) | Email categories and what each one does | ingest |
+| [Q-052](Q-052-school-relevance.md) | Filtering school and daycare mail per child: grade, age, gender? | ingest |
+| [Q-053](Q-053-contact-linking.md) | How do teachers and coaches get linked to a child? | ingest |
+| [Q-054](Q-054-event-auto-add.md) | Which extracted events are added to calendars without asking? | ingest |
+| [Q-055](Q-055-gmail-actions.md) | What may the system do in Gmail when a source isn't read-only? | ingest |
+| [Q-056](Q-056-bill-details.md) | Bills: who pays, autopay, and detecting payment | ingest |
+| [Q-057](Q-057-email-tasks.md) | Tasks from email: 'reply', 'sign', 'RSVP' | ingest |
+| [Q-058](Q-058-approval-inbox.md) | The approval inbox: notifications and expiry | ingest |
+| [Q-059](Q-059-labelling-scope.md) | The labelling view: what you label and how messages are picked | ingest |
+| [Q-060](Q-060-mail-visibility.md) | Who can see which messages? | ingest |
 
 ## Resolved
 | ID | Title | Decisions |

@@ -1,0 +1,90 @@
+import sys; sys.path.insert(0, "tools")
+from drawio import Page, write, COMP, EXT, TITLE, PKG, NOTE, ENUM, cls, assoc
+
+# Page 1: Components (UML 2 component diagram)
+pc = Page("components", "Components", 1500, 820)
+b, e = pc.box, pc.edge
+b("Ingest: email, rules pipeline, bills, linking, approvals (UML 2 component), DRAFT v0 (M3)", 20, 10, 1100, 30, TITLE)
+api = b("fa-api\n/mail-sources /messages /orgs /mail-rules /inbox /bills + SSE", 440, 60, 380, 60, COMP)
+wrk = b("fa-server worker\n(fa-jobs scheduler)", 940, 60, 240, 60, COMP)
+ml = b("fa-mail\nsources · sync · process · actions · retention · labelling", 380, 220, 380, 70, COMP)
+pl = b("fa-pipeline\nengine · versions · 'Rules only' preset", 60, 220, 260, 70, COMP)
+rl = b("fa-rules\nsignals · org/member/grade match · extractors", 60, 380, 260, 70, COMP)
+cal = b("fa-calendar (+M3)\ncalendar.route: dedupe · route · gate · write", 820, 220, 320, 70, COMP)
+tk = b("fa-tasks (+M3)\ntasks.from_bill · tasks.from_mail", 1180, 220, 280, 70, COMP)
+nt = b("fa-notify (+M3)\nmail_time_sensitive · approval_needed", 1180, 380, 280, 60, COMP)
+jq = b("job queue (fa-jobs)\ncalendar.route · tasks.from_*", 820, 380, 320, 60, COMP)
+con = b("fa-connectors\ngmail · gcal write · caldav PUT (no DB)", 380, 380, 380, 60, COMP)
+st = b("fa-store\nM3 repos · ChangeBus · outbox", 380, 540, 380, 60, COMP)
+gm = b("«external» Gmail API\nhistory.list · messages.get · modify", 60, 680, 300, 60, EXT)
+gc = b("«external» Google Calendar / CalDAV", 420, 680, 300, 60, EXT)
+for s, t, l in [(api, ml, "sources, messages, labels"), (api, cal, "inbox approve"), (wrk, ml, "mail.sync_due, mail.process, mail.retention"),
+                (ml, pl, "run decision points"), (pl, rl, "rules stage"), (ml, rl, "extractors"), (ml, con, ""),
+                (ml, st, "message, event(extracted), bill, outbox"), (ml, jq, "enqueue"), (jq, cal, "calendar.route"), (jq, tk, "tasks.from_*"),
+                (cal, pl, "event.calendar_route"), (cal, con, "write"), (nt, st, "outbox drain"), (tk, st, ""), (cal, st, "")]:
+    e(s, t, l)
+e(con, gm, "HTTPS, OAuth (gmail.readonly | gmail.modify)", False)
+e(con, gc, "calendar.events | VEVENT PUT", False)
+b("feature crates (fa-mail, fa-calendar, fa-tasks, fa-notify) never depend on each other: they meet through the store and the job queue. fa-pipeline and fa-rules are shared infrastructure", 820, 520, 420, 80, NOTE)
+b("M4 adds knn, system_one, llm stages (unavailable in M3)", 60, 540, 260, 50, NOTE)
+
+# Page 2: Model (UML 2 class)
+pm = Page("model", "Model", 1600, 1050)
+pm.box("Ingest: M3 tables (UML 2 class), DRAFT v0", 20, 10, 700, 30, TITLE)
+pm.box("Organizations & Mail (M3)", 20, 50, 1040, 600, PKG)
+org = cls(pm, "Org", ["kind: school|daycare|club|biller|other", "name, domains[], senders[]", "calendar_source? (ICS, D-014)", "default_calendar?"], 40, 90, 260)
+oc = cls(pm, "OrgContact", ["name, email", "role: teacher|coach|admin|office|other"], 40, 300, 260)
+enr = cls(pm, "Enrollment", ["grade?, class?", "from?, until?"], 360, 300, 200)
+mem = cls(pm, "Member (+M3)", ["aliases[]", "relevance_tags[] (Q-052)"], 360, 90, 200)
+src = cls(pm, "MailSource", ["provider: gmail, address", "read_only = true, query?", "backfill_days = 30, poll_minutes = 5", "history_id?, state"], 620, 90, 260)
+msgc = cls(pm, "Message", ["gmail_id, thread_id, received_at", "from, to[], subject, gmail_labels[]", "category?, time_sensitive?, is_bill?", "processing_state: pending|processed|expired", "content? (policy, D-034)", "is_learning_example, in_eval_sample"], 620, 300, 280)
+bill = cls(pm, "Bill", ["payee, amount_minor, currency", "due_on?, account_hint?", "status: proposed|open|paid|dismissed", "confidence, autopay (Q-056)"], 360, 470, 240)
+cat = cls(pm, "Category", ["key, label", "behaviour: ignore|keep|extract", "notify_time_sensitive"], 40, 470, 260)
+ga = cls(pm, "GmailAction", ["action: archive|mark_read|label", "done_by, done_at, undone_at?"], 660, 520, 240)
+assoc(pm, org, oc, "1", "*", kind="composition"); assoc(pm, mem, enr, "1", "*"); assoc(pm, enr, org, "*", "1")
+assoc(pm, enr, oc, "*", "*", "contacts"); assoc(pm, src, mem, "*", "1..*", "owners"); assoc(pm, src, msgc, "1", "*", kind="composition")
+assoc(pm, msgc, mem, "*", "*", "member links"); assoc(pm, msgc, bill, "0..1", "*"); assoc(pm, msgc, ga, "1", "*")
+pm.box("Pipelines (created in M3; AI stages M4)", 1080, 50, 500, 600, PKG)
+dp = cls(pm, "DecisionPoint", ["key: email.category | email.time_sensitive |", "email.member_link | email.is_bill |", "event.calendar_route | task.urgency (M4)"], 1100, 90, 300)
+pv = cls(pm, "PipelineVersion", ["version, active, created_by"], 1100, 230, 300)
+stg = cls(pm, "Stage", ["ord, kind, enabled", "accept_threshold", "on_unavailable: skip|wait|queue", "config jsonb"], 1100, 330, 300)
+dec = cls(pm, "Decision", ["subject_type, subject_id", "stage, value, confidence"], 1100, 500, 300)
+sk = cls(pm, "StageKind", ["rules (M3)", "human (M3)", "knn, system_one, llm (M4)"], 1430, 330, 140, "enumeration", ENUM)
+rule = cls(pm, "MailRule", ["decision_point, priority", "conditions[] {field, op, values}", "value, confidence", "origin: builtin|user"], 1430, 90, 140)
+assoc(pm, dp, pv, "1", "*", kind="composition"); assoc(pm, pv, stg, "1", "1..* {ordered}", kind="composition")
+assoc(pm, dp, dec, "1", "*"); assoc(pm, stg, sk, "", "", kind="dependency"); assoc(pm, rule, dp, "*", "1")
+pm.box("Calendar & Tasks (existing, used by M3)", 20, 690, 1040, 220, PKG)
+ev = cls(pm, "Event", ["origin: synced|extracted|manual", "status: extracted|proposed|approved|written|rejected", "confidence, dedupe_key, source_ref", "target_calendar?"], 40, 730, 320)
+tsk = cls(pm, "Task", ["origin: email", "source_ref", "list kind: email"], 420, 730, 220)
+sr = cls(pm, "SourceRef", ["kind: email", "message_id, external_url (Gmail link)"], 700, 730, 260, "datatype")
+assoc(pm, ev, sr, "*", "1", kind="dependency"); assoc(pm, tsk, sr, "*", "0..1", kind="dependency"); assoc(pm, bill, tsk, "1", "0..1", "pay task")
+pm.box("Invariant: the last enabled stage of an active PipelineVersion is rules or human (D-029)", 1100, 690, 460, 60, NOTE)
+
+# Page 3: Process (UML 2 sequence): a teacher's email with an ICS invite
+ps = Page("process", "Process sequence", 1500, 780)
+ps.box("Ingest: a teacher's email with an invite (UML 2 sequence), DRAFT v0", 20, 10, 900, 30, TITLE)
+ps.box("sd process", 20, 50, 1440, 680, "shape=umlFrame;whiteSpace=wrap;html=1;width=260;height=24;verticalAlign=top;align=left;spacingLeft=8;")
+lanes = ["Gmail", "fa-mail", "fa-pipeline / fa-rules", "fa-store / Postgres", "fa-calendar", "Google Calendar", "fa-notify"]
+xs = {}
+for i, n in enumerate(lanes):
+    x = 50 + i * 200
+    ps.box(n, x, 90, 170, 36, "html=1;whiteSpace=wrap;")
+    ps.box("", x + 84, 126, 2, 580, "html=1;dashed=1;strokeColor=#999999;")
+    xs[n] = x + 80
+def msg(a, c, y, label, dashed=False):
+    s = ps.box("", xs[a], y, 10, 10, "html=1;fillColor=#dae8fc;")
+    t = ps.box("", xs[c], y, 10, 10, "html=1;fillColor=#dae8fc;")
+    ps.edge(s, t, label, dashed)
+msg("fa-mail", "Gmail", 160, "mail.sync: history.list(startHistoryId) → messages.get(raw)")
+msg("fa-mail", "fa-store / Postgres", 210, "message pending (content held, D-034) · enqueue mail.process")
+msg("fa-mail", "fa-pipeline / fa-rules", 260, "email.category: contact → school (0.95, rules)")
+msg("fa-mail", "fa-pipeline / fa-rules", 300, "email.member_link: enrollment_contact → child (0.95)")
+msg("fa-mail", "fa-pipeline / fa-rules", 340, "email.time_sensitive, email.is_bill (rules, else default)")
+msg("fa-mail", "fa-pipeline / fa-rules", 390, "extract: text/calendar part → event (0.95)")
+msg("fa-mail", "fa-store / Postgres", 440, "decisions · event(extracted, source_ref) · enqueue calendar.route · processed")
+msg("fa-calendar", "fa-store / Postgres", 490, "dedupe (key, similarity, UID) · event.calendar_route → child's default calendar")
+msg("fa-calendar", "Google Calendar", 540, "gate passed: events.insert (calendar.events)")
+msg("fa-calendar", "fa-store / Postgres", 590, "status written, remote uid · ChangeBus calendar.updated")
+msg("fa-calendar", "fa-notify", 640, "below gate instead: proposed → inbox · approval_needed outbox row", True)
+
+write("arch/Ingest.drawio", [pc, pm, ps])
