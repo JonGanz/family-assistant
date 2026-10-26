@@ -2,6 +2,8 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import type { ContactMode, ContactRole, OrgKind, OrgView } from '../api/mailSettings'
 import ErrorBanner from '../components/ErrorBanner.vue'
+import PageHeader from '../components/PageHeader.vue'
+import StateBlock from '../components/StateBlock.vue'
 import { useMembersStore } from '../stores/members'
 import { useOrgsStore } from '../stores/orgs'
 import { useSourcesStore } from '../stores/sources'
@@ -124,8 +126,14 @@ async function addContact(o: OrgView) {
 
 <template>
   <section>
-    <h1>Organizations</h1>
-    <p class="settings-note">
+    <PageHeader eyebrow="Settings" title="Organizations">
+      <template #actions>
+        <button v-if="editing === null" type="button" class="btn-primary" @click="open('new')">
+          Add organization
+        </button>
+      </template>
+    </PageHeader>
+    <p class="muted">
       Schools, clubs and billers. Mail from their domains or senders is linked to them, and their
       contacts to your children.
     </p>
@@ -133,25 +141,26 @@ async function addContact(o: OrgView) {
     <ErrorBanner v-if="store.conflict" conflict @reload="store.load()" />
     <ErrorBanner v-if="error" :message="error" />
 
-    <ul class="settings-list">
+    <ul class="card-list">
       <li v-for="o in store.orgs" :key="o.id" :data-testid="`org-${o.name}`">
-        <div class="head">
+        <div class="row">
           <strong>{{ o.name }}</strong>
           <span class="badge">{{ o.kind }}</span>
-          <span class="settings-note">
+          <span class="muted">
             {{ [...o.domains, ...o.senders].join(', ') }}
             <template v-if="calName(o.default_calendar)">
               · events go to {{ calName(o.default_calendar) }}</template
             >
           </span>
-          <button type="button" @click="open(o)">Edit</button>
-          <button type="button" @click="remove(o)">Delete</button>
+          <button type="button" class="btn-sm" @click="open(o)">Edit</button>
+          <button type="button" class="btn-danger btn-sm" @click="remove(o)">Delete</button>
         </div>
         <ul class="contacts">
           <li v-for="c in o.contacts" :key="c.id">
             {{ c.name }} ({{ c.email }}, {{ c.role }})
             <button
               type="button"
+              class="btn-ghost btn-sm"
               :aria-label="`Remove ${c.name}`"
               @click="run(() => store.removeContact(c.id), 'Could not remove.')"
             >
@@ -176,22 +185,20 @@ async function addContact(o: OrgView) {
           <select v-model="contact.role" :aria-label="`Role for ${o.name}`">
             <option v-for="r in ROLES" :key="r" :value="r">{{ r }}</option>
           </select>
-          <button type="submit">Add contact</button>
+          <button type="submit" class="btn-sm">Add contact</button>
         </form>
       </li>
     </ul>
-    <p v-if="!store.orgs.length && store.loaded" class="settings-note">No organizations yet.</p>
-    <button v-if="editing === null" type="button" @click="open('new')">Add organization</button>
+    <StateBlock
+      :loading="!store.loaded && !store.error"
+      :empty="store.loaded && !store.orgs.length"
+      empty-text="No organizations yet."
+    />
 
-    <form
-      v-if="editing !== null"
-      class="settings-form"
-      data-testid="org-form"
-      @submit.prevent="save"
-    >
+    <form v-if="editing !== null" class="form" data-testid="org-form" @submit.prevent="save">
       <h2>{{ editing === 'new' ? 'New organization' : 'Edit organization' }}</h2>
-      <label>Name <input v-model="form.name" name="name" required /></label>
-      <label>
+      <label class="field">Name <input v-model="form.name" name="name" required /></label>
+      <label class="field">
         Kind
         <select v-model="form.kind" name="kind">
           <option v-for="k in KINDS" :key="k" :value="k">{{ k }}</option>
@@ -199,14 +206,14 @@ async function addContact(o: OrgView) {
       </label>
       <ChipInput v-model="form.domains" label="Mail domains (example.edu)" />
       <ChipInput v-model="form.senders" label="Specific sender addresses" />
-      <label>
+      <label class="field">
         Calendar feed from this organization
         <select v-model="form.ics" name="ics_calendar">
           <option value="">None</option>
           <option v-for="c in sources.calendars" :key="c.id" :value="c.id">{{ c.name }}</option>
         </select>
       </label>
-      <label>
+      <label class="field">
         Default calendar for events from its mail
         <select v-model="form.defaultCal" name="default_calendar">
           <option value="">Choose each time</option>
@@ -219,7 +226,7 @@ async function addContact(o: OrgView) {
           </option>
         </select>
       </label>
-      <label>
+      <label class="field">
         New contacts
         <select v-model="form.mode" name="contact_mode">
           <option v-for="m in MODES" :key="m.key" :value="m.key">{{ m.label }}</option>
@@ -227,30 +234,24 @@ async function addContact(o: OrgView) {
       </label>
       <fieldset v-if="form.kind === 'biller' || form.amount || form.due || form.account">
         <legend>Bill patterns (regular expressions; group 1 is the value)</legend>
-        <label>Amount <input v-model="form.amount" name="bill_amount" /></label>
-        <label>Due date <input v-model="form.due" name="bill_due" /></label>
-        <label>Account <input v-model="form.account" name="bill_account" /></label>
+        <label class="field">Amount <input v-model="form.amount" name="bill_amount" /></label>
+        <label class="field">Due date <input v-model="form.due" name="bill_due" /></label>
+        <label class="field">Account <input v-model="form.account" name="bill_account" /></label>
       </fieldset>
-      <div>
-        <button type="submit">Save</button>
-        <button type="button" @click="editing = null">Cancel</button>
+      <div class="row">
+        <button type="submit" class="btn-primary">Save</button>
+        <button type="button" class="btn-ghost" @click="editing = null">Cancel</button>
       </div>
     </form>
 
     <h2>Enrollments</h2>
-    <p class="settings-note">Which school, class or club each child belongs to.</p>
+    <p class="muted">Which school, class or club each child belongs to.</p>
     <EnrollmentsPanel v-for="c in children" :key="c.id" :child="c" :orgs="store.orgs" />
-    <p v-if="!children.length" class="settings-note">No children yet.</p>
+    <p v-if="!children.length" class="muted">No children yet.</p>
   </section>
 </template>
 
 <style scoped>
-.head {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-}
 .contacts {
   list-style: none;
   margin: var(--space-2) 0;
@@ -259,6 +260,7 @@ async function addContact(o: OrgView) {
 .contact-form {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: var(--space-2);
 }
 </style>

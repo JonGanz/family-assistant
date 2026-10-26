@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PageHeader from '../components/PageHeader.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -22,7 +23,7 @@ onMounted(async () => {
 
 <template>
   <section>
-    <h1>Google account</h1>
+    <PageHeader title="Google account" />
     <div v-if="error">
       <ErrorBanner :message="`Google did not connect: ${error}.`" />
       <RouterLink :to="target">Back</RouterLink>

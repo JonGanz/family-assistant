@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import ErrorBanner from '../components/ErrorBanner.vue'
+import PageHeader from '../components/PageHeader.vue'
+import StateBlock from '../components/StateBlock.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import DateRangeNav from '../components/DateRangeNav.vue'
 import EventCard from '../components/EventCard.vue'
@@ -111,7 +112,19 @@ const dayNumber = (k: string) => Number(k.slice(8))
 
 <template>
   <section>
-    <h1>Calendar</h1>
+    <PageHeader title="Calendar">
+      <template #actions>
+        <label class="field-inline">
+          Member
+          <select v-model="member" name="member">
+            <option value="">Everyone</option>
+            <option v-for="m in members.items" :key="m.id" :value="m.id">
+              {{ m.display_name }}
+            </option>
+          </select>
+        </label>
+      </template>
+    </PageHeader>
     <div class="controls">
       <DateRangeNav
         :label="label"
@@ -130,15 +143,8 @@ const dayNumber = (k: string) => Number(k.slice(8))
           {{ v }}
         </button>
       </span>
-      <label class="filter">
-        Member
-        <select v-model="member" name="member">
-          <option value="">Everyone</option>
-          <option v-for="m in members.items" :key="m.id" :value="m.id">{{ m.display_name }}</option>
-        </select>
-      </label>
     </div>
-    <ErrorBanner v-if="calendar.error" :message="calendar.error" />
+    <StateBlock :error="calendar.error" />
 
     <AgendaList
       v-if="view === 'agenda'"
@@ -264,12 +270,6 @@ label.done,
 button[aria-pressed='true'] {
   background: var(--color-accent);
   color: var(--color-bg);
-}
-.filter {
-  margin-left: auto;
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
 }
 .week {
   display: grid;

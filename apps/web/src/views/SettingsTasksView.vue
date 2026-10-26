@@ -5,6 +5,7 @@ import AbsencesPanel from './parts/AbsencesPanel.vue'
 import DefinitionsPanel from './parts/DefinitionsPanel.vue'
 import RoutinesPanel from './parts/RoutinesPanel.vue'
 import TaskListsPanel from './parts/TaskListsPanel.vue'
+import PageHeader from '../components/PageHeader.vue'
 
 const TABS = [
   { key: 'lists', label: 'Lists' },
@@ -25,7 +26,7 @@ const go = (key: Key) => router.replace({ query: { tab: key } })
 
 <template>
   <section>
-    <h1>Task settings</h1>
+    <PageHeader eyebrow="Settings" title="Tasks" />
     <div class="tabs" role="tablist">
       <button
         v-for="t in TABS"
@@ -44,16 +45,3 @@ const go = (key: Key) => router.replace({ query: { tab: key } })
     <AbsencesPanel v-else />
   </section>
 </template>
-
-<style scoped>
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
-  margin: var(--space-3) 0;
-}
-.tabs button[aria-selected='true'] {
-  background: var(--color-accent);
-  color: var(--color-bg);
-}
-</style>

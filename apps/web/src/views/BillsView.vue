@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import ErrorBanner from '../components/ErrorBanner.vue'
+import PageHeader from '../components/PageHeader.vue'
+import StateBlock from '../components/StateBlock.vue'
 import { onMounted, watch } from 'vue'
 import { fmtDay } from '../components/mail/format'
 import { formatMoney, useBillsStore, type BillFilter } from '../stores/bills'
@@ -22,22 +23,29 @@ watch(
 
 <template>
   <section>
-    <h1>Bills</h1>
-    <label>
-      Show
-      <select v-model="bills.filter">
-        <option v-for="f in FILTERS" :key="f.v" :value="f.v">{{ f.label }}</option>
-      </select>
-    </label>
-    <ErrorBanner v-if="bills.error" :message="bills.error" />
-    <p v-if="!bills.loading && !bills.items.length" class="settings-note">No bills.</p>
-    <ul class="settings-list">
+    <PageHeader title="Bills">
+      <template #actions>
+        <label class="field-inline">
+          Show
+          <select v-model="bills.filter">
+            <option v-for="f in FILTERS" :key="f.v" :value="f.v">{{ f.label }}</option>
+          </select>
+        </label>
+      </template>
+    </PageHeader>
+    <StateBlock
+      :loading="bills.loading && !bills.items.length"
+      :error="bills.error"
+      :empty="!bills.loading && !bills.items.length"
+      empty-text="No bills."
+    />
+    <ul class="card-list">
       <li v-for="b in bills.items" :key="b.id">
         <strong>{{ b.payee }}</strong
         >: {{ formatMoney(b.amount_minor, b.currency) }}
         <span v-if="b.due_on">, due {{ fmtDay(b.due_on) }}</span>
         <span class="badge">{{ b.status }}</span>
-        <div class="settings-note">
+        <div class="muted">
           <template v-if="b.task">
             Pay task:
             <RouterLink :to="{ name: 'task-detail', params: { id: b.task } }">{{
@@ -53,8 +61,10 @@ watch(
             Original ↗</a
           >
         </div>
-        <div v-if="b.status === 'proposed' || b.status === 'open'" class="row">
-          <button type="button" @click="bills.patch(b, { status: 'dismissed' })">Dismiss</button>
+        <div v-if="b.status === 'proposed' || b.status === 'open'" class="row actions">
+          <button type="button" class="btn-ghost" @click="bills.patch(b, { status: 'dismissed' })">
+            Dismiss
+          </button>
           <button
             v-if="b.status === 'proposed'"
             type="button"
@@ -69,9 +79,7 @@ watch(
 </template>
 
 <style scoped>
-.row {
-  display: flex;
-  gap: var(--space-2);
+.actions {
   margin-top: var(--space-2);
 }
 </style>

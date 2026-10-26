@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { api, type StatusView } from '../api/client'
 import ErrorBanner from '../components/ErrorBanner.vue'
+import PageHeader from '../components/PageHeader.vue'
 import { formatTime } from '../lib/time'
 import { useHouseholdStore } from '../stores/household'
 import { describeError } from './shared'
@@ -32,19 +33,22 @@ function when(iso: string | null | undefined): string {
 
 <template>
   <section>
-    <h1>Status</h1>
+    <PageHeader eyebrow="Settings" title="Status">
+      <template #actions>
+        <button type="button" @click="load">Refresh</button>
+      </template>
+    </PageHeader>
     <ErrorBanner v-if="error" :message="error" />
-    <button type="button" @click="load">Refresh</button>
     <template v-if="status">
       <h2>Calendar sources</h2>
-      <ul class="settings-list">
+      <ul class="card-list">
         <li v-for="s in status.sources" :key="s.id">
           <strong>{{ s.name }}</strong>
           <span class="badge" :class="s.state">{{ s.state }}</span>
-          <span class="settings-note"> {{ s.kind }} · last sync {{ when(s.last_synced_at) }}</span>
-          <p v-if="s.last_error" class="settings-error">{{ s.last_error }}</p>
+          <span class="muted"> {{ s.kind }} · last sync {{ when(s.last_synced_at) }}</span>
+          <p v-if="s.last_error" class="text-danger">{{ s.last_error }}</p>
         </li>
-        <li v-if="!status.sources.length" class="settings-note">No sources.</li>
+        <li v-if="!status.sources.length" class="muted">No sources.</li>
       </ul>
       <h2>Weather</h2>
       <p>
@@ -63,7 +67,7 @@ function when(iso: string | null | undefined): string {
       <h2>Background jobs</h2>
       <p data-testid="queue">
         {{ status.queue.ready }} waiting, {{ status.queue.running }} running,
-        <span :class="{ 'settings-error': status.queue.dead > 0 }"
+        <span :class="{ 'text-danger': status.queue.dead > 0 }"
           >{{ status.queue.dead }} failed</span
         >
       </p>

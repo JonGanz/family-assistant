@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PageHeader from '../components/PageHeader.vue'
 import { computed, onMounted, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import type { TaskView } from '../api/client'
@@ -12,7 +13,6 @@ import { useSessionStore } from '../stores/session'
 import { useTasksStore } from '../stores/tasks'
 import { fromInstant, toInstant } from './parts/dateInput'
 import { describeError } from './shared'
-import './parts/settings.css'
 
 const route = useRoute()
 const router = useRouter()
@@ -160,11 +160,10 @@ const stepModels = computed(
 
 <template>
   <section>
-    <p><RouterLink to="/tasks">← Tasks</RouterLink></p>
+    <PageHeader v-if="!task" title="Task" back="/tasks" />
     <ErrorBanner v-if="loadError" :message="loadError" />
     <template v-if="task">
-      <h1>{{ task.title }}</h1>
-      <p class="settings-note">
+      <PageHeader :title="task.title" back="/tasks">
         {{ sourceLabel }} · {{ task.list_name }} · {{ task.status }}
         <template v-if="task.definition && session.isAdult">
           ·
@@ -173,10 +172,10 @@ const stepModels = computed(
             >Edit the schedule</RouterLink
           >
         </template>
-      </p>
-      <p v-if="task.assignee_away" class="settings-note">An assignee is away on the due date.</p>
+      </PageHeader>
+      <p v-if="task.assignee_away" class="muted">An assignee is away on the due date.</p>
 
-      <form class="settings-form" @submit.prevent="save">
+      <form class="form" @submit.prevent="save">
         <label
           >Title <input v-model="form.title" name="title" required :disabled="!canEdit"
         /></label>
@@ -192,7 +191,7 @@ const stepModels = computed(
         </label>
         <fieldset>
           <legend>Assigned to</legend>
-          <label v-for="m in people" :key="m.id" class="inline">
+          <label v-for="m in people" :key="m.id" class="field-inline">
             <input
               type="checkbox"
               :checked="form.assignees.includes(m.id)"
@@ -201,7 +200,7 @@ const stepModels = computed(
             />
             {{ m.display_name }}
           </label>
-          <p v-if="form.assignees.length === 0" class="settings-note">Anyone in the household.</p>
+          <p v-if="form.assignees.length === 0" class="muted">Anyone in the household.</p>
         </fieldset>
         <label>
           Priority
@@ -264,15 +263,15 @@ const stepModels = computed(
             :disabled="task.status !== 'open'"
             @tick="tick"
           />
-          <p v-else class="settings-note">No steps.</p>
+          <p v-else class="muted">No steps.</p>
         </fieldset>
 
         <ErrorBanner v-if="tasks.conflict" conflict @reload="load" />
         <ErrorBanner v-if="error" :message="error" />
-        <p v-if="saved" class="settings-ok" role="status">Saved.</p>
+        <p v-if="saved" class="text-ok" role="status">Saved.</p>
         <div v-if="canEdit" class="row">
-          <button type="submit">Save</button>
-          <button type="button" @click="remove">Delete</button>
+          <button type="submit" class="btn-primary">Save</button>
+          <button type="button" class="btn-danger" @click="remove">Delete</button>
         </div>
       </form>
     </template>
@@ -280,7 +279,6 @@ const stepModels = computed(
 </template>
 
 <style scoped>
-.row,
 .add-step,
 .edit-steps li {
   display: flex;
@@ -295,5 +293,18 @@ const stepModels = computed(
 }
 .edit-steps input {
   flex: 1;
+}
+form > label:not(.field-inline) {
+  display: grid;
+  gap: var(--space-1);
+}
+fieldset {
+  display: grid;
+  gap: var(--space-2);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.text-ok {
+  color: var(--color-success);
 }
 </style>

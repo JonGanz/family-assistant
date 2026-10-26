@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import type { NewMailSource } from '../api/mailSettings'
 import ErrorBanner from '../components/ErrorBanner.vue'
+import PageHeader from '../components/PageHeader.vue'
 import { useHouseholdStore } from '../stores/household'
 import { useMailSettingsStore } from '../stores/mailSettings'
 import { useMembersStore } from '../stores/members'
@@ -43,12 +44,11 @@ async function create(b: NewMailSource) {
 
 <template>
   <section>
-    <h1>Mail settings</h1>
-    <p class="settings-note">
+    <PageHeader eyebrow="Settings" title="Mail">
       Approval, expiry, currency and retention settings are under
       <RouterLink to="/settings/household">Household</RouterLink>. Schools and clubs are under
       <RouterLink to="/settings/orgs">Organizations</RouterLink>.
-    </p>
+    </PageHeader>
     <ErrorBanner v-if="store.error" :message="store.error" />
     <ErrorBanner v-if="store.conflict" conflict @reload="store.load()" />
     <ErrorBanner v-if="error" :message="error" />
@@ -70,7 +70,7 @@ async function create(b: NewMailSource) {
     <RulesPanel :members="members.items" />
 
     <h2>Built-in signals</h2>
-    <p class="settings-note">Turn off a signal that guesses wrong for your household.</p>
+    <p class="muted">Turn off a signal that guesses wrong for your household.</p>
     <SignalsPanel />
   </section>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import ErrorBanner from '../components/ErrorBanner.vue'
+import PageHeader from '../components/PageHeader.vue'
+import StateBlock from '../components/StateBlock.vue'
 import { computed, onMounted, ref } from 'vue'
 import type { InboxItem, InboxKind } from '../api/client'
 import { useHouseholdStore } from '../stores/household'
@@ -10,7 +11,6 @@ import BillItem from './parts/inbox/BillItem.vue'
 import ContactItem from './parts/inbox/ContactItem.vue'
 import EventItem from './parts/inbox/EventItem.vue'
 import TaskItem from './parts/inbox/TaskItem.vue'
-import './parts/settings.css'
 
 const inbox = useInboxStore()
 const household = useHouseholdStore()
@@ -38,7 +38,7 @@ const approve = (kind: InboxKind, id: string, edits: Approval) => inbox.approve(
 
 <template>
   <section>
-    <h1>Inbox</h1>
+    <PageHeader title="Inbox" />
     <div role="tablist" class="tabs">
       <button
         v-for="t in TABS"
@@ -52,9 +52,13 @@ const approve = (kind: InboxKind, id: string, edits: Approval) => inbox.approve(
         {{ t.label }} ({{ inbox.counts[t.kind] }})
       </button>
     </div>
-    <ErrorBanner v-if="inbox.error" :message="inbox.error" />
-    <p v-if="inbox.loaded && !shown.length" class="settings-note">Nothing waiting here.</p>
-    <ul class="settings-list">
+    <StateBlock
+      :loading="!inbox.loaded && !inbox.error"
+      :error="inbox.error"
+      :empty="inbox.loaded && !shown.length"
+      empty-text="Nothing waiting here."
+    />
+    <ul class="card-list">
       <template v-for="i in shown" :key="key(i)">
         <EventItem
           v-if="i.kind === 'event'"
@@ -91,24 +95,3 @@ const approve = (kind: InboxKind, id: string, edits: Approval) => inbox.approve(
     </ul>
   </section>
 </template>
-
-<style scoped>
-.tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
-}
-.tabs button {
-  min-height: 44px;
-  padding: 0 var(--space-3);
-  background: transparent;
-  color: inherit;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-.tabs button.on {
-  border-color: var(--color-accent);
-  font-weight: 600;
-}
-</style>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PageHeader from '../components/PageHeader.vue'
+import StateBlock from '../components/StateBlock.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import { computed, onMounted, ref } from 'vue'
 import type { RoutineRunView } from '../api/client'
@@ -7,7 +9,6 @@ import ProgressBar from '../components/tasks/ProgressBar.vue'
 import { useMembersStore } from '../stores/members'
 import { useRoutinesStore } from '../stores/routines'
 import { describeError } from './shared'
-import './parts/settings.css'
 
 const routines = useRoutinesStore()
 const members = useMembersStore()
@@ -44,15 +45,17 @@ async function tick(run: RoutineRunView, stepId: string, done: boolean) {
 
 <template>
   <section>
-    <h1>Routines</h1>
-    <ErrorBanner v-if="routines.error" :message="routines.error" />
+    <PageHeader title="Routines" />
+    <StateBlock
+      :loading="!routines.todayLoaded && !routines.error"
+      :error="routines.error"
+      :empty="routines.todayLoaded && groups.length === 0"
+      empty-text="No routines today."
+    />
     <ErrorBanner v-if="error" :message="error" />
-    <p v-if="routines.todayLoaded && groups.length === 0" class="settings-note">
-      No routines today.
-    </p>
     <section v-for="g in groups" :key="g.id" class="member">
       <h2><MemberChip :name="g.name" :color="g.color" /></h2>
-      <div v-for="r in g.runs" :key="r.id" class="run" :data-testid="`run-${r.routine_name}`">
+      <div v-for="r in g.runs" :key="r.id" class="run card" :data-testid="`run-${r.routine_name}`">
         <h3>{{ r.routine_name }}</h3>
         <ProgressBar :done="r.done" :total="r.total" :label="`${r.routine_name} progress`" />
         <ul class="steps">
@@ -64,9 +67,7 @@ async function tick(run: RoutineRunView, stepId: string, done: boolean) {
                 @change="tick(r, s.step, ($event.target as HTMLInputElement).checked)"
               />
               {{ s.text }}
-              <span v-if="s.target_time" class="settings-note"
-                >by {{ s.target_time.slice(0, 5) }}</span
-              >
+              <span v-if="s.target_time" class="muted">by {{ s.target_time.slice(0, 5) }}</span>
             </label>
           </li>
         </ul>
@@ -77,9 +78,6 @@ async function tick(run: RoutineRunView, stepId: string, done: boolean) {
 
 <style scoped>
 .run {
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
   margin-bottom: var(--space-3);
 }
 .steps {

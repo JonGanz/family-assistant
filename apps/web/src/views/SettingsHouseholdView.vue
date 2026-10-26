@@ -2,6 +2,7 @@
 import { onMounted, reactive, ref, watch } from 'vue'
 import type { ContentPolicy } from '../api/mailSettings'
 import ErrorBanner from '../components/ErrorBanner.vue'
+import PageHeader from '../components/PageHeader.vue'
 import { useHouseholdStore } from '../stores/household'
 import { describeError } from './shared'
 import './parts/settings.css'
@@ -171,10 +172,10 @@ async function reload() {
 
 <template>
   <section>
-    <h1>Household</h1>
-    <form class="settings-form" @submit.prevent="save">
-      <label>Name <input v-model="form.name" name="name" required /></label>
-      <label>
+    <PageHeader eyebrow="Settings" title="Household" />
+    <form class="form" @submit.prevent="save">
+      <label class="field">Name <input v-model="form.name" name="name" required /></label>
+      <label class="field">
         Time zone
         <input v-model="form.tz" name="tz" list="tz-list" required />
         <datalist id="tz-list">
@@ -183,13 +184,19 @@ async function reload() {
       </label>
       <fieldset>
         <legend>Location (for weather)</legend>
-        <label>Label <input v-model="form.label" name="label" placeholder="Home" /></label>
-        <label>Latitude <input v-model="form.lat" name="lat" inputmode="decimal" /></label>
-        <label>Longitude <input v-model="form.lon" name="lon" inputmode="decimal" /></label>
+        <label class="field"
+          >Label <input v-model="form.label" name="label" placeholder="Home"
+        /></label>
+        <label class="field"
+          >Latitude <input v-model="form.lat" name="lat" inputmode="decimal"
+        /></label>
+        <label class="field"
+          >Longitude <input v-model="form.lon" name="lon" inputmode="decimal"
+        /></label>
         <button type="button" @click="useDeviceLocation">Use this device's location</button>
-        <p v-if="geoNote" class="settings-note" role="status">{{ geoNote }}</p>
+        <p v-if="geoNote" class="muted" role="status">{{ geoNote }}</p>
       </fieldset>
-      <label>
+      <label class="field">
         Units
         <select v-model="form.units" name="units">
           <option value="metric">Metric (°C, km/h, mm)</option>
@@ -198,26 +205,26 @@ async function reload() {
       </label>
       <fieldset>
         <legend>Calendar window</legend>
-        <label>
+        <label class="field">
           Days of past events to keep
           <input v-model.number="form.past" name="past" type="number" min="0" max="3650" />
         </label>
-        <label>
+        <label class="field">
           Days ahead to sync
           <input v-model.number="form.future" name="future" type="number" min="1" max="3650" />
         </label>
       </fieldset>
-      <label>
+      <label class="field">
         Days of weather history to keep
         <input v-model.number="form.retention" name="retention" type="number" min="1" max="365" />
       </label>
       <fieldset>
         <legend>Tasks</legend>
-        <label class="inline">
+        <label class="field-inline">
           <input v-model="form.override" name="dashboard_completion_override" type="checkbox" />
           Allow ticking off tasks on dashboards
         </label>
-        <label>
+        <label class="field">
           How many tasks the "Now" list shows
           <input
             v-model.number="form.nowSize"
@@ -227,45 +234,45 @@ async function reload() {
             max="50"
           />
         </label>
-        <p class="settings-note">
+        <p class="muted">
           What floats to the top of "Now": higher numbers count for more. Due date is how close or
           late a task is, priority is the high-priority flag, weather is a task made by a weather
           rule.
         </p>
-        <label
+        <label class="field"
           >Weight: due date
           <input v-model.number="form.wDue" name="w_due" type="number" min="0" step="0.1"
         /></label>
-        <label
+        <label class="field"
           >Weight: priority
           <input v-model.number="form.wFlag" name="w_flag" type="number" min="0" step="0.1"
         /></label>
-        <label
+        <label class="field"
           >Weight: weather
           <input v-model.number="form.wWeather" name="w_weather" type="number" min="0" step="0.1"
         /></label>
       </fieldset>
       <fieldset>
         <legend>Default quiet hours (no notifications)</legend>
-        <label
+        <label class="field"
           >From <input v-model="form.quietFrom" name="quiet_from" type="time" required
         /></label>
-        <label
+        <label class="field"
           >Until <input v-model="form.quietUntil" name="quiet_until" type="time" required
         /></label>
       </fieldset>
       <fieldset data-testid="mail-household">
         <legend>Mail and approvals</legend>
-        <p class="settings-note">
+        <p class="muted">
           Sources, categories and rules are under <RouterLink to="/settings/mail">Mail</RouterLink>;
           schools and clubs under <RouterLink to="/settings/orgs">Organizations</RouterLink>.
         </p>
-        <label class="inline">
+        <label class="field-inline">
           <input v-model="form.autoWrite" name="auto_write" type="checkbox" />
           Add events found in mail to the calendar without asking (off: you approve each one)
         </label>
         <template v-if="form.autoWrite">
-          <label>
+          <label class="field">
             Minimum confidence that it is an event (0 to 1)
             <input
               v-model.number="form.extractThreshold"
@@ -276,7 +283,7 @@ async function reload() {
               step="0.05"
             />
           </label>
-          <label>
+          <label class="field">
             Minimum confidence for the calendar choice (0 to 1)
             <input
               v-model.number="form.routeThreshold"
@@ -288,7 +295,7 @@ async function reload() {
             />
           </label>
         </template>
-        <label>
+        <label class="field">
           Days before a suggested task expires
           <input
             v-model.number="form.taskExpiry"
@@ -298,7 +305,7 @@ async function reload() {
             max="365"
           />
         </label>
-        <label>
+        <label class="field">
           Days before a contact suggestion expires
           <input
             v-model.number="form.contactExpiry"
@@ -308,19 +315,19 @@ async function reload() {
             max="365"
           />
         </label>
-        <label>
+        <label class="field">
           Words for girls' groups (comma separated)
           <input v-model="form.female" name="gender_female" />
         </label>
-        <label>
+        <label class="field">
           Words for boys' groups (comma separated)
           <input v-model="form.male" name="gender_male" />
         </label>
-        <label>
+        <label class="field">
           Currency for bills (ISO code)
           <input v-model="form.currency" name="currency" maxlength="3" required />
         </label>
-        <label>
+        <label class="field">
           Days before the due date that a bill's task is due
           <input
             v-model.number="form.billLead"
@@ -330,7 +337,7 @@ async function reload() {
             max="60"
           />
         </label>
-        <label>
+        <label class="field">
           Keeping email content
           <select v-model="form.policy" name="content_policy">
             <option value="purge_after_processing">Delete after processing</option>
@@ -338,7 +345,7 @@ async function reload() {
             <option value="keep_all">Keep everything</option>
           </select>
         </label>
-        <label>
+        <label class="field">
           Examples kept per category
           <input
             v-model.number="form.examples"
@@ -347,19 +354,19 @@ async function reload() {
             min="0"
           />
         </label>
-        <label>
+        <label class="field">
           Days to keep content of unprocessed mail
           <input v-model.number="form.maxPending" name="max_pending_days" type="number" min="1" />
         </label>
       </fieldset>
-      <label class="inline">
+      <label class="field-inline">
         <input v-model="form.asBusy" name="private_events_as_busy" type="checkbox" />
         Show adults' private events as "Busy" to children and on the dashboard
       </label>
       <ErrorBanner v-if="household.conflict" conflict @reload="reload" />
       <ErrorBanner v-if="error" :message="error" />
-      <p v-if="message" class="settings-ok" role="status">{{ message }}</p>
-      <button type="submit">Save</button>
+      <p v-if="message" class="text-success" role="status">{{ message }}</p>
+      <button type="submit" class="btn-primary">Save</button>
     </form>
   </section>
 </template>

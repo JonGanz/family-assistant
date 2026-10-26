@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PageHeader from '../components/PageHeader.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -40,13 +41,13 @@ async function submit() {
 
 <template>
   <section class="login">
-    <h1>Log in</h1>
-    <form @submit.prevent="submit">
-      <label>
+    <PageHeader title="Log in" />
+    <form class="form" @submit.prevent="submit">
+      <label class="field">
         Username
         <input v-model="username" name="username" autocomplete="username" required />
       </label>
-      <label>
+      <label class="field">
         Password
         <input
           v-model="password"
@@ -57,7 +58,7 @@ async function submit() {
         />
       </label>
       <ErrorBanner v-if="error" :message="error" />
-      <button type="submit" :disabled="busy">Log in</button>
+      <button type="submit" class="btn-primary" :disabled="busy">Log in</button>
     </form>
   </section>
 </template>
@@ -66,13 +67,5 @@ async function submit() {
 .login {
   max-width: 22rem;
   margin: 3rem auto;
-}
-form {
-  display: grid;
-  gap: 1rem;
-}
-label {
-  display: grid;
-  gap: 0.25rem;
 }
 </style>

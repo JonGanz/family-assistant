@@ -4,6 +4,7 @@ import { computed, onMounted, reactive, ref, watch } from 'vue'
 import type { NotifyTrigger } from '../api/client'
 import type { ApprovalMode } from '../api/mailSettings'
 import ErrorBanner from '../components/ErrorBanner.vue'
+import PageHeader from '../components/PageHeader.vue'
 import { useHouseholdStore } from '../stores/household'
 import { useMembersStore } from '../stores/members'
 import { useNotifyPrefsStore } from '../stores/notifyPrefs'
@@ -137,8 +138,8 @@ async function sendTest() {
 
 <template>
   <section>
-    <h1>Notifications</h1>
-    <label v-if="choices.length > 1" class="picker">
+    <PageHeader eyebrow="Settings" title="Notifications" />
+    <label v-if="choices.length > 1" class="field-inline picker">
       Settings for
       <select
         :value="selected"
@@ -155,7 +156,7 @@ async function sendTest() {
     <template v-if="store.prefs">
       <p
         v-if="!store.prefs.server_configured"
-        class="settings-note"
+        class="muted"
         role="status"
         data-testid="not-configured"
       >
@@ -163,10 +164,10 @@ async function sendTest() {
         address. You can still choose your settings below.
       </p>
 
-      <form class="settings-form" @submit.prevent="save">
+      <form class="form" @submit.prevent="save">
         <fieldset>
           <legend>Tell me when</legend>
-          <label v-for="t in triggers" :key="t.key" class="inline">
+          <label v-for="t in triggers" :key="t.key" class="field-inline">
             <input
               type="checkbox"
               :checked="form.triggers.includes(t.key)"
@@ -175,33 +176,37 @@ async function sendTest() {
             {{ t.label }}
           </label>
         </fieldset>
-        <label>
+        <label class="field">
           Minutes before a task is due
           <input v-model.number="form.dueSoon" name="due_soon" type="number" min="1" max="1440" />
         </label>
-        <label>
+        <label class="field">
           Minutes before a routine deadline to nudge
           <input v-model.number="form.nudge" name="nudge" type="number" min="1" max="240" />
         </label>
         <fieldset>
           <legend>Quiet hours</legend>
-          <label class="inline">
+          <label class="field-inline">
             <input v-model="form.override" type="checkbox" name="quiet_override" />
             Use my own quiet hours (the household default is
             {{ household.quiet.from }}–{{ household.quiet.until }})
           </label>
           <template v-if="form.override">
-            <label>From <input v-model="form.from" name="quiet_from" type="time" /></label>
-            <label>Until <input v-model="form.until" name="quiet_until" type="time" /></label>
+            <label class="field"
+              >From <input v-model="form.from" name="quiet_from" type="time"
+            /></label>
+            <label class="field"
+              >Until <input v-model="form.until" name="quiet_until" type="time"
+            /></label>
           </template>
         </fieldset>
-        <label v-if="!isChild">
+        <label v-if="!isChild" class="field">
           Approval reminders
           <select v-model="form.approval" name="approval_mode">
             <option v-for="a in APPROVAL_MODES" :key="a.key" :value="a.key">{{ a.label }}</option>
           </select>
         </label>
-        <label>
+        <label class="field">
           Also send a copy to
           <select v-model="form.copyTo" name="copy_to">
             <option value="">Nobody</option>
@@ -210,8 +215,8 @@ async function sendTest() {
         </label>
         <ErrorBanner v-if="store.conflict" conflict @reload="pick(selected)" />
         <ErrorBanner v-if="error" :message="error" />
-        <p v-if="message" class="settings-ok" role="status">{{ message }}</p>
-        <button type="submit">Save</button>
+        <p v-if="message" class="text-success" role="status">{{ message }}</p>
+        <button type="submit" class="btn-primary">Save</button>
       </form>
 
       <h2>Phone</h2>
@@ -228,13 +233,13 @@ async function sendTest() {
           alt="QR code for the ntfy subscribe address"
         />
       </div>
-      <p v-else class="settings-note">No subscribe address is available yet.</p>
+      <p v-else class="muted">No subscribe address is available yet.</p>
       <button type="button" :disabled="!store.prefs.server_configured" @click="sendTest">
         Send test
       </button>
       <p
         v-if="testResult"
-        :class="testResult.ok ? 'settings-ok' : 'settings-error'"
+        :class="testResult.ok ? 'text-success' : 'text-danger'"
         role="status"
         data-testid="test-result"
       >
@@ -246,9 +251,6 @@ async function sendTest() {
 
 <style scoped>
 .picker {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
   margin-bottom: var(--space-3);
 }
 code {

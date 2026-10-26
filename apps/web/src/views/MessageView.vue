@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PageHeader from '../components/PageHeader.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
@@ -54,11 +55,10 @@ const makeTask = () => guard(() => mail.makeTask(id.value, {}, childId.value || 
 
 <template>
   <section>
-    <p><RouterLink to="/mail">Back to mail</RouterLink></p>
+    <PageHeader v-if="!d" title="Message" back="/mail" />
     <ErrorBanner v-if="mail.detailError" :message="mail.detailError" />
     <template v-if="d">
-      <h1>{{ d.summary.subject }}</h1>
-      <p class="settings-note">
+      <PageHeader :title="d.summary.subject" back="/mail">
         {{ d.summary.from_name || d.summary.from_addr }} &middot;
         {{ fmt(d.summary.received_at, household.tz) }}
         <template v-if="d.summary.external_url">
@@ -67,20 +67,18 @@ const makeTask = () => guard(() => mail.makeTask(id.value, {}, childId.value || 
             >open in Gmail ↗</a
           >
         </template>
-      </p>
+      </PageHeader>
       <ErrorBanner v-if="error" :message="error" />
 
       <h2>Content</h2>
-      <label v-if="children.length" class="inline">
+      <label v-if="children.length" class="field-inline">
         Show for
         <select v-model="childId">
           <option value="">Everything</option>
           <option v-for="m in children" :key="m.id" :value="m.id">{{ m.display_name }}</option>
         </select>
       </label>
-      <p v-if="d.content_purged" class="settings-note">
-        The body was removed by the retention policy.
-      </p>
+      <p v-if="d.content_purged" class="muted">The body was removed by the retention policy.</p>
       <SectionsPanel
         v-else-if="d.sections.length"
         :sections="d.sections"
@@ -102,7 +100,7 @@ const makeTask = () => guard(() => mail.makeTask(id.value, {}, childId.value || 
       </div>
 
       <h2>Derived items</h2>
-      <ul class="settings-list">
+      <ul class="card-list">
         <li v-for="e in d.events" :key="e.id">
           Event: {{ e.title }}, {{ fmt(e.start_at, household.tz) }}
           <span class="badge">{{ e.status }}</span>
@@ -118,7 +116,7 @@ const makeTask = () => guard(() => mail.makeTask(id.value, {}, childId.value || 
           <span class="badge">{{ b.status }}</span>
         </li>
       </ul>
-      <p v-if="!d.events.length && !d.tasks.length && !d.bills.length" class="settings-note">
+      <p v-if="!d.events.length && !d.tasks.length && !d.bills.length" class="muted">
         Nothing derived from this message.
       </p>
       <button type="button" @click="makeTask">Make task</button>

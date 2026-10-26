@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import ErrorBanner from '../components/ErrorBanner.vue'
+import PageHeader from '../components/PageHeader.vue'
+import StateBlock from '../components/StateBlock.vue'
 import QRCode from 'qrcode'
 import { onMounted, ref } from 'vue'
 import { api, type DeviceDto, type PairDeviceResp } from '../api/client'
@@ -10,6 +12,7 @@ import LayoutEditor from '../dashboard/LayoutEditor.vue'
 import { loadPreviewData, type PreviewData } from '../dashboard/preview'
 import { S } from '../dashboard/strings'
 import type { DashboardSettings } from '../dashboard/types'
+import './parts/settings.css'
 
 const devices = ref<DeviceDto[]>([])
 const name = ref('')
@@ -113,12 +116,12 @@ async function revoke(d: DeviceDto) {
 
 <template>
   <section>
-    <h1>Devices</h1>
+    <PageHeader eyebrow="Settings" title="Devices" />
     <ErrorBanner v-if="error" :message="error" />
 
-    <form @submit.prevent="pair">
-      <label>Device name <input v-model="name" name="device_name" required /></label>
-      <button type="submit">Pair a device</button>
+    <form class="pair" @submit.prevent="pair">
+      <label class="field">Device name <input v-model="name" name="device_name" required /></label>
+      <button type="submit" class="btn-primary">Pair a device</button>
     </form>
 
     <div v-if="paired" class="paired" data-testid="paired">
@@ -143,15 +146,16 @@ async function revoke(d: DeviceDto) {
     </div>
 
     <h2>Paired devices</h2>
-    <ul>
-      <li v-for="d in devices" :key="d.id">
+    <StateBlock :empty="!devices.length" empty-text="No devices paired yet." />
+    <ul class="card-list">
+      <li v-for="d in devices" :key="d.id" class="row">
         <strong>{{ d.name }}</strong> ({{ d.kind }})
         <span v-if="d.revoked"> revoked</span>
         <span v-else-if="d.last_seen"> last seen {{ d.last_seen }}</span>
-        <button v-if="!d.revoked && d.kind === 'dashboard'" @click="edit(d)">
+        <button v-if="!d.revoked && d.kind === 'dashboard'" class="btn-sm" @click="edit(d)">
           {{ S.editLayout }}
         </button>
-        <button v-if="!d.revoked" @click="revoke(d)">Revoke</button>
+        <button v-if="!d.revoked" class="btn-danger btn-sm" @click="revoke(d)">Revoke</button>
       </li>
     </ul>
 
@@ -171,20 +175,16 @@ async function revoke(d: DeviceDto) {
           <DevicePreview :data="preview" :settings="draft" />
         </div>
       </div>
-      <button type="button" @click="closeEditor">{{ S.closeEditor }}</button>
+      <button type="button" class="btn-ghost" @click="closeEditor">{{ S.closeEditor }}</button>
     </section>
   </section>
 </template>
 
 <style scoped>
-form {
+.pair {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--space-3);
   align-items: end;
-}
-label {
-  display: grid;
-  gap: 0.15rem;
 }
 code {
   word-break: break-all;
@@ -194,8 +194,5 @@ code {
   grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
   gap: var(--space-5);
   align-items: start;
-}
-li {
-  margin: 0.4rem 0;
 }
 </style>

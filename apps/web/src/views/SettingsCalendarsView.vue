@@ -4,6 +4,8 @@ import { api } from '../api/client'
 import { mailApi, type CalendarViewExt, type SourceViewExt } from '../api/mailSettings'
 import { ApiError } from '../api/http'
 import ErrorBanner from '../components/ErrorBanner.vue'
+import PageHeader from '../components/PageHeader.vue'
+import StateBlock from '../components/StateBlock.vue'
 import { formatTime } from '../lib/time'
 import { useHouseholdStore } from '../stores/household'
 import { useMembersStore } from '../stores/members'
@@ -80,27 +82,27 @@ const synced = (s: SourceViewExt) =>
 
 <template>
   <section>
-    <h1>Calendars</h1>
+    <PageHeader eyebrow="Settings" title="Calendars" />
     <ErrorBanner v-if="sources.error" :message="sources.error" />
     <ErrorBanner v-if="sources.conflict" conflict @reload="sources.load()" />
     <ErrorBanner v-if="error" :message="error" />
 
-    <ul class="settings-list">
+    <ul class="card-list">
       <li v-for="s in sources.sources" :key="s.id" :data-testid="`source-${s.name}`">
-        <div class="head">
+        <div class="row">
           <strong>{{ s.name }}</strong>
           <span class="badge" :class="s.state" data-testid="state">{{ s.state }}</span>
-          <span class="settings-note">
+          <span class="muted">
             {{ s.kind }}<template v-if="s.masked_url"> · {{ s.masked_url }}</template> · last sync
             {{ synced(s) }}
           </span>
         </div>
-        <p v-if="s.last_error" class="settings-error">{{ s.last_error }}</p>
-        <div class="actions">
-          <button type="button" @click="syncNow(s)">Sync now</button>
+        <p v-if="s.last_error" class="text-danger">{{ s.last_error }}</p>
+        <div class="row">
+          <button type="button" class="btn-sm" @click="syncNow(s)">Sync now</button>
           <a
             v-if="s.kind === 'google' && s.state === 'needs_reauth'"
-            class="button"
+            class="btn btn-sm"
             :href="googleReconnect()"
           >
             Reconnect
@@ -108,15 +110,16 @@ const synced = (s: SourceViewExt) =>
           <button
             v-else-if="s.kind !== 'google'"
             type="button"
+            class="btn-sm"
             @click="editing = editing === s.id ? null : s.id"
           >
             {{ s.state === 'needs_reauth' ? 'Reconnect' : 'Change link or password' }}
           </button>
-          <button type="button" @click="remove(s)">Remove</button>
-          <span v-if="note[s.id]" class="settings-ok" role="status">{{ note[s.id] }}</span>
+          <button type="button" class="btn-danger btn-sm" @click="remove(s)">Remove</button>
+          <span v-if="note[s.id]" class="text-success" role="status">{{ note[s.id] }}</span>
         </div>
-        <div v-if="s.kind !== 'ics'" class="actions">
-          <label class="inline">
+        <div v-if="s.kind !== 'ics'" class="row">
+          <label class="field-inline">
             <input
               type="checkbox"
               :checked="s.writable"
@@ -127,12 +130,12 @@ const synced = (s: SourceViewExt) =>
           </label>
           <a
             v-if="s.kind === 'google' && (needsWriteAccess[s.id] || (!s.writable && googleEnabled))"
-            class="button"
+            class="btn btn-sm"
             :href="connectWrite()"
           >
             Connect for writing
           </a>
-          <span v-if="needsWriteAccess[s.id]" class="settings-error" role="alert">
+          <span v-if="needsWriteAccess[s.id]" class="text-danger" role="alert">
             Reconnect with calendar write access first.
           </span>
         </div>
@@ -140,7 +143,7 @@ const synced = (s: SourceViewExt) =>
 
         <ul class="calendars">
           <li v-for="c in calendarsOf(s)" :key="c.id">
-            <label class="inline">
+            <label class="field-inline">
               <input
                 type="checkbox"
                 :checked="c.enabled"
@@ -149,7 +152,7 @@ const synced = (s: SourceViewExt) =>
               />
               <strong>{{ c.name }}</strong>
             </label>
-            <label v-if="s.writable" class="inline">
+            <label v-if="s.writable" class="field-inline">
               <input
                 type="checkbox"
                 :checked="c.is_default_target"
@@ -157,7 +160,7 @@ const synced = (s: SourceViewExt) =>
               />
               Default target
             </label>
-            <label class="inline">
+            <label class="field-inline">
               Colour
               <input
                 type="color"
@@ -167,7 +170,7 @@ const synced = (s: SourceViewExt) =>
             </label>
             <fieldset class="who">
               <legend>Whose calendar (none means the whole household)</legend>
-              <label v-for="m in members.items" :key="m.id" class="inline">
+              <label v-for="m in members.items" :key="m.id" class="field-inline">
                 <input
                   type="checkbox"
                   :checked="c.members.includes(m.id)"
@@ -177,13 +180,15 @@ const synced = (s: SourceViewExt) =>
               </label>
             </fieldset>
           </li>
-          <li v-if="!calendarsOf(s).length" class="settings-note">No calendars found yet.</li>
+          <li v-if="!calendarsOf(s).length" class="muted">No calendars found yet.</li>
         </ul>
       </li>
     </ul>
-    <p v-if="!sources.sources.length && sources.loaded" class="settings-note">
-      No calendar sources yet.
-    </p>
+    <StateBlock
+      :loading="!sources.loaded && !sources.error"
+      :empty="sources.loaded && !sources.sources.length"
+      empty-text="No calendar sources yet."
+    />
 
     <AddSourceForm
       :google-enabled="googleEnabled"
@@ -195,12 +200,7 @@ const synced = (s: SourceViewExt) =>
 </template>
 
 <style scoped>
-.head,
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
+.row {
   margin-bottom: var(--space-2);
 }
 .calendars {
@@ -216,11 +216,6 @@ const synced = (s: SourceViewExt) =>
   align-items: center;
   gap: var(--space-4);
 }
-.inline {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
 .who {
   display: flex;
   flex-wrap: wrap;
@@ -231,11 +226,5 @@ const synced = (s: SourceViewExt) =>
 .who legend {
   font-size: var(--font-size-sm);
   color: var(--color-muted);
-}
-.button {
-  padding: 0.1rem 0.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  text-decoration: none;
 }
 </style>

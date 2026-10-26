@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PageHeader from '../components/PageHeader.vue'
+import StateBlock from '../components/StateBlock.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import { computed, onMounted, ref } from 'vue'
 import type { DecisionPointKey } from '../api/client'
@@ -9,7 +11,6 @@ import { useHouseholdStore } from '../stores/household'
 import { useMailStore } from '../stores/mail'
 import { useMembersStore } from '../stores/members'
 import { describeError } from './shared'
-import './parts/settings.css'
 
 const mail = useMailStore()
 const household = useHouseholdStore()
@@ -66,11 +67,13 @@ const toggleSample = (e: Event) =>
 
 <template>
   <section>
-    <p><RouterLink to="/mail">Back to mail</RouterLink></p>
-    <h1>Label mail</h1>
-    <ErrorBanner v-if="mail.labelError" :message="mail.labelError" />
+    <PageHeader title="Label mail" back="/mail" />
+    <StateBlock
+      :error="mail.labelError"
+      :empty="mail.labelEmpty"
+      empty-text="Nothing left to label right now."
+    />
     <ErrorBanner v-if="error" :message="error" />
-    <p v-if="mail.labelEmpty" class="settings-ok">Nothing left to label right now.</p>
     <template v-if="msg && cur">
       <label class="progress">
         {{ cur.progress.labelled }} of {{ cur.progress.target }} labelled
@@ -78,7 +81,7 @@ const toggleSample = (e: Event) =>
       </label>
       <article class="card">
         <h2>{{ msg.summary.subject }}</h2>
-        <p class="settings-note">
+        <p class="muted">
           {{ msg.summary.from_name || msg.summary.from_addr }} &middot;
           {{ fmt(msg.summary.received_at, household.tz) }}
         </p>
@@ -99,15 +102,15 @@ const toggleSample = (e: Event) =>
           @fix="(v) => fixPoint(p, v)"
         />
       </div>
-      <label class="inline">
+      <label class="field-inline">
         <input type="checkbox" :checked="msg.summary.in_eval_sample" @change="toggleSample" />
         In the evaluation sample
       </label>
       <div class="buttons">
-        <button type="button" class="primary" :disabled="busy" @click="looksRight">
+        <button type="button" class="btn-primary" :disabled="busy" @click="looksRight">
           Looks right
         </button>
-        <button type="button" :disabled="busy" @click="next">Skip</button>
+        <button type="button" class="btn-ghost" :disabled="busy" @click="next">Skip</button>
       </div>
     </template>
   </section>
@@ -123,9 +126,6 @@ const toggleSample = (e: Event) =>
   width: 100%;
 }
 .card {
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
   margin-bottom: var(--space-3);
 }
 .snippet {

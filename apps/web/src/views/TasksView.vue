@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import PageHeader from '../components/PageHeader.vue'
+import StateBlock from '../components/StateBlock.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
@@ -14,7 +16,6 @@ import { addableLists, memberRefs, toTaskItem, type Viewer } from '../stores/tas
 import { useTasksStore, type TaskTab } from '../stores/tasks'
 import { describeError } from './shared'
 import TaskAddForm from './parts/TaskAddForm.vue'
-import './parts/settings.css'
 
 type Tab = 'now' | 'mine' | 'lists' | 'suggested'
 
@@ -79,10 +80,13 @@ const undo = () => act(() => tasks.undoLast())
 
 <template>
   <section>
-    <div class="head">
-      <h1>Tasks</h1>
-      <button v-if="canAdd && !adding" type="button" @click="adding = true">+ Task</button>
-    </div>
+    <PageHeader title="Tasks">
+      <template #actions>
+        <button v-if="canAdd && !adding" type="button" class="btn-primary" @click="adding = true">
+          + Task
+        </button>
+      </template>
+    </PageHeader>
     <TaskAddForm
       v-if="adding"
       :lists="lists.items"
@@ -106,12 +110,12 @@ const undo = () => act(() => tasks.undoLast())
       </button>
     </div>
 
-    <ErrorBanner v-if="tasks.error" :message="tasks.error" />
+    <StateBlock :error="tasks.error" />
     <ErrorBanner v-if="error" :message="error" />
 
     <template v-if="tab === 'now'">
       <h2>Mine</h2>
-      <p v-if="nowMine.length === 0" class="settings-note">Nothing for you right now.</p>
+      <p v-if="nowMine.length === 0" class="muted">Nothing for you right now.</p>
       <div class="rows">
         <TaskItem
           v-for="t in nowMine"
@@ -124,12 +128,14 @@ const undo = () => act(() => tasks.undoLast())
           @claim="act(() => tasks.claim(t.id))"
         >
           <template v-if="claimedByMe(t)" #claim>
-            <button type="button" @click="act(() => tasks.release(t.id))">Release</button>
+            <button type="button" class="btn-sm" @click="act(() => tasks.release(t.id))">
+              Release
+            </button>
           </template>
         </TaskItem>
       </div>
       <h2>Household</h2>
-      <p v-if="nowHousehold.length === 0" class="settings-note">Nothing else is due.</p>
+      <p v-if="nowHousehold.length === 0" class="muted">Nothing else is due.</p>
       <div class="rows">
         <TaskItem
           v-for="t in nowHousehold"
@@ -145,7 +151,7 @@ const undo = () => act(() => tasks.undoLast())
     </template>
 
     <template v-else-if="tab === 'mine'">
-      <p v-if="current.length === 0" class="settings-note">You have no open tasks.</p>
+      <p v-if="current.length === 0" class="muted">You have no open tasks.</p>
       <div class="rows">
         <TaskItem
           v-for="t in current"
@@ -158,14 +164,16 @@ const undo = () => act(() => tasks.undoLast())
           @claim="act(() => tasks.claim(t.id))"
         >
           <template v-if="claimedByMe(t)" #claim>
-            <button type="button" @click="act(() => tasks.release(t.id))">Release</button>
+            <button type="button" class="btn-sm" @click="act(() => tasks.release(t.id))">
+              Release
+            </button>
           </template>
         </TaskItem>
       </div>
     </template>
 
     <template v-else-if="tab === 'lists'">
-      <p v-if="byList.length === 0" class="settings-note">No open tasks in any list.</p>
+      <p v-if="byList.length === 0" class="muted">No open tasks in any list.</p>
       <section v-for="g in byList" :key="g.list.id">
         <h2>{{ g.list.name }}</h2>
         <div class="rows">
@@ -184,14 +192,18 @@ const undo = () => act(() => tasks.undoLast())
     </template>
 
     <template v-else>
-      <p v-if="current.length === 0" class="settings-note">No suggestions waiting.</p>
-      <ul class="settings-list">
+      <p v-if="current.length === 0" class="muted">No suggestions waiting.</p>
+      <ul class="card-list">
         <li v-for="t in current" :key="t.id">
           <strong>{{ t.title }}</strong>
-          <span class="settings-note"> suggested by the weather</span>
-          <div class="actions">
-            <button type="button" @click="act(() => tasks.accept(t.id))">Accept</button>
-            <button type="button" @click="act(() => tasks.skip(t.id))">Dismiss</button>
+          <span class="muted"> suggested by the weather</span>
+          <div class="row">
+            <button type="button" class="btn-primary" @click="act(() => tasks.accept(t.id))">
+              Accept
+            </button>
+            <button type="button" class="btn-ghost" @click="act(() => tasks.skip(t.id))">
+              Dismiss
+            </button>
           </div>
         </li>
       </ul>
@@ -208,27 +220,8 @@ const undo = () => act(() => tasks.undoLast())
 </template>
 
 <style scoped>
-.head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-}
-.tabs {
-  display: flex;
-  gap: var(--space-1);
-  margin: var(--space-3) 0;
-}
-.tabs button[aria-selected='true'] {
-  background: var(--color-accent);
-  color: var(--color-bg);
-}
 .rows {
   display: grid;
   gap: var(--space-2);
-}
-.actions {
-  display: flex;
-  gap: var(--space-2);
-  margin-top: var(--space-2);
 }
 </style>

@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import ErrorBanner from '../components/ErrorBanner.vue'
+import PageHeader from '../components/PageHeader.vue'
+import StateBlock from '../components/StateBlock.vue'
 import { onMounted, watch } from 'vue'
 import MessageRow from '../components/mail/MessageRow.vue'
 import { useHouseholdStore } from '../stores/household'
 import { useMailStore } from '../stores/mail'
 import { useMembersStore } from '../stores/members'
-import './parts/settings.css'
 
 const mail = useMailStore()
 const household = useHouseholdStore()
@@ -29,8 +29,10 @@ watch(
 
 <template>
   <section>
-    <h1>Mail</h1>
-    <form class="settings-form filters" @submit.prevent="mail.load()">
+    <PageHeader title="Mail">
+      <template #actions><RouterLink to="/mail/label">Label mail</RouterLink></template>
+    </PageHeader>
+    <form class="form form-wide filters" @submit.prevent="mail.load()">
       <label>
         Search
         <input v-model="mail.filters.q" type="search" placeholder="Sender or subject" />
@@ -56,18 +58,20 @@ watch(
           <option v-for="s in mail.sources" :key="s.id" :value="s.id">{{ s.name }}</option>
         </select>
       </label>
-      <label class="inline">
+      <label class="field-inline">
         <input v-model="mail.filters.includeIgnored" type="checkbox" /> Show ignored categories
       </label>
       <div>
-        <button type="submit">Search</button> <RouterLink to="/mail/label">Label mail</RouterLink>
+        <button type="submit" class="btn-primary">Search</button>
       </div>
     </form>
-    <ErrorBanner v-if="mail.error" :message="mail.error" />
-    <p v-if="!mail.loading && !mail.items.length && !mail.error" class="settings-note">
-      No messages.
-    </p>
-    <ul class="settings-list plain">
+    <StateBlock
+      :loading="mail.loading && !mail.items.length"
+      :error="mail.error"
+      :empty="!mail.loading && !mail.items.length"
+      empty-text="No messages."
+    />
+    <ul class="card-list plain">
       <li v-for="m in mail.items" :key="m.id">
         <MessageRow
           :msg="m"
@@ -85,10 +89,13 @@ watch(
 
 <style scoped>
 .filters {
-  max-width: none;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
   align-items: end;
   margin-bottom: var(--space-3);
+}
+.filters > label:not(.field-inline) {
+  display: grid;
+  gap: var(--space-1);
 }
 .plain > li {
   padding: 0;

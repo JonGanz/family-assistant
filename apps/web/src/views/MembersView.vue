@@ -5,9 +5,12 @@ import type { Gender } from '../api/mailSettings'
 import ChipInput from './parts/settings-mail/ChipInput.vue'
 import Avatar from '../components/Avatar.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
+import PageHeader from '../components/PageHeader.vue'
+import StateBlock from '../components/StateBlock.vue'
 import { describeError } from './shared'
 import { useMembersStore } from '../stores/members'
 import { useSessionStore } from '../stores/session'
+import './parts/settings.css'
 
 const session = useSessionStore()
 const members = useMembersStore()
@@ -129,9 +132,14 @@ async function create() {
 
 <template>
   <section>
-    <h1>Members</h1>
-    <ErrorBanner v-if="members.error" :message="members.error" />
-    <ul class="members">
+    <PageHeader eyebrow="Household" title="Members" />
+    <StateBlock
+      :error="members.error"
+      :loading="members.loading && !members.items.length"
+      :empty="!members.loading && !members.items.length"
+      empty-text="No members yet."
+    />
+    <ul class="members card-list">
       <li v-for="m in members.items" :key="m.id" :data-testid="`member-${m.display_name}`">
         <template v-if="editing !== m.id">
           <Avatar
@@ -142,13 +150,21 @@ async function create() {
           />
           <strong>{{ m.display_name }}</strong>
           <em>{{ m.role }}</em>
-          <button v-if="session.isAdult && m.version !== undefined" @click="startEdit(m)">
+          <button
+            v-if="session.isAdult && m.version !== undefined"
+            class="btn-sm"
+            @click="startEdit(m)"
+          >
             Edit
           </button>
         </template>
-        <form v-else @submit.prevent="save(m)">
-          <label>Name <input v-model="form.display_name" name="display_name" required /></label>
-          <label>Colour <input v-model="form.color" name="color" type="color" /></label>
+        <form v-else class="form form-wide" @submit.prevent="save(m)">
+          <label class="field"
+            >Name <input v-model="form.display_name" name="display_name" required
+          /></label>
+          <label class="field"
+            >Colour <input v-model="form.color" name="color" type="color"
+          /></label>
           <div class="avatar-edit">
             <Avatar
               :name="form.display_name || m.display_name"
@@ -156,7 +172,7 @@ async function create() {
               :src="preview ?? m.avatar_url"
               size="4rem"
             />
-            <label>
+            <label class="field">
               Picture (PNG, JPEG or WebP, up to 512 KB)
               <input
                 type="file"
@@ -165,29 +181,34 @@ async function create() {
                 @change="pickFile"
               />
             </label>
-            <button v-if="m.avatar_url && !preview" type="button" @click="removeAvatar(m)">
+            <button
+              v-if="m.avatar_url && !preview"
+              type="button"
+              class="btn-sm"
+              @click="removeAvatar(m)"
+            >
               Remove picture
             </button>
           </div>
-          <label
+          <label class="field"
             >Initials or emoji <input v-model="form.avatar" name="avatar" maxlength="4"
           /></label>
-          <label>Grade <input v-model="form.grade" name="grade" /></label>
-          <label>
+          <label class="field">Grade <input v-model="form.grade" name="grade" /></label>
+          <label class="field">
             Interests (comma separated)
             <input v-model="form.interests" name="interests" />
           </label>
-          <label>
+          <label class="field">
             Hobbies (comma separated)
             <input v-model="form.hobbies" name="hobbies" />
           </label>
-          <label>
+          <label class="field">
             Responsibilities (comma separated)
             <input v-model="form.responsibilities" name="responsibilities" />
           </label>
           <ChipInput v-model="form.aliases" label="Also known as (names used in mail)" />
           <template v-if="m.role === 'child'">
-            <label>
+            <label class="field">
               Gender (helps match girls' or boys' groups; optional)
               <select v-model="form.gender" name="gender">
                 <option value="">Not set</option>
@@ -203,42 +224,37 @@ async function create() {
           </template>
           <ErrorBanner v-if="members.conflictId === m.id" conflict @reload="reload" />
           <ErrorBanner v-if="error" :message="error" />
-          <button type="submit">Save</button>
-          <button type="button" @click="editing = null">Cancel</button>
+          <div class="row">
+            <button type="submit" class="btn-primary">Save</button>
+            <button type="button" class="btn-ghost" @click="editing = null">Cancel</button>
+          </div>
         </form>
       </li>
     </ul>
 
     <ErrorBanner v-if="error && editing === null" :message="error" />
-    <form v-if="session.isAdult" class="create" @submit.prevent="create">
+    <form v-if="session.isAdult" class="form create" @submit.prevent="create">
       <h2>Add member</h2>
-      <label>Name <input v-model="creating.display_name" name="new_name" required /></label>
-      <label>
+      <label class="field"
+        >Name <input v-model="creating.display_name" name="new_name" required
+      /></label>
+      <label class="field">
         Role
         <select v-model="creating.role" name="new_role">
           <option value="child">child</option>
           <option value="adult">adult</option>
         </select>
       </label>
-      <button type="submit">Add</button>
+      <button type="submit" class="btn-primary">Add</button>
     </form>
   </section>
 </template>
 
 <style scoped>
-.members {
-  list-style: none;
-  padding: 0;
-  display: grid;
-  gap: 0.5rem;
-}
-.members li {
+.members > li {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--space-3);
   align-items: center;
-  padding: 0.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: 0.5rem;
 }
 .avatar-edit {
   display: flex;
@@ -247,13 +263,7 @@ async function create() {
   flex-wrap: wrap;
 }
 form {
-  display: grid;
-  gap: 0.5rem;
   width: 100%;
-}
-label {
-  display: grid;
-  gap: 0.15rem;
 }
 .create {
   margin-top: 2rem;

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import PageHeader from '../components/PageHeader.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import { computed, onMounted, watch } from 'vue'
 import { addDays, dayKey } from '../lib/time'
@@ -20,6 +21,9 @@ const members = useMembersStore()
 
 const tz = computed(() => household.tz)
 const today = computed(() => dayKey(new Date(), tz.value))
+const todayLabel = computed(() =>
+  new Intl.DateTimeFormat(undefined, { timeZone: tz.value, dateStyle: 'full' }).format(new Date()),
+)
 const end = computed(() => addDays(today.value, 2))
 const events = computed(() => calendar.eventsIn(today.value, end.value, tz.value))
 const likes = computed(() => memberLikes(members.items))
@@ -38,7 +42,7 @@ watch(tz, loadRange)
 
 <template>
   <section>
-    <h1>{{ session.household?.name ?? 'Today' }}</h1>
+    <PageHeader :title="session.household?.name ?? 'Today'" :subtitle="todayLabel" />
     <AdvisoryList :advisories="weather.advisories" @dismiss="weather.dismiss" />
     <WeatherCard
       v-if="weather.latest"
@@ -57,9 +61,3 @@ watch(tz, loadRange)
     <AgendaList :events="events" :tz="tz" :from="today" :days="2" :members="likes" />
   </section>
 </template>
-
-<style scoped>
-.muted {
-  color: var(--color-muted);
-}
-</style>

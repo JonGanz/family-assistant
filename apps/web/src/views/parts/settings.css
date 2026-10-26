@@ -1,3 +1,4 @@
+/* Form, note, status and list rules moved to the UI kit in styles/base.css; these are aliases for parts not yet migrated. */
 .settings-form {
     display: grid;
     gap: var(--space-3);
@@ -11,12 +12,6 @@
     display: flex;
     align-items: center;
     gap: var(--space-2);
-}
-.settings-form fieldset {
-    display: grid;
-    gap: var(--space-2);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
 }
 .settings-note {
     color: var(--color-muted);
@@ -36,6 +31,13 @@
 }
 .settings-list > li {
     padding: var(--space-3);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+.form fieldset,
+.settings-form fieldset {
+    display: grid;
+    gap: var(--space-2);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
 }
