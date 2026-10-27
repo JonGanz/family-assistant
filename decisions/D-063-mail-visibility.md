@@ -9,6 +9,8 @@ superseded_by:
 affects: [arch/Ingest.md, arch/Domain.md]
 ---
 
+> **Extended by [D-078](D-078-private-approvals.md) (2026-10-26):** the same visibility rule decides who may see and approve the inbox items derived from a source.
+
 # D-063: Messages are visible to source owners, or all adults for household sources
 
 ## Context

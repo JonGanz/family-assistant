@@ -1,12 +1,12 @@
 ---
 id: Q-068
 title: Who may run the first-run wizard?
-status: open
+status: resolved
 batch: 18
 area: security
 created: 2026-10-26
-resolved:
-decisions: []
+resolved: 2026-10-26
+decisions: [D-073]
 ---
 
 # Q-068: Who may run the first-run wizard?

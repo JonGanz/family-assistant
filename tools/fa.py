@@ -186,7 +186,10 @@ def check():
     for p in sorted(glob.glob("plan/M*.md")):
         need(p, "plan")
     for p in sorted(glob.glob("plan/M*/T-*.md")):
-        need(p, "T", {"todo", "running", "done", "blocked"})
+        fm = need(p, "T", {"todo", "running", "done", "blocked"})
+        # P-10: briefs from M3.5 on must cite their decisions.
+        if fm and str(fm.get("milestone")) not in ("M0", "M1", "M2", "M3") and "decisions" not in fm:
+            err(p, "missing key 'decisions'")
 
     for k, d in ids.items():
         for i, ps in d.items():

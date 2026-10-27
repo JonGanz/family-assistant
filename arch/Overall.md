@@ -2,16 +2,16 @@
 title: Overall Architecture
 scope: system
 status: draft
-updated: 2026-10-23
+updated: 2026-10-26
 drawio: Overall.drawio
 drawio_src: src/Overall.py
-depends_on: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012, D-013, D-014, D-015, D-017, D-018, D-019, D-020, D-021, D-023, D-024, D-025, D-026, D-027, D-028, D-029, D-030, D-031, D-032, D-033, D-034, D-035]
+depends_on: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012, D-013, D-014, D-015, D-017, D-018, D-019, D-020, D-021, D-023, D-024, D-025, D-026, D-027, D-028, D-029, D-031, D-032, D-033, D-034, D-035, D-036, D-037, D-038, D-039, D-040, D-041, D-042, D-043, D-044, D-045, D-046, D-047, D-048, D-049, D-050, D-051, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-064, D-065, D-066, D-067, D-068, D-069, D-070, D-071, D-072, D-073, D-074, D-075, D-076, D-077]
 research: [R-001]
 ---
 
-# Overall Architecture (DRAFT v7)
+# Overall Architecture (DRAFT v8)
 
-v7 re-derives the design from PROJECT.md and all accepted decisions (D-001 to D-035). D-016, D-022, and D-030 are superseded. **No questions are open. The M0 design is complete.**
+v8 re-derives the design from PROJECT.md and all accepted decisions (D-001 to D-077). D-016, D-022, and D-030 are superseded. New in v8: simple onboarding (D-065, D-072 to D-077), the M3.5 milestone (D-066), the M4/M4.1 split (D-067), an at-a-glance dashboard without the approval inbox (D-068), and member interests as LLM-only inputs (D-071). Detail is in [Platform.md](Platform.md) and [Frontend.md](Frontend.md).
 
 ## Scope
 **In:** members and roles; email ingest (Gmail API or IMAP, D-052) and classification; bills; school, daycare, and teacher linking; calendars (Google, CalDAV, ICS) with event extraction; weather with rules and advisories; tasks and routines; goals with progress; meal plan, recipes, the living grocery list; configurable AI decision pipelines; dashboard, PWA, TUI (stretch); ntfy.
@@ -21,21 +21,21 @@ v7 re-derives the design from PROJECT.md and all accepted decisions (D-001 to D-
 ## Principles
 1. **It works without AI, and AI makes it better.** Every decision is a **configurable pipeline** of stages: rules → kNN → System One → LLM → human. Every pipeline ends in a deterministic or human stage (D-002, D-024, D-029).
 2. **Hardware-adaptive.** Models are registered backends on whatever nodes exist. The system probes the hardware and suggests profiles, and nothing is hard-wired to the reference machines (D-026).
-3. **Members come first, and everything is configured.** Files bootstrap the config, the UI owns it after that, and there is no PII in the repo (D-004, D-018).
+3. **Members come first, and everything is configured in the UI.** A first-run wizard sets up the household (D-065); the UI owns configuration after that, including non-infrastructure server settings (D-075). TOML import and export stay as an optional upload and download (D-018). There is no PII in the repo (D-004).
 4. **Our code is Rust and Vue.** Third-party model servers can be containerised Python sidecars (D-003, D-025).
-5. **Local and private.** Access is over Tailscale only (D-010). If in doubt, make it a toggle.
+5. **Local and private.** Nothing is exposed to the internet. The whole app is served on the home network over plain HTTP by default; HTTPS and access from outside come from an optional Tailscale sidecar or the hoster's own proxy (D-010 as amended by D-065, D-072). If in doubt, make it a toggle.
 6. **Keeps only what helps.** Email content is kept only as far as it helps local learning, under a configurable retention policy. Every derived item keeps a provenance link back to its source, and Gmail stays the system of record (D-034).
-7. **The hoster deploys.** We ship images and a compose sample with profiles, and don't prescribe how it is run (D-033).
+7. **Two commands to install.** We ship an amd64 image on GHCR and one compose file: download it, `docker compose up -d`, open the browser (D-033, D-065, D-077). Secrets are generated on first start (D-074). Hosters may still deploy however they like.
 8. **Open source.** The repo and images are public, AGPL-3.0-or-later. No household data goes in the repo, docs, or logs (D-035).
 
 ## Deployment (page "Deployment"): reference hardware
 | Node | Always on | Runs |
 |---|---|---|
-| **Core node**: Ubuntu Server | yes | Docker Compose with `fa-server` (api + worker, including `fa-sysprobe`), `postgres:16` + pgvector, `ntfy`, `backup` to NAS, tailscale. **Suggested backends:** `s1-small` (System One sidecar, e.g. GLiNER2.5-Decide on CPU) and `embed` (a small embedding model) |
-| **GPU node(s)**: 0 or more. Reference is a Linux gaming PC with RTX 3070 8 GB | no | `fa-gpu-agent` (hardware report, gaming detection, suspend). **Suggested backends:** `s1-large` (e.g. Strands 2B or Kev 4B sidecar) and `llm` (Ollama 7–8B Q4). Woken by WoL (D-020, D-026) |
-| **NAS** | yes | Nightly pg_dump (D-005) |
-| **Echo Show 15** | yes | Silk browser on `/dashboard` with keep-alive (D-011) |
-| **Phones and desktops** | n/a | PWA and the ntfy app |
+| **Core node**: Ubuntu Server | yes | Docker Compose: `init` (one-shot, generates the master key and DB password into a `secrets` volume, D-074), **one `app` container** (`fa-server serve all`: api and worker, D-076), `postgres:16` + pgvector, `ntfy`, `backup` (to a volume or the NAS). Optional profile `tailscale`: a Tailscale sidecar that serves HTTPS on the tailnet (D-065). The app port is plain HTTP on the LAN (D-072). **Backends:** M4 adds one CPU System One backend; M4.1 adds `embed` and the registry (D-067) |
+| **GPU node(s)**: 0 or more. Reference is a Linux gaming PC with RTX 3070 8 GB | no | M4: `llm` (Ollama 7–8B Q4), used when the PC is awake, with rules as the fallback. M4.1: `fa-gpu-agent` (hardware report, gaming detection, suspend), WoL, `s1-large` (D-020, D-026, D-067) |
+| **NAS** (optional) | yes | Nightly pg_dump when `BACKUP_DIR` points at it; otherwise a local volume (D-005) |
+| **Echo Show 15** | yes | Silk browser on `/dashboard` over the LAN, with keep-alive (D-011). At-a-glance only: date, time, weather, agenda, tasks, routines (D-068) |
+| **Phones and desktops** | n/a | The web app (installable as a PWA over HTTPS) and the ntfy app; on the LAN, or through Tailscale from outside |
 
 The final model choices come from `fa-eval` on the household's labelled sample (D-024, D-028).
 
@@ -43,7 +43,7 @@ The final model choices come from `fa-eval` on the household's labelled sample (
 | Crate | Responsibility |
 |---|---|
 | `fa-api` | Axum REST + SSE, sessions, RBAC, device sessions with adult PIN step-up (D-006, D-019) |
-| `fa-config` | Versioned TOML import and export. Includes pipelines and backends (D-018, D-029) |
+| `fa-config` | Process config and runtime settings (env > DB > default, D-075); versioned TOML import and export, also from the UI (D-018, D-029) |
 | `fa-auth` | Passwords, sessions, devices, PIN step-up, `Policy::authorize` (see Platform.md §5) |
 | `fa-jobs` | Postgres job queue and cron schedule (see Platform.md §7) |
 | `fa-connectors` | Gmail, IMAP, Google Calendar, CalDAV, ICS, Open-Meteo |
@@ -51,23 +51,23 @@ The final model choices come from `fa-eval` on the household's labelled sample (
 | `fa-rules` | Deterministic rulesets (sender and Org maps, headers, keywords, biller templates) and extractors (ICS, dates, PDF) |
 | `fa-decide` | `DecisionBackend` trait with a `/v1/systemone` client (`choice`, `score`, `noul`) and the kNN stage over pgvector (D-024, D-028) |
 | `fa-llm` | System 2 client (Ollama): JSON-schema prompts for extraction, routing hints, recipes, advisories. Uses a queue when the backend is `on_demand` |
-| `fa-backends` | **Backend registry**: availability tracking, preference-list routing, the model catalogue, and the profile suggester from node hardware reports (D-026) |
-| `fa-sysprobe` | Core node hardware probe |
-| `fa-eval` | Replays the labelled sample against backends and pipelines (accuracy, calibration, latency). Powers dry-run (D-028, D-029) |
+| `fa-backends` (M4.1) | **Backend registry**: availability tracking, preference-list routing, the model catalogue, and the profile suggester from node hardware reports (D-026) |
+| `fa-sysprobe` (M4.1) | Core node hardware probe |
+| `fa-eval` (M4 basic, M4.1 full) | Replays the labelled sample against backends and pipelines (accuracy, calibration, latency). Powers dry-run (D-028, D-029) |
 | `fa-calendar` | Dedupe, approval inbox, writes. Routing is the `event.calendar_route` pipeline (D-008, D-027) |
 | `fa-tasks` | Recurrence, fixed/rotation/pool strategies (smart later), completion policy, priority (urgency from the `task.urgency` pipeline) (D-013) |
 | `fa-weather` | Snapshots, `WeatherRule`s, S2 advisories and suggested rules (D-017) |
 | `fa-meals` | Recipes, meal plan, the living grocery list with the staples check (D-015, D-021) |
-| `fa-gpu-node` | WoL and agent state for each GPU node (D-020) |
+| `fa-gpu-node` (M4.1) | WoL and agent state for each GPU node (D-020) |
 | `fa-notify` | `Notifier` trait with an ntfy implementation (D-010) |
 | `fa-domain`, `fa-store` | Entities, DTOs (`ts-rs`), SQLx repositories, encrypted secrets |
-| `fa-gpu-agent` | Separate binary on each GPU node |
-| `web` | Vue 3 + TS PWA: dashboard, labelling view, **Pipeline settings**, **Backends** screens |
+| `fa-gpu-agent` (M4.1) | Separate binary on each GPU node |
+| `web` | Vue 3 + TS PWA: first-run wizard, at-a-glance dashboard, app pages, adult-only Settings (incl. Members, System, **Pipeline settings**, **Backends**) (D-065, D-070, D-075) |
 | `fa-tui` | ratatui (stretch) |
 
 ## Domain model
 The detailed model is in **[Domain.md](Domain.md)**. Summary:
-- `Household{location, tz, meal_plan_horizon_weeks, dashboard_completion_override}` 1—* `Member{role, avatar, birthdate?, grade?, interests[], hobbies[], responsibilities[], notify_prefs, pin_hash?}`
+- `Household{location, tz, meal_plan_horizon_weeks, dashboard_completion_override}` 1—* `Member{role, avatar, birthdate?, grade?, interests[], hobbies[], responsibilities[], notify_prefs, pin_hash?}`. Interests, hobbies and responsibilities are inputs to LLM features only (D-071); members are edited by adults only (D-070)
 - `UserAccount`, `Device{kind: dashboard}`, `AuditEntry{actor, device?, action}`
 - `Org{type, domains[], senders[], ics_urls[]}` and `OrgContact{role, members[]}`
 - `MailSource{owners[*], read_only, backfill_days, state}`
@@ -75,7 +75,8 @@ The detailed model is in **[Domain.md](Domain.md)**. Summary:
 - `CalendarSource`, `Calendar`, `Event{status, confidence, dedupe_key}`
 - `TaskList{completion_policy}` 1—* `Task{recurrence?, last_done, strategy, assignees[], due, priority, urgency?, origin, steps[]}`, and `Bill`
 - `Recipe`, `Ingredient{is_staple}`, `MealPlanEntry`, `GroceryList` 1—* `GroceryItem`
-- `WeatherSnapshot`, `WeatherRule{status}`, `Advisory`
+- `WeatherSnapshot`, `WeatherRule{status}`, `Advisory` (not dismissable; cleared when no longer relevant, D-068)
+- `InstanceSetting{key, value, secret?}` (system-wide runtime settings, D-075)
 - **AI:**
   - `Node{kind: core|gpu, hardware{cpu, ram, vram}, state}`
   - `Backend{node, kind: system_one|llm|embedding, endpoint, model, dialect, capabilities[], availability}`
@@ -87,25 +88,28 @@ The detailed model is in **[Domain.md](Domain.md)**. Summary:
 ## Key flows
 1. **Decision pipeline (generic):** for each enabled stage in order: is a backend available (preference list)? If not, apply `on_unavailable` (skip, wait, or queue). Run it. If the result is ≥ the threshold, accept and record the `Decision`. Otherwise go to the next stage. The last stage is always deterministic or human.
 2. **Email:** poll (content held, `pending`) → the `email.category`, `email.time_sensitive`, `email.is_bill`, and `email.member_link` pipelines run (a time-sensitive result sends a notification now) → for extraction-worthy categories, S2 extraction is queued while the deterministic extractors give a first pass → emit events, tasks, and bills, each with a `SourceRef` (Gmail link) → `processed` → the retention policy keeps or purges content (D-034). Corrections go into `CategoryLabel`. Purged content is re-fetched from Gmail when needed.
-3. **Event:** dedupe → `event.calendar_route` pipeline → write it, or send it to the approval inbox (adult PIN on the dashboard).
-4. **Hardware onboarding:** a node reports its hardware → the profile suggester proposes backends from the catalogue and a pipeline preset → an adult accepts it in the Backends screen.
+3. **Event:** dedupe → `event.calendar_route` pipeline → write it, or send it to the approval inbox, which adults work through in the app (`/inbox`); the dashboard never shows it (D-068).
+0. **First run:** `docker compose up -d` → `init` creates secrets → the first browser visit finds no household and opens `/setup` (open to the first visitor, D-073) → household, first adult, family, access and notifications, master-key backup, starter chores or a TOML import → setup closes for good.
+4. **Hardware onboarding (M4.1):** a node reports its hardware → the profile suggester proposes backends from the catalogue and a pipeline preset → an adult accepts it in the Backends screen.
 5. **Pipeline change:** edit in Pipeline settings → dry-run on the eval sample and recent history → compare before and after → save a new version (rollback is possible).
-6. **GPU wake:** schedule or queue → WoL → agent `available` → on-demand backends come up → queued stages drain → auto-suspend. A game starting means `busy_gaming`.
+6. **GPU wake (M4.1):** schedule or queue → WoL → agent `available` → on-demand backends come up → queued stages drain → auto-suspend. A game starting means `busy_gaming`.
 7. **Recurring task, Dashboard, Weather, Grocery:** as in v4 (see D-013, D-019, D-017, D-021).
 
 Platform details (layout, security, deployment, backups) are in **[Platform.md](Platform.md)**.
 
-## Roadmap (D-023, adjusted by D-029 and D-050)
+## Roadmap (D-023, adjusted by D-029, D-050, D-066 and D-067)
 | Milestone | Content | Arch docs needed first |
 |---|---|---|
 | M0 | Skeleton: workspace, DB, config, auth/RBAC, devices, Vue shell, compose, backups | `Domain.md`, `Platform.md` |
 | M1 | Members, weather, calendar read, dashboard | `Frontend.md`, `Feeds.md` |
 | M2 | Tasks + ntfy | `Tasks.md` |
 | M3 | Email ingest, **pipeline engine with the 'Rules only' preset**, bills, linking, approvals, **labelling view** | `Ingest.md` |
-| M4 | Backend registry, System One sidecars, kNN, S2, eval, **Pipeline and Backends settings**, GPU agent, WoL, advisories | `AI.md` |
+| M3.5 | **Onboarding** (D-065): one compose file with an optional Tailscale sidecar, optional HTTPS, generated secrets, the first-run wizard, Settings, System. **Shakedown** (D-066): H-02..H-11 on the real server through the new install, a week of approval-inbox measurement, the M3 known gaps | `Platform.md` v4, `Frontend.md` v4 |
+| M4 | **Minimal AI slice** (D-067): one CPU System One backend and one Ollama model behind the existing `fa-pipeline` stages, aimed at the decision points with the most inbox rejections in M3.5; basic eval; first LLM features using member interests (D-071) | `AI.md` |
+| M4.1 | Backend registry and profile suggester, sysprobe, GPU agent wake/yield and gaming detection, kNN, `s1-large`, full eval, **Pipeline and Backends settings**, S2 advisories | `AI.md` update |
 | M5 | Recipes, meal plan, grocery | `Meals.md` |
 | M6 | Smart assignment, learned calendar routing | updates |
 | M7 | Goals: count or quantity targets, weekly cadence with reset, progress bars (D-048, D-051) | `Goals.md` |
 | M8 | TUI (stretch) | updates |
 
-The M6 to M8 split is D-050.
+The M6 to M8 split is D-050; M3.5 and the M4/M4.1 split are D-066 and D-067.

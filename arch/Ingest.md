@@ -2,14 +2,14 @@
 title: Ingest — email, rules pipeline, bills, linking, approvals
 scope: Mail sources (Gmail API and IMAP) and sync, message storage and retention, the decision pipeline engine (rules-only preset), deterministic classifiers and extractors, orgs, contacts and enrollments, bills, event proposals and calendar writes, the approval inbox, email tasks, the labelling view
 status: draft
-updated: 2026-10-25
+updated: 2026-10-26
 drawio: Ingest.drawio
 drawio_src: src/Ingest.py
-depends_on: [D-001, D-004, D-006, D-007, D-008, D-009, D-010, D-012, D-013, D-014, D-018, D-019, D-023, D-024, D-027, D-028, D-029, D-034, D-035, D-036, D-044, D-045, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063]
+depends_on: [D-001, D-004, D-006, D-007, D-008, D-009, D-010, D-012, D-013, D-014, D-018, D-019, D-023, D-024, D-027, D-028, D-029, D-034, D-035, D-036, D-044, D-045, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-068, D-070, D-071, D-078]
 milestone: M3
 ---
 
-# Ingest: email, rules pipeline, bills, linking, approvals (DRAFT v1)
+# Ingest: email, rules pipeline, bills, linking, approvals (DRAFT v1.1)
 
 This doc covers M3 (D-023, as adjusted by D-029):
 - mail ingest through the Gmail API or IMAP (D-052);
@@ -75,7 +75,7 @@ This refines the Organizations & Mail and AI & Pipelines packages of [Domain.md]
 | `org` (+col) | contact_mode: `suggest\|auto\|manual` (default `suggest`) | D-056 |
 | `contact_suggestion` | org, email, name?, member?, message, status: `proposed\|accepted\|rejected\|expired` | Unique `(org, lower(email))`, so a rejected address isn't proposed again |
 | `member` (+cols) | `aliases[]` (nicknames to match in mail), `gender?`: `female\|male\|other`, `relevance_tags[]` | D-055. Used by member linking (§6.3) |
-| `household` (+settings) | `gender_terms{female[], male[]}`, `events.auto_write` (false), `events.thresholds{extract: 0.9, route: 0.9}`, `inbox.expiry{task_days: 14, contact_days: 14}` | D-055, D-057, D-061 |
+| `household` (+settings) | `gender_terms{female[], male[]}`, `events.auto_write` (false), `events.thresholds{extract: 0.9, route: 0.9}`, `inbox.expiry{task_days: 14, contact_days: 14}`, `dashboard_pending_approvals` (true) | D-055, D-057, D-061, D-078 |
 | `mail_source` | provider: `gmail\|imap` (default `gmail`), address, read_only (true), visibility: `owners\|household` (default `owners`), backfill_days (30), query? (Gmail search string), poll_minutes (5), state: `ok\|needs_reauth\|error\|paused`, last_synced_at?, last_error?, archived_at?, version. **Gmail:** oauth_account, history_id?. **IMAP:** host, port (993), username, secret (app password), folders[] (default `INBOX`; `[Gmail]/All Mail` on Gmail), archive_folder?, gmail_ext (detected) | D-007, D-052, D-053, D-063. Gmail reuses `oauth_account` (Feeds.md §2) with incremental consent for `gmail.readonly`, or `gmail.modify` when read-only is off |
 | `mail_folder_state` | source, folder, uidvalidity, uidnext | IMAP incremental sync state |
 | `mail_source_owner` | mail_source ↔ member (1..*) | The owners are the classification context, and the visibility boundary unless the source is `household` (D-063) |
@@ -224,16 +224,17 @@ Summarising a long newsletter per child is System 2 work (M4).
   - "Make task" on any message is always available to adults who can see it.
 
 ## 10. The approval inbox and the labelling view
-- **Inbox** (`/inbox` in the app, and an `inbox` panel on the dashboard) holds four kinds:
+- **Inbox** (`/inbox` in the app only; nothing derived from email is on the dashboard, D-068) holds four kinds:
   - **events** (every extracted event in M3, D-057): approve, which can change the calendar, title or time; or reject;
   - **bills** below threshold: confirm, edit or dismiss;
   - **tasks** (suggested, D-060): accept (optionally editing assignees and due) or dismiss;
   - **contacts** (suggested, D-056): accept, which creates the contact and links it to the enrollment, or reject (remembered per address).
   - Each item shows its "from email ↗" link (in-app message view when the viewer can see the message).
-- Approving needs an adult, or an elevated dashboard with a PIN (D-019).
+- **Private to the source's adults (D-078):** an item is visible to, and can be approved, edited or rejected by, the adults who may see its source message (the source's owners, or every adult for a `household` source, D-063). Each adult's `/inbox` lists only those items. Items whose source is gone or archived fall back to every adult.
+- Approving needs that adult signed in to the app. Dashboard devices, elevated or not, are refused `ReadInbox` and approvals (D-068; amends D-008). The dashboard shows at most a pending count per adult (D-078, household setting `dashboard_pending_approvals`, default on).
 - Every approval, edit or rejection is stored as a `Decision` from the `human` stage, which is training data for M4 kNN and M6 routing.
 - **Expiry (D-061):** `inbox.expire` marks proposals `expired` (not rejected, so they aren't negatives): events when their start passes, suggested tasks and contacts after 14 days (household settings); bills never.
-- **Notifications (D-061):** `approval_needed` is a per-adult trigger, default **batched** (D-044) plus the daily digest; each adult can switch it to immediate, digest only, or off.
+- **Notifications (D-061):** `approval_needed` is a per-adult trigger, sent only to the adults who may approve the item (D-078), default **batched** (D-044) plus the daily digest; each adult can switch it to immediate, digest only, or off.
 - **Mail actions (D-058):** after processing, a writable source applies its category's `auto_actions` (default: labels `FA/<category>` and `FA/<child>`; archive and mark read are opt-in per category). Each is a `gmail_action` row, undoable from the message view for 30 days.
 - **Labelling view** (`/mail/label`, D-062):
   - one message at a time, with all four email decision points (category, time-sensitive, member links, is-bill) pre-filled from the current decisions, one-tap confirm or fix;
@@ -252,7 +253,7 @@ Summarising a long newsletter per child is System 2 work (M4).
 | `GET/POST/PATCH /orgs`, `/orgs/{id}/contacts`, `/members/{id}/enrollments` | adult | Linking setup |
 | `GET/POST/PATCH /mail-rules`, `POST /mail-rules/test` `{rule, message?}` | adult | Rules, and dry-running a rule on recent mail |
 | `GET/POST/PATCH /categories` | adult | Category set, behaviour, auto actions, email tasks |
-| `GET /inbox`, `POST /inbox/{kind}/{id}/approve\|reject` (kind: `event\|bill\|task\|contact`) | adult, elevated device | Approvals |
+| `GET /inbox`, `POST /inbox/{kind}/{id}/approve\|reject` (kind: `event\|bill\|task\|contact`) | adults who may see the source (D-078) | Approvals (devices refused, D-068) |
 | `GET /bills`, `PATCH /bills/{id}` | adult | Bills list (no ledger, D-009) |
 
 ## 12. Authorization (adds to the RBAC matrix in Domain.md)
@@ -263,8 +264,8 @@ Summarising a long newsletter per child is System 2 work (M4).
 | Mail actions and undo (D-058) | ✗ | adults who can see the message | ✗ | ✗ |
 | Manage sources | ✗ | own and household | ✗ | ✗ |
 | Manage orgs, contacts, enrollments, rules, categories | ✗ | ✓ | ✗ | ✗ |
-| See the inbox | ✗ | ✓ | count only | ✓ |
-| Approve or reject | ✗ | ✓ | ✗ | ✓ (D-019) |
+| See the inbox | ✗ | items from sources they may see (D-078) | pending count per adult only | count only (D-068, D-078) |
+| Approve or reject | ✗ | items from sources they may see (D-078) | ✗ | ✗ (D-068) |
 
 ## 13. Jobs
 | Job | Schedule | What it does |
@@ -299,9 +300,11 @@ New app screens:
 - **Bills**;
 - Settings → Mail (sources with the Gmail/IMAP choice, categories, rules);
 - Settings → Organizations (orgs, contact mode, contacts, enrollments);
-- the member editor gains aliases, gender and relevance tags (children).
+- the member editor (adult-only Settings, D-070) gains aliases, gender and relevance tags (children).
 
-New dashboard panel: `inbox` (a count, and items when elevated).
+No dashboard panel: the dashboard is at-a-glance only (D-068). The M3 `inbox` panel is removed in M3.5.
+
+**Member relevance (D-071):** mail linking uses grade, class, name and aliases, relevance tags and gender terms (D-055). Interests, hobbies and responsibilities are **not** rules inputs; only LLM features (M4 onward) read them.
 
 ## 16. Security and privacy notes
 - Email bodies are not secrets, so they're stored in plain text under the retention policy (D-034). OAuth tokens and IMAP app passwords are `Secret`s and are never exported.

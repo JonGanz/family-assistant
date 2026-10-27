@@ -27,25 +27,8 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Batch 17, open
-| ID | Title | Area |
-|---|---|---|
-| [Q-061](Q-061-next-milestone-order.md) | What comes next: real-hardware shakedown, M4 AI, or M5 food? | infra |
-| [Q-062](Q-062-m4-scope.md) | How big is M4: minimal AI slice or the full registry design? | tech |
-| [Q-063](Q-063-device-inbox-and-advisories.md) | What may an unelevated dashboard device do: read the approval inbox, dismiss advisories? | security |
-| [Q-064](Q-064-trusted-proxy-default.md) | Which peers may set the client IP (X-Forwarded-For)? | security |
-| [Q-065](Q-065-members-page-placement.md) | Where does the Members page live, and what do children see there? | frontend |
-| [Q-066](Q-066-interests-consumer.md) | What should use member interests, hobbies and responsibilities? | domain |
-
-## Batch 18, open
-| ID | Title | Area |
-|---|---|---|
-| [Q-067](Q-067-lan-exposure.md) | Without Tailscale, what is reachable on the home network over plain HTTP? | security |
-| [Q-068](Q-068-first-run-protection.md) | Who may run the first-run wizard? | security |
-| [Q-069](Q-069-secrets-and-key-backup.md) | How are the master key and database password created, and how is the key backed up? | security |
-| [Q-070](Q-070-settings-in-ui.md) | Which server settings move from environment variables into the UI? | tech |
-| [Q-071](Q-071-container-layout.md) | How many app containers does the default compose file run? | infra |
-| [Q-072](Q-072-image-distribution.md) | How do households get the app: a pulled image or a local build? | infra |
+## Open
+_None. The next question number is Q-073._
 
 ## Resolved
 | ID | Title | Decisions |
@@ -110,3 +93,15 @@ decisions: []
 | [Q-058](resolved/Q-058-approval-inbox.md) | The approval inbox: notifications and expiry | D-061 |
 | [Q-059](resolved/Q-059-labelling-scope.md) | The labelling view: what you label and how messages are picked | D-062 |
 | [Q-060](resolved/Q-060-mail-visibility.md) | Who can see which messages? | D-063 |
+| [Q-061](resolved/Q-061-next-milestone-order.md) | What comes next: real-hardware shakedown, M4 AI, or M5 food? | D-066 |
+| [Q-062](resolved/Q-062-m4-scope.md) | How big is M4: minimal AI slice or the full registry design? | D-067 |
+| [Q-063](resolved/Q-063-device-inbox-and-advisories.md) | What may an unelevated dashboard device do: read the approval inbox, dismiss advisories? | D-068, D-078 |
+| [Q-064](resolved/Q-064-trusted-proxy-default.md) | Which peers may set the client IP (X-Forwarded-For)? | D-069 |
+| [Q-065](resolved/Q-065-members-page-placement.md) | Where does the Members page live, and what do children see there? | D-070 |
+| [Q-066](resolved/Q-066-interests-consumer.md) | What should use member interests, hobbies and responsibilities? | D-071 |
+| [Q-067](resolved/Q-067-lan-exposure.md) | Without Tailscale, what is reachable on the home network over plain HTTP? | D-072 |
+| [Q-068](resolved/Q-068-first-run-protection.md) | Who may run the first-run wizard? | D-073 |
+| [Q-069](resolved/Q-069-secrets-and-key-backup.md) | How are the master key and database password created, and how is the key backed up? | D-074 |
+| [Q-070](resolved/Q-070-settings-in-ui.md) | Which server settings move from environment variables into the UI? | D-075 |
+| [Q-071](resolved/Q-071-container-layout.md) | How many app containers does the default compose file run? | D-076 |
+| [Q-072](resolved/Q-072-image-distribution.md) | How do households get the app: a pulled image or a local build? | D-077 |

@@ -1,12 +1,12 @@
 ---
 id: Q-061
 title: What comes next: real-hardware shakedown, M4 AI, or M5 food?
-status: open
+status: resolved
 batch: 17
 area: infra
 created: 2026-10-26
-resolved:
-decisions: []
+resolved: 2026-10-26
+decisions: [D-066]
 ---
 
 # Q-061: What comes next: real-hardware shakedown, M4 AI, or M5 food?

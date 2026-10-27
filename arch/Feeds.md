@@ -2,14 +2,14 @@
 title: Feeds — calendar read & weather
 scope: calendar sync (Google, CalDAV, ICS), Google OAuth accounts, weather fetch, WeatherRules, advisories, cross-process change events
 status: draft
-updated: 2026-10-24
+updated: 2026-10-26
 drawio: Feeds.drawio
 drawio_src: src/Feeds.py
-depends_on: [D-004, D-006, D-008, D-014, D-017, D-018, D-019, D-023, D-034, D-035, D-036]
+depends_on: [D-004, D-006, D-008, D-014, D-017, D-018, D-019, D-023, D-034, D-035, D-036, D-068]
 milestone: M1
 ---
 
-# Feeds: calendar read & weather (DRAFT v1)
+# Feeds: calendar read & weather (DRAFT v1.1)
 
 This doc covers the backend half of M1: pulling calendars and weather in, storing them, and turning weather into advisories. The UI half is in [Frontend.md](Frontend.md). Calendar **writes**, event extraction, and the approval inbox come in M3 (`Ingest.md`).
 
@@ -41,7 +41,7 @@ This refines the Calendar and Weather packages of [Domain.md](Domain.md). All ta
 | `event_member` | event ↔ member | Used by extracted events (M3). Synced events take their members from the calendar |
 | `weather_snapshot` | fetched_at, provider: `open-meteo`, current jsonb, hourly jsonb, daily jsonb | Always metric. Hard-deleted after `weather_retention_days` |
 | `weather_rule` | name, condition (DSL text), action: `alert\|task`, severity: `info\|warning\|severe`, message, task_definition? (M2), task_mode: `create\|suggest` (M2, D-043), status: `active\|suggested\|disabled`, suggested_by: `default\|s2\|user`, archived_at?, version | `task` rules can be saved in M1 but only fire from M2 ([Tasks.md](Tasks.md) §4.5) |
-| `advisory` | rule?, text, severity, valid_from, valid_until, source: `rule\|s2`, dedupe_key (unique per household), dismissed_at?, dismissed_by? | Shown on the dashboard until `valid_until` or dismissed |
+| `advisory` | rule?, text, severity, valid_from, valid_until, source: `rule\|s2`, dedupe_key (unique per household) | Shown on the dashboard while relevant. **Not dismissable** (D-068): it is removed automatically (lifecycle in §4) |
 | `member_avatar` | member (PK), mime, bytes (≤ 512 KB), sha256 | Served with an ETag. Only images (png, jpeg, webp) are accepted |
 | `device` (+col) | `settings jsonb` | Dashboard layout (Frontend.md §4). An opaque UI blob, never queried |
 
@@ -96,6 +96,8 @@ An event's members are the members of its calendar. A calendar with no members i
 - `weather.fetch` runs on the cron `*/30 * * * *` (editable in the schedule settings). It skips when the household has no location. It calls Open-Meteo `/v1/forecast` with `current`, `hourly` (48 h), and `daily` (7 days) in metric units and the household tz, then stores a `weather_snapshot`.
 - **Fields used:** current: `temperature_2m`, `apparent_temperature`, `weather_code`, `wind_speed_10m`, `wind_gusts_10m`, `precipitation`, `is_day`. Hourly: `temperature_2m`, `apparent_temperature`, `precipitation_probability`, `precipitation`, `snowfall`, `wind_speed_10m`, `wind_gusts_10m`, `uv_index`, `weather_code`. Daily: `weather_code`, `temperature_2m_max`/`_min`, `precipitation_probability_max`, `precipitation_sum`, `sunrise`, `sunset`, `uv_index_max`.
 - After each fetch, `weather.evaluate` runs every `active` rule against the snapshot. A rule that matches upserts an `advisory` with the dedupe key `rule:{id}:{window start date}`, so a rule fires at most once per window. It then publishes `weather.updated` (and `advisory.updated` if anything changed).
+- **Advisory lifecycle (D-068):** nobody dismisses an advisory. It is removed (hard-deleted) when its `valid_until` passes, or when `weather.evaluate` finds its rule no longer matches the new snapshot for that window (the rule was edited, disabled or archived, or the forecast changed). Each evaluate pass reconciles: upsert the matching dedupe keys, delete this household's `source=rule` advisories whose key did not match. S2 advisories (M4) expire by `valid_until` only. A daily sweep in `weather.retention` deletes any past `valid_until` that a missed evaluate left behind.
+- **Data change:** `dismissed_at` and `dismissed_by` are dropped and `POST /advisories/{id}/dismiss` and the `DismissAdvisory` action are removed. This needs a **new migration** (M3.5); earlier migrations are never edited.
 - `weather.retention` (daily) deletes snapshots older than `weather_retention_days`.
 - **Units:** storage and the DSL are always metric. The API returns metric, and the UI converts using `household.units`.
 

@@ -1,12 +1,12 @@
 ---
 id: Q-062
 title: How big is M4: minimal AI slice or the full registry design?
-status: open
+status: resolved
 batch: 17
 area: tech
 created: 2026-10-26
-resolved:
-decisions: []
+resolved: 2026-10-26
+decisions: [D-067]
 ---
 
 # Q-062: How big is M4: minimal AI slice or the full registry design?

@@ -11,6 +11,8 @@ affects: [arch/Overall.md, arch/Ingest.md (future)]
 
 > M3 default set by [D-057](D-057-event-auto-add-m3.md): auto-write off, every extracted event is proposed.
 
+> **Amended by [D-068](D-068-dashboard-at-a-glance.md) (2026-10-26):** the approval inbox is not on the dashboard; approvals happen in the app.
+
 # D-008: Multiple calendar sources; confidence-gated auto-add; configurable + learned target routing
 
 ## Context

@@ -1,12 +1,12 @@
 ---
 id: Q-071
 title: How many app containers does the default compose file run?
-status: open
+status: resolved
 batch: 18
 area: infra
 created: 2026-10-26
-resolved:
-decisions: []
+resolved: 2026-10-26
+decisions: [D-076]
 ---
 
 # Q-071: How many app containers does the default compose file run?

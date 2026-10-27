@@ -1,53 +1,83 @@
 ---
 title: Frontend
-scope: Vue PWA structure, routes, dashboard (kiosk) design and layout config, settings screens, data flow (REST + SSE), offline behaviour
+scope: Vue PWA structure, routes, first-run wizard, settings structure, dashboard (kiosk) design and layout config, data flow (REST + SSE), offline and insecure-context behaviour
 status: draft
 updated: 2026-10-26
 drawio: Frontend.drawio
 drawio_src: src/Frontend.py
-depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064]
-milestone: M3
+depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078]
+milestone: M3.5
 ---
 
-# Frontend (DRAFT v3)
+# Frontend (DRAFT v4)
 
-This doc describes the Vue 3 PWA in `apps/web`: one app with two shells. The **app shell** is for signed-in people on phones and desktops. The **kiosk shell** is `/dashboard` on the Echo Show and other wall screens. This version covers what M1 builds. Later milestones add screens (tasks M2, inbox and labelling M3, pipelines and backends M4, meals M5). Backend data comes from [Feeds.md](Feeds.md).
+This doc describes the Vue 3 PWA in `apps/web`: one app with three shells. The **setup shell** is the first-run wizard (`/setup`, D-065). The **app shell** is for signed-in people on phones and desktops. The **kiosk shell** is `/dashboard` on the Echo Show and other wall screens. v4 (M3.5) adds the wizard, the grouped Settings area with Settings, System, moves Members into Settings, makes the dashboard at-a-glance only, and makes the app work over plain HTTP. Backend data comes from [Feeds.md](Feeds.md), [Tasks.md](Tasks.md) and [Ingest.md](Ingest.md); the runtime settings and setup API are in [Platform.md](Platform.md).
 
 ## 1. Structure (page "Components")
 ```
 apps/web/src/
 ├─ api/            http.ts (fetch wrapper, X-FA-Request, bearer opt-in), client.ts (typed calls over gen/)
 ├─ gen/            api.d.ts generated from openapi.json (`just gen`). The only source of API types
-├─ stores/         Pinia: session, members, household, calendar, weather, sources, devices, dashboard
-├─ composables/    useLiveStream (SSE → store invalidation), useUnits, useRange, useClock
-├─ components/     shared UI: MemberChip, Avatar, PinPad, EventCard, WeatherIcon, DateRangeNav, ErrorBanner
-├─ views/          app-shell screens (§3)
+├─ stores/         Pinia: setup, session, members, household, calendar, weather, sources, devices, dashboard, tasks, mail, inbox, system
+├─ composables/    useLiveStream (SSE → store invalidation), useUnits, useRange, useClock, useSecureContext
+├─ components/     shared UI: PageHeader, StateBlock, MemberChip, Avatar, PinPad, EventCard, WeatherIcon, DateRangeNav, ErrorBanner, Tabs
+├─ lib/            platform shims: ids (randomId), copy (clipboard fallback), pwa (conditional service worker)
+├─ setup/          the first-run wizard: SetupLayout + one component per step (§2a)
+├─ views/          app-shell screens (§3); settings/ holds SettingsLayout, SettingsIndexView and the settings pages
 ├─ dashboard/      kiosk panels + layout engine (§4)
 ├─ kiosk/          keepAlive, watchdog, deviceToken, sse (M0)
-├─ layouts/        AppLayout (nav), KioskLayout (full-screen, no nav)
-└─ router/         routes + guards (auth: user | adult | device)
+├─ layouts/        SetupLayout, AppLayout (nav), KioskLayout (full-screen, no nav)
+└─ router/         routes + guards (setup | user | adult | device)
 ```
-- **API types:** one source only. `gen/api.d.ts` comes from the server's OpenAPI. The server derives it from the DTOs with `utoipa::ToSchema`, which removes M0's hand-written mirror schemas. The unused ts-rs output is dropped from the web app.
+- **API types:** one source only. `gen/api.d.ts` comes from the server's OpenAPI, which the server derives from its DTOs (`utoipa::ToSchema`).
 - **State:** stores fetch over REST and keep normalised data by ID. They never poll. They refresh when an SSE event invalidates their data (§5).
-- **No UI framework.** Plain CSS with design tokens in `styles/base.css` (colour, spacing, type scale), plus a `kiosk` scale for viewing distance. That keeps the bundle small for Silk on Fire OS.
+- **No UI framework.** Plain CSS with design tokens and the UI kit in `styles/base.css` (colour, spacing, type scale, `.form`, `.card-list`, `.badge`), plus a `kiosk` scale for viewing distance. That keeps the bundle small for Silk on Fire OS.
 - **Dates:** `Intl.DateTimeFormat` in the household tz (from `/household`, not the browser's tz), with no date library. Recurrence is already expanded by the server.
 
+### 1.1 Secure and insecure contexts (D-072)
+The whole app must work over plain HTTP on a LAN address, where the browser is in an **insecure context**:
+- **Service worker** (vite-plugin-pwa) is registered only when `window.isSecureContext`. Without it the app loads normally from the network; the PWA install hint is hidden. The offline dashboard relies on the localStorage snapshot (§4.2), not on the service worker.
+- **No `crypto.randomUUID`, no `crypto.subtle`:** IDs that the client makes come from `lib/ids` (`crypto.getRandomValues`, available in both contexts). The client never hashes or encrypts.
+- **No async clipboard:** `lib/copy` uses `navigator.clipboard` when available, else a selected read-only text field with a "press Ctrl+C" hint.
+- **No nag banners.** Plain HTTP is the hoster's choice. Settings, System states the connection type as a fact (§3c); the login page shows nothing about it.
+- **Google sign-in needs HTTPS** (Google rejects `http://` redirect URIs except localhost). On an insecure context, Settings, Calendars and Settings, Mail show Google as **"needs HTTPS"**, with a one-line pointer to the Tailscale profile, instead of hiding it. IMAP, CalDAV and ICS work the same in both.
+- e2e runs the UI suite over plain HTTP from a non-localhost address so that a secure-context-only API fails the build.
+
 ## 2. Routes
-| Path | Shell | Guard | M1 content |
+| Path | Shell | Guard | Content |
 |---|---|---|---|
-| `/login` | app | none | M0 |
-| `/` | app | user | **Today**: my agenda (or the whole household for adults), weather card, active advisories |
+| `/setup` | setup | setup | First-run wizard (§2a). Only while setup is needed |
+| `/login` | app | none | Username and password |
+| `/` | app | user | **Today**: my agenda (or the whole household for adults), weather card, active advisories, my Now list |
 | `/calendar` | app | user | Agenda, week, and month views. Filter by member. Child users see only what §3.5 of Feeds.md allows |
-| `/members` | app | user | M0 list + avatar upload and colour picker, plus interests, hobbies, and responsibilities editing |
-| `/settings/household` | app | adult | name, tz, location (lat/lon + label, with a "use this device's location" button), units, calendar window, `private_events_as_busy` (D-036) |
-| `/settings/calendars` | app | adult | sources (add Google / CalDAV / ICS, state, last sync, sync now, reconnect), calendars (enable, colour, members) |
-| `/settings/weather` | app | adult | rules list, editor with live validation and preview, enable or disable |
-| `/settings/devices` | app | adult | M0 pairing (plus a home-network link and QR code when the LAN dashboard is on, D-064) + **dashboard layout editor** (§4) |
-| `/settings/status` | app | adult | System status: sources, last weather fetch, backup age, queue depth and dead jobs |
-| `/oauth/done` | app | user | landing page after the Google callback. It shows the result and continues to `return_to` |
+| `/tasks`, `/tasks/:id`, `/routines` | app | user | §3a |
+| `/mail`, `/mail/:id`, `/mail/label`, `/inbox`, `/bills` | app | adult | §3b |
+| `/settings` | app | user | **Settings index** (§3c): grouped cards; children see only the Personal group |
+| `/settings/<page>` | app | per page | Child routes rendered inside `SettingsLayout` (§3c) |
+| `/oauth/done` | app | user | Landing page after the Google callback. It shows the result and continues to `return_to` |
 | `/dashboard` | kiosk | device | §4 |
 
-Children see `/`, `/calendar`, and `/members` (public fields). Settings are adult-only in the nav, and the API enforces this as well.
+- **Setup guard:** the router asks `GET /api/v1/setup` once at start. While `needed` is true, **every route redirects to `/setup`**, and any API call answering `409 setup_required` does the same. Once setup is done, `/setup` redirects to `/`.
+- **No `/members` route** and no redirect from it (D-070): member management is `/settings/members`, adults only.
+- Nested pages mark their parent nav item active by path prefix (`/tasks/:id` → Tasks, `/settings/*` → Settings).
+- The API enforces every guard as well; the router guard only shapes navigation.
+
+## 2a. First-run wizard (setup shell, D-065, D-073, D-074)
+Shown when no household exists. It is **open to whoever opens the app first** (D-073): no setup code, no address check. Setup closes for good once the first adult account exists; the hoster is told to finish it right after `docker compose up`.
+
+| Step | Content | Writes |
+|---|---|---|
+| 1. Welcome | The detected address (`location.origin`), whether it is HTTPS, whether the Tailscale sidecar is up and its tailnet address | nothing |
+| 2. Household | Name, time zone (browser default), location (city search through the Open-Meteo geocoding API, or lat/lon by hand, or "use this device's location" when secure), units, currency | `POST /setup/household` |
+| 3. You | The first adult: display name, colour, username, password (12+), optional PIN. Signs in; the rest of the wizard runs as that adult | `POST /setup/owner` |
+| 4. Family | Add adults and children (role, display name, colour, optional grade and aliases), each with an optional login and PIN. Reuses the member editor components | existing `/api/v1/members` routes |
+| 5. Access and notifications | Public address(es) (prefilled from step 1; LAN and tailnet both kept when the sidecar is up), notifications on or off with "Send a test" | `PATCH /system/settings` |
+| 6. Master key backup | The key as text with **Copy** and **Download** buttons; continuing needs "I stored it somewhere safe" ticked (D-074) | `POST /system/master-key/confirm` |
+| 7. Start | Starter chores and routines (D-047), or **Import a household file** (TOML upload with a dry-run preview, D-018). Then links to Calendars, Mail and Devices (pair the wall screen) | existing routes |
+
+- Each step saves when you press Next; `GET /setup` returns the step to resume at, so a reload or a second device continues where it stopped.
+- Back keeps values; steps 4–7 can be skipped and done later in Settings.
+- A failed step shows the server's field errors inline (`.form` errors), as in Settings.
 
 ## 3. App shell screens (M1)
 - **Today:** a merged list of today's and tomorrow's events with member chips, the current weather plus the 7-day strip, and advisories at the top.
@@ -78,15 +108,35 @@ Children see `/`, `/calendar`, and `/members` (public fields). Settings are adul
 New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/inbox`, `/bills`, `/settings/mail`, `/settings/orgs`. Children get none of them (D-063); they see derived events and tasks in the existing screens.
 - **Mail** (`/mail`): messages from visible sources (D-063), filtered by category, member, source and state; ignored categories hidden behind a toggle. Each row: sender, subject, category chip, member chips, time-sensitive marker.
 - **Message** (`/mail/:id`): metadata, body (when content is kept), and for a child filter the relevant and general sections first with the others collapsed (D-055); the decisions with one-tap "Fix"; derived items; "Make task"; mail actions with an Undo list for 30 days (D-058; hidden on read-only sources); "open in Gmail ↗" when an external link exists.
-- **Inbox** (`/inbox`): tabs for events, bills, tasks and contacts (D-056, D-057, D-060). Events show the suggested calendar with a picker and editable title and time; tasks show assignees and due; contacts show org, child and the triggering message. Approve and reject buttons, a nav badge with the count, and SSE `inbox.updated`.
+- **Inbox** (`/inbox`): tabs for events, bills, tasks and contacts (D-056, D-057, D-060). Events show the suggested calendar with a picker and editable title and time; tasks show assignees and due; contacts show org, child and the triggering message. Approve and reject buttons, a nav badge with the count, and SSE `inbox.updated`. Each adult sees only items from sources they may see (owners, or every adult for `household` sources); the server filters, the UI has no other view (D-078).
 - **Labelling** (`/mail/label`, D-062): phone-first, one message per screen, the four decision points pre-filled as chips (one tap confirms all, tapping a chip fixes it), "in eval sample" toggle, progress toward ~200, and "next" from the suggested balanced queue.
 - **Bills** (`/bills`): open, proposed and paid bills with payee, amount, due date and the pay task's state (D-059).
 - **Settings → Mail:** sources (add **Gmail** via Google sign-in or **IMAP** with host, port, username and app password plus a "Test connection" button, D-052; owners, visibility, read-only, backfill, filter, folders, poll, state and reconnect), categories (behaviour, notify, auto actions, email tasks; D-054, D-058, D-060), rules (condition builder with a dry run on recent mail), and household mail settings (event auto-write off by default with its thresholds, inbox expiry, gender term lists; D-055, D-057, D-061).
 - **Settings → Organizations:** orgs (kind, domains, senders, ICS feed, default calendar, contact mode), contacts, and enrollments per child.
 - **Member editor** gains aliases, and for children an optional gender and relevance tags (D-055).
+- **Inbox** is an app screen only: approvals never appear on the dashboard (D-068).
 - **Settings → Notifications** gains the `approval_needed` trigger (batched by default, immediate, digest only, off; D-061) and `mail_time_sensitive`.
 
+## 3c. Settings area (M3.5, U-08, D-070, D-075)
+`/settings` is a parent route with `SettingsLayout`: a sidebar on desktop, a chip row on phones. Its index (`SettingsIndexView`) shows grouped cards. Every page keeps its own guard.
+
+| Group | Pages (path under `/settings/`) | Guard |
+|---|---|---|
+| Personal | `account` (password, sessions), `notifications` (own, plus children's for adults; §3a) | user |
+| Household | `household` (name, tz, location, units, currency, calendar window, Now list weights, quiet hours, dashboard pending-approvals badge), **`members`** (add, edit, avatar, colour, role, account and password reset, PIN, aliases, gender and relevance tags, interests, hobbies and responsibilities), `tasks` (lists, definitions, routines, absences) | adult |
+| Sources and rules | `calendars`, `weather`, `mail`, `orgs` | adult |
+| System | `system` (below), `devices` (pairing + dashboard layout editor, §4), `status` | adult |
+
+- **Members** (D-070): adults only, since other features rely on member details. Children see members on the dashboard's `members` strip, not in the app. A child sees only the Personal group.
+- **Settings, System** (D-075, D-074, D-072):
+  - **Runtime settings:** public address(es), ntfy URL and token, Google client ID and secret, plain-HTTP feeds, private hosts for feeds, the home-network dashboard listener (D-064), trusted proxies (D-069). Each field shows its source: editable when stored in the DB; **locked with "set by the server"** when an environment variable overrides it. Secrets are write-only ("set" / "not set", replace, clear). Fields that need a restart (listeners) say so after saving.
+  - **Connection:** a plain statement such as "This page is served over HTTP" or "HTTPS via Tailscale (`https://family.<tailnet>.ts.net`)". No warning styling.
+  - **Master key backup:** a warning card until an adult has confirmed a backup; it reopens the step-6 Copy/Download flow (needs a recent login or elevation).
+  - **Household file:** **Export** downloads TOML (no secrets). **Import** uploads TOML, shows a dry-run diff (created, changed, skipped, errors with positions), then applies on confirmation (D-018).
+
 ## 4. Dashboard (kiosk shell)
+The dashboard is **at-a-glance only** (D-068): date and time, weather with advisories, agenda, tasks, routines, and the household's members. **Nothing derived from email** appears on it: no inbox panel, no titles, senders or approvals, elevated or not. The one exception is a **pending-approvals count badge per adult** on the `members` strip (D-078), which the household setting `dashboard_pending_approvals` (default on) can turn off.
+
 ### 4.1 Layout model
 The layout is data held in `device.settings` and edited by adults in Settings → Devices. It is never edited on the dashboard itself (D-019).
 ```json
@@ -97,18 +147,25 @@ The layout is data held in `device.settings` and edited by adults in Settings �
   "panels": [ {"kind": "clock"}, {"kind": "weather", "hourly": true},
               {"kind": "advisories"}, {"kind": "agenda"}, {"kind": "week"}, {"kind": "members"} ] }
 ```
-- **Panels in M2:** `now` (the Now list, D-042, with optional `members` and `lists` filters), `member_tasks` (one column per member with their open tasks for today), and `routine` (D-041: shown automatically during a routine window, one column per member with large step buttons and a progress bar; `pinned: true` keeps it visible outside the window). `agenda` also shows key-date tasks (`always`), and `week` shows `until_done` and `always` task chips (D-046). Completing anything on the dashboard opens the member picker ("who did it?", preselecting the assignee) and needs no PIN while the override is on (D-013, D-019).
-- **Panel in M3:** `inbox` shows the pending count; when the device is elevated with an adult PIN (D-019), it lists the items with approve and reject.
-- **Panels in M1:** `clock` (time, date), `weather` (now, the next 12 h, and 5–7 days), `advisories` (coloured by severity, dismissable without a PIN), `agenda` (today plus the next N days, grouped by day, with member chips), `week` (a 7-day column grid), `members` (avatars, which is also the entry point for M2 per-member task views and the PIN step-up).
+- **Panels:**
+  - `clock` (time, date);
+  - `weather` (now, the next 12 h, and 5–7 days);
+  - `advisories` (coloured by severity). **Not dismissable** by anyone: an advisory disappears when its `valid_until` passes or when the server finds its rule no longer matches the forecast (D-068), arriving as SSE `advisory.updated`;
+  - `agenda` (today plus the next N days, grouped by day, with member chips and key-date tasks, D-046);
+  - `week` (a 7-day column grid, with `until_done` and `always` task chips);
+  - `members` (avatars and names of the household, D-070; the entry point for per-member task views and the PIN step-up; adults carry a count-only "to approve" badge when `dashboard_pending_approvals` is on, D-078);
+  - `now` (the Now list, D-042, with optional `members` and `lists` filters), `member_tasks` (one column per member with today's open tasks), `routine` (D-041: shown automatically during a routine window with large step buttons and a progress bar; `pinned: true` keeps it visible).
+- Completing anything on the dashboard opens the member picker ("who did it?", preselecting the assignee) and needs no PIN while the override is on (D-013, D-019). PIN elevation remains for adult actions on tasks (D-019); it is not used for approvals.
+- **Removed in v4:** the `inbox` panel (D-068). A layout that still names it is ignored like any unknown kind, so older saved layouts keep working.
 - **Presets** ("Family hub", "Calendar wall", "Minimal") fill `panels`. Unknown panel kinds are ignored, so an older client survives a newer layout.
-- **Landscape 1920×1080:** a 12-column grid. The left column (4) holds clock, weather, and advisories, and the right (8) holds agenda or week. **Portrait** stacks them. Type is sized for 2–3 m (base 28 px on the kiosk scale).
+- **Landscape 1920×1080:** a 12-column grid. The left column (4) holds clock, weather, and advisories, and the right (8) holds agenda or week. **Portrait** stacks them. Type is sized for 2–3 m (base 28 px on the kiosk scale, one kiosk font system).
 - The layout editor shows a live, scaled preview of the dashboard with the edited settings.
 
 ### 4.2 Data & resilience
-- **One fetch:** `GET /api/v1/dashboard?days=N` returns household (name, tz, units), members (public fields + avatar URL), events in the window (already masked), the latest weather, active advisories, and the device settings. Refreshes reuse it.
-- **M2 data:** `GET /api/v1/dashboard` gains `tasks[]` (open tasks visible now, plus calendar-displayed tasks in the window) and `routines[]` (today's runs with steps). SSE `tasks.updated` and `routines.updated` trigger a refetch of those parts.
-- **Live:** SSE kinds update the snapshot: `calendar.updated` (refetch when its range overlaps), `weather.updated`, `advisory.updated`, `device.updated`, `member.updated`, `household.updated`, and `resync` (full refetch).
-- **Offline:** the last snapshot is saved to localStorage (extending the M0 cache) with `savedAt`. While the stream is down, the dashboard shows the cache with a quiet "last updated hh:mm" badge. The service worker caches the app shell and avatar images.
+- **One fetch:** `GET /api/v1/dashboard?days=N` returns household (name, tz, units), members (public fields + avatar URL), events in the window (already masked), the latest weather, active advisories, `tasks[]` (open tasks visible now, plus calendar-displayed tasks in the window), `routines[]` (today's runs with steps), and the device settings. Refreshes reuse it. It carries no mail-derived data.
+- **Live:** SSE kinds update the snapshot: `calendar.updated` (refetch when its range overlaps), `weather.updated`, `advisory.updated`, `tasks.updated`, `routines.updated`, `device.updated`, `member.updated`, `household.updated`, and `resync` (full refetch).
+- **Offline:** the last snapshot is saved to localStorage with `savedAt`. While the stream is down, the dashboard shows the cache with a quiet "last updated hh:mm" badge. Where a service worker runs (secure contexts only, §1.1) it also caches the app shell and avatar images; over plain HTTP the snapshot is the offline story.
+- **Access paths:** the dashboard works on the main listener (HTTP or HTTPS, D-072) and on the optional restricted home-network listener (D-064); pairing shows a link and QR code for each available address.
 - **Day rollover:** at midnight in the household tz, the dashboard refetches. The nightly reload (D-011) stays as a backstop.
 - **Burn-in:** in dark theme the content shifts by a few pixels every 10 minutes. The M0 keep-alive is unchanged.
 
@@ -134,4 +191,8 @@ The layout is data held in `device.settings` and edited by adults in Settings �
   - the dashboard renders the agenda, weather, and advisory;
   - an SSE update appears without a reload;
   - a child login sees only permitted events;
-  - the settings flows for ICS and weather rules work.
+  - the settings flows for ICS and weather rules work;
+  - **first run** (M3.5): an empty database redirects every route to `/setup`; the wizard creates the household, owner, a child and confirms the key backup; `/setup` is then closed;
+  - the whole suite runs over plain HTTP from a non-localhost address (insecure context, §1.1);
+  - Settings, System shows env-set fields as locked; TOML import dry-run then apply;
+  - the dashboard has no advisory dismiss control and no inbox panel; a child sees no `/settings/members`.

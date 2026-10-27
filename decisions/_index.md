@@ -74,3 +74,16 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-063](D-063-mail-visibility.md) | Messages are visible to source owners, or all adults for household sources | accepted | Q-060 | arch/Ingest.md, arch/Domain.md |
 | [D-064](D-064-lan-dashboard.md) | Optional dashboard-only listener on the home network; everything else stays tailnet-only | accepted | (user instruction) | arch/Platform.md, arch/Frontend.md |
 | [D-065](D-065-simple-onboarding.md) | Simple onboarding: one compose file, optional Tailscale sidecar, optional HTTPS, first-run wizard | accepted |  | arch/Platform.md, arch/Frontend.md, arch/Overall.md, README.md, deploy/README.md |
+| [D-066](D-066-m35-shakedown-first.md) | M3.5 is onboarding plus a real-hardware shakedown, before M4 | accepted | Q-061 | arch/Overall.md, plan/M3.5.md, README.md |
+| [D-067](D-067-m4-minimal-slice.md) | M4 ships a minimal AI slice first; the registry and platform pieces move to M4.1 | accepted | Q-062 | arch/Overall.md, README.md |
+| [D-068](D-068-dashboard-at-a-glance.md) | The dashboard is at-a-glance only; advisories clear themselves and can't be dismissed | accepted | Q-063 | arch/Frontend.md, arch/Feeds.md, arch/Ingest.md, arch/Domain.md |
+| [D-069](D-069-trusted-proxies-explicit.md) | Trusted proxies: loopback by default, plus an explicit list that the compose file sets | accepted | Q-064 | arch/Platform.md |
+| [D-070](D-070-members-adult-settings.md) | Members are managed on an adult-only Settings screen; children see members on the dashboard | accepted | Q-065 | arch/Frontend.md, arch/Domain.md |
+| [D-071](D-071-interests-llm-only.md) | Member interests, hobbies and responsibilities feed LLM features only | accepted | Q-066 | arch/Domain.md, arch/Overall.md |
+| [D-072](D-072-http-full-app.md) | Plain HTTP serves the entire app; HTTPS is the hoster's choice | accepted | Q-067 | arch/Platform.md, arch/Frontend.md |
+| [D-073](D-073-open-first-run.md) | The first-run wizard is open to the first visitor | accepted | Q-068 | arch/Platform.md, arch/Frontend.md |
+| [D-074](D-074-generated-secrets.md) | Secrets are generated on first start; the wizard requires a master-key backup | accepted | Q-069 | arch/Platform.md, arch/Frontend.md |
+| [D-075](D-075-settings-in-ui.md) | Every non-infrastructure server setting is editable in Settings, System | accepted | Q-070 | arch/Platform.md, arch/Frontend.md |
+| [D-076](D-076-single-container.md) | One app container; no split layout | accepted | Q-071 | arch/Platform.md |
+| [D-077](D-077-ghcr-amd64.md) | Release images on GHCR, amd64 only for now | accepted | Q-072 | arch/Platform.md, README.md |
+| [D-078](D-078-private-approvals.md) | Approvals are private to the adults who may see the source mail; the dashboard shows only a count per adult | accepted | Q-063 | arch/Ingest.md, arch/Domain.md, arch/Frontend.md |

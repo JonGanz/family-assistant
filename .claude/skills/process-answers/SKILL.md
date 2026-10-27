@@ -20,4 +20,5 @@ Use the helpers in `tools/fa.py`: `answered`, `new_question`, `new_decision`, `r
 6. Append to `log/<today>.md`, and add a line for it to `log/_index.md` if the file is new.
 7. If one answer settles another open question, or a question was only partly answered, record both in a single decision and ask about the missing part in the next batch.
 8. Answers sometimes contain the user's own ideas or questions ("would it make sense to..."). Evaluate the idea honestly in a decision. If you adopt it, say why. If it changes an earlier decision, supersede that decision. Answer the question directly in the summary to the user.
-9. Self-learn: if this run uncovered a repeated pattern, update CLAUDE.md or this skill.
+9. When several arch docs are affected, re-derive them in parallel with one fork per doc (strict ownership: the md, its `arch/src/*.py` and `.drawio`; no indexes). Afterwards, grep all of `arch/` for terms that the decisions removed, then bring the open plan and `IMPROVEMENTS.md` in line with the decisions.
+10. Self-learn: if this run uncovered a repeated pattern, update CLAUDE.md or this skill.

@@ -2,14 +2,14 @@
 title: Domain Model
 scope: domain (all bounded contexts, persistence conventions)
 status: draft
-updated: 2026-10-25
+updated: 2026-10-26
 drawio: Domain.drawio
 drawio_src: src/Domain.py
-depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-037, D-038, D-039, D-040, D-041, D-044, D-045, D-046, D-050, D-051, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034, D-036, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063]
+depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-037, D-038, D-039, D-040, D-041, D-044, D-045, D-046, D-050, D-051, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034, D-036, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-068, D-070, D-071, D-078]
 milestone: M0
 ---
 
-# Domain Model (DRAFT v5)
+# Domain Model (DRAFT v5.1)
 
 This is the full UML class model, split into packages (bounded contexts). Each package below matches a page in `Domain.drawio`. The model covers every milestone, but **M0 only implements Identity and Audit**. The other packages appear in migrations when their milestone arrives. Items marked **[Q-0xx]** depend on an open question.
 
@@ -31,7 +31,7 @@ This is the full UML class model, split into packages (bounded contexts). Each p
 | Class | Key attributes | Notes |
 |---|---|---|
 | `Household` | name, tz, location{lat, lon, label}, meal_plan_horizon_weeks, dashboard_completion_override | One per install by default. The schema allows several (D-004) |
-| `Member` | display_name, role: `adult\|child`, avatar, color, birthdate?, grade?, aliases[] (M3), gender? `female\|male\|other` (M3, optional, used only for mail relevance, D-055), relevance_tags[] (M3, D-055), interests[], hobbies[], responsibilities[], pin_hash? (adults only) | The central entity. Has no login unless it has a `UserAccount` |
+| `Member` | display_name, role: `adult\|child`, avatar, color, birthdate?, grade?, aliases[] (M3), gender? `female\|male\|other` (M3, optional, used only for mail relevance, D-055), relevance_tags[] (M3, D-055), interests[], hobbies[], responsibilities[] (read only by LLM features from M4, never as rules inputs, D-071), pin_hash? (adults only) | The central entity. Has no login unless it has a `UserAccount`. **Only adults create or edit members** (D-070); children see the member list on the dashboard |
 | `UserAccount` | 0..1 per Member. username, password_hash (argon2id), disabled_at? | Adults set up and reset child accounts. Child passwords need 4+ characters, adults 12+ (D-031) |
 | `Session` | account, created/last_seen, user_agent, expires_at | Stored in Postgres. Rolls for 180 days for children and 30 days for adults. Adults can revoke child sessions (D-031) |
 | `Device` | kind: `dashboard`, name, token_hash, last_seen, revoked_at? | A shared kiosk identity, not a user (D-006) |
@@ -49,9 +49,13 @@ This is the full UML class model, split into packages (bounded contexts). Each p
 | Add a one-off task | own, on lists with `child_can_add = own` (D-045) | ✓ | on lists with `dashboard_add` | ✓ |
 | Manage lists, definitions, routines, absences; skip | ✗ | ✓ | ✗ | ✗ |
 | Add a grocery item | ✓ | ✓ | ✓ | ✓ |
-| Approve inbox items, mail actions | ✗ | ✓ | ✗ | ✓ |
+| Manage members (details, accounts, PINs) (D-070) | ✗ | ✓ | ✗ | ✗ |
+| See members (names, avatars, colours) | on the dashboard | ✓ | ✓ | ✓ |
+| Read the approval inbox; approve items; mail actions (D-068, D-078) | ✗ | items from sources they may see | ✗ (pending count per adult only) | ✗ (count only) |
 | Household and child settings, pipelines | ✗ | ✓ | ✗ | ✗ |
 | Another adult's personal settings and sources | ✗ | ✗ | ✗ | ✗ |
+
+Weather advisories have no dismiss action for anyone: they clear themselves (D-068, [Feeds.md](Feeds.md) §4). Devices never see email-derived data (D-068).
 
 ## Package: Organizations & Mail (M3)
 Table-level detail is in [Ingest.md](Ingest.md) §3.
@@ -134,7 +138,7 @@ Progress sources beyond manual entry, and the privacy of adults' goals, are sett
 |---|---|
 | `WeatherSnapshot` | fetched_at, provider, current jsonb, hourly jsonb, daily jsonb (always metric) |
 | `WeatherRule` | name, condition (a small DSL such as `min(temp_c, next 12h) <= 0`), action: `alert\|task`, task_definition?, status: `active\|suggested\|disabled`, suggested_by: `default\|s2` (D-017) |
-| `Advisory` | rule?, text, severity, valid_from/until, source: `rule\|s2`, dedupe_key, dismissed_at? |
+| `Advisory` | rule?, text, severity, valid_from/until, source: `rule\|s2`, dedupe_key. Not dismissable; removed when `valid_until` passes or its rule stops matching (D-068) |
 
 The rule DSL, default rules, and evaluation are in [Feeds.md](Feeds.md) §4. M1 also adds `Household{units, calendar_past_days, calendar_future_days, weather_retention_days, private_events_as_busy}`, `MemberAvatar`, and `Device.settings` (dashboard layout, [Frontend.md](Frontend.md) §4).
 

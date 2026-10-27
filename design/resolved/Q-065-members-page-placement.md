@@ -1,12 +1,12 @@
 ---
 id: Q-065
 title: Where does the Members page live, and what do children see there?
-status: open
+status: resolved
 batch: 17
 area: frontend
 created: 2026-10-26
-resolved:
-decisions: []
+resolved: 2026-10-26
+decisions: [D-070]
 ---
 
 # Q-065: Where does the Members page live, and what do children see there?

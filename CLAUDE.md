@@ -60,6 +60,7 @@ updated: 2026-10-23
 - **Never quote aggregate numbers (test counts and the like) without computing them from the output.**
 - Briefs must require `cargo fmt` and enough disk space. Check `df -h /` before launching build-heavy waves. Sub-agents build with `CARGO_INCREMENTAL=0`. Recover space by deleting `target/debug/incremental` and running `docker builder prune -f` (never prune volumes). Scripts that start throwaway containers must remove them with `docker rm -f -v`: without `-v`, every run leaks an anonymous Postgres volume. If `target/debug/deps` grows past about 15 GB, run `cargo clean` between waves.
 - When agents (forks included) work in parallel in one directory, any glob or bulk edit must name its own files explicitly. A `T-0*.md` loop once rewrote another fork's briefs.
+- When a milestone changes both `fa-domain` types and `fa-store`, give them to **one** task in the first wave: every other crate depends on both, and splitting them across waves breaks the build in between.
 - Cross-check briefs before launching: every column, table, or dependency a task needs must be owned and created by an earlier or same-wave task.
 - For every new column, the plan names what writes it (route, TOML key, UI) and its default must match the arch. Every time or date DTO field states its wire format (`"HH:MM"` local, RFC 3339, `YYYY-MM-DD`). M2 shipped a column nothing could set and a panel that parsed `"HH:MM"` with `Date.parse`.
 - ts-rs: `#[ts(type = "X | null")]` with a named type emits no import. Use `#[ts(as = "Option<X>", optional = nullable)]`.

@@ -13,7 +13,7 @@ There is one plan per milestone (`M<n>.md`). Its sub-agent task briefs are in `M
 | M1 Dashboard core | [M1.md](M1.md) | code-complete, awaiting human steps H-05 to H-07 | [M1/](M1/): T-01 to T-12, plus human steps H-05 to H-07 |
 | M2 Tasks | [M2.md](M2.md) | code-complete, awaiting human steps H-08, H-09 | [M2/](M2/): T-01 to T-14 (+ `_rules.md`), plus human steps H-08, H-09 |
 | M3 Ingest | [M3.md](M3.md) | code-complete, awaiting human steps H-10, H-11 | [M3/](M3/): T-01 to T-15 (+ `_rules.md`), plus human steps H-10, H-11 |
-| M3.5 Onboarding | [M3.5.md](M3.5.md) | planned, waiting on batch 18 (Q-067 to Q-072) and Q-064 | T-01 to T-09 (briefs after batch 18), plus human steps H-12 to H-14 |
+| M3.5 Onboarding and shakedown | [M3.5.md](M3.5.md) | planned; briefs written (6 waves); W0 process items and baseline run next | [M3.5/](M3.5/): T-01 to T-10 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)), plus human steps H-12 to H-14 and the shakedown |
 
 ## Reviews
 Time-boxed review sessions (CLAUDE.md workflow 7). Each file has findings tables with IDs, sizes and status.

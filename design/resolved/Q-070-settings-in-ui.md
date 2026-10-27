@@ -1,12 +1,12 @@
 ---
 id: Q-070
 title: Which server settings move from environment variables into the UI?
-status: open
+status: resolved
 batch: 18
 area: tech
 created: 2026-10-26
-resolved:
-decisions: []
+resolved: 2026-10-26
+decisions: [D-075]
 ---
 
 # Q-070: Which server settings move from environment variables into the UI?

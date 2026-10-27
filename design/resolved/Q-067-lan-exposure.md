@@ -1,12 +1,12 @@
 ---
 id: Q-067
 title: Without Tailscale, what is reachable on the home network over plain HTTP?
-status: open
+status: resolved
 batch: 18
 area: security
 created: 2026-10-26
-resolved:
-decisions: []
+resolved: 2026-10-26
+decisions: [D-072]
 ---
 
 # Q-067: Without Tailscale, what is reachable on the home network over plain HTTP?

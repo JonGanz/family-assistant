@@ -1,12 +1,12 @@
 ---
 id: Q-066
 title: What should use member interests, hobbies and responsibilities?
-status: open
+status: resolved
 batch: 17
 area: domain
 created: 2026-10-26
-resolved:
-decisions: []
+resolved: 2026-10-26
+decisions: [D-071]
 ---
 
 # Q-066: What should use member interests, hobbies and responsibilities?

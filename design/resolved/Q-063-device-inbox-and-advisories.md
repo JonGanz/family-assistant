@@ -1,12 +1,12 @@
 ---
 id: Q-063
 title: What may an unelevated dashboard device do: read the approval inbox, dismiss advisories?
-status: open
+status: resolved
 batch: 17
 area: security
 created: 2026-10-26
-resolved:
-decisions: []
+resolved: 2026-10-26
+decisions: [D-068, D-078]
 ---
 
 # Q-063: What may an unelevated dashboard device do: read the approval inbox, dismiss advisories?

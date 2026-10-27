@@ -1,12 +1,12 @@
 ---
 id: Q-064
 title: Which peers may set the client IP (X-Forwarded-For)?
-status: open
+status: resolved
 batch: 17
 area: security
 created: 2026-10-26
-resolved:
-decisions: []
+resolved: 2026-10-26
+decisions: [D-069]
 ---
 
 # Q-064: Which peers may set the client IP (X-Forwarded-For)?

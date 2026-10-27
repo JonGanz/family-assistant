@@ -1,12 +1,12 @@
 ---
 id: Q-072
 title: How do households get the app: a pulled image or a local build?
-status: open
+status: resolved
 batch: 18
 area: infra
 created: 2026-10-26
-resolved:
-decisions: []
+resolved: 2026-10-26
+decisions: [D-077]
 ---
 
 # Q-072: How do households get the app: a pulled image or a local build?

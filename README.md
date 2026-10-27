@@ -767,8 +767,9 @@ repository**. Examples use `example.com`.
 | M1 | Members, weather, calendar read (Google, CalDAV, ICS), real dashboard | ✅ code-complete ([plan](plan/M1.md)) |
 | M2 | Tasks and chores (rotation, pools), routines, the Now list, ntfy notifications | ✅ code-complete ([plan](plan/M2.md)) |
 | M3 | Email ingest (Gmail API or IMAP), rules pipeline, bills, school and teacher linking, event approvals | ✅ code-complete ([plan](plan/M3.md)) |
-| M3.5 | Onboarding: one compose file with an optional Tailscale sidecar, optional HTTPS, a first-run setup wizard (D-065) | planned ([plan](plan/M3.5.md)) |
-| M4 | AI: System One decision models, local LLM, GPU node wake, eval harness | |
+| M3.5 | Onboarding (one compose file, optional Tailscale sidecar, optional HTTPS, first-run wizard) and a real-hardware shakedown (D-065, D-066) | planned ([plan](plan/M3.5.md)) |
+| M4 | AI, minimal slice: one System One model and one local LLM behind the pipeline (D-067) | |
+| M4.1 | AI platform: backend registry, hardware probe, GPU node wake and gaming detection, eval harness | |
 | M5 | Recipes, meal plan, grocery list | |
 | M6 | Smart assignment, learned calendar routing | |
 | M7 | Goals with progress (count or quantity, weekly cadence) | |

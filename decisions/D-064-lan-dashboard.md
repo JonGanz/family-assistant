@@ -11,6 +11,8 @@ affects: [arch/Platform.md, arch/Frontend.md]
 
 > **Widened by [D-065](D-065-simple-onboarding.md) (2026-10-26):** the full app may be reachable on the home network over HTTP; this listener becomes an optional hardening mode (see Q-067).
 
+> **Context changed by [D-072](D-072-http-full-app.md) (2026-10-26):** the full app is on HTTP by default; this listener remains an opt-in restricted port.
+
 # D-064: Optional dashboard-only listener on the home network; everything else stays tailnet-only
 
 ## Context

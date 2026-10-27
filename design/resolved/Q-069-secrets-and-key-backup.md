@@ -1,12 +1,12 @@
 ---
 id: Q-069
 title: How are the master key and database password created, and how is the key backed up?
-status: open
+status: resolved
 batch: 18
 area: security
 created: 2026-10-26
-resolved:
-decisions: []
+resolved: 2026-10-26
+decisions: [D-074]
 ---
 
 # Q-069: How are the master key and database password created, and how is the key backed up?
