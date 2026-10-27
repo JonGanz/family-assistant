@@ -11,6 +11,8 @@ affects: [arch/Overall.md]
 
 > Extended by D-064 (2026-10-26): an optional dashboard-only listener on the home network for screens that cannot run Tailscale. Everything else stays tailnet-only.
 
+> **Amended by [D-065](D-065-simple-onboarding.md) (2026-10-26):** Tailscale becomes an optional compose sidecar and HTTPS optional; plain HTTP on the home network is the default.
+
 # D-010: Remote access via Tailscale; Android notifications via self-hosted ntfy
 
 ## Context

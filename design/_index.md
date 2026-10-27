@@ -37,6 +37,16 @@ decisions: []
 | [Q-065](Q-065-members-page-placement.md) | Where does the Members page live, and what do children see there? | frontend |
 | [Q-066](Q-066-interests-consumer.md) | What should use member interests, hobbies and responsibilities? | domain |
 
+## Batch 18, open
+| ID | Title | Area |
+|---|---|---|
+| [Q-067](Q-067-lan-exposure.md) | Without Tailscale, what is reachable on the home network over plain HTTP? | security |
+| [Q-068](Q-068-first-run-protection.md) | Who may run the first-run wizard? | security |
+| [Q-069](Q-069-secrets-and-key-backup.md) | How are the master key and database password created, and how is the key backed up? | security |
+| [Q-070](Q-070-settings-in-ui.md) | Which server settings move from environment variables into the UI? | tech |
+| [Q-071](Q-071-container-layout.md) | How many app containers does the default compose file run? | infra |
+| [Q-072](Q-072-image-distribution.md) | How do households get the app: a pulled image or a local build? | infra |
+
 ## Resolved
 | ID | Title | Decisions |
 |---|---|---|

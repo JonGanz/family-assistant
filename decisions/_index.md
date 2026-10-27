@@ -73,3 +73,4 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-062](D-062-labelling-defaults.md) | Labelling covers all four email decision points with a suggested balanced queue | accepted | Q-059 | arch/Ingest.md, arch/Frontend.md |
 | [D-063](D-063-mail-visibility.md) | Messages are visible to source owners, or all adults for household sources | accepted | Q-060 | arch/Ingest.md, arch/Domain.md |
 | [D-064](D-064-lan-dashboard.md) | Optional dashboard-only listener on the home network; everything else stays tailnet-only | accepted | (user instruction) | arch/Platform.md, arch/Frontend.md |
+| [D-065](D-065-simple-onboarding.md) | Simple onboarding: one compose file, optional Tailscale sidecar, optional HTTPS, first-run wizard | accepted |  | arch/Platform.md, arch/Frontend.md, arch/Overall.md, README.md, deploy/README.md |
