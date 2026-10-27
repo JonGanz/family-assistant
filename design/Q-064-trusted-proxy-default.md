@@ -24,4 +24,4 @@ Review finding C-04. `fa-api/src/extract.rs` trusts `X-Forwarded-For` from loopb
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

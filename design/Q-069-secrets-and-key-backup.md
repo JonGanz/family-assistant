@@ -24,4 +24,4 @@ Today the hoster makes `secrets/fa_master_key` with `head -c 32 /dev/urandom`, s
 
 ## Answer
 <!-- answer below this line -->
-
+A.

@@ -24,4 +24,4 @@ D-065 makes HTTPS optional. Today only the dashboard-only listener (D-064) is on
 
 ## Answer
 <!-- answer below this line -->
-
+It's self-hosted. If a user wishes to skip HTTPS, that is their choice. The entire app should remain avialable.

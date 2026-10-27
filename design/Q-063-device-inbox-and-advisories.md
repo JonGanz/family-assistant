@@ -24,4 +24,4 @@ Review findings C-08 and C-09. In `fa-domain/src/authz.rs`, `ReadInbox` is allow
 
 ## Answer
 <!-- answer below this line -->
-
+Weather advisories should not be dismissable. They should be removed when they are not relevant anymore. The emails shouldn't be shown on the dashboard; preserve that for at-a-glance material: date, time, weather, agenda, tasks, and routines.

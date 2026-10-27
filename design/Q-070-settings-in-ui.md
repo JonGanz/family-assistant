@@ -24,4 +24,4 @@ D-065 removes the TOML file and admin commands from setup, but about 20 `FA_*` v
 
 ## Answer
 <!-- answer below this line -->
-
+Definitely option A.

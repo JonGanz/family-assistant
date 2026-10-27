@@ -23,4 +23,4 @@ Today the compose file runs `api` and `worker` from the same image, plus postgre
 
 ## Answer
 <!-- answer below this line -->
-
+Option A seems "on brand", but honestly a single container is sufficient. The application scale is limited by it's nature.

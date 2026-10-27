@@ -24,4 +24,4 @@ Review finding U-08. `/members` is a top-level page for every signed-in user, bu
 
 ## Answer
 <!-- answer below this line -->
-
+Member management should definitely be an Adult-only settings screen, we don't need redirect routes to it. Children can see the list on the dashboard, as that is obviously where the entire group views shared information. Since elements of the application will use the details of the members, they adults are the only ones who can edit it.

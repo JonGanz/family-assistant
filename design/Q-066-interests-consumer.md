@@ -24,4 +24,4 @@ PROJECT.md says members' interests, hobbies and responsibilities "help guide the
 
 ## Answer
 <!-- answer below this line -->
-
+They would be used strictly by the LLM features to drive automations.

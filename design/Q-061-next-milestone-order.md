@@ -24,4 +24,4 @@ The 2026-10-26 review ([plan/reviews/2026-10-26-repo-review.md](../plan/reviews/
 
 ## Answer
 <!-- answer below this line -->
-
+A.

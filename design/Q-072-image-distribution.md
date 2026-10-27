@@ -24,4 +24,4 @@ Today the guide clones the repository and builds the image on the server (`docke
 
 ## Answer
 <!-- answer below this line -->
-
+Option A, but only amd64 at this point in time.

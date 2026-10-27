@@ -24,4 +24,4 @@ The wizard appears when no household exists, and creates the first adult (who ca
 
 ## Answer
 <!-- answer below this line -->
-
+Option C, this is a self-hosted application.
