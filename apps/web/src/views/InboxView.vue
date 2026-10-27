@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Tabs from '../components/Tabs.vue'
 import PageHeader from '../components/PageHeader.vue'
 import StateBlock from '../components/StateBlock.vue'
 import { computed, onMounted, ref } from 'vue'
@@ -24,6 +25,9 @@ const TABS: { kind: InboxKind; label: string }[] = [
   { kind: 'contact', label: 'Contacts' },
 ]
 const tab = ref<InboxKind>('event')
+const tabItems = computed(() =>
+  TABS.map((t) => ({ key: t.kind, label: `${t.label} (${inbox.counts[t.kind]})` })),
+)
 const shown = computed(() => inbox.items.filter((i) => i.kind === tab.value))
 
 onMounted(() => {
@@ -37,21 +41,9 @@ const approve = (kind: InboxKind, id: string, edits: Approval) => inbox.approve(
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader title="Inbox" />
-    <div role="tablist" class="tabs">
-      <button
-        v-for="t in TABS"
-        :key="t.kind"
-        type="button"
-        role="tab"
-        :aria-selected="tab === t.kind"
-        :class="{ on: tab === t.kind }"
-        @click="tab = t.kind"
-      >
-        {{ t.label }} ({{ inbox.counts[t.kind] }})
-      </button>
-    </div>
+    <Tabs v-model="tab" :tabs="tabItems" label="Inbox" />
     <StateBlock
       :loading="!inbox.loaded && !inbox.error"
       :error="inbox.error"

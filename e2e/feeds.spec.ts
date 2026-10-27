@@ -47,9 +47,15 @@ function ny(instant: string) {
   return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}`;
 }
 
-/** The fixture date N days from today, as the fixture server renders it (UTC date). */
-const fixtureDay = (n: number) =>
-  new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+/** The fixture date N days from today, as the fixture server renders it (America/New_York date). */
+const fixtureDay = (n: number) => {
+  // Calendar-day arithmetic: adding n * 24 h is a day off across a DST change.
+  const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York" })
+    .format(new Date())
+    .split("-")
+    .map(Number);
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10);
+};
 
 async function login(pw: Playwright, user: string, password: string) {
   const ctx = await pw.request.newContext({

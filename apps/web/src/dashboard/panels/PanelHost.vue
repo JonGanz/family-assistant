@@ -4,7 +4,6 @@ import type { PanelProps } from '../types'
 import AdvisoriesPanel from './AdvisoriesPanel.vue'
 import AgendaPanel from './AgendaPanel.vue'
 import ClockPanel from './ClockPanel.vue'
-import InboxPanel from './InboxPanel.vue'
 import MemberTasksPanel from './MemberTasksPanel.vue'
 import MembersPanel from './MembersPanel.vue'
 import NowPanel from './NowPanel.vue'
@@ -14,7 +13,6 @@ import WeekPanel from './WeekPanel.vue'
 
 const props = defineProps<PanelProps>()
 defineEmits<{
-  dismiss: [id: string]
   pick: [id: string]
   complete: [id: string]
   tick: [run: string, step: string, done: boolean]
@@ -31,7 +29,6 @@ const REGISTRY: Record<string, Component> = {
   now: NowPanel,
   member_tasks: MemberTasksPanel,
   routine: RoutinePanel,
-  inbox: InboxPanel,
 }
 /** Unknown kinds resolve to nothing, so an older client survives a newer layout. */
 const comp = computed(() => REGISTRY[props.panel.kind] ?? null)
@@ -42,7 +39,6 @@ const comp = computed(() => REGISTRY[props.panel.kind] ?? null)
     :is="comp"
     v-if="comp"
     v-bind="props"
-    @dismiss="(id: string) => $emit('dismiss', id)"
     @pick="(id: string) => $emit('pick', id)"
     @complete="(id: string) => $emit('complete', id)"
     @tick="(r: string, st: string, d: boolean) => $emit('tick', r, st, d)"

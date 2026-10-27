@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use fa_domain::{HouseholdId, MemberId, Notification, NotificationId, NotifyTrigger};
+use fa_domain::{HouseholdId, MailSourceId, MemberId, Notification, NotificationId, NotifyTrigger};
 use sqlx::PgConnection;
 use uuid::Uuid;
 
@@ -133,6 +133,47 @@ impl NotificationRepo {
         .bind(body)
         .bind(click_path)
         .bind(key_prefix)
+        .execute(conn)
+        .await?
+        .rows_affected())
+    }
+
+    /// Like `insert_for_adults`, limited to the adults who may read the mail source: its owners,
+    /// or every adult for a `household` source. `None` or an archived source reaches every adult (D-078).
+    #[allow(clippy::too_many_arguments)]
+    pub async fn insert_for_source_adults(
+        conn: &mut PgConnection,
+        source: Option<MailSourceId>,
+        trigger: NotifyTrigger,
+        subject_type: &str,
+        subject_id: Option<Uuid>,
+        title: &str,
+        body: &str,
+        click_path: Option<&str>,
+        key_prefix: &str,
+    ) -> Result<u64> {
+        Ok(sqlx::query(
+            "INSERT INTO notification (id, household_id, member_id, trigger, subject_type, subject_id,
+                                       title, body, click_path, priority, dedupe_key)
+             SELECT gen_random_uuid(), m.household_id, m.id, $1, $2, $3, $4, $5, $6, 3,
+                    $7 || ':' || m.id::text
+             FROM member m
+             LEFT JOIN mail_source s ON s.id = $8
+             WHERE m.role = 'adult' AND m.archived_at IS NULL AND m.household_id = app_household()
+               AND ($8::uuid IS NULL OR s.id IS NULL OR s.archived_at IS NOT NULL
+                    OR s.visibility = 'household'
+                    OR EXISTS (SELECT 1 FROM mail_source_owner o
+                                WHERE o.source_id = s.id AND o.member_id = m.id))
+             ON CONFLICT (household_id, dedupe_key) DO NOTHING",
+        )
+        .bind(enum_str(&trigger))
+        .bind(subject_type)
+        .bind(subject_id)
+        .bind(title)
+        .bind(body)
+        .bind(click_path)
+        .bind(key_prefix)
+        .bind(source.map(|s| s.as_uuid()))
         .execute(conn)
         .await?
         .rows_affected())

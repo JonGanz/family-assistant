@@ -494,6 +494,7 @@ pub async fn skip_task(
     ApiPath(id): ApiPath<TaskId>,
 ) -> ApiResult<Json<TaskView>> {
     require_manage(&auth.actor)?;
+    crate::mail::ensure_mail_task_scope(&s, &auth.actor, id).await?;
     let view = s
         .services
         .tasks
@@ -514,6 +515,7 @@ pub async fn accept_task(
     ApiPath(id): ApiPath<TaskId>,
 ) -> ApiResult<Json<TaskView>> {
     require_manage(&auth.actor)?;
+    crate::mail::ensure_mail_task_scope(&s, &auth.actor, id).await?;
     Ok(Json(
         s.services.tasks.accept(household(&auth.actor)?, id).await?,
     ))

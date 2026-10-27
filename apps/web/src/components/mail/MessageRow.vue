@@ -20,7 +20,7 @@ const people = computed(() =>
   <RouterLink class="row" :to="{ name: 'mail-detail', params: { id: msg.id } }">
     <div class="top">
       <strong class="from">{{ msg.from_name || msg.from_addr }}</strong>
-      <time class="settings-note" :datetime="msg.received_at">{{ fmt(msg.received_at, tz) }}</time>
+      <time class="muted" :datetime="msg.received_at">{{ fmt(msg.received_at, tz) }}</time>
     </div>
     <div class="subject">{{ msg.subject }}</div>
     <div class="meta">
@@ -29,7 +29,7 @@ const people = computed(() =>
       <span v-for="p in people" :key="p" class="badge">{{ p }}</span>
       <span v-if="msg.time_sensitive" class="badge needs_reauth">Time-sensitive</span>
       <span v-if="msg.is_bill" class="badge">Bill</span>
-      <span v-if="msg.has_attachments" class="settings-note">Attachment</span>
+      <span v-if="msg.has_attachments" class="muted">Attachment</span>
     </div>
   </RouterLink>
 </template>

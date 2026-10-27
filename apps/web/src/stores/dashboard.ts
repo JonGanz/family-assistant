@@ -272,20 +272,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }, ms)
   }
 
-  async function dismiss(id: string): Promise<void> {
-    if (snapshot.value) {
-      snapshot.value = {
-        ...snapshot.value,
-        advisories: snapshot.value.advisories.filter((a) => a.id !== id),
-      }
-    }
-    try {
-      await api.dismissAdvisory(id, true)
-    } finally {
-      await refresh()
-    }
-  }
-
   async function start(onHeartbeat?: () => void): Promise<void> {
     stop()
     applyCache()
@@ -327,7 +313,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     showStaleBadge,
     refresh,
     handleEvent,
-    dismiss,
     complete,
     reopen,
     tickStep,

@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM advisory WHERE source = 'rule' AND NOT (dedupe_key = ANY($1))",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "TextArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "21f7c60c5ac9979c30ac97a5e1e9806a608078b5194968eeba76b73884d14977"
+}

@@ -1,6 +1,6 @@
 // Delivers fictional mail to a (GreenMail) SMTP server. No dependencies, Node 22.18+ (type stripping).
 // Library for the specs and the CLI `node e2e/send-mail.mjs` (see there).
-// Fixtures are e2e/fixtures/mail/<name>.eml; {{d+N}} becomes the UTC date N days from today
+// Fixtures are e2e/fixtures/mail/<name>.eml; {{d+N}} becomes the household-local (America/New_York) date N days from today
 // (YYYYMMDD) and {{long+N}} the same day as "Month D, YYYY".
 import { readFile } from "node:fs/promises";
 import { connect } from "node:net";
@@ -23,18 +23,29 @@ const MONTHS = [
   "December",
 ];
 
-function day(n: number): Date {
-  return new Date(Date.now() + n * 86_400_000);
+const TZ = "America/New_York";
+
+// [year, month 1-12, day] of the household-local date n days from today.
+function day(n: number): [number, number, number] {
+  // Calendar-day arithmetic: n * 24 h is a day off across a DST change.
+  const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: TZ })
+    .format(new Date())
+    .split("-")
+    .map(Number);
+  const t = new Date(Date.UTC(y, m - 1, d + n));
+  return [t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate()];
 }
 
 export function expand(text: string): string {
   return text
     .replace(/\{\{d([+-]\d+)\}\}/g, (_: string, n: string) =>
-      day(Number(n)).toISOString().slice(0, 10).replaceAll("-", ""),
+      day(Number(n))
+        .map((v, i) => String(v).padStart(i === 0 ? 4 : 2, "0"))
+        .join(""),
     )
     .replace(/\{\{long([+-]\d+)\}\}/g, (_: string, n: string) => {
-      const d = day(Number(n));
-      return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}, ${d.getUTCFullYear()}`;
+      const [y, m, d] = day(Number(n));
+      return `${MONTHS[m - 1]} ${d}, ${y}`;
     });
 }
 

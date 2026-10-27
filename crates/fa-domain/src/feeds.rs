@@ -128,8 +128,6 @@ pub struct Advisory {
     pub valid_until: DateTime<Utc>,
     pub source: AdvisorySource,
     pub dedupe_key: String,
-    pub dismissed_at: Option<DateTime<Utc>>,
-    pub dismissed_by: Option<MemberId>,
 }
 
 /// Avatar metadata (the bytes are fetched separately).

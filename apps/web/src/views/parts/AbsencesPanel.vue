@@ -3,7 +3,6 @@ import { onMounted, reactive, ref } from 'vue'
 import { useAwayStore } from '../../stores/away'
 import { useMembersStore } from '../../stores/members'
 import { describeError } from '../shared'
-import './settings.css'
 
 const away = useAwayStore()
 const members = useMembersStore()
@@ -46,20 +45,20 @@ async function remove(member: string, id: string) {
 
 <template>
   <div>
-    <p class="settings-note">
+    <p class="muted">
       While someone is away they are skipped when tasks are handed out for those days.
     </p>
-    <p v-if="away.error" class="settings-error" role="alert">{{ away.error }}</p>
-    <ul class="settings-list">
+    <p v-if="away.error" class="text-danger" role="alert">{{ away.error }}</p>
+    <ul class="card-list">
       <template v-for="m in members.items" :key="m.id">
         <li v-for="a in away.byMember[m.id] ?? []" :key="a.id">
           <strong>{{ nameOf(a.member) }}</strong> {{ a.from }} to {{ a.until }}
-          <span v-if="a.note" class="settings-note"> · {{ a.note }}</span>
+          <span v-if="a.note" class="muted"> · {{ a.note }}</span>
           <button type="button" @click="remove(a.member, a.id)">Remove</button>
         </li>
       </template>
     </ul>
-    <form class="settings-form" @submit.prevent="add">
+    <form class="form" @submit.prevent="add">
       <label>
         Who
         <select v-model="form.member" name="member" required>
@@ -71,7 +70,7 @@ async function remove(member: string, id: string) {
         >Until (last day) <input v-model="form.until" name="until" type="date" required
       /></label>
       <label>Note <input v-model="form.note" name="note" /></label>
-      <p v-if="error" class="settings-error" role="alert">{{ error }}</p>
+      <p v-if="error" class="text-danger" role="alert">{{ error }}</p>
       <button type="submit">Add absence</button>
     </form>
   </div>

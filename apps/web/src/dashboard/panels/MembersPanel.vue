@@ -2,12 +2,14 @@
 import { computed, ref, watch } from 'vue'
 import Avatar from '../../components/Avatar.vue'
 import { avatarSrc } from '../avatars'
-import { visibleMembers } from '../filter'
+import { approvalCounts, visibleMembers } from '../filter'
+import { S } from '../strings'
 import type { PanelProps } from '../types'
 
 const props = defineProps<PanelProps>()
 defineEmits<{ pick: [id: string] }>()
 const members = computed(() => visibleMembers(props.data, props.settings))
+const counts = computed(() => approvalCounts(props.data))
 const srcs = ref<Record<string, string | null>>({})
 watch(
   members,
@@ -32,6 +34,13 @@ watch(
             size="2.2em"
           />
           <span>{{ m.display_name }}</span>
+          <span
+            v-if="counts[m.id]"
+            class="approvals"
+            :data-testid="`approvals-${m.id}`"
+            :aria-label="S.approvalsWaiting(counts[m.id]!)"
+            >{{ counts[m.id] }}</span
+          >
         </button>
       </li>
     </ul>
@@ -46,6 +55,15 @@ ul {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-3);
+}
+.approvals {
+  min-width: 1.6em;
+  padding: 0 var(--space-2);
+  border-radius: 999px;
+  background: var(--color-accent);
+  color: var(--color-bg, #fff);
+  font-size: var(--font-size-sm);
+  text-align: center;
 }
 button {
   display: grid;

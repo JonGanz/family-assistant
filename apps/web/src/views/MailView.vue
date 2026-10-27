@@ -28,7 +28,7 @@ watch(
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader title="Mail">
       <template #actions><RouterLink to="/mail/label">Label mail</RouterLink></template>
     </PageHeader>

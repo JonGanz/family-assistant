@@ -66,7 +66,7 @@ const p = computed(() => progress(props.done, props.total))
   height: 1.4rem;
 }
 .kiosk .count {
-  font-size: var(--kiosk-font-small, 1.5rem);
+  font-size: var(--kiosk-font-small);
 }
 @media (prefers-reduced-motion: reduce) {
   .fill {

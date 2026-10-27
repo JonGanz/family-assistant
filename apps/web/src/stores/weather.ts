@@ -34,11 +34,6 @@ export const useWeatherStore = defineStore('weather', () => {
     loaded.value = true
   }
 
-  async function dismiss(id: string): Promise<void> {
-    await api.dismissAdvisory(id)
-    advisories.value = advisories.value.filter((a) => a.id !== id)
-  }
-
   async function invalidate(kind: LiveEventKind): Promise<void> {
     if (!loaded.value) return
     if (kind === 'resync') await load()
@@ -46,7 +41,7 @@ export const useWeatherStore = defineStore('weather', () => {
     if (kind === 'advisory.updated') await loadAdvisories()
   }
 
-  return { latest, advisories, error, loaded, load, dismiss, invalidate }
+  return { latest, advisories, error, loaded, load, invalidate }
 })
 
 /** Open-Meteo columnar block: `time[]` plus one array per field (metric). */

@@ -4,7 +4,6 @@ import StateBlock from '../components/StateBlock.vue'
 import { onMounted, watch } from 'vue'
 import { fmtDay } from '../components/mail/format'
 import { formatMoney, useBillsStore, type BillFilter } from '../stores/bills'
-import './parts/settings.css'
 
 const bills = useBillsStore()
 const FILTERS: { v: BillFilter; label: string }[] = [
@@ -22,7 +21,7 @@ watch(
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader title="Bills">
       <template #actions>
         <label class="field-inline">

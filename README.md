@@ -7,7 +7,7 @@ on a wall dashboard and on everyone's phone.
 Everything runs locally. Deterministic rules do most of the work, and local AI models help only
 where rules can't decide.
 
-> **Status:** M3 (mail ingest) is code-complete. On top of the M0 platform (login, members, dashboard
+> **Status:** M3.5 (onboarding) is code-complete: one compose file, a first-run wizard and optional Tailscale and HTTPS. M3 (mail ingest) is code-complete. On top of the M0 platform (login, members, dashboard
 > device pairing with PIN elevation, the job queue, backups, CI), M1 (calendars: Google, CalDAV,
 > ICS; the weather forecast with rule-based advisories; a real dashboard) and M2 (task lists,
 > recurring chores, routines, the "Now" list, weather tasks, ntfy push notifications) it reads
@@ -75,7 +75,10 @@ cargo run -p fa-server -- user add --member alex --username alex@example.com    
 cargo run -p fa-server -- user add --member riley --username riley@example.com  # a child (4+ chars)
 cargo run -p fa-server -- pin set --member alex                                  # 4-6 digit PIN for dashboard approvals
 ```
-The import also adds the 8 default weather rules and a disabled example calendar source.
+The import also adds the 8 default weather rules and a disabled example calendar source, and, because it
+creates the household, it marks the first-run setup complete, so the browser shows the login page and not the
+wizard. (To try the wizard instead, start with an empty database and skip this step.) `.env.dev` sets
+`FA_ALLOW_PRIVATE_HOSTS=true` so the local stubs below are reachable.
 Forgotten a password? `cargo run -p fa-server -- user reset-password --username alex@example.com`.
 
 ### 4. Get a weather forecast
@@ -212,7 +215,7 @@ Events of a calendar with no members are shown for the whole household.
 
 | Kind | How | Notes |
 |---|---|---|
-| **Google (OAuth)** | **Connect a Google account**, then pick the calendars | Needs a Google OAuth client set up once: [`deploy/README.md`, Google sign-in](deploy/README.md#74-google-sign-in-optional). Hidden in the UI until `FA_GOOGLE_CLIENT_ID` is set. While the Google consent screen is in *Testing* mode the refresh token expires after **7 days** and you must reconnect |
+| **Google (OAuth)** | **Connect a Google account**, then pick the calendars | Needs a Google OAuth client set up once: [`deploy/README.md`, Google sign-in](deploy/README.md#44-google-sign-in-optional). Hidden in the UI until a Google client ID is set (Settings, System, or `FA_GOOGLE_CLIENT_ID`). While the Google consent screen is in *Testing* mode the refresh token expires after **7 days** and you must reconnect |
 | **Google secret iCal address** | Add it as an **ICS link** | An alternative that needs no OAuth and no 7-day re-consent: in Google Calendar, Settings for the calendar, *Secret address in iCal format*. Google refreshes these slowly |
 | **CalDAV** | **CalDAV**, server URL, username and password | Discovers the calendars of the account (Radicale, Nextcloud, iCloud and others). A LAN server over plain `http` needs `FA_ALLOW_HTTP_FEEDS=true` |
 | **ICS link** | **ICS link**, then the URL | Any `.ics` URL (school calendars, sports clubs, public holidays) |
@@ -340,7 +343,7 @@ Messages for one member that are at least a minute old are grouped, so a burst o
 arrives as "3 updates" with the titles listed. A failed send is retried with growing delays (five
 attempts). **Children's copies**: set a child's *copy to* to an adult and that adult receives every
 notification of the child, prefixed with the child's name, subject to the adult's own triggers and
-quiet hours. Tapping a notification opens the app (the link uses `FA_PUBLIC_BASE_URL`).
+quiet hours. Tapping a notification opens the app (the link uses the public address, **Settings, System**).
 
 ### Household TOML
 All of this can be written in the household TOML (`fa-server config import`), which checks every
@@ -422,7 +425,7 @@ provider, an app password). Each source has owners, a visibility (*owners* or th
 *household*), the number of days of history to read first (30), an optional Gmail search filter, a
 poll interval (5 minutes) and a **read only** switch (on by default). Setup, including the Google
 scopes and the 7-day re-consent while Google's consent screen is in *Testing* mode, is in
-[`deploy/README.md`, Mail](deploy/README.md#73-mail). Sources sync incrementally (Gmail history, IMAP
+[`deploy/README.md`, Mail](deploy/README.md#43-mail). Sources sync incrementally (Gmail history, IMAP
 UIDs), and **Sync now** forces a pass. IMAP passwords and Google tokens are stored encrypted and
 never exported.
 
@@ -430,7 +433,7 @@ never exported.
 The app stores each message's metadata and, depending on **Settings, Household, Mail and
 approvals**, its text (keep it all, keep it for labelling examples only, or purge it after
 processing). Adults see the messages of the sources they own, or of *household* sources.
-**Children and dashboards never list or read mail**; a dashboard only shows the inbox counts.
+**Children and dashboards never list or read mail**; a dashboard shows at most how many items wait for each adult's approval (a household switch), never what they are.
 Message text is never written to the logs.
 
 ### Categories and how mail is sorted
@@ -471,8 +474,9 @@ mail only adds provenance. A cancellation withdraws a pending proposal, or propo
 event it wrote. Proposals that are not decided expire (events when they start; tasks and
 contacts after 14 days). Adults get an **approval needed** notification, sent immediately, batched
 (the default) or only in the morning digest, or switched off, per member under **Settings,
-Notifications**. The wall **dashboard** has an `inbox` panel (add it in the layout editor) with the
-counts; after PIN elevation it can approve or reject items. **Settings, Household, Mail and
+Notifications**. Approvals happen only in the app's **Inbox**, and each adult sees only the items from sources they may
+see. The wall **dashboard** has no inbox panel, only an optional per-adult pending count (**Settings,
+Household**). **Settings, Household, Mail and
 approvals** holds the thresholds, the expiry days and an automatic-write switch for
 high-confidence events (off by default).
 
@@ -586,55 +590,76 @@ confidence = 0.9
 ## The dashboard layout
 Each paired device has its own layout: **Settings, Devices, Edit layout** lets you pick a preset,
 orientation, theme, agenda length, and add, remove and reorder panels (clock, weather, advisories,
-agenda, week, members, now, member tasks, routine, inbox), with a live preview of the device. The layout is stored on the server, so
+agenda, week, members, now, member tasks, routine), with a live preview of the device. The layout is stored on the server, so
 the screen picks it up on its next refresh.
 
 ## Configuration reference
-Settings come from environment variables (`FA_*` and `DATABASE_URL`). Local defaults are in
-[`.env.dev`](.env.dev); the deployment sample is [`deploy/.env.example`](deploy/.env.example).
+Settings come from environment variables (`FA_*` and `DATABASE_URL`), and an optional `fa.toml`
+(path in `FA_CONFIG`; a key set there counts as an environment value). Local defaults are in
+[`.env.dev`](.env.dev); the deployment's compose variables are in [`deploy/.env.example`](deploy/.env.example)
+(all optional).
 
+### Process settings (environment only)
 | Variable | Default | Meaning |
 |---|---|---|
 | `DATABASE_URL` | none | Postgres URL |
-| `FA_MASTER_KEY_PATH` | `/run/secrets/fa_master_key` | 32-byte key file; encrypts stored secrets |
-| `FA_BIND_ADDR` | `127.0.0.1:8080` | API listen address (the port the app is served on) |
-| `FA_PUBLIC_BASE_URL` | none | URL users reach (cookies, pairing links, the links in notifications) |
-| `FA_COOKIE_SECURE` | `true` | `false` only for plain-http local use |
+| `FA_DATABASE_PASSWORD_FILE` | unset | File holding the DB password, inserted into `DATABASE_URL` (which then has a user name and no password). The compose file uses it |
+| `FA_MASTER_KEY_PATH` | `/run/secrets/fa_master_key` | 32-byte key file; encrypts stored secrets. The compose file points it at `/run/fa-secrets/master_key`, made by `fa-server init` |
+| `FA_BIND_ADDR` | `127.0.0.1:8080` | API listen address (compose: `0.0.0.0:8080`) |
+| `FA_COOKIE_SECURE` | `auto` | `auto` marks the session cookie `Secure` when the request came over TLS, or over a trusted proxy with `X-Forwarded-Proto: https`; `true` or `false` force it. HSTS is never sent |
 | `FA_WEB_DIST_DIR` | `/srv/web` | The built web app |
-| `FA_PUBLIC_URL` | `FA_PUBLIC_BASE_URL` | Base of the Google OAuth redirect (`/api/v1/oauth/google/callback`); https |
-| `FA_GOOGLE_CLIENT_ID`, `FA_GOOGLE_CLIENT_SECRET` | unset | Google OAuth client; unset hides Google in the UI |
+| `FA_BACKUP_DIR` | unset | Read-only view of the backups, for the app's own checks |
+| `FA_LAN_DASHBOARD_BIND` | `0.0.0.0:8081` | Where the home-network dashboard listener binds (inside the container) once the setting below is on |
+| `FA_PUBLIC_URL` | `tailnet_base_url`, else the effective public address | Base of the Google OAuth redirect (`/api/v1/oauth/google/callback`) and of links produced without a request; Google needs `https` |
 | `FA_OPEN_METEO_URL` | `https://api.open-meteo.com` | Weather provider (point it at a stub or your own instance) |
-| `FA_ALLOW_HTTP_FEEDS` | `false` | Allow plain `http` feeds (LAN CalDAV, local fixtures) |
-| `FA_NTFY_URL` | unset | ntfy server that notifications are published to (`http` or `https`; plain `http` is allowed and independent of `FA_ALLOW_HTTP_FEEDS`). Unset (or empty) turns notifications off, and the UI says so. The worker sends every minute |
-| `FA_NTFY_TOKEN` | unset | Optional bearer token (a secret) for an ntfy server with access control. Never logged |
 | `FA_GOOGLE_API_BASE` | `https://www.googleapis.com` | Base URL of the Gmail and Google Calendar calls. For stubs and tests, not for production |
 | `FA_ALLOW_PLAIN_IMAP` | `false` | Allow IMAP without TLS. **Tests, e2e and the local GreenMail only**; the compose file does not pass it through |
 | `FA_IMAP_TLS_INSECURE` | `false` | Accept self-signed IMAPS certificates. **The GreenMail tests only** |
-| `FA_TRUSTED_PROXIES` | `127.0.0.0/8,::1/128,172.16.0.0/12` | Comma-separated CIDRs whose `X-Forwarded-For` is trusted for the client IP (login rate limiting); empty trusts none. The default fits `tailscale serve` on the host |
-| `FA_LAN_DASHBOARD_URL` | unset | The dashboard's address on the home network, such as `http://192.168.1.10:8081`. Setting it turns on a **dashboard-only listener** for screens that can't run Tailscale (D-064): device tokens only, only the dashboard's own API calls, no cookies. Pairing then also returns this link |
-| `FA_LAN_DASHBOARD_BIND` | `0.0.0.0:8081` | Where that listener binds (inside the container; compose publishes it on `FA_LAN_DASHBOARD_HOST_IP`) |
-| `FA_LAN_ALLOWED_CIDRS` | private and loopback ranges | Comma-separated CIDRs allowed to use that listener, by peer address (`X-Forwarded-For` is ignored there) |
-| `FA_LAN_ALLOW_PIN` | `false` | Allow PIN elevation on that listener. It is plain HTTP, so a PIN would cross the LAN unencrypted |
-| `FA_LOG_LEVEL`, `FA_LOG_FORMAT` | `info`, `pretty` | `trace` to `error`; `pretty` or `json` |
+| `FA_SECRETS_DIR` | `/run/fa-secrets` | Where `fa-server init` writes the master key and database password |
+| `FA_LOG_LEVEL`, `FA_LOG_FORMAT` | `info`, `pretty` (compose: `json`) | `trace` to `error`; `pretty` or `json` |
 
-The deployment's `deploy/.env` also sets values for the compose file itself: `COMPOSE_FILE`,
-`COMPOSE_PROJECT_NAME`, `POSTGRES_*`, `FA_MASTER_KEY_FILE`, `BACKUP_DIR`, `FA_IMAGE_OWNER`,
-`FA_VERSION`, `NTFY_BASE_URL`, `NTFY_UPSTREAM_BASE_URL`, `FA_HOST_API_PORT`, `FA_HOST_NTFY_PORT`,
-`FA_LAN_DASHBOARD_HOST_IP`, `FA_LAN_DASHBOARD_PORT` and `OLLAMA_BIND`. They are described in [`deploy/.env.example`](deploy/.env.example).
+### Settings you can also change in the app (Settings, System)
+Precedence, highest first (D-075): **an environment variable (or a key in `fa.toml`)**, then the value saved
+in **Settings, System** (table `instance_setting`; secrets are stored encrypted), then **`FA_DEFAULT_<KEY>`**,
+then the built-in default. A setting given as a plain environment variable is **locked**: the UI shows it
+greyed out. `FA_DEFAULT_<KEY>` sets a starting value without locking (the compose file uses it for the ntfy
+address and the trusted proxies). An **empty** variable counts as unset: it neither locks nor hides the saved
+value. Saving a changed setting restarts the app by itself in about a second, only if the effective values changed.
 
-**Ports:** the app serves `8080` (`FA_BIND_ADDR`); the dev database is `55432`; the dev ntfy is `18090`; the dev GreenMail is `13143` (IMAP) and `13025` (SMTP); ntfy in the deployment is `8090`; the optional home-network dashboard is `8081`; the e2e stack uses `55499`, `18080`, `18081` (home-network dashboard), `18091`, `18092`, `18093` (ntfy), `18143` (GreenMail IMAP) and `18025` (GreenMail SMTP); `scripts/ci-local.sh` uses `55496`, `55497` and `55498`; `scripts/compose-smoke.sh` uses `18180`, `18182` and `18190`.
+| Setting (UI label) | Variable (`FA_DEFAULT_` + the key in capitals) | Default | Meaning |
+|---|---|---|---|
+| Public address (`public_base_url`) | `FA_PUBLIC_BASE_URL` | the wizard saves the browser's address | URL users reach: pairing links, the links in notifications. Optional |
+| Tailscale address (`tailnet_base_url`) | `FA_TAILNET_BASE_URL` | unset | The HTTPS tailnet address; used for the Google redirect and as a notification link base |
+| Notifications server (`ntfy_url`) | `FA_NTFY_URL` | compose: `http://ntfy:80` | ntfy server the app publishes to (`http` or `https`; independent of the feeds switch). Unset turns notifications off |
+| Notifications address for phones (`ntfy_public_url`) | `FA_NTFY_PUBLIC_URL` | empty: the tailnet address on `:8443`, else this server on `:8090`, else the server above | The ntfy address in subscribe links and QR codes |
+| Notifications token (`ntfy_token`) | `FA_NTFY_TOKEN` | unset | Bearer token (secret) for an ntfy server with access control. Never logged |
+| Google client ID, secret (`google_client_id`, `google_client_secret`) | `FA_GOOGLE_CLIENT_ID`, `FA_GOOGLE_CLIENT_SECRET` | unset | Google OAuth client; without it Google is hidden. Needs an `https` redirect, so HTTPS access |
+| Allow plain-HTTP feeds (`allow_http_feeds`) | `FA_ALLOW_HTTP_FEEDS` | `false` | Accept plain `http` for feeds and OAuth redirects (LAN CalDAV, dev) |
+| Allow feeds on private addresses (`allow_private_hosts`) | `FA_ALLOW_PRIVATE_HOSTS` | `false` | Let calendars, feeds and the like reach private and loopback addresses (SSRF guard, C-05). Turn it on for a LAN CalDAV server, or in dev for local stubs (`.env.dev` does). IMAP is not affected |
+| Trusted proxies (`trusted_proxies`) | `FA_TRUSTED_PROXIES` | loopback only; compose: loopback and the Tailscale sidecar `172.30.89.10/32` | Comma-separated CIDRs whose `X-Forwarded-*` headers are trusted (client IP for login limiting, `https` detection for the cookie). Add your own reverse proxy here |
+| Home-network dashboard address (`lan_dashboard_url`) | `FA_LAN_DASHBOARD_URL` | unset | The dashboard's address on the home network, such as `http://192.168.1.10:8081`. Setting it turns on a **dashboard-only listener** for screens that can't use Tailscale (D-064): device tokens only, only the dashboard's own API. You also publish the port yourself |
+| Allowed networks (`lan_allowed_cidrs`) | `FA_LAN_ALLOWED_CIDRS` | private and loopback ranges | CIDRs allowed to use that listener, by peer address (`X-Forwarded-For` is ignored there) |
+| Allow PIN elevation (`lan_allow_pin`) | `FA_LAN_ALLOW_PIN` | `false` | Allow PIN elevation on that listener. It is plain HTTP, so a PIN would cross the LAN unencrypted |
+
+### Compose variables (`deploy/.env`, all optional)
+`FA_HTTP_HOST_IP` (`0.0.0.0`), `FA_HTTP_PORT` (`8080`), `FA_NTFY_PORT` (`8090`), `FA_VERSION` (`latest`),
+`BACKUP_DIR` (the volume `fa-backups`), `TS_AUTHKEY`, `TS_HOSTNAME` (`family`), `FA_LOG_LEVEL`, `NTFY_BASE_URL`,
+`NTFY_UPSTREAM_BASE_URL` and `OLLAMA_BIND`. They are described in [`deploy/.env.example`](deploy/.env.example).
+
+**Ports:** the app serves `8080` (`FA_BIND_ADDR`); the dev database is `55432`; the dev ntfy is `18090`; the dev GreenMail is `13143` (IMAP) and `13025` (SMTP); the deployment publishes the app on `8080` (`FA_HTTP_PORT`) and ntfy on `8090` (`FA_NTFY_PORT`), and the optional home-network dashboard listener is `8081` inside the container (you publish it yourself, see the [guide](deploy/README.md#45-the-wall-screen-dashboard)); the e2e stack uses `55499`, `18080`, `18081` (home-network dashboard), `18091`, `18092`, `18093` (ntfy), `18143` (GreenMail IMAP), `18025` (GreenMail SMTP), and `18094`/`18095` for the two empty-database instances (setup API and the plain-HTTP wizard; `FA_E2E_SETUP_PORT`, `FA_E2E_WIZARD_PORT`); `scripts/ci-local.sh` uses `55496`, `55497` and `55498`; `scripts/compose-smoke.sh` uses `18180`, `18182` and `18190`.
 
 **`fa-server` commands:**
 | Command | What it does |
 |---|---|
-| `serve [all\|api\|worker]` | Run the server. `api` also runs migrations and the live-update bridge, `worker` runs the jobs, `all` is both in one process |
+| `serve [all\|api\|worker]` | Run the server. `api` also runs migrations and the live-update bridge, `worker` runs the jobs, `all` is both in one process (what compose runs) |
+| `init [--secrets-dir <dir>]` | Create the master key and the database password in the secrets folder if absent, never overwriting. Runs before any config loading; compose runs it as the one-shot `init` service |
 | `migrate` | Apply migrations and exit |
-| `config import <file> [--replace]` / `config export [--out f]` | Household TOML in and out. Import validates RRULEs, weather conditions and season conditions first (naming each one and the position) and fails before writing anything if any is invalid. It seeds the default weather rules. Export never includes secrets or notification topics |
+| `config import <file> [--replace] [--dry-run]` / `config export [--out f]` | Household TOML in and out. Import validates RRULEs, weather conditions and season conditions first (naming each one and the position) and fails before writing anything if any is invalid. `--dry-run` prints the report and writes nothing. It seeds the default weather rules, and an import that creates the household marks the first-run setup complete. Export never includes secrets or notification topics. Both are in **Settings, System, Household file** too |
 | `tasks run-now` | One pass of `tasks.materialize`, `tasks.tick` and `routines.materialize` in this process: new tasks and routine runs appear at once instead of within a minute |
-| `notify test --member <key>` | Publishes a test notification to a member's topic and prints the subscribe address. Fails clearly if `FA_NTFY_URL` is unset |
-| `user add --member <key> --username <u>` / `user reset-password` | Accounts (add `--password-stdin` to script it) |
-| `pin set --member <key>` | An adult's PIN |
-| `device pair --name <n>` / `device revoke <id>` | Dashboard devices. Pairing prints the home-network link too when `FA_LAN_DASHBOARD_URL` is set |
+| `notify test --member <key>` | Publishes a test notification to a member's topic and prints the subscribe address. Fails clearly if no ntfy server is set |
+| `user add --member <key> --username <u>` / `user reset-password` | Accounts (add `--password-stdin` to script it). A recovery and scripting tool: the wizard and Settings, Members cover everyday use |
+| `pin set --member <key>` | An adult's PIN (recovery and scripting, as above) |
+| `device pair --name <n>` / `device revoke <id>` | Dashboard devices. Pairing uses the saved settings and prints the home-network link too when that address is set |
 | `mail sync-now [--source <name>]` | One sync pass of every mail source (or the named one), then processes the new messages, in this process. Needs `FA_ALLOW_PLAIN_IMAP` for a plain-IMAP server |
 | `mail process-now` | Process the household's pending messages in this process |
 | `calendar sync <source-id>` | Sync one calendar source now, in this process, and print what changed |
@@ -688,8 +713,8 @@ just e2e         # = scripts/e2e.sh
 | [`IMPROVEMENTS.md`](IMPROVEMENTS.md) | Outstanding review findings and suggestions, by area |
 | `python3 tools/fa.py check` | Lints the design tree (`arch/`, `design/`, `decisions/`, `log/`, `plan/`, `research/`): front-matter keys, status values, id/filename parity, duplicate numbers, index ⇄ file parity. CI runs it |
 | [`scripts/ci-local.sh`](scripts/ci-local.sh) | Mirrors `.github/workflows/ci.yml`: fmt, clippy, tests against a **fresh throwaway Postgres** with `SQLX_OFFLINE=true`, the GreenMail-gated IMAP tests (a throwaway GreenMail), cargo-deny (if installed), the example-data hygiene check, and web lint, typecheck, test and build. `--no-web` skips the web part |
-| [`scripts/e2e.sh`](scripts/e2e.sh) | The end-to-end suite. Starts a throwaway Postgres, `serve api` and `serve worker` as **separate processes**, a fixture server (ICS calendars and an Open-Meteo stub, [`e2e/stubs/`](e2e/stubs/) and [`e2e/fixtures/`](e2e/fixtures/)), Radicale (CalDAV, `tomsquest/docker-radicale`, also the writable calendar for approved events), a real ntfy (`binwiederhier/ntfy`) and a GreenMail (`greenmail/standalone`, fictional fixture mails from [`e2e/fixtures/mail/`](e2e/fixtures/mail/)), seeds the example household, sources, a device, task lists, chores, a routine, a weather rule and an IMAP mailbox through the API, runs `tasks run-now` and `mail sync-now`, then runs the Playwright API specs (`e2e/`) and UI specs (`apps/web/e2e/`). Everything is torn down on exit. `FA_E2E_HOLD=<seconds>` keeps the seeded stack up for debugging |
-| [`scripts/compose-smoke.sh`](scripts/compose-smoke.sh) | Builds the image, starts `deploy/compose.example.yaml` and takes an on-demand backup |
+| [`scripts/e2e.sh`](scripts/e2e.sh) | The end-to-end suite. Starts a throwaway Postgres, `serve api` and `serve worker` as **separate processes**, a fixture server (ICS calendars and an Open-Meteo stub, [`e2e/stubs/`](e2e/stubs/) and [`e2e/fixtures/`](e2e/fixtures/)), Radicale (CalDAV, `tomsquest/docker-radicale`, also the writable calendar for approved events), a real ntfy (`binwiederhier/ntfy`) and a GreenMail (`greenmail/standalone`, fictional fixture mails from [`e2e/fixtures/mail/`](e2e/fixtures/mail/)), seeds the example household, sources, a device, task lists, chores, a routine, a weather rule and an IMAP mailbox through the API, runs `tasks run-now` and `mail sync-now`, then runs the Playwright API specs (`e2e/`) and UI specs (`apps/web/e2e/`). Everything is torn down on exit. It also starts two empty-database instances for the setup API and wizard specs; the wizard one is browsed through the host's LAN address so it is a plain-HTTP, non-secure context. `FA_E2E_HOLD=<seconds>` keeps the seeded stack up for debugging |
+| [`scripts/compose-smoke.sh`](scripts/compose-smoke.sh) | Builds the image, starts `deploy/compose.yaml` (with the build overlay) with **no `.env`**, checks the generated secrets and their idempotence, runs setup through the API over plain HTTP (no `Secure` cookie), takes an on-demand backup and checks that `down -v` leaves no volumes. `FA_SMOKE_IMAGE` (optional) tests a prebuilt image instead. CI runs it as the `compose-smoke` job |
 | [`scripts/restore-rehearsal.sh`](scripts/restore-rehearsal.sh) | Restores a backup dump into a fresh Postgres and checks the app comes up with the same data |
 | [`scripts/check-example-data.sh`](scripts/check-example-data.sh) | Fails if example data, fixtures or e2e files contain email domains other than `example.com`, `example.org`, `example.net`, `example.edu` (the fictional school) and `.test`/`.invalid` |
 
@@ -701,26 +726,34 @@ migrations) that can hide failures CI will hit.
 
 ## Deploying
 **Follow the step-by-step guide: [Install on a home server](deploy/README.md).** It assumes no prior
-Docker knowledge. It goes from an empty Linux machine to the app running in Docker, on your phones,
-with calendars, mail and notifications connected, and explains for each provider where to get what
-the app asks for.
+Docker knowledge, and ends with the app on your phones, with calendars, mail and notifications connected.
 
-In short:
+In short, on a machine with Docker (Compose 2.23.1 or newer):
 
-| Step | What happens |
+```bash
+curl -fsSLO https://raw.githubusercontent.com/JonGanz/family-assistant/<release-tag>/deploy/compose.yaml
+docker compose up -d
+```
+then open `http://<server>:8080` and **finish the setup wizard right away**: nothing else protects the first
+visit. No `.env`, key files or household file are needed: the one-shot `init` service creates the master key and
+the database password in the `fa-secrets` volume, and the wizard creates the household, the logins, the public address, the
+notification settings and shows the master key to back up. Until the first release image is published
+(human step H-12), build locally: `docker compose -f deploy/compose.yaml -f deploy/compose.build.yaml up -d --build`.
+
+| Want | Do |
 |---|---|
-| 1–3 | Install Docker and [Tailscale](https://tailscale.com/), and give the server an HTTPS tailnet address with `tailscale serve` |
-| 4 | `git clone`, then in `deploy/`: `cp .env.example .env`. Fill in three values: a database password, the tailnet address, and the ntfy address. Create the master key in `deploy/secrets/` and back it up offline |
-| 5 | `docker compose up -d --build` from `deploy/`. The `.env` names the compose file, so no flags are needed |
-| 6 | Load a small household file and create logins: `fa-server config import`, `user add`, `pin set` |
-| 7 | In the app, connect phones (Tailscale + ntfy), calendars (ICS, CalDAV or Google), mail (IMAP app password or Gmail) and the wall screen |
-| 8 | Backups (nightly, to a NAS), updates (`git pull && docker compose up -d --build`), troubleshooting |
+| Remote access over HTTPS | `TS_AUTHKEY=... docker compose --profile tailscale up -d`: a Tailscale sidecar serves `https://<name>.<tailnet>.ts.net` (and ntfy on `:8443`) |
+| Plain HTTP at home | Nothing: the app works over `http://<server>:8080`; the cookie is `Secure` only for HTTPS requests |
+| Your own reverse proxy | Add its address under **Settings, System, Trusted proxies** |
+| A different port, version or backup folder | Copy [`deploy/.env.example`](deploy/.env.example) to `.env` (all optional) |
+| A wall screen without Tailscale | The opt-in dashboard-only listener (D-064), see the [guide](deploy/README.md#45-the-wall-screen-dashboard) |
+| Backups | Nightly, into the `fa-backups` volume or `BACKUP_DIR`; the master key is **not** in them, keep the wizard's copy |
 
-The app is reachable **only over Tailscale**. The one opt-in exception is a dashboard-only address on the home network, for wall screens that can't run Tailscale ([7.5](deploy/README.md#75-the-wall-screen-dashboard)). Never expose it to the public internet. The compose
-file ([`deploy/compose.example.yaml`](deploy/compose.example.yaml)) runs Postgres, `api`,
-`worker`, ntfy and nightly backups. The optional `gpu` profile runs Ollama, and `ai-cpu` arrives
-with M4. The runbooks for restoring a backup and rotating the key are in
-[`deploy/runbooks/`](deploy/runbooks/).
+**Never expose the app to the public internet.** The default services are `init`, `postgres`, `app` (the API,
+the web app and the jobs in one container), `ntfy` and `backup`; profiles add `tailscale`, `gpu` (Ollama) and
+`ai-cpu` (a placeholder until M4). Settings that belong to the installation live in **Settings, System** (see the
+[Configuration reference](#configuration-reference)). The runbooks for restoring a backup and rotating the key
+are in [`deploy/runbooks/`](deploy/runbooks/).
 
 ## Repository layout
 ```
@@ -738,7 +771,8 @@ apps/web/        Vue 3 + TypeScript PWA, including the /dashboard kiosk view
 e2e/             Playwright API specs, the fixture server, ICS and mail fixtures (e2e/stubs, e2e/fixtures),
                  the mail sender (e2e/mail-send.ts, e2e/send-mail.mjs)
 apps/web/e2e/    Playwright UI specs
-deploy/          Compose sample, env example, systemd unit, runbooks
+deploy/          compose.yaml (install file), compose.build.yaml (build overlay), compose.dev.yaml, env example,
+                 systemd unit, guide and runbooks
 scripts/         Dev, CI and ops scripts
 config/examples/ Fictional household config
 arch/ design/ decisions/ research/ plan/ log/   Design system (see below)
@@ -767,7 +801,7 @@ repository**. Examples use `example.com`.
 | M1 | Members, weather, calendar read (Google, CalDAV, ICS), real dashboard | ✅ code-complete ([plan](plan/M1.md)) |
 | M2 | Tasks and chores (rotation, pools), routines, the Now list, ntfy notifications | ✅ code-complete ([plan](plan/M2.md)) |
 | M3 | Email ingest (Gmail API or IMAP), rules pipeline, bills, school and teacher linking, event approvals | ✅ code-complete ([plan](plan/M3.md)) |
-| M3.5 | Onboarding (one compose file, optional Tailscale sidecar, optional HTTPS, first-run wizard) and a real-hardware shakedown (D-065, D-066) | planned ([plan](plan/M3.5.md)) |
+| M3.5 | Onboarding (one compose file, optional Tailscale sidecar, optional HTTPS, first-run wizard) and a real-hardware shakedown (D-065, D-066) | ✅ code-complete; the shakedown on the real server (H-12 to H-14, then H-02 to H-11) is pending ([plan](plan/M3.5.md), [human steps](plan/human-steps.md)) |
 | M4 | AI, minimal slice: one System One model and one local LLM behind the pipeline (D-067) | |
 | M4.1 | AI platform: backend registry, hardware probe, GPU node wake and gaming detection, eval harness | |
 | M5 | Recipes, meal plan, grocery list | |

@@ -1,18 +1,19 @@
 //! The approval inbox: events, bills, suggested email tasks and contact suggestions.
 //! Events and tasks are approved by fa-calendar and fa-tasks; bills and contacts here.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use chrono::{DateTime, Utc};
 use fa_domain::{
     BillId, BillPatch, BillPatchStatus, BillStatus, ContactApproval, ContactRole,
-    ContactSuggestionId, ContactSuggestionView, DecisionPointKey, EventProposalView, HouseholdId,
-    InboxCounts, InboxItem, InboxKind, InboxView, MailSource, MemberId, MessageId, OrgContactView,
-    Subject, SubjectType, SuggestionStatus, TaskOrigin, TaskStatus, TaskStepView, TaskView,
+    ContactSuggestionId, ContactSuggestionView, DecisionPointKey, EventId, EventProposalView,
+    HouseholdId, InboxCounts, InboxItem, InboxKind, InboxView, MailSource, MailSourceId, MemberId,
+    MessageId, OrgContactView, Subject, SubjectType, SuggestionStatus, TaskOrigin, TaskStatus,
+    TaskStepView, TaskView,
 };
 use fa_pipeline::Pipeline;
 use fa_store::{
-    BillRepo, ChangeBus, ContactSuggestionRepo, EventRepo, InboxRepo, MailSourceRepo, MessageRepo,
+    BillRepo, ChangeBus, ContactSuggestionRepo, EventRepo, MailSourceRepo, MessageRepo,
     OrgContactRepo, OrgRepo, Store, TaskFilter, TaskRepo, TaskRow,
 };
 use sqlx::PgConnection;
@@ -25,14 +26,6 @@ use crate::{MailError, Result};
 #[derive(Clone)]
 pub struct InboxService {
     store: Store,
-}
-
-/// What the viewer may do with the inbox.
-enum Access {
-    Full {
-        readable: Option<Vec<fa_domain::MailSourceId>>,
-    },
-    CountsOnly,
 }
 
 fn task_view(r: &TaskRow) -> TaskView {
@@ -73,39 +66,77 @@ fn task_view(r: &TaskRow) -> TaskView {
     }
 }
 
-/// Message links of inbox items: shown only for messages the viewer can read.
-struct Links {
-    sources: HashMap<fa_domain::MailSourceId, MailSource>,
-    readable: Option<Vec<fa_domain::MailSourceId>>,
-    cache: HashMap<MessageId, (bool, Option<String>)>,
+/// What an adult may see (D-078): items whose message is on a source they can read, plus items
+/// with no message or whose source is gone or archived. Links show only for readable sources.
+struct Scope {
+    sources: HashMap<MailSourceId, MailSource>,
+    readable: HashSet<MailSourceId>,
+    cache: HashMap<MessageId, (bool, bool, Option<String>)>,
 }
 
-impl Links {
+impl Scope {
+    async fn load(conn: &mut PgConnection, viewer: Viewer) -> Result<Self> {
+        let member = viewer.adult_member().ok_or(MailError::Forbidden)?;
+        let readable = MailSourceRepo::readable_by(conn, member)
+            .await?
+            .into_iter()
+            .collect();
+        let sources = MailSourceRepo::list(conn, false)
+            .await?
+            .into_iter()
+            .map(|(s, _)| (s.value.id, s.value))
+            .collect();
+        Ok(Self {
+            sources,
+            readable,
+            cache: HashMap::new(),
+        })
+    }
+
+    /// `(visible, link)`: the link is set only for a message on a readable source.
     async fn get(
         &mut self,
         conn: &mut PgConnection,
         id: Option<MessageId>,
-    ) -> Result<(Option<MessageId>, Option<String>)> {
+    ) -> Result<(bool, Option<(MessageId, Option<String>)>)> {
         let Some(id) = id else {
-            return Ok((None, None));
+            return Ok((true, None));
         };
         if !self.cache.contains_key(&id) {
             let entry = match MessageRepo::get(conn, id).await? {
-                Some(m) => {
-                    let src = self.sources.get(&m.source_id);
-                    let ok = match (&self.readable, src) {
-                        (Some(r), Some(_)) => r.contains(&m.source_id),
-                        _ => false,
-                    };
-                    (ok, src.and_then(|s| external_url(s, &m.remote_id)))
-                }
-                None => (false, None),
+                Some(m) => match self.sources.get(&m.source_id) {
+                    Some(src) if self.readable.contains(&m.source_id) => {
+                        (true, true, external_url(src, &m.remote_id))
+                    }
+                    Some(_) => (false, false, None),
+                    None => (true, false, None),
+                },
+                None => (true, false, None),
             };
             self.cache.insert(id, entry);
         }
-        let (ok, url) = &self.cache[&id];
-        Ok((ok.then_some(id), if *ok { url.clone() } else { None }))
+        let (visible, linked, url) = &self.cache[&id];
+        Ok((*visible, linked.then(|| (id, url.clone()))))
     }
+}
+
+fn split(link: Option<(MessageId, Option<String>)>) -> (Option<MessageId>, Option<String>) {
+    match link {
+        Some((m, url)) => (Some(m), url),
+        None => (None, None),
+    }
+}
+
+fn task_message(r: &TaskRow) -> Option<MessageId> {
+    r.task
+        .value
+        .source_ref
+        .as_ref()?
+        .get("message_id")?
+        .as_str()?
+        .parse::<uuid::Uuid>()
+        .ok()
+        .map(MessageId::from)
 }
 
 impl InboxService {
@@ -113,28 +144,12 @@ impl InboxService {
         Self { store }
     }
 
-    async fn access(conn: &mut PgConnection, viewer: Viewer) -> Result<Access> {
-        if let Some(m) = viewer.adult_member() {
-            let readable = MailSourceRepo::readable_by(conn, m).await?;
-            return Ok(Access::Full {
-                readable: Some(readable),
-            });
-        }
-        if viewer.device && viewer.elevated {
-            return Ok(Access::Full { readable: None });
-        }
-        if viewer.device {
-            return Ok(Access::CountsOnly);
-        }
-        Err(MailError::Forbidden)
-    }
-
     pub async fn list(&self, household: HouseholdId, viewer: Viewer) -> Result<InboxView> {
         self.list_kind(household, viewer, None).await
     }
 
-    /// Items newest first, optionally of one kind. A dashboard device without elevation gets the
-    /// counts only. Message links are included only for messages the viewer can read.
+    /// Items newest first, optionally of one kind, scoped to the sources the adult may read
+    /// (D-078). Counts cover every kind. Devices are refused.
     pub async fn list_kind(
         &self,
         household: HouseholdId,
@@ -142,108 +157,110 @@ impl InboxService {
         kind: Option<InboxKind>,
     ) -> Result<InboxView> {
         let mut tx = self.store.tx_for(household).await?;
-        let access = Self::access(&mut tx, viewer).await?;
-        let counts = InboxRepo::counts(&mut tx).await?;
-        let Access::Full { readable } = access else {
-            return Ok(InboxView {
-                items: Vec::new(),
-                counts,
-            });
-        };
-        let want = |k: InboxKind| kind.is_none_or(|w| w == k);
-        let sources: HashMap<_, _> = MailSourceRepo::list(&mut tx, false)
+        let mut scope = Scope::load(&mut tx, viewer).await?;
+        let mut stamped: Vec<(DateTime<Utc>, InboxItem)> = Vec::new();
+
+        for r in EventRepo::proposals(&mut tx).await? {
+            let e = r.event;
+            let (visible, link) = scope.get(&mut tx, e.message_id).await?;
+            if !visible {
+                continue;
+            }
+            let (message, url) = split(link);
+            stamped.push((
+                e.event.created_at,
+                InboxItem::Event {
+                    event: EventProposalView {
+                        id: e.event.id,
+                        title: e.event.title.clone(),
+                        start_at: e.event.start_at,
+                        end_at: e.event.end_at,
+                        all_day: e.event.all_day,
+                        location: e.event.location.clone(),
+                        confidence: e.event.confidence.unwrap_or(0.0),
+                        suggested_calendar: e.target_calendar_id,
+                        route_confidence: e.route_confidence,
+                        pending_cancel: e.pending_cancel,
+                        members: e.members.clone(),
+                        message,
+                        from_label: r.message_from.or(r.org_name),
+                        external_url: url,
+                        write_error: e.write_error.clone(),
+                        version: e.version,
+                    },
+                },
+            ));
+        }
+        for b in BillRepo::list(&mut tx, Some(BillStatus::Proposed)).await? {
+            let (visible, link) = scope.get(&mut tx, b.value.message_id).await?;
+            if !visible {
+                continue;
+            }
+            let (message, url) = split(link);
+            let mut view = bill_view(&mut tx, &b, url).await?;
+            view.message = message;
+            stamped.push((b.value.created_at, InboxItem::Bill { bill: view }));
+        }
+        let rows = TaskRepo::get_view_rows(
+            &mut tx,
+            &TaskFilter {
+                statuses: Some(vec![TaskStatus::Suggested]),
+                ..Default::default()
+            },
+        )
+        .await?;
+        for r in rows
+            .iter()
+            .filter(|r| r.task.value.origin == TaskOrigin::Email)
+        {
+            if !scope.get(&mut tx, task_message(r)).await?.0 {
+                continue;
+            }
+            stamped.push((
+                r.task.value.created_at,
+                InboxItem::Task { task: task_view(r) },
+            ));
+        }
+        let orgs: HashMap<_, _> = OrgRepo::list(&mut tx, true)
             .await?
             .into_iter()
-            .map(|(s, _)| (s.value.id, s.value))
+            .map(|o| (o.value.id, o.value.name))
             .collect();
-        let mut stamped: Vec<(DateTime<Utc>, InboxItem)> = Vec::new();
-        let mut links = Links {
-            sources,
-            readable,
-            cache: HashMap::new(),
-        };
-
-        if want(InboxKind::Event) {
-            for r in EventRepo::proposals(&mut tx).await? {
-                let e = r.event;
-                let (message, url) = links.get(&mut tx, e.message_id).await?;
-                stamped.push((
-                    e.event.created_at,
-                    InboxItem::Event {
-                        event: EventProposalView {
-                            id: e.event.id,
-                            title: e.event.title.clone(),
-                            start_at: e.event.start_at,
-                            end_at: e.event.end_at,
-                            all_day: e.event.all_day,
-                            location: e.event.location.clone(),
-                            confidence: e.event.confidence.unwrap_or(0.0),
-                            suggested_calendar: e.target_calendar_id,
-                            route_confidence: e.route_confidence,
-                            pending_cancel: e.pending_cancel,
-                            members: e.members.clone(),
-                            message,
-                            from_label: r.message_from.or(r.org_name),
-                            external_url: url,
-                            write_error: e.write_error.clone(),
-                            version: e.version,
-                        },
+        for s in ContactSuggestionRepo::list(&mut tx, Some(SuggestionStatus::Proposed)).await? {
+            let (visible, link) = scope.get(&mut tx, s.message_id).await?;
+            if !visible {
+                continue;
+            }
+            stamped.push((
+                s.created_at,
+                InboxItem::Contact {
+                    contact: ContactSuggestionView {
+                        id: s.id,
+                        org: s.org_id,
+                        org_name: orgs.get(&s.org_id).cloned().unwrap_or_default(),
+                        email: s.email,
+                        name: s.name,
+                        member: s.member_id,
+                        message: split(link).0,
+                        created_at: s.created_at,
                     },
-                ));
-            }
-        }
-        if want(InboxKind::Bill) {
-            for b in BillRepo::list(&mut tx, Some(BillStatus::Proposed)).await? {
-                let (message, url) = links.get(&mut tx, b.value.message_id).await?;
-                let mut view = bill_view(&mut tx, &b, url).await?;
-                view.message = message;
-                stamped.push((b.value.created_at, InboxItem::Bill { bill: view }));
-            }
-        }
-        if want(InboxKind::Task) {
-            let rows = TaskRepo::get_view_rows(
-                &mut tx,
-                &TaskFilter {
-                    statuses: Some(vec![TaskStatus::Suggested]),
-                    ..Default::default()
                 },
-            )
-            .await?;
-            for r in rows
-                .iter()
-                .filter(|r| r.task.value.origin == TaskOrigin::Email)
-            {
-                stamped.push((
-                    r.task.value.created_at,
-                    InboxItem::Task { task: task_view(r) },
-                ));
-            }
+            ));
         }
-        if want(InboxKind::Contact) {
-            let orgs: HashMap<_, _> = OrgRepo::list(&mut tx, true)
-                .await?
-                .into_iter()
-                .map(|o| (o.value.id, o.value.name))
-                .collect();
-            for s in ContactSuggestionRepo::list(&mut tx, Some(SuggestionStatus::Proposed)).await? {
-                let (message, _) = links.get(&mut tx, s.message_id).await?;
-                stamped.push((
-                    s.created_at,
-                    InboxItem::Contact {
-                        contact: ContactSuggestionView {
-                            id: s.id,
-                            org: s.org_id,
-                            org_name: orgs.get(&s.org_id).cloned().unwrap_or_default(),
-                            email: s.email,
-                            name: s.name,
-                            member: s.member_id,
-                            message,
-                            created_at: s.created_at,
-                        },
-                    },
-                ));
-            }
-        }
+        let kind_of = |i: &InboxItem| match i {
+            InboxItem::Event { .. } => InboxKind::Event,
+            InboxItem::Bill { .. } => InboxKind::Bill,
+            InboxItem::Task { .. } => InboxKind::Task,
+            InboxItem::Contact { .. } => InboxKind::Contact,
+        };
+        let n = |k: InboxKind| stamped.iter().filter(|(_, i)| kind_of(i) == k).count() as i64;
+        let counts = InboxCounts::new(
+            n(InboxKind::Event),
+            n(InboxKind::Bill),
+            n(InboxKind::Task),
+            n(InboxKind::Contact),
+        );
+        stamped.retain(|(_, i)| kind.is_none_or(|w| w == kind_of(i)));
         stamped.sort_by_key(|a| std::cmp::Reverse(a.0));
         Ok(InboxView {
             items: stamped.into_iter().map(|(_, i)| i).collect(),
@@ -251,9 +268,67 @@ impl InboxService {
         })
     }
 
-    pub async fn counts(&self, household: HouseholdId) -> Result<InboxCounts> {
+    /// Pending counts the viewer may see (D-078).
+    pub async fn counts(&self, household: HouseholdId, viewer: Viewer) -> Result<InboxCounts> {
+        Ok(self.list_kind(household, viewer, None).await?.counts)
+    }
+
+    /// Refuses with `Forbidden` unless the viewer is an adult who may act on an item whose source
+    /// message is `message`. Events and tasks are decided in fa-calendar and fa-tasks; the API
+    /// calls these before approving, editing or rejecting them.
+    pub async fn ensure_message(
+        &self,
+        household: HouseholdId,
+        viewer: Viewer,
+        message: Option<MessageId>,
+    ) -> Result<()> {
         let mut tx = self.store.tx_for(household).await?;
-        Ok(InboxRepo::counts(&mut tx).await?)
+        Self::check(&mut tx, viewer, message).await
+    }
+
+    pub async fn ensure_event(
+        &self,
+        household: HouseholdId,
+        viewer: Viewer,
+        id: EventId,
+    ) -> Result<()> {
+        let mut tx = self.store.tx_for(household).await?;
+        let e = EventRepo::get_full(&mut tx, id)
+            .await?
+            .ok_or(MailError::NotFound)?;
+        Self::check(&mut tx, viewer, e.message_id).await
+    }
+
+    pub async fn ensure_task(
+        &self,
+        household: HouseholdId,
+        viewer: Viewer,
+        id: fa_domain::TaskId,
+    ) -> Result<()> {
+        let mut tx = self.store.tx_for(household).await?;
+        let t = TaskRepo::get(&mut tx, id)
+            .await?
+            .ok_or(MailError::NotFound)?;
+        let message = t
+            .value
+            .source_ref
+            .as_ref()
+            .and_then(|r| r.get("message_id")?.as_str()?.parse::<uuid::Uuid>().ok())
+            .map(MessageId::from);
+        Self::check(&mut tx, viewer, message).await
+    }
+
+    async fn check(
+        conn: &mut PgConnection,
+        viewer: Viewer,
+        message: Option<MessageId>,
+    ) -> Result<()> {
+        let mut scope = Scope::load(conn, viewer).await?;
+        if scope.get(conn, message).await?.0 {
+            Ok(())
+        } else {
+            Err(MailError::Forbidden)
+        }
     }
 
     /// Opens a proposed bill (applying the edits in `patch`) and queues its pay task. A patch
@@ -263,15 +338,17 @@ impl InboxService {
         household: HouseholdId,
         id: BillId,
         patch: BillPatch,
-        by: Option<MemberId>,
+        viewer: Viewer,
     ) -> Result<fa_domain::BillView> {
         if patch.status == Some(BillPatchStatus::Dismissed) {
-            return self.reject_bill(household, id, by).await;
+            return self.reject_bill(household, id, viewer).await;
         }
+        let by = viewer.member;
         let mut tx = self.store.tx_for(household).await?;
         let mut b = BillRepo::get(&mut tx, id)
             .await?
             .ok_or(MailError::NotFound)?;
+        Self::check(&mut tx, viewer, b.value.message_id).await?;
         match b.value.status {
             BillStatus::Proposed => {}
             BillStatus::Open | BillStatus::Paid => {
@@ -318,12 +395,14 @@ impl InboxService {
         &self,
         household: HouseholdId,
         id: BillId,
-        by: Option<MemberId>,
+        viewer: Viewer,
     ) -> Result<fa_domain::BillView> {
+        let by = viewer.member;
         let mut tx = self.store.tx_for(household).await?;
         let b = BillRepo::get(&mut tx, id)
             .await?
             .ok_or(MailError::NotFound)?;
+        Self::check(&mut tx, viewer, b.value.message_id).await?;
         match b.value.status {
             BillStatus::Dismissed => {
                 let v = self.view(&mut tx, &b).await?;
@@ -368,12 +447,14 @@ impl InboxService {
         household: HouseholdId,
         id: ContactSuggestionId,
         a: ContactApproval,
-        by: Option<MemberId>,
+        viewer: Viewer,
     ) -> Result<OrgContactView> {
+        let by = viewer.member;
         let mut tx = self.store.tx_for(household).await?;
         let s = ContactSuggestionRepo::get(&mut tx, id)
             .await?
             .ok_or(MailError::NotFound)?;
+        Self::check(&mut tx, viewer, s.message_id).await?;
         if s.status != SuggestionStatus::Proposed {
             return Err(MailError::Conflict);
         }
@@ -412,12 +493,14 @@ impl InboxService {
         &self,
         household: HouseholdId,
         id: ContactSuggestionId,
-        by: Option<MemberId>,
+        viewer: Viewer,
     ) -> Result<()> {
+        let by = viewer.member;
         let mut tx = self.store.tx_for(household).await?;
         let s = ContactSuggestionRepo::get(&mut tx, id)
             .await?
             .ok_or(MailError::NotFound)?;
+        Self::check(&mut tx, viewer, s.message_id).await?;
         match s.status {
             SuggestionStatus::Rejected => return Ok(()),
             SuggestionStatus::Proposed => {}

@@ -89,7 +89,7 @@ h2 {
 }
 .celebrate {
   margin: 0;
-  font-size: var(--kiosk-font-base, 2rem);
+  font-size: var(--kiosk-font-base);
   color: var(--color-success, #2e9e5b);
   font-weight: 600;
 }
@@ -112,7 +112,7 @@ ul {
   border-radius: var(--radius-md);
   color: inherit;
   font: inherit;
-  font-size: var(--kiosk-font-base, 2rem);
+  font-size: var(--kiosk-font-base);
   text-align: left;
   cursor: pointer;
 }

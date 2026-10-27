@@ -29,6 +29,14 @@ impl<K: Hash + Eq + Clone> KeyedRateLimiter<K> {
         self.check_at(key, Instant::now())
     }
 
+    /// Returns a token taken by `check`, for an attempt that turned out legitimate.
+    pub fn refund(&self, key: &K) {
+        let mut map = self.buckets.lock().unwrap_or_else(|p| p.into_inner());
+        if let Some((tokens, _)) = map.get_mut(key) {
+            *tokens = (*tokens + 1.0).min(self.burst);
+        }
+    }
+
     fn check_at(&self, key: K, now: Instant) -> bool {
         let per_sec = 1.0 / self.refill.as_secs_f64().max(f64::EPSILON);
         let mut map = self.buckets.lock().unwrap_or_else(|p| p.into_inner());
@@ -76,5 +84,18 @@ mod tests {
         assert!(l.check_at(1, t0));
         assert!(!l.check_at(1, t0));
         assert!(l.check_at(2, t0));
+    }
+
+    #[test]
+    fn refund_returns_a_token_up_to_the_burst() {
+        let l = KeyedRateLimiter::new(1, Duration::from_secs(3600));
+        assert!(l.check(7u8));
+        assert!(!l.check(7u8));
+        l.refund(&7u8);
+        assert!(l.check(7u8));
+        l.refund(&7u8);
+        l.refund(&7u8);
+        assert!(l.check(7u8));
+        assert!(!l.check(7u8));
     }
 }

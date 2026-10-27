@@ -4,8 +4,10 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-echo "== docs: front-matter and index check"
+echo "== docs: front-matter and index check, its negative tests, YAML"
 python3 tools/fa.py check
+python3 tools/test_fa.py
+python3 tools/fa.py check-yaml .github/workflows/*.yml deploy/*.yaml
 
 PORT=55496
 IMAP_PORT=55497

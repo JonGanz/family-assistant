@@ -99,7 +99,7 @@ impl CalendarService {
         cfg: ConnectorConfig,
         tokens: Arc<dyn AccessTokenProvider>,
     ) -> Result<Self> {
-        let http = Http::new(cfg.allow_http)?;
+        let http = Http::with_policy(cfg.allow_http, cfg.allow_private_hosts)?;
         Ok(Self {
             store,
             key: Arc::new(key),

@@ -245,8 +245,9 @@ impl Extractor<'_> {
                 enqueue_pay_task(self.conn, self.household, bill.id).await?;
                 out.bills_open += 1;
             } else {
-                NotificationRepo::insert_for_adults(
+                NotificationRepo::insert_for_source_adults(
                     self.conn,
+                    Some(self.msg.source_id),
                     NotifyTrigger::ApprovalNeeded,
                     "bill",
                     Some(bill.id.as_uuid()),
@@ -336,8 +337,9 @@ impl Extractor<'_> {
                     updated_at: Utc::now(),
                 };
                 if ContactSuggestionRepo::insert_if_new(self.conn, &s).await? {
-                    NotificationRepo::insert_for_adults(
+                    NotificationRepo::insert_for_source_adults(
                         self.conn,
+                        Some(self.msg.source_id),
                         NotifyTrigger::ApprovalNeeded,
                         "contact",
                         Some(s.id.as_uuid()),

@@ -17,6 +17,9 @@ pub struct NotifyConfig {
     pub ntfy_token: Option<String>,
     /// `FA_PUBLIC_BASE_URL`, the prefix of every click link.
     pub public_base_url: String,
+    /// The ntfy address phones subscribe to (`ProcessConfig::ntfy_subscribe_base`); falls back
+    /// to `ntfy_url`.
+    pub subscribe_base: Option<String>,
 }
 
 #[derive(Clone)]
@@ -102,6 +105,7 @@ impl NotifyService {
                 .config
                 .ntfy_url
                 .as_ref()
+                .map(|u| self.config.subscribe_base.as_deref().unwrap_or(u))
                 .map(|u| format!("{}/{}", u.trim_end_matches('/'), v.topic)),
             server_configured: self.configured(),
             approval_mode: v.approval_mode,

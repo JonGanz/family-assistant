@@ -5,7 +5,7 @@ milestone: M3.5
 wave: 1
 depends_on: [T-01]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["bins/fa-server/src/init.rs", "bins/fa-server/src/cli.rs", "bins/fa-server/src/main.rs", "deploy/compose.yaml", "deploy/compose.build.yaml", "deploy/tailscale/**", "deploy/.env.example", ".github/workflows/release-image.yml"]
 decisions: [D-065, D-069, D-072, D-074, D-076, D-077]
 ---
@@ -44,4 +44,4 @@ You are a sub-agent implementing one task of milestone M3.5 (onboarding and shak
 - [ ] the init tests pass, or the report says the crate did not compile because of other tasks' changes (then the main session runs them after W4)
 - [ ] `docker compose -f deploy/compose.yaml config` and `docker compose -f deploy/compose.yaml --profile tailscale config` succeed with no `.env`
 - [ ] `init` in a real container (fresh volume, modes, owners, idempotent) is verified by T-10, not here
-- [ ] the workflow file is valid YAML (`python3 -c 'import yaml,sys; yaml.safe_load(open(sys.argv[1]))' <file>`)
+- [ ] the workflow file is valid YAML (`python3 tools/fa.py check-yaml .github/workflows/release-image.yml`)

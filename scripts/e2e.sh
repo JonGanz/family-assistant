@@ -5,7 +5,11 @@
 # Playwright API specs (e2e/) and UI specs (apps/web/e2e/).
 # Env: FA_E2E_PG_PORT (55499), FA_E2E_PORT (18080), FA_E2E_STUB_PORT (18091),
 #      FA_E2E_RADICALE_PORT (18092), FA_E2E_NTFY_PORT (18093),
-#      FA_E2E_IMAP_PORT (18143), FA_E2E_SMTP_PORT (18025), FA_E2E_LAN_PORT (18081), FA_E2E_SKIP_BUILD=1 to reuse apps/web/dist,
+#      FA_E2E_IMAP_PORT (18143), FA_E2E_SMTP_PORT (18025), FA_E2E_LAN_PORT (18081),
+#      FA_E2E_SETUP_PORT (18094, empty-database instance for the API setup spec),
+#      FA_E2E_WIZARD_PORT (18095, empty-database instance for the UI wizard, bound on all
+#      interfaces and browsed through the host's LAN address: a plain-HTTP, non-secure context),
+#      FA_E2E_SKIP_BUILD=1 to reuse apps/web/dist,
 #      FA_E2E_HOLD=<seconds> to keep the seeded stack up for that long before the specs (debugging).
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -19,6 +23,8 @@ NTFY_PORT=${FA_E2E_NTFY_PORT:-18093}
 IMAP_PORT=${FA_E2E_IMAP_PORT:-18143}
 SMTP_PORT=${FA_E2E_SMTP_PORT:-18025}
 LAN_PORT=${FA_E2E_LAN_PORT:-18081}
+SETUP_PORT=${FA_E2E_SETUP_PORT:-18094}
+WIZARD_PORT=${FA_E2E_WIZARD_PORT:-18095}
 PROJECT=fa-e2e-$$
 WORK=$(mktemp -d)
 PIDS=()
@@ -31,7 +37,7 @@ cleanup() {
 trap cleanup EXIT
 
 dump_logs() {
-  for f in api worker stub; do echo "---- $f log ----"; tail -n 40 "$WORK/$f.log" 2>/dev/null || true; done
+  for f in api worker stub setup wizard; do echo "---- $f log ----"; tail -n 40 "$WORK/$f.log" 2>/dev/null || true; done
 }
 
 export SQLX_OFFLINE=true # compile-time queries use the committed .sqlx data, not the not-yet-started stack
@@ -45,6 +51,7 @@ export FA_MASTER_KEY_PATH="$WORK/master.key"
 export FA_WEB_DIST_DIR="$ROOT/apps/web/dist"
 export FA_OPEN_METEO_URL="http://127.0.0.1:$STUB_PORT"
 export FA_ALLOW_HTTP_FEEDS=true
+export FA_ALLOW_PRIVATE_HOSTS=true # the fixture server, Radicale, GreenMail and the stubs are all on 127.0.0.1
 export FA_NTFY_URL="http://127.0.0.1:$NTFY_PORT"
 export FA_ALLOW_PLAIN_IMAP=true # test-only: GreenMail speaks plain IMAP
 # The home-network dashboard listener (D-064); loopback is in its default allowed ranges.
@@ -112,6 +119,30 @@ printf '%s\n' "$FA_E2E_SAM_PASSWORD" | "$BIN" user add --member sam --username "
 printf '%s\n' "$FA_E2E_CHILD_PASSWORD" | "$BIN" user add --member riley --username "$FA_E2E_CHILD_USER" --password-stdin
 "$BIN" weather fetch
 
+echo "== empty-database instances for the setup specs (:$SETUP_PORT API, :$WIZARD_PORT UI)"
+# Own database each, no seeded household, and no FA_ALLOW_PRIVATE_HOSTS (the setup spec checks
+# that the guard refuses private addresses by default). Everything else mirrors the main instance.
+LAN_IP=$(hostname -I 2>/dev/null | tr ' ' '\n' | grep -E '^(10|192\.168|172\.(1[6-9]|2[0-9]|3[01]))\.' | head -n1 || true)
+start_empty() { # name, bind-address, port
+  docker exec "$PROJECT-pg" psql -U fa -d postgres -qc "create database fa_$1" >/dev/null
+  (
+    # The binary loads .env.dev from the working directory; run elsewhere so it cannot leak in.
+    cd "$WORK"
+    unset FA_ALLOW_PRIVATE_HOSTS FA_COOKIE_SECURE FA_PUBLIC_BASE_URL FA_LAN_DASHBOARD_URL FA_LAN_DASHBOARD_BIND FA_NTFY_URL
+    export DATABASE_URL="postgres://fa:fa@127.0.0.1:$PG_PORT/fa_$1" FA_BIND_ADDR="$2:$3"
+    "$BIN" migrate >"$WORK/$1.migrate.log" 2>&1
+    exec "$BIN" serve api >"$WORK/$1.log" 2>&1
+  ) &
+  PIDS+=($!)
+  for _ in $(seq 60); do curl -fsS "http://127.0.0.1:$3/readyz" >/dev/null 2>&1 && return; sleep 1; done
+  echo "empty instance $1 did not start" >&2; tail -n 40 "$WORK/$1.log" >&2; exit 1
+}
+start_empty setup 127.0.0.1 "$SETUP_PORT"
+if [[ -n $LAN_IP ]]; then start_empty wizard 0.0.0.0 "$WIZARD_PORT"; WIZARD_URL=http://$LAN_IP:$WIZARD_PORT
+else echo "warning: no private LAN address found; the wizard runs on 127.0.0.1, a secure context" >&2
+  start_empty wizard 127.0.0.1 "$WIZARD_PORT"; WIZARD_URL=http://127.0.0.1:$WIZARD_PORT; fi
+export FA_E2E_SETUP_URL=http://127.0.0.1:$SETUP_PORT FA_E2E_SETUP_DATABASE_URL="postgres://fa:fa@127.0.0.1:$PG_PORT/fa_setup"
+
 echo "== serve api + serve worker (separate processes)"
 "$BIN" serve api >"$WORK/api.log" 2>&1 &
 PIDS+=($!)
@@ -149,7 +180,7 @@ cd apps/web
 if ! E2E_BASE_URL=$FA_PUBLIC_BASE_URL E2E_USERNAME=$FA_E2E_USER E2E_PASSWORD=$FA_E2E_PASSWORD \
   E2E_CHILD_USERNAME=$FA_E2E_CHILD_USER E2E_CHILD_PASSWORD=$FA_E2E_CHILD_PASSWORD \
   E2E_FIXTURES=$FA_E2E_FIXTURES E2E_PG_CONTAINER=$FA_E2E_PG_CONTAINER \
-  E2E_IMAP_PORT=$IMAP_PORT E2E_SMTP_PORT=$SMTP_PORT \
+  E2E_IMAP_PORT=$IMAP_PORT E2E_SMTP_PORT=$SMTP_PORT E2E_WIZARD_URL=$WIZARD_URL E2E_NTFY_URL=$FA_NTFY_URL \
   corepack pnpm@9 exec playwright test; then dump_logs; exit 1; fi
 cd ../..
 echo "e2e OK"

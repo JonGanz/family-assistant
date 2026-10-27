@@ -4,7 +4,6 @@ import type { SourceView } from '../../api/client'
 import ErrorBanner from '../../components/ErrorBanner.vue'
 import { useSourcesStore } from '../../stores/sources'
 import { describeError } from '../shared'
-import './settings.css'
 
 const props = defineProps<{ source: SourceView }>()
 const emit = defineEmits<{ done: [] }>()
@@ -31,8 +30,8 @@ async function save() {
 </script>
 
 <template>
-  <form class="settings-form" autocomplete="off" @submit.prevent="save">
-    <p class="settings-note">Leave a field empty to keep its current value.</p>
+  <form class="form" autocomplete="off" @submit.prevent="save">
+    <p class="muted">Leave a field empty to keep its current value.</p>
     <label>
       {{ source.kind === 'ics' ? 'New calendar link' : 'New server URL' }}
       <input v-model="form.url" name="new_url" type="url" autocomplete="off" />

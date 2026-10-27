@@ -21,6 +21,19 @@ export class ApiError extends Error {
   }
 }
 
+/** The problem `code` of an error (`setup_required`, `setting_locked`, `invalid_setting`, ...). */
+export function problemCode(e: unknown): string | null {
+  const c = e instanceof ApiError ? e.problem.code : null
+  return typeof c === 'string' ? c : null
+}
+
+let setupRequiredHandler: (() => void) | null = null
+
+/** The router registers the redirect to `/setup` for any `409 setup_required` answer. */
+export function onSetupRequired(fn: (() => void) | null): void {
+  setupRequiredHandler = fn
+}
+
 /** True for a 409 (stale `If-Match`) or 428 (missing precondition) response. */
 export function isConflict(e: unknown): e is ApiError {
   return e instanceof ApiError && (e.status === 409 || e.status === 428)
@@ -35,6 +48,10 @@ export interface RequestOptions {
   raw?: Blob
   headers?: Record<string, string>
   signal?: AbortSignal
+  /** Plain-text payload (household TOML import); wins over `body`. */
+  text?: string
+  /** Read the answer as text instead of JSON (household TOML export). */
+  asText?: boolean
   /** Send the stored device token (default true). User-session calls pass false. */
   bearer?: boolean
 }
@@ -49,21 +66,44 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   if (opts.raw) {
     headers['Content-Type'] = opts.raw.type || 'application/octet-stream'
     body = opts.raw
+  } else if (opts.text !== undefined) {
+    headers['Content-Type'] = 'text/plain'
+    body = opts.text
   } else if (opts.body !== undefined) {
     headers['Content-Type'] = 'application/json'
     body = JSON.stringify(opts.body)
   }
 
-  const res = await fetch(path, {
-    method,
-    headers,
-    body,
-    credentials: 'include',
-    signal: opts.signal,
-  })
-  if (!res.ok) throw new ApiError(res.status, await parseProblem(res))
+  const init: RequestInit = { method, headers, body, credentials: 'include', signal: opts.signal }
+  const res = SAFE_METHODS.has(method) ? await fetchRetrying(path, init) : await fetch(path, init)
+  if (!res.ok) {
+    const problem = await parseProblem(res)
+    if (res.status === 409 && problem.code === 'setup_required') setupRequiredHandler?.()
+    throw new ApiError(res.status, problem)
+  }
   if (res.status === 204) return undefined as T
+  if (opts.asText) return (await res.text()) as T
   return (await res.json()) as T
+}
+
+/**
+ * A settings save restarts the server's listeners about a second later, so a
+ * read sent then is refused. Reads are safe to repeat; writes are never retried.
+ */
+export async function fetchRetrying(
+  path: string,
+  init: RequestInit,
+  tries = 6,
+  delayMs = 500,
+): Promise<Response> {
+  for (let i = 1; ; i++) {
+    try {
+      return await fetch(path, init)
+    } catch (e) {
+      if (i >= tries || init.signal?.aborted || !(e instanceof TypeError)) throw e
+      await new Promise((r) => setTimeout(r, delayMs))
+    }
+  }
 }
 
 async function parseProblem(res: Response): Promise<ProblemDetails> {

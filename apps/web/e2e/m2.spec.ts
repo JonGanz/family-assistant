@@ -1,6 +1,10 @@
 import { execFileSync } from 'node:child_process'
 import { expect, test, type Browser, type Page } from '@playwright/test'
 
+// Logins are limited per client address. The server trusts X-Forwarded-For from loopback, so each
+// file logs in from its own made-up address and the suite does not share one budget.
+test.use({ extraHTTPHeaders: { 'X-Forwarded-For': '10.99.0.2' } })
+
 // UI specs for M2 (arch/Frontend.md sections 3a and 4). They run against the stack from
 // scripts/e2e.sh: api and worker as separate processes, a real ntfy, and the data from
 // e2e/seed.mjs (the lists Chores, Homework and Errands; the "Morning routine" for Riley).
@@ -10,6 +14,9 @@ const adult = {
   user: process.env.E2E_USERNAME ?? 'alex@example.com',
   pass: process.env.E2E_PASSWORD ?? '',
 }
+// The household is in America/New_York: a UTC date is a day ahead in the evening.
+const localDay = () =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date())
 const BIN = process.env.FA_E2E_BIN ?? 'fa-server'
 
 async function uiLogin(page: Page, who: { user: string; pass: string }) {
@@ -301,7 +308,7 @@ test('Settings, Absences: add and remove one', async ({ page }) => {
   const note = `Camp ${Date.now()}`
   await page.goto('/settings/tasks?tab=absences')
   await page.locator('select[name=member]').selectOption({ label: 'Jordan' })
-  const day = new Date().toISOString().slice(0, 10)
+  const day = localDay()
   await page.locator('input[name=from]').fill(day)
   await page.locator('input[name=until]').fill(day)
   await page.locator('input[name=note]').fill(note)
@@ -328,7 +335,7 @@ test('a suggested weather task is accepted from the Suggested tab', async ({ pag
       list: chores.id,
       title,
       schedule: { kind: 'after_done', interval_days: 7 },
-      start_date: new Date().toISOString().slice(0, 10),
+      start_date: localDay(),
       strategy: 'fixed',
       candidates: [alex.id],
       paused: true, // only the weather rule below may make tasks from it
@@ -372,5 +379,5 @@ test('Settings, Notifications: Send test succeeds', async ({ page }) => {
   await page.getByRole('button', { name: 'Send test' }).click()
   const result = page.getByTestId('test-result')
   await expect(result).toBeVisible()
-  await expect(result).toHaveClass(/settings-ok/)
+  await expect(result).toHaveClass(/text-success/)
 })

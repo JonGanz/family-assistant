@@ -84,7 +84,10 @@ fn mail_services(store: &Store, oauth: &fa_auth::OAuthService) -> fa_api::MailSe
         http: fa_connectors::Http::new(true).unwrap(),
         tokens: std::sync::Arc::new(oauth.clone()),
         key: std::sync::Arc::new(MasterKey::from_bytes(&[7u8; 32], 1).unwrap()),
-        cfg: fa_mail::MailConfig::default(),
+        cfg: fa_mail::MailConfig {
+            allow_private_hosts: true,
+            ..Default::default()
+        },
     }))
 }
 
@@ -107,6 +110,7 @@ fn services(store: &Store, google: bool, allow_http: bool) -> Services {
                 key(),
                 fa_calendar::ConnectorConfig {
                     allow_http,
+                    allow_private_hosts: true,
                     ..Default::default()
                 },
                 Arc::new(oauth.clone()),
@@ -115,7 +119,10 @@ fn services(store: &Store, google: bool, allow_http: bool) -> Services {
         ),
         weather: fa_weather::WeatherService::new(
             store.clone(),
-            fa_weather::WeatherConfig::default(),
+            fa_weather::WeatherConfig {
+                allow_private_hosts: true,
+                ..Default::default()
+            },
         )
         .unwrap(),
         mail: mail_services(store, &oauth),
@@ -127,6 +134,7 @@ fn services(store: &Store, google: bool, allow_http: bool) -> Services {
                 ntfy_url: None,
                 ntfy_token: None,
                 public_base_url: "https://fa.example.com".into(),
+                subscribe_base: None,
             },
         ),
     }
@@ -149,6 +157,8 @@ async fn seed_with(pool: PgPool, google: bool, allow_http: bool) -> Fx {
     HouseholdRepo::insert(
         &mut tx,
         &Household {
+            dashboard_pending_approvals: true,
+            setup_completed_at: None,
             id: hid,
             name: "Example".into(),
             tz: "UTC".into(),
@@ -226,7 +236,7 @@ async fn seed_with(pool: PgPool, google: bool, allow_http: bool) -> Fx {
         auth,
         services(&store, google, allow_http),
         ApiConfig {
-            cookie_secure: false,
+            cookie_secure: fa_config::CookieSecure::Never,
             heartbeat_interval: Duration::from_secs(60),
             // Debug-build argon2 is slow when many tests run at once.
             request_timeout: Duration::from_secs(120),
@@ -364,7 +374,6 @@ async fn rbac_matrix(pool: PgPool) {
     let now = Utc::now();
     let events = format!("/api/v1/events?{}", range_query(now, now + Dur::days(2)));
     let device = format!("/api/v1/devices/{}", fx.device);
-    let dismiss = format!("/api/v1/advisories/{}/dismiss", AdvisoryId::new());
     let ver = as_(&fx, Adult, Method::GET, "/api/v1/household", None)
         .await
         .json()["version"]
@@ -422,7 +431,6 @@ async fn rbac_matrix(pool: PgPool) {
             None,
             [401, 200, 200, 200, 200],
         ),
-        (Method::POST, &dismiss, None, [401, 404, 404, 404, 404]),
         (
             Method::GET,
             "/api/v1/status",
@@ -1142,7 +1150,7 @@ async fn weather_rules_validate_and_422(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../fa-store/migrations")]
-async fn advisories_list_and_dismiss(pool: PgPool) {
+async fn advisories_list_and_dismiss_is_gone(pool: PgPool) {
     use Who::*;
     let fx = seed(pool).await;
     let mut tx = fx.store.tx_for(fx.hid).await.unwrap();
@@ -1162,18 +1170,20 @@ async fn advisories_list_and_dismiss(pool: PgPool) {
     let r = as_(&fx, Device, Method::GET, "/api/v1/advisories", None).await;
     assert_eq!(r.json().as_array().unwrap().len(), 1);
     assert_eq!(r.json()[0]["text"], "Frost tonight");
-    // Dashboards dismiss without a PIN.
-    let r = as_(
-        &fx,
-        Device,
-        Method::POST,
-        &format!("/api/v1/advisories/{id}/dismiss"),
-        None,
-    )
-    .await;
-    assert_eq!(r.status, StatusCode::NO_CONTENT);
-    let r = as_(&fx, Child, Method::GET, "/api/v1/advisories", None).await;
-    assert_eq!(r.json(), json!([]));
+    // D-068: advisories clear themselves; there is no dismiss route any more.
+    for who in [Device, Adult] {
+        let r = as_(
+            &fx,
+            who,
+            Method::POST,
+            &format!("/api/v1/advisories/{id}/dismiss"),
+            None,
+        )
+        .await;
+        assert_eq!(r.status, StatusCode::NOT_FOUND, "{who:?}");
+    }
+    let r = as_(&fx, Device, Method::GET, "/api/v1/advisories", None).await;
+    assert_eq!(r.json().as_array().unwrap().len(), 1);
 }
 
 fn ics(uid: &str) -> String {

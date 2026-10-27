@@ -20,6 +20,10 @@ pub enum AuthError {
     Password(#[from] PasswordError),
     #[error(transparent)]
     Pin(#[from] PinError),
+    #[error("{0}")]
+    Invalid(String),
+    #[error("setup is already done")]
+    SetupClosed,
     #[error("not found")]
     NotFound,
     #[error("storage error: {0}")]

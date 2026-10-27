@@ -23,13 +23,13 @@ const canUndo = (a: MailActionView) => !a.undone_at && !a.error && Date.parse(a.
         Add label
       </button>
     </div>
-    <p v-else class="settings-note">This source is read-only, so mail actions are unavailable.</p>
-    <ul v-if="actions.length" class="settings-list">
+    <p v-else class="muted">This source is read-only, so mail actions are unavailable.</p>
+    <ul v-if="actions.length" class="card-list">
       <li v-for="a in actions" :key="a.id">
         {{ a.action }}<span v-if="a.label"> "{{ a.label }}"</span>
         {{ a.automatic ? '(automatic)' : '' }} at {{ fmt(a.done_at, tz) }}
-        <span v-if="a.undone_at" class="settings-note">undone</span>
-        <span v-if="a.error" class="settings-error">{{ a.error }}</span>
+        <span v-if="a.undone_at" class="muted">undone</span>
+        <span v-if="a.error" class="text-danger">{{ a.error }}</span>
         <button v-if="canUndo(a)" type="button" @click="emit('undo', a.id)">Undo</button>
       </li>
     </ul>

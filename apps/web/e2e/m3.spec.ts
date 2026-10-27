@@ -17,10 +17,15 @@ const IMAP_PORT = Number(process.env.E2E_IMAP_PORT ?? 18143)
 const SMTP_PORT = Number(process.env.E2E_SMTP_PORT ?? 18025)
 const MAILBOX = 'ui@example.com'
 const SOURCE = 'UI mailbox'
-const PIN = '135790'
 
-const day = (n: number) =>
-  new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10).replaceAll('-', '')
+const day = (n: number) => {
+  // Calendar-day arithmetic on the New York date: n * 24 h is a day off across a DST change.
+  const [y, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' })
+    .format(new Date())
+    .split('-')
+    .map(Number)
+  return new Date(Date.UTC(y, m - 1, d + n)).toISOString().slice(0, 10).replaceAll('-', '')
+}
 
 function invite(summary: string, uid: string, inDays: number) {
   return `From: "Ms. Teacher" <teacher@example.edu>
@@ -91,7 +96,7 @@ test.describe.configure({ mode: 'serial' })
 let ctx: BrowserContext
 let page: Page
 test.beforeAll(async ({ browser }) => {
-  ctx = await browser.newContext()
+  ctx = await browser.newContext({ extraHTTPHeaders: { 'X-Forwarded-For': '10.99.0.3' } })
   page = await ctx.newPage()
   await uiLogin(page, adult)
 })
@@ -188,15 +193,21 @@ test('Labelling view: one-tap confirm and progress', async () => {
   await page.getByRole('button', { name: 'Skip' }).click()
 })
 
-test('Dashboard inbox panel: count, then an elevated approve', async ({ browser }) => {
+test("Dashboard: no inbox, no dismiss; the members strip shows each adult's pending count", async ({
+  browser,
+}) => {
   const members = await (await page.request.get('/api/v1/members')).json()
   const list = Array.isArray(members) ? members : (members.items ?? members.members)
   const alex = list.find((m: { display_name: string }) => m.display_name === 'Alex')
-  const pin = await page.request.put(`/api/v1/members/${alex.id}/pin`, {
-    headers: { 'X-FA-Request': '1' },
-    data: { pin: PIN },
+
+  // A fresh proposal, so that Alex has something pending whatever the earlier specs decided.
+  const stamp = Date.now()
+  await sendRaw({
+    port: SMTP_PORT,
+    to: MAILBOX,
+    raw: invite(`Badge check ${stamp}`, `ui-badge-${stamp}`, 9),
   })
-  expect(pin.ok()).toBeTruthy()
+  syncNow()
 
   const res = await page.request.post('/api/v1/devices', {
     data: { name: `e2e-m3-${Date.now()}` },
@@ -213,7 +224,7 @@ test('Dashboard inbox panel: count, then an elevated approve', async ({ browser 
         theme: 'auto',
         agenda_days: 3,
         members: 'all',
-        panels: [{ kind: 'clock' }, { kind: 'inbox' }],
+        panels: [{ kind: 'clock' }, { kind: 'members' }, { kind: 'advisories' }],
       },
     },
   })
@@ -222,26 +233,18 @@ test('Dashboard inbox panel: count, then an elevated approve', async ({ browser 
   const screen = await kiosk.newPage()
   await screen.goto(paired.pair_url)
 
-  const total = async () => Number((await screen.getByTestId('inbox-total').textContent()) ?? '0')
-  await expect(screen.getByTestId('inbox-total')).toBeVisible()
-  const before = await total()
-  expect(before).toBeGreaterThanOrEqual(1)
-  await expect(screen.getByTestId('inbox-counts')).toContainText(/\d/)
-  // Without elevation the panel only shows counts.
-  await expect(screen.getByTestId('inbox-locked')).toBeVisible()
+  // Alex is the owner of the mail sources, so the seeded proposals count for them (D-078).
+  const badge = screen.getByTestId(`approvals-${alex.id}`)
+  await expect(badge).toBeVisible()
+  expect(Number((await badge.textContent()) ?? '0')).toBeGreaterThanOrEqual(1)
 
-  await screen.getByRole('button', { name: 'Try elevation' }).click()
-  const dialog = screen.getByRole('dialog', { name: 'Elevation' })
-  await dialog.getByRole('button', { name: 'Alex' }).click()
-  for (const d of PIN) await dialog.getByRole('button', { name: d, exact: true }).click()
-  await dialog.getByRole('button', { name: 'Enter' }).click()
-  await expect(screen.getByTestId('elevated')).toBeVisible()
-  await screen.getByRole('button', { name: '✕' }).click()
-
-  await expect(screen.getByTestId('inbox-locked')).toHaveCount(0)
-  await screen.locator('.items li').first().getByRole('button', { name: 'Approve' }).click()
-  await expect
-    .poll(async () => ((await screen.getByTestId('inbox-total').count()) ? await total() : 0))
-    .toBeLessThan(before)
+  // D-068: the dashboard shows no inbox at all and offers no way to dismiss an advisory.
+  await expect(screen.getByTestId('inbox-total')).toHaveCount(0)
+  await expect(screen.getByTestId('inbox-counts')).toHaveCount(0)
+  await expect(screen.getByRole('button', { name: 'Approve' })).toHaveCount(0)
+  await expect(screen.getByRole('button', { name: /dismiss/i })).toHaveCount(0)
+  // The device is refused the inbox itself, with or without elevation.
+  const inbox = await kiosk.request.get('/api/v1/inbox')
+  expect([401, 403]).toContain(inbox.status())
   await kiosk.close()
 })

@@ -16,6 +16,8 @@ pub enum ConnectorError {
     Network(String),
     #[error("insecure url (http not allowed)")]
     InsecureUrl,
+    #[error("private or local address refused")]
+    PrivateHost,
     /// Gmail `history.list` 404: the start history id is too old.
     #[error("history id expired")]
     HistoryExpired,

@@ -5,7 +5,6 @@ import { useTasksStore } from '../../stores/tasks'
 import { addableLists, assignableMembers, type Viewer } from '../../stores/taskMap'
 import { describeError } from '../shared'
 import { toInstant } from './dateInput'
-import './settings.css'
 
 const props = defineProps<{
   lists: TaskListView[]
@@ -52,7 +51,7 @@ async function submit() {
 </script>
 
 <template>
-  <form class="settings-form add-form" @submit.prevent="submit">
+  <form class="form add-form" @submit.prevent="submit">
     <label>Task <input v-model="title" name="title" required maxlength="200" /></label>
     <label>
       List
@@ -69,7 +68,7 @@ async function submit() {
         <option v-for="m in people" :key="m.id" :value="m.id">{{ m.display_name }}</option>
       </select>
     </label>
-    <p v-if="error" class="settings-error" role="alert">{{ error }}</p>
+    <p v-if="error" class="text-danger" role="alert">{{ error }}</p>
     <div class="row">
       <button type="submit" :disabled="!list || !title.trim()">Add</button>
       <button type="button" @click="emit('done')">Cancel</button>

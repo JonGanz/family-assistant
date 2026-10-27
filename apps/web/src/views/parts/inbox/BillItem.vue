@@ -18,14 +18,14 @@ function approve() {
 </script>
 
 <template>
-  <li class="settings-form item">
+  <li class="form item">
     <p>
       <strong>{{ formatMoney(bill.amount_minor, bill.currency) }}</strong>
       <span v-if="bill.due_on"> due {{ fmtDay(bill.due_on) }}</span>
     </p>
     <label>Payee <input v-model="form.payee" /></label>
     <label>Due <input v-model="form.due" type="date" /></label>
-    <p class="settings-note">
+    <p class="muted">
       Confidence {{ Math.round(bill.confidence * 100) }}%.
       <RouterLink v-if="bill.message" :to="{ name: 'mail-detail', params: { id: bill.message } }"
         >Open message</RouterLink

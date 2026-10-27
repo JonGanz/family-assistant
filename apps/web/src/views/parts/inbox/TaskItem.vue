@@ -34,17 +34,17 @@ function approve() {
 </script>
 
 <template>
-  <li class="settings-form item">
+  <li class="form item">
     <label>Title <input v-model="form.title" /></label>
     <label>Due <input v-model="form.due" type="datetime-local" /></label>
     <fieldset>
       <legend>Assignees</legend>
-      <label v-for="m in members" :key="m.id" class="inline">
+      <label v-for="m in members" :key="m.id" class="field-inline">
         <input type="checkbox" :checked="form.assignees.includes(m.id)" @change="toggle(m.id)" />
         {{ m.display_name }}
       </label>
     </fieldset>
-    <p class="settings-note">
+    <p class="muted">
       Suggested for {{ names.length ? names.join(', ') : 'nobody yet' }}
       <span v-if="task.due_at">, due {{ fmt(task.due_at, tz) }}</span
       >.

@@ -39,6 +39,7 @@ fn config(url: Option<String>) -> NotifyConfig {
         ntfy_url: url,
         ntfy_token: None,
         public_base_url: "https://fa.example.com/".into(),
+        subscribe_base: None,
     }
 }
 
@@ -102,6 +103,8 @@ async fn env(pool: &PgPool, url: Option<&str>) -> Env {
         events: Default::default(),
         inbox: Default::default(),
         retention_mail: Default::default(),
+        dashboard_pending_approvals: true,
+        setup_completed_at: None,
         bill_lead_days: fa_domain::DEFAULT_BILL_LEAD_DAYS,
         created_at: Utc::now(),
         updated_at: Utc::now(),
@@ -533,6 +536,7 @@ async fn real_client_sends_headers_and_token(pool: PgPool) {
             ntfy_url: Some(server.uri()),
             ntfy_token: Some("tk_secret".into()),
             public_base_url: "https://fa.example.com".into(),
+            subscribe_base: None,
         },
     );
     let topic = svc.get_prefs(e.h, e.adult).await.unwrap().topic.unwrap();

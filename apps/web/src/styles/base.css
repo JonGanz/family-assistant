@@ -8,7 +8,7 @@
     --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
     /* Kiosk scale: readable at 1920x1080 from across a room */
-    --kiosk-font-base: 2rem;
+    --kiosk-font-base: 1.75rem;
     --kiosk-font-title: 4rem;
     --kiosk-font-small: 1.5rem;
     color-scheme: light dark;
@@ -108,9 +108,9 @@ a {
     z-index: 1000;
 }
 
-/* Kiosk scale: base 28px for viewing distance */
+/* Kiosk scale: the --kiosk-font-* tokens, base 28px for viewing distance */
 .kiosk {
-    font-size: 28px;
+    font-size: var(--kiosk-font-base);
     --font-size-xs: 0.75rem;
     --font-size-sm: 0.875rem;
     --font-size-base: 1rem;
@@ -129,20 +129,13 @@ a {
     outline-offset: 2px;
 }
 
-/* ---- Navigation (primary + settings sub-nav) ---- */
-.nav-primary,
-.nav-sub {
+/* ---- Navigation (primary; the settings map lives in SettingsLayout) ---- */
+.nav-primary {
     display: flex;
     flex-wrap: wrap;
     gap: 0 1rem;
 }
-.nav-sub {
-    padding: 0 1rem;
-    background: var(--color-surface);
-    border-bottom: 1px solid var(--color-border);
-}
 .nav-primary a,
-.nav-sub a,
 .settings-link {
     display: inline-flex;
     align-items: center;
@@ -151,12 +144,10 @@ a {
     text-decoration: none;
     border-bottom: 2px solid transparent;
 }
-.nav-primary a:hover,
-.nav-sub a:hover {
+.nav-primary a:hover {
     color: var(--color-accent);
 }
-.nav-primary a.router-link-active,
-.nav-sub a.router-link-active {
+.nav-primary a.router-link-active {
     color: var(--color-accent);
     border-bottom-color: var(--color-accent);
     font-weight: 600;
@@ -287,6 +278,16 @@ input[type='radio'] {
 .form-wide {
     max-width: none;
 }
+.form label:not(.field):not(.field-inline) {
+    display: grid;
+    gap: var(--space-1);
+}
+.form fieldset {
+    display: grid;
+    gap: var(--space-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
 .field {
     display: grid;
     gap: var(--space-1);
@@ -315,6 +316,24 @@ input[type='radio'] {
     padding: var(--space-3);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
+}
+
+/* Badges */
+.badge {
+    display: inline-block;
+    padding: 0 var(--space-2);
+    border-radius: 999px;
+    font-size: var(--font-size-sm);
+    border: 1px solid currentColor;
+}
+.badge.ok {
+    color: var(--color-success);
+}
+.badge.needs_reauth {
+    color: var(--color-warning);
+}
+.badge.error {
+    color: var(--color-danger);
 }
 
 /* Tabs */

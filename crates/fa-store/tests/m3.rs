@@ -36,6 +36,8 @@ fn household(name: &str) -> Household {
         inbox: Default::default(),
         retention_mail: Default::default(),
         bill_lead_days: DEFAULT_BILL_LEAD_DAYS,
+        dashboard_pending_approvals: true,
+        setup_completed_at: None,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     }
@@ -2658,4 +2660,168 @@ async fn insert_for_adults_dedupes(pool: PgPool) {
     tx.commit().await.unwrap();
     let mut tx = store.tx_for(b.h).await.unwrap();
     assert_eq!(count(&mut tx, "notification").await, 0);
+}
+
+async fn add_source_vis(
+    store: &Store,
+    h: HouseholdId,
+    owners: &[MemberId],
+    visibility: MailVisibility,
+) -> MailSourceId {
+    let mut s = source(h, "Shared mail");
+    s.visibility = visibility;
+    let mut tx = store.tx_for(h).await.unwrap();
+    MailSourceRepo::insert(&mut tx, &s, owners).await.unwrap();
+    tx.commit().await.unwrap();
+    s.id
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn pending_by_adult_follows_source_scope(pool: PgPool) {
+    let store = Store::from_pool(pool);
+    let s = seed(&store, "A").await;
+    let own = add_source(&store, s.h, &[s.adult]).await;
+    let shared = add_source_vis(&store, s.h, &[s.adult2], MailVisibility::Household).await;
+    let m_own = add_msg(&store, s.h, own, "own-1", None, at(20, 9)).await;
+    let m_shared = add_msg(&store, s.h, shared, "shared-1", None, at(20, 10)).await;
+
+    let mut tx = store.tx_for(s.h).await.unwrap();
+    let with_msg = |payee: &str, amount: i64, m: Option<MessageId>| {
+        let mut b = bill(s.h, payee, amount, BillStatus::Proposed);
+        b.message_id = m;
+        b
+    };
+    for b in [
+        with_msg("Own Power", 100, Some(m_own)),
+        with_msg("Shared Water", 200, Some(m_shared)),
+        with_msg("Orphan Gas", 300, None),
+    ] {
+        BillRepo::insert_if_new(&mut tx, &b).await.unwrap().unwrap();
+    }
+    let l = TaskListRepo::get_or_create(
+        &mut tx,
+        TaskListKind::Email,
+        "Email",
+        &TaskList {
+            kind: TaskListKind::Email,
+            ..list_defaults(s.h)
+        },
+    )
+    .await
+    .unwrap();
+    TaskRepo::insert(
+        &mut tx,
+        &email_task_row(s.h, l.value.id, m_own, TaskStatus::Suggested),
+        &[],
+        &[],
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    let o = OrgRepo::insert(&mut tx, &org(s.h, "Example School"))
+        .await
+        .unwrap();
+    ContactSuggestionRepo::insert_if_new(
+        &mut tx,
+        &ContactSuggestion {
+            id: ContactSuggestionId::new(),
+            household_id: s.h,
+            org_id: o.value.id,
+            email: "c@example.edu".into(),
+            name: None,
+            member_id: None,
+            message_id: Some(m_shared),
+            status: SuggestionStatus::Proposed,
+            decided_by: None,
+            decided_at: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        },
+    )
+    .await
+    .unwrap();
+
+    let got: std::collections::HashMap<_, _> = InboxRepo::pending_by_adult(&mut tx)
+        .await
+        .unwrap()
+        .into_iter()
+        .collect();
+    assert_eq!(got.len(), 2, "adults only, the child is not listed");
+    // owner of the owners-only source: own bill + own task + shared bill + shared contact + orphan bill
+    assert_eq!(got[&s.adult], 5);
+    // the other adult: household-source items and the orphan only
+    assert_eq!(got[&s.adult2], 3);
+
+    // an archived source reaches every adult
+    sqlx::query("UPDATE mail_source SET archived_at = now() WHERE id = $1")
+        .bind(own.as_uuid())
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    let got: std::collections::HashMap<_, _> = InboxRepo::pending_by_adult(&mut tx)
+        .await
+        .unwrap()
+        .into_iter()
+        .collect();
+    assert_eq!((got[&s.adult], got[&s.adult2]), (5, 5));
+    tx.commit().await.unwrap();
+}
+
+async fn send_src(tx: &mut Tx, src: Option<MailSourceId>, key: &str) -> u64 {
+    NotificationRepo::insert_for_source_adults(
+        tx,
+        src,
+        NotifyTrigger::ApprovalNeeded,
+        "event",
+        None,
+        "t",
+        "b",
+        None,
+        key,
+    )
+    .await
+    .unwrap()
+}
+
+#[sqlx::test(migrations = "./migrations")]
+async fn insert_for_source_adults_scopes_recipients(pool: PgPool) {
+    let store = Store::from_pool(pool);
+    let s = seed(&store, "A").await;
+    let own = add_source(&store, s.h, &[s.adult]).await;
+    let shared = add_source_vis(&store, s.h, &[s.adult], MailVisibility::Household).await;
+    let mut tx = store.tx_for(s.h).await.unwrap();
+    assert_eq!(
+        send_src(&mut tx, Some(own), "k1").await,
+        1,
+        "owners-only: the owner"
+    );
+    assert_eq!(
+        send_src(&mut tx, Some(shared), "k2").await,
+        2,
+        "household: every adult"
+    );
+    assert_eq!(
+        send_src(&mut tx, None, "k3").await,
+        2,
+        "no source: every adult"
+    );
+    assert_eq!(send_src(&mut tx, None, "k3").await, 0, "deduped");
+    sqlx::query("UPDATE mail_source SET archived_at = now() WHERE id = $1")
+        .bind(own.as_uuid())
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    assert_eq!(
+        send_src(&mut tx, Some(own), "k4").await,
+        2,
+        "archived: every adult"
+    );
+    let to_owner: i64 =
+        sqlx::query_scalar("SELECT count(*) FROM notification WHERE dedupe_key = $1")
+            .bind(format!("k1:{}", s.adult))
+            .fetch_one(&mut *tx)
+            .await
+            .unwrap();
+    assert_eq!(to_owner, 1);
+    tx.commit().await.unwrap();
 }

@@ -1,6 +1,3 @@
-use std::sync::OnceLock;
-use std::time::Duration;
-
 use chrono::Utc;
 use fa_domain::{
     Action, Actor, Device, DeviceElevation, MemberId, PolicyCtx, Resource, Role, authorize,
@@ -9,15 +6,8 @@ use fa_domain::{
 use fa_store::{DeviceElevationRepo, MemberRepo};
 
 use crate::error::{AuthError, Result};
-use crate::limiter::KeyedRateLimiter;
 use crate::password::{self, PasswordCheck};
 use crate::service::{ActorIds, AuthService, actor_ids, audit};
-
-/// PIN attempts per device: 5 per 15 minutes.
-fn device_limiter() -> &'static KeyedRateLimiter<fa_domain::DeviceId> {
-    static L: OnceLock<KeyedRateLimiter<fa_domain::DeviceId>> = OnceLock::new();
-    L.get_or_init(|| KeyedRateLimiter::new(5, Duration::from_secs(180)))
-}
 
 impl AuthService {
     /// An adult sets their own PIN (4-6 digits, argon2id).
@@ -53,13 +43,17 @@ impl AuthService {
     }
 
     /// Dashboard device elevates to an adult for `elevation_ttl` after a correct PIN.
+    ///
+    /// The argon2 verify runs with no transaction open (C-12). The lockout row is then read
+    /// `FOR UPDATE` and the outcome recorded in that same short transaction, so parallel guesses
+    /// are serialised and a lock set by an earlier one is honoured.
     pub async fn elevate(
         &self,
         device: &Device,
         member: MemberId,
         pin: &str,
     ) -> Result<DeviceElevation> {
-        if !device_limiter().check(device.id) {
+        if !self.device_limiter.check(device.id) {
             return Err(AuthError::RateLimited);
         }
         let dev_actor = Actor::Device {
@@ -71,6 +65,7 @@ impl AuthService {
             member: None,
             device: Some(device.id),
         };
+
         let mut tx = self.store.tx_for(device.household_id).await?;
         let m = MemberRepo::get(&mut tx, member)
             .await?
@@ -87,11 +82,19 @@ impl AuthService {
             return Err(AuthError::InvalidCredentials);
         };
         let lock = MemberRepo::pin_lockout(&mut tx, member).await?;
+        tx.rollback().await?;
         if let Some(until) = lock.locked_until.filter(|u| *u > Utc::now()) {
             return Err(AuthError::Locked { until });
         }
 
         let check = password::verify_blocking(pin.to_owned(), pin_hash).await?;
+
+        let mut tx = self.store.tx_for(device.household_id).await?;
+        let lock = MemberRepo::pin_lockout(&mut tx, member).await?;
+        if let Some(until) = lock.locked_until.filter(|u| *u > Utc::now()) {
+            tx.rollback().await?;
+            return Err(AuthError::Locked { until });
+        }
         if !matches!(check, PasswordCheck::Match { .. }) {
             let after = MemberRepo::record_pin_failure(
                 &mut tx,
@@ -119,6 +122,8 @@ impl AuthService {
             return Err(AuthError::InvalidCredentials);
         }
 
+        // A correct PIN doesn't use up the device's attempt budget.
+        self.device_limiter.refund(&device.id);
         if lock.failed_attempts > 0 || lock.locked_until.is_some() {
             MemberRepo::clear_pin_failures(&mut tx, member).await?;
         }

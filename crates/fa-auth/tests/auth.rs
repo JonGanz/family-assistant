@@ -51,6 +51,8 @@ async fn seed(pool: PgPool) -> Fx {
     HouseholdRepo::insert(
         &mut tx,
         &Household {
+            dashboard_pending_approvals: true,
+            setup_completed_at: None,
             id: h,
             name: "Example".into(),
             tz: "UTC".into(),
@@ -467,4 +469,92 @@ async fn pg_session_store_roundtrip(pool: PgPool) {
     );
     store.delete(&rec.id).await.unwrap();
     assert!(store.load(&rec.id).await.unwrap().is_none());
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn device_pin_budget_comes_from_the_config(pool: PgPool) {
+    let fx = seed(pool).await;
+    let auth = AuthService::new(
+        fx.store.clone(),
+        AuthConfig {
+            device_pin_burst: 2,
+            device_pin_refill: Duration::from_secs(3600),
+            max_pin_failures: 50,
+            ..AuthConfig::default()
+        },
+    );
+    let (device, _) = device_with_pin(&fx, &auth).await;
+    for _ in 0..2 {
+        assert!(matches!(
+            auth.elevate(&device, fx.adult, "9999").await,
+            Err(AuthError::InvalidCredentials)
+        ));
+    }
+    assert!(matches!(
+        auth.elevate(&device, fx.adult, "9999").await,
+        Err(AuthError::RateLimited)
+    ));
+    // Another service instance has its own budget (no process-wide state).
+    let other = AuthService::new(fx.store.clone(), AuthConfig::default());
+    assert!(matches!(
+        other.elevate(&device, fx.adult, "9999").await,
+        Err(AuthError::InvalidCredentials)
+    ));
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn correct_pins_do_not_use_up_the_device_budget(pool: PgPool) {
+    let fx = seed(pool).await;
+    let auth = AuthService::new(
+        fx.store.clone(),
+        AuthConfig {
+            device_pin_burst: 1,
+            device_pin_refill: Duration::from_secs(3600),
+            ..AuthConfig::default()
+        },
+    );
+    let (device, _) = device_with_pin(&fx, &auth).await;
+    for _ in 0..4 {
+        auth.elevate(&device, fx.adult, "4321").await.unwrap();
+    }
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn parallel_wrong_logins_are_serialised_by_the_lockout(pool: PgPool) {
+    let fx = seed(pool).await;
+    let auth = svc(&fx);
+    let results = futures_join(
+        (0..8)
+            .map(|_| {
+                let auth = auth.clone();
+                tokio::spawn(
+                    async move { auth.login("alex", "wrong wrong wrong", None, None).await },
+                )
+            })
+            .collect(),
+    )
+    .await;
+    let invalid = results
+        .iter()
+        .filter(|r| matches!(r, Err(AuthError::InvalidCredentials)))
+        .count();
+    let locked = results
+        .iter()
+        .filter(|r| matches!(r, Err(AuthError::Locked { .. })))
+        .count();
+    assert_eq!(invalid + locked, results.len());
+    // Exactly the configured number of failures were recorded before the lock held.
+    assert_eq!(invalid, 5, "{results:?}");
+    assert!(matches!(
+        auth.login("alex", "adult password 123", None, None).await,
+        Err(AuthError::Locked { .. })
+    ));
+}
+
+async fn futures_join<T: Send + 'static>(handles: Vec<tokio::task::JoinHandle<T>>) -> Vec<T> {
+    let mut out = Vec::new();
+    for h in handles {
+        out.push(h.await.unwrap());
+    }
+    out
 }

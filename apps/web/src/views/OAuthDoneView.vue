@@ -22,7 +22,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader title="Google account" />
     <div v-if="error">
       <ErrorBanner :message="`Google did not connect: ${error}.`" />

@@ -138,6 +138,8 @@ async fn env(pool: PgPool, server: &MockServer, scopes: &[&str], auto: bool) -> 
         inbox: Default::default(),
         retention_mail: Default::default(),
         bill_lead_days: fa_domain::DEFAULT_BILL_LEAD_DAYS,
+        dashboard_pending_approvals: true,
+        setup_completed_at: None,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     };
@@ -172,6 +174,7 @@ async fn env(pool: PgPool, server: &MockServer, scopes: &[&str], auto: bool) -> 
         MasterKey::from_bytes(&[7u8; 32], 1).unwrap(),
         ConnectorConfig {
             allow_http: true,
+            allow_private_hosts: true,
             google_api_base: server.uri(),
         },
         Arc::new(Tokens),

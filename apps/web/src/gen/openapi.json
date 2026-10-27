@@ -41,48 +41,6 @@
         ]
       }
     },
-    "/api/v1/advisories/{id}/dismiss": {
-      "post": {
-        "tags": [
-          "weather"
-        ],
-        "operationId": "dismiss_advisory",
-        "parameters": [
-          {
-            "name": "id",
-            "in": "path",
-            "description": "advisory id",
-            "required": true,
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "204": {
-            "description": ""
-          },
-          "404": {
-            "description": "",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "cookie": []
-          },
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
     "/api/v1/auth/login": {
       "post": {
         "tags": [
@@ -1120,6 +1078,133 @@
         ]
       }
     },
+    "/api/v1/config/export": {
+      "get": {
+        "tags": [
+          "config"
+        ],
+        "operationId": "export_config",
+        "responses": {
+          "200": {
+            "description": "household TOML as an attachment; no secrets",
+            "content": {
+              "text/plain": {}
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/config/import": {
+      "post": {
+        "tags": [
+          "config"
+        ],
+        "operationId": "import_config",
+        "parameters": [
+          {
+            "name": "dry_run",
+            "in": "query",
+            "description": "Validate and report without writing anything.",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "replace",
+            "in": "query",
+            "description": "Archive keyed members the file no longer lists (default: merge).",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "household TOML, at most 1 MiB",
+          "content": {
+            "text/plain": {
+              "schema": {
+                "type": "string"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "with `dry_run=true` nothing is written",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportReport"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
     "/api/v1/dashboard": {
       "get": {
         "tags": [
@@ -1777,7 +1862,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HouseholdView"
+                  "$ref": "#/components/schemas/HouseholdViewExt"
                 }
               }
             }
@@ -1837,7 +1922,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HouseholdView"
+                  "$ref": "#/components/schemas/HouseholdViewExt"
                 }
               }
             }
@@ -3299,7 +3384,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PasswordReq"
+                "$ref": "#/components/schemas/PasswordBody"
               }
             }
           },
@@ -3307,7 +3392,17 @@
         },
         "responses": {
           "204": {
-            "description": ""
+            "description": "an own change ends the member's other sessions"
+          },
+          "401": {
+            "description": "wrong current password",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
           },
           "403": {
             "description": "",
@@ -3330,6 +3425,26 @@
             }
           },
           "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
             "description": "",
             "content": {
               "application/json": {
@@ -5696,6 +5811,154 @@
         ]
       }
     },
+    "/api/v1/setup": {
+      "get": {
+        "tags": [
+          "setup"
+        ],
+        "operationId": "get_setup",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupStatus"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/setup/complete": {
+      "post": {
+        "tags": [
+          "setup"
+        ],
+        "operationId": "setup_complete",
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/setup/household": {
+      "post": {
+        "tags": [
+          "setup"
+        ],
+        "operationId": "setup_household",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewSetupHousehold"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupHouseholdCreated"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "code `setup_closed`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/setup/owner": {
+      "post": {
+        "tags": [
+          "setup"
+        ],
+        "operationId": "setup_owner",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewSetupOwner"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "sets the fa_session cookie",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "code `setup_closed`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/status": {
       "get": {
         "tags": [
@@ -5754,6 +6017,217 @@
           },
           {
             "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/system/master-key": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "operationId": "master_key",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MasterKeyRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "the key as base64; the response is not cacheable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MasterKeyView"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "wrong password; counts toward the login lockout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/system/master-key/confirm": {
+      "post": {
+        "tags": [
+          "system"
+        ],
+        "operationId": "master_key_confirm",
+        "responses": {
+          "204": {
+            "description": "the key backup is recorded as confirmed"
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/system/settings": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "operationId": "get_settings",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemSettingsView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "system"
+        ],
+        "operationId": "patch_settings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SystemSettingsPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "stored; the server applies the change by restarting its services",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemSettingsView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "code `setting_locked`: an environment variable sets the key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "code `invalid_setting`; `field` is the key",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
           }
         ]
       }
@@ -8261,6 +8735,21 @@
           }
         }
       },
+      "ConnectionInfo": {
+        "type": "object",
+        "required": [
+          "secure",
+          "origin"
+        ],
+        "properties": {
+          "origin": {
+            "type": "string"
+          },
+          "secure": {
+            "type": "boolean"
+          }
+        }
+      },
       "ContactApproval": {
         "type": "object",
         "properties": {
@@ -8579,15 +9068,18 @@
           "household": {
             "$ref": "#/components/schemas/DashboardHousehold"
           },
-          "inbox": {
-            "$ref": "#/components/schemas/InboxCounts",
-            "description": "Counts of items waiting for approval; the panel fetches `GET /inbox` for the items."
-          },
           "members": {
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/MemberPublicDto"
             }
+          },
+          "pending_approvals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PendingApprovals"
+            },
+            "description": "Pending approvals per adult; empty when the household setting is off."
           },
           "routines": {
             "type": "array",
@@ -9476,6 +9968,12 @@
               "null"
             ]
           },
+          "dashboard_pending_approvals": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
           "events": {
             "oneOf": [
               {
@@ -9698,6 +10196,26 @@
           }
         }
       },
+      "HouseholdViewExt": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/HouseholdView"
+          },
+          {
+            "type": "object",
+            "required": [
+              "dashboard_pending_approvals"
+            ],
+            "properties": {
+              "dashboard_pending_approvals": {
+                "type": "boolean",
+                "description": "Dashboards show how many approvals wait for each adult."
+              }
+            }
+          }
+        ],
+        "description": "`HouseholdView` plus the dashboard approvals switch (D-068)."
+      },
       "ImapSettings": {
         "type": "object",
         "description": "IMAP connection settings. Debug output omits the password.",
@@ -9791,6 +10309,292 @@
           },
           "ok": {
             "type": "boolean"
+          }
+        }
+      },
+      "ImportReport": {
+        "type": "object",
+        "required": [
+          "household_id",
+          "household_created",
+          "household_updated",
+          "members_created",
+          "members_updated",
+          "members_unchanged",
+          "members_archived",
+          "sources_created",
+          "sources_updated",
+          "sources_unchanged",
+          "rules_created",
+          "rules_updated",
+          "rules_unchanged",
+          "task_lists_created",
+          "task_lists_updated",
+          "task_lists_unchanged",
+          "task_definitions_created",
+          "task_definitions_updated",
+          "task_definitions_unchanged",
+          "routines_created",
+          "routines_updated",
+          "routines_unchanged",
+          "notify_created",
+          "notify_updated",
+          "notify_unchanged",
+          "orgs_created",
+          "orgs_updated",
+          "orgs_unchanged",
+          "enrollments_created",
+          "enrollments_updated",
+          "enrollments_unchanged",
+          "mail_sources_created",
+          "mail_sources_updated",
+          "mail_sources_unchanged",
+          "mail_sources_skipped",
+          "categories_created",
+          "categories_updated",
+          "categories_unchanged",
+          "mail_rules_created",
+          "mail_rules_updated",
+          "mail_rules_unchanged"
+        ],
+        "properties": {
+          "categories_created": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "categories_unchanged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "categories_updated": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "enrollments_created": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "enrollments_unchanged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "enrollments_updated": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "household_created": {
+            "type": "boolean"
+          },
+          "household_id": {
+            "$ref": "#/components/schemas/HouseholdId"
+          },
+          "household_updated": {
+            "type": "boolean"
+          },
+          "mail_rules_created": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mail_rules_unchanged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mail_rules_updated": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mail_sources_created": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mail_sources_skipped": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Gmail sources that need an OAuth connection made in the UI first."
+          },
+          "mail_sources_unchanged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mail_sources_updated": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "members_archived": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "members_created": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "members_unchanged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "members_updated": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notify_created": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notify_unchanged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "notify_updated": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "orgs_created": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "orgs_unchanged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "orgs_updated": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "routines_created": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "routines_unchanged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "routines_updated": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rules_created": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rules_unchanged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "rules_updated": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sources_created": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sources_unchanged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "sources_updated": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "task_definitions_created": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "task_definitions_unchanged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "task_definitions_updated": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "task_lists_created": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "task_lists_unchanged": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "task_lists_updated": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -10560,6 +11364,29 @@
           }
         }
       },
+      "MasterKeyRequest": {
+        "type": "object",
+        "required": [
+          "password"
+        ],
+        "properties": {
+          "password": {
+            "type": "string"
+          }
+        }
+      },
+      "MasterKeyView": {
+        "type": "object",
+        "required": [
+          "key_base64"
+        ],
+        "properties": {
+          "key_base64": {
+            "type": "string",
+            "description": "Standard base64 of the 32 raw key bytes."
+          }
+        }
+      },
       "MeResponse": {
         "type": "object",
         "required": [
@@ -11074,6 +11901,79 @@
                 "description": "Default `owners`."
               }
             ]
+          }
+        }
+      },
+      "NewSetupHousehold": {
+        "type": "object",
+        "required": [
+          "name",
+          "tz",
+          "units",
+          "currency",
+          "base_url"
+        ],
+        "properties": {
+          "base_url": {
+            "type": "string",
+            "description": "The browser's `location.origin`."
+          },
+          "currency": {
+            "type": "string",
+            "description": "ISO 4217."
+          },
+          "location": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SetupLocation"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "tz": {
+            "type": "string",
+            "description": "IANA time zone."
+          },
+          "units": {
+            "$ref": "#/components/schemas/Units"
+          }
+        }
+      },
+      "NewSetupOwner": {
+        "type": "object",
+        "required": [
+          "display_name",
+          "username",
+          "password"
+        ],
+        "properties": {
+          "color": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "`#rrggbb`."
+          },
+          "display_name": {
+            "type": "string"
+          },
+          "password": {
+            "type": "string"
+          },
+          "pin": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "4 to 6 digits."
+          },
+          "username": {
+            "type": "string"
           }
         }
       },
@@ -11877,6 +12777,21 @@
           "portrait"
         ]
       },
+      "OwnPasswordChange": {
+        "type": "object",
+        "required": [
+          "current_password",
+          "new_password"
+        ],
+        "properties": {
+          "current_password": {
+            "type": "string"
+          },
+          "new_password": {
+            "type": "string"
+          }
+        }
+      },
       "PairDeviceReq": {
         "type": "object",
         "required": [
@@ -11934,6 +12849,17 @@
           }
         ],
         "description": "A panel with a kind and kind-specific options. Unknown kinds and options are kept as they are."
+      },
+      "PasswordBody": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/OwnPasswordChange"
+          },
+          {
+            "$ref": "#/components/schemas/PasswordReq"
+          }
+        ],
+        "description": "An adult resetting a child's password sends `PasswordReq`; a member changing their own sends\n`OwnPasswordChange` (C-03)."
       },
       "PasswordReq": {
         "type": "object",
@@ -12042,6 +12968,23 @@
           }
         }
       },
+      "PendingApprovals": {
+        "type": "object",
+        "required": [
+          "member_id",
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "member_id": {
+            "$ref": "#/components/schemas/MemberId"
+          }
+        }
+      },
       "PinReq": {
         "type": "object",
         "required": [
@@ -12070,6 +13013,13 @@
           "detail"
         ],
         "properties": {
+          "code": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Machine-readable code of the setup and system routes (`setup_required`, `setup_closed`,\n`setting_locked`, `invalid_setting`)."
+          },
           "detail": {
             "type": "string"
           },
@@ -12838,6 +13788,129 @@
           }
         }
       },
+      "SettingKind": {
+        "type": "string",
+        "enum": [
+          "url",
+          "bool",
+          "text",
+          "secret",
+          "cidrs"
+        ]
+      },
+      "SettingSource": {
+        "type": "string",
+        "enum": [
+          "env",
+          "db",
+          "default"
+        ]
+      },
+      "SettingView": {
+        "type": "object",
+        "required": [
+          "key",
+          "kind",
+          "is_set",
+          "source",
+          "locked"
+        ],
+        "properties": {
+          "is_set": {
+            "type": "boolean"
+          },
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/SettingKind"
+          },
+          "locked": {
+            "type": "boolean",
+            "description": "The source is `env`."
+          },
+          "source": {
+            "$ref": "#/components/schemas/SettingSource"
+          },
+          "value": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "description": "Always `null` for secrets."
+          }
+        }
+      },
+      "SetupHouseholdCreated": {
+        "type": "object",
+        "required": [
+          "household_id"
+        ],
+        "properties": {
+          "household_id": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SetupLocation": {
+        "type": "object",
+        "required": [
+          "label",
+          "lat",
+          "lon"
+        ],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "lat": {
+            "type": "number",
+            "format": "double"
+          },
+          "lon": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "SetupStatus": {
+        "type": "object",
+        "required": [
+          "needed",
+          "owner_needed",
+          "completed",
+          "secure",
+          "origin",
+          "via_tailscale"
+        ],
+        "properties": {
+          "completed": {
+            "type": "boolean",
+            "description": "`setup_completed_at` is set."
+          },
+          "needed": {
+            "type": "boolean",
+            "description": "No household yet."
+          },
+          "origin": {
+            "type": "string",
+            "description": "`scheme://host[:port]` of this request."
+          },
+          "owner_needed": {
+            "type": "boolean",
+            "description": "A household exists but no adult account."
+          },
+          "secure": {
+            "type": "boolean",
+            "description": "This request arrived over HTTPS."
+          },
+          "via_tailscale": {
+            "type": "boolean",
+            "description": "Secure and the host ends in `.ts.net`."
+          }
+        }
+      },
       "Severity": {
         "type": "string",
         "enum": [
@@ -13233,6 +14306,53 @@
           "s2",
           "user"
         ]
+      },
+      "SystemSettingsPatch": {
+        "type": "object",
+        "required": [
+          "values"
+        ],
+        "properties": {
+          "values": {
+            "type": "object",
+            "description": "`null` resets a key to the default; a secret takes a string.",
+            "additionalProperties": {
+              "type": [
+                "object",
+                "null"
+              ]
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SystemSettingsView": {
+        "type": "object",
+        "required": [
+          "settings",
+          "connection"
+        ],
+        "properties": {
+          "connection": {
+            "$ref": "#/components/schemas/ConnectionInfo"
+          },
+          "key_backup_confirmed_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "settings": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettingView"
+            }
+          }
+        }
       },
       "TaskApproval": {
         "type": "object",

@@ -27,7 +27,9 @@ impl From<ConnectorError> for CalendarError {
     fn from(e: ConnectorError) -> Self {
         match e {
             ConnectorError::Unauthorized => Self::Unauthorized,
-            ConnectorError::InsecureUrl => Self::Invalid(e.to_string()),
+            ConnectorError::InsecureUrl | ConnectorError::PrivateHost => {
+                Self::Invalid(e.to_string())
+            }
             other => Self::Remote(scrub(&other.to_string(), &[])),
         }
     }

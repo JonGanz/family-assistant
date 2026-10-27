@@ -44,7 +44,7 @@ async function tick(run: RoutineRunView, stepId: string, done: boolean) {
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader title="Routines" />
     <StateBlock
       :loading="!routines.todayLoaded && !routines.error"

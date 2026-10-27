@@ -40,7 +40,7 @@ async function submit() {
 </script>
 
 <template>
-  <section class="login">
+  <section class="login" aria-labelledby="page-title">
     <PageHeader title="Log in" />
     <form class="form" @submit.prevent="submit">
       <label class="field">

@@ -5,7 +5,7 @@ milestone: M3.5
 wave: 1
 depends_on: [T-01]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-domain/**", "crates/fa-store/**"]
 decisions: [D-065, D-068, D-070, D-073, D-074, D-075, D-078]
 ---

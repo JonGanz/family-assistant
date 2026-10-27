@@ -21,6 +21,11 @@ pub struct AuthConfig {
     /// Per-IP token bucket: burst size and refill interval per token.
     pub ip_burst: u32,
     pub ip_refill: Duration,
+    /// PIN attempts per dashboard device: burst size and refill interval per token. The burst is one
+    /// more than `max_pin_failures`, so the member lockout (D-019, which notifies the adults)
+    /// answers before this backstop does.
+    pub device_pin_burst: u32,
+    pub device_pin_refill: Duration,
     /// `device.last_seen` is written at most this often.
     pub device_touch_interval: Duration,
 }
@@ -38,6 +43,8 @@ impl Default for AuthConfig {
             elevation_ttl: Duration::from_secs(5 * 60),
             ip_burst: 20,
             ip_refill: Duration::from_secs(30),
+            device_pin_burst: 6,
+            device_pin_refill: Duration::from_secs(180),
             device_touch_interval: Duration::from_secs(60),
         }
     }

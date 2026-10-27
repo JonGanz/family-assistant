@@ -1,6 +1,6 @@
 //! Rule evaluation against a stored snapshot (arch/Feeds.md section 4).
 
-use chrono::{DateTime, Duration, NaiveDate, TimeZone, Utc};
+use chrono::{DateTime, Duration, DurationRound, NaiveDate, TimeZone, Utc};
 use chrono_tz::Tz;
 use fa_connectors::Forecast;
 use fa_domain::{Units, WeatherSnapshot};
@@ -160,7 +160,13 @@ pub fn resolve_window(
     let next_day = today.succ_opt().unwrap_or(today);
     match w {
         Window::Next(n) => (now, now + Duration::hours(i64::from(n)), today),
-        Window::Today => (now, local_at(tz, next_day, 0), today),
+        // The current hour's point starts before `now`; include it so the
+        // last hour of the day still has data.
+        Window::Today => (
+            now.duration_trunc(Duration::hours(1)).unwrap_or(now),
+            local_at(tz, next_day, 0),
+            today,
+        ),
         Window::Tonight => {
             use chrono::Timelike;
             if now.with_timezone(&tz).hour() < 8 {

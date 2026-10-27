@@ -40,12 +40,8 @@ function toggleMember(id: string) {
     <div class="head">
       <strong>{{ POINT_TITLES[point] }}</strong>
       <span class="val">{{ text }}</span>
-      <span v-if="decision?.is_final && decision.decided_by" class="settings-note"
-        >(confirmed)</span
-      >
-      <span v-else-if="decision" class="settings-note"
-        >{{ Math.round(decision.confidence * 100) }}%</span
-      >
+      <span v-if="decision?.is_final && decision.decided_by" class="muted">(confirmed)</span>
+      <span v-else-if="decision" class="muted">{{ Math.round(decision.confidence * 100) }}%</span>
     </div>
     <div class="choices">
       <template v-if="point === 'email.category'">

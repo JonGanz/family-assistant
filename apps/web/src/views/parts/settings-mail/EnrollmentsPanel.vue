@@ -69,10 +69,10 @@ async function remove(e: EnrollmentView) {
 <template>
   <div :data-testid="`enrollments-${child.display_name}`">
     <h3>{{ child.display_name }}</h3>
-    <ul class="settings-list">
+    <ul class="card-list">
       <li v-for="e in list()" :key="e.id">
         <strong>{{ orgName(e.org) }}</strong>
-        <span class="settings-note">
+        <span class="muted">
           {{
             [
               e.grade && `grade ${e.grade}`,
@@ -91,7 +91,7 @@ async function remove(e: EnrollmentView) {
     <button v-if="editing === null && orgs.length" type="button" @click="open('new')">
       Add enrollment
     </button>
-    <form v-if="editing !== null" class="settings-form" @submit.prevent="save">
+    <form v-if="editing !== null" class="form" @submit.prevent="save">
       <label>
         Organization
         <select v-model="form.org" name="org" required>
@@ -104,12 +104,12 @@ async function remove(e: EnrollmentView) {
       <label>Until <input v-model="form.until" name="until" type="date" /></label>
       <fieldset v-if="contactsOf(form.org).length">
         <legend>Contacts (teachers, coaches)</legend>
-        <label v-for="c in contactsOf(form.org)" :key="c.id" class="inline">
+        <label v-for="c in contactsOf(form.org)" :key="c.id" class="field-inline">
           <input v-model="form.contacts" type="checkbox" :value="c.id" />
           {{ c.name }} ({{ c.email }})
         </label>
       </fieldset>
-      <p v-if="error" class="settings-error" role="alert">{{ error }}</p>
+      <p v-if="error" class="text-danger" role="alert">{{ error }}</p>
       <div>
         <button type="submit">Save</button>
         <button type="button" @click="editing = null">Cancel</button>

@@ -1,5 +1,9 @@
 import { expect, test, type Browser, type Page } from '@playwright/test'
 
+// Logins are limited per client address. The server trusts X-Forwarded-For from loopback, so each
+// file logs in from its own made-up address and the suite does not share one budget.
+test.use({ extraHTTPHeaders: { 'X-Forwarded-For': '10.99.0.1' } })
+
 // UI specs for M1 (arch/Frontend.md section 7). They run against the stack from scripts/e2e.sh:
 // api and worker as separate processes, fixture feeds and Radicale. Env: E2E_BASE_URL,
 // E2E_USERNAME/E2E_PASSWORD (adult), E2E_CHILD_USERNAME/E2E_CHILD_PASSWORD, E2E_FIXTURES.

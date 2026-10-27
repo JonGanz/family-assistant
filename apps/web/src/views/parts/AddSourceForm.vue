@@ -3,9 +3,9 @@ import { computed, reactive, ref } from 'vue'
 import { api, type NewSource, type OAuthAccountView, type SourceTestResult } from '../../api/client'
 import ErrorBanner from '../../components/ErrorBanner.vue'
 import { formatRange } from '../../lib/time'
+import { GOOGLE_NEEDS_HTTPS, isSecure } from '../../lib/secure'
 import { useSourcesStore } from '../../stores/sources'
 import { describeError } from '../shared'
-import './settings.css'
 
 const props = defineProps<{
   googleEnabled: boolean
@@ -18,7 +18,8 @@ const emit = defineEmits<{ created: [] }>()
 
 type Kind = 'google' | 'caldav' | 'ics'
 const sources = useSourcesStore()
-const kind = ref<Kind>(props.googleEnabled ? 'google' : 'ics')
+const secure = isSecure()
+const kind = ref<Kind>(props.googleEnabled && secure ? 'google' : 'ics')
 const form = reactive({ name: '', url: '', username: '', password: '', account: '' })
 const result = ref<SourceTestResult | null>(null)
 const error = ref('')
@@ -87,7 +88,7 @@ async function add() {
     <h2>Add a calendar source</h2>
     <div class="kinds" role="group" aria-label="Source type">
       <button
-        v-if="googleEnabled"
+        v-if="googleEnabled && secure"
         type="button"
         :aria-pressed="kind === 'google'"
         @click="pick('google')"
@@ -100,7 +101,11 @@ async function add() {
       <button type="button" :aria-pressed="kind === 'ics'" @click="pick('ics')">ICS link</button>
     </div>
 
-    <form class="settings-form" autocomplete="off" @submit.prevent="add">
+    <p v-if="!secure" class="muted" data-testid="google-needs-https">
+      Google: {{ GOOGLE_NEEDS_HTTPS }}. CalDAV and ICS links work over plain HTTP.
+    </p>
+
+    <form class="form" autocomplete="off" @submit.prevent="add">
       <label>Name <input v-model="form.name" name="source_name" placeholder="Family" /></label>
 
       <template v-if="kind === 'google'">
@@ -135,9 +140,7 @@ async function add() {
             />
           </label>
         </template>
-        <p class="settings-note">
-          The link or password is stored encrypted and is never shown again.
-        </p>
+        <p class="muted">The link or password is stored encrypted and is never shown again.</p>
       </template>
 
       <div class="row">
@@ -150,11 +153,11 @@ async function add() {
     </form>
 
     <div v-if="result" class="result" data-testid="test-result">
-      <p v-if="result.ok" class="settings-ok">
+      <p v-if="result.ok" class="text-success">
         It works. Found {{ result.calendars.length }}
         {{ result.calendars.length === 1 ? 'calendar' : 'calendars' }}.
       </p>
-      <p v-else class="settings-error" role="alert">{{ result.error ?? 'The test failed.' }}</p>
+      <p v-else class="text-danger" role="alert">{{ result.error ?? 'The test failed.' }}</p>
       <ul v-if="result.ok">
         <li v-for="c in result.calendars" :key="c.remote_id">{{ c.name }}</li>
       </ul>

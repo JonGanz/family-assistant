@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, http } from './http'
+import { ApiError, http, onSetupRequired, problemCode } from './http'
 
 describe('http', () => {
   const fetchMock = vi.fn()
@@ -39,5 +39,46 @@ describe('http', () => {
     expect(err).toBeInstanceOf(ApiError)
     expect(err.status).toBe(401)
     expect(err.message).toBe('bad creds')
+  })
+
+  it('calls the setup handler on 409 setup_required', async () => {
+    const handler = vi.fn()
+    onSetupRequired(handler)
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ code: 'setup_required', detail: 'x' }), {
+        status: 409,
+        headers: { 'content-type': 'application/problem+json' },
+      }),
+    )
+    const err = await http.get('/api/v1/x').catch((e: unknown) => e)
+    expect(handler).toHaveBeenCalledTimes(1)
+    expect(problemCode(err)).toBe('setup_required')
+    onSetupRequired(null)
+  })
+
+  it('does not call it for another 409', async () => {
+    const handler = vi.fn()
+    onSetupRequired(handler)
+    fetchMock.mockResolvedValue(new Response('{}', { status: 409 }))
+    await http.get('/api/v1/x').catch(() => undefined)
+    expect(handler).not.toHaveBeenCalled()
+    onSetupRequired(null)
+  })
+
+  it('retries a refused read while the server restarts, but never a write', async () => {
+    vi.useFakeTimers()
+    fetchMock
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'))
+      .mockResolvedValueOnce(new Response('{"ok":1}', { status: 200 }))
+    const read = http.get('/api/v1/x')
+    await vi.advanceTimersByTimeAsync(500)
+    await expect(read).resolves.toEqual({ ok: 1 })
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    vi.useRealTimers()
+
+    fetchMock.mockReset()
+    fetchMock.mockRejectedValueOnce(new TypeError('Failed to fetch'))
+    await expect(http.post('/api/v1/x', {})).rejects.toBeInstanceOf(TypeError)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })

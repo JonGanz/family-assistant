@@ -76,7 +76,10 @@ fn mail_services(store: &Store, oauth: &fa_auth::OAuthService) -> fa_api::MailSe
         http: fa_connectors::Http::new(true).unwrap(),
         tokens: std::sync::Arc::new(oauth.clone()),
         key: std::sync::Arc::new(MasterKey::from_bytes(&[7u8; 32], 1).unwrap()),
-        cfg: fa_mail::MailConfig::default(),
+        cfg: fa_mail::MailConfig {
+            allow_private_hosts: true,
+            ..Default::default()
+        },
     }))
 }
 
@@ -97,14 +100,20 @@ fn services(store: &Store) -> Services {
             fa_calendar::CalendarService::new(
                 store.clone(),
                 key(),
-                fa_calendar::ConnectorConfig::default(),
+                fa_calendar::ConnectorConfig {
+                    allow_private_hosts: true,
+                    ..Default::default()
+                },
                 Arc::new(oauth.clone()),
             )
             .unwrap(),
         ),
         weather: fa_weather::WeatherService::new(
             store.clone(),
-            fa_weather::WeatherConfig::default(),
+            fa_weather::WeatherConfig {
+                allow_private_hosts: true,
+                ..Default::default()
+            },
         )
         .unwrap(),
         mail: mail_services(store, &oauth),
@@ -116,6 +125,7 @@ fn services(store: &Store) -> Services {
                 ntfy_url: None,
                 ntfy_token: None,
                 public_base_url: "https://fa.example.com".into(),
+                subscribe_base: None,
             },
         ),
     }
@@ -134,6 +144,8 @@ async fn seed(pool: PgPool) -> Fx {
     HouseholdRepo::insert(
         &mut tx,
         &Household {
+            dashboard_pending_approvals: true,
+            setup_completed_at: None,
             id: hid,
             name: "Example".into(),
             tz: "UTC".into(),
@@ -211,7 +223,7 @@ async fn seed(pool: PgPool) -> Fx {
         auth,
         services(&store),
         ApiConfig {
-            cookie_secure: false,
+            cookie_secure: fa_config::CookieSecure::Never,
             heartbeat_interval: Duration::from_secs(60),
             // Debug-build argon2 is slow when many tests run at once.
             request_timeout: Duration::from_secs(120),

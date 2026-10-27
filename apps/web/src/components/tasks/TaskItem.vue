@@ -138,13 +138,13 @@ const overdue = computed(() => !done.value && isOverdue(props.task.dueAt, props.
   height: 3rem;
 }
 .kiosk .title {
-  font-size: var(--kiosk-font-base, 2rem);
+  font-size: var(--kiosk-font-base);
 }
 .kiosk .meta {
-  font-size: var(--kiosk-font-small, 1.5rem);
+  font-size: var(--kiosk-font-small);
 }
 .kiosk .claim-btn {
   min-height: 4rem;
-  font-size: var(--kiosk-font-small, 1.5rem);
+  font-size: var(--kiosk-font-small);
 }
 </style>

@@ -31,6 +31,8 @@ fn household(name: &str) -> Household {
         inbox: Default::default(),
         retention_mail: Default::default(),
         bill_lead_days: fa_domain::DEFAULT_BILL_LEAD_DAYS,
+        dashboard_pending_approvals: true,
+        setup_completed_at: None,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     }
@@ -579,7 +581,7 @@ async fn calendars_discovery_archive_and_conflicts(pool: PgPool) {
 #[sqlx::test(migrations = "./migrations")]
 async fn advisories_dedupe_and_no_resurrection(pool: PgPool) {
     let store = Store::from_pool(pool);
-    let (h, ma) = seed(&store, "A").await;
+    let (h, _ma) = seed(&store, "A").await;
     let mut tx = store.tx_for(h).await.unwrap();
     let (id, changed) = AdvisoryRepo::upsert_by_dedupe(
         &mut tx,
@@ -629,13 +631,50 @@ async fn advisories_dedupe_and_no_resurrection(pool: PgPool) {
             .is_empty()
     );
 
-    AdvisoryRepo::dismiss(&mut tx, id, Some(ma)).await.unwrap();
-    assert!(
-        AdvisoryRepo::active(&mut tx, t(5))
+    let (s2, _) = AdvisoryRepo::upsert_by_dedupe(
+        &mut tx,
+        None,
+        "Model note",
+        Severity::Info,
+        t(0),
+        t(20),
+        AdvisorySource::S2,
+        "s2:1",
+    )
+    .await
+    .unwrap();
+    let (other, _) = AdvisoryRepo::upsert_by_dedupe(
+        &mut tx,
+        None,
+        "Wind",
+        Severity::Info,
+        t(0),
+        t(20),
+        AdvisorySource::Rule,
+        "rule:2:d",
+    )
+    .await
+    .unwrap();
+    // keeps the listed rule key and every s2 advisory, drops the other rule advisory
+    let removed = AdvisoryRepo::retain_rule_advisories(&mut tx, &["rule:1:d".to_string()])
+        .await
+        .unwrap();
+    assert_eq!(removed, 1);
+    let ids: Vec<_> = AdvisoryRepo::active(&mut tx, t(5))
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|a| a.id)
+        .collect();
+    assert!(ids.contains(&id) && ids.contains(&s2) && !ids.contains(&other));
+    // an empty keep list removes every rule advisory
+    assert_eq!(
+        AdvisoryRepo::retain_rule_advisories(&mut tx, &[])
             .await
-            .unwrap()
-            .is_empty()
+            .unwrap(),
+        1
     );
+    assert_eq!(AdvisoryRepo::active(&mut tx, t(5)).await.unwrap().len(), 1);
     let (id3, changed) = AdvisoryRepo::upsert_by_dedupe(
         &mut tx,
         None,
@@ -648,15 +687,8 @@ async fn advisories_dedupe_and_no_resurrection(pool: PgPool) {
     )
     .await
     .unwrap();
-    assert_eq!(id3, id);
-    assert!(!changed);
-    assert!(
-        AdvisoryRepo::active(&mut tx, t(5))
-            .await
-            .unwrap()
-            .is_empty(),
-        "dismissed stays dismissed"
-    );
+    assert!(changed);
+    let _ = id3;
     assert_eq!(
         AdvisoryRepo::delete_expired(&mut tx, t(19)).await.unwrap(),
         0
@@ -665,7 +697,7 @@ async fn advisories_dedupe_and_no_resurrection(pool: PgPool) {
         AdvisoryRepo::delete_expired(&mut tx, t(23) + chrono::Duration::days(1))
             .await
             .unwrap(),
-        1
+        2
     );
 }
 

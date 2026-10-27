@@ -158,7 +158,9 @@ fn validation_errors() {
 async fn import_export_round_trip_and_idempotent(pool: PgPool) {
     let store = Store::from_pool(pool);
     let cfg = HouseholdConfig::from_toml(TASKS).unwrap();
-    let r = import(&store, None, &cfg, ImportMode::Merge).await.unwrap();
+    let r = import(&store, None, &cfg, ImportMode::Merge, false)
+        .await
+        .unwrap();
     assert_eq!(r.task_lists_created, ["Chores", "Homework"]);
     assert_eq!(r.task_definitions_created.len(), 2);
     assert_eq!(r.routines_created, ["Morning"]);
@@ -203,9 +205,15 @@ async fn import_export_round_trip_and_idempotent(pool: PgPool) {
     let first = out.to_toml().unwrap();
     assert!(!first.contains("topic"), "{first}");
     let again = HouseholdConfig::from_toml(&first).unwrap();
-    let r2 = import(&store, Some(r.household_id), &again, ImportMode::Merge)
-        .await
-        .unwrap();
+    let r2 = import(
+        &store,
+        Some(r.household_id),
+        &again,
+        ImportMode::Merge,
+        false,
+    )
+    .await
+    .unwrap();
     assert!(r2.task_lists_unchanged.len() == 2 && r2.task_lists_updated.is_empty());
     assert!(r2.task_definitions_unchanged.len() == 2 && r2.task_definitions_updated.is_empty());
     assert_eq!(r2.routines_unchanged, ["Morning"]);
@@ -232,9 +240,15 @@ async fn import_export_round_trip_and_idempotent(pool: PgPool) {
         text: "Shoes".into(),
         target_time: None,
     });
-    let r3 = import(&store, Some(r.household_id), &changed, ImportMode::Merge)
-        .await
-        .unwrap();
+    let r3 = import(
+        &store,
+        Some(r.household_id),
+        &changed,
+        ImportMode::Merge,
+        false,
+    )
+    .await
+    .unwrap();
     assert_eq!(r3.task_definitions_updated, ["Water the plants"]);
     assert_eq!(r3.routines_updated, ["Morning"]);
 }
@@ -244,7 +258,7 @@ async fn import_rejects_unknown_weather_definition(pool: PgPool) {
     let store = Store::from_pool(pool);
     let mut cfg = HouseholdConfig::from_toml(TASKS).unwrap();
     cfg.weather_rules[0].task_definition = Some("Missing".into());
-    let e = import(&store, None, &cfg, ImportMode::Merge)
+    let e = import(&store, None, &cfg, ImportMode::Merge, false)
         .await
         .unwrap_err()
         .to_string();

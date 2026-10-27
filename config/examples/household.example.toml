@@ -1,6 +1,13 @@
 # Fictional household for development and tests. No real data, no secrets.
-# Accounts are created separately with `fa-server user add`
-# (e.g. alex@example.com, sam@example.com).
+#
+# This file is OPTIONAL. A normal install describes the household in the first-run setup wizard and in
+# Settings, and never needs a file. To use one anyway, upload it under Settings, System, Household file
+# (it shows a preview of what would change first), or run
+#   fa-server config import [--dry-run] <file>
+# Settings, System can also download the current household as the same format. (Development: the
+# README's "Run it locally" imports this file, which also marks the first-run setup complete.)
+# Accounts are not part of this file: the wizard or Settings, Members create them
+# (or `fa-server user add`, e.g. alex@example.com, sam@example.com).
 
 [household]
 name = "The Example Family"

@@ -83,15 +83,15 @@ h2 {
   cursor: pointer;
 }
 .kiosk h2 {
-  font-size: var(--kiosk-font-base, 2rem);
+  font-size: var(--kiosk-font-base);
 }
 .kiosk .member {
   min-width: 9rem;
   min-height: 9rem;
-  font-size: var(--kiosk-font-small, 1.5rem);
+  font-size: var(--kiosk-font-small);
 }
 .kiosk .cancel {
   min-height: 4rem;
-  font-size: var(--kiosk-font-small, 1.5rem);
+  font-size: var(--kiosk-font-small);
 }
 </style>

@@ -5,6 +5,7 @@ use crate::error::Problem;
 use crate::feeds;
 use crate::routes::{self, *};
 use crate::{mail, notify, tasks};
+use fa_domain::system_api::*;
 use fa_domain::*;
 
 struct Security;
@@ -36,12 +37,17 @@ impl Modify for Security {
         routes::create_account, routes::reset_password, routes::set_pin,
         routes::list_devices, routes::pair_device, routes::revoke_device, routes::elevate,
         routes::list_sessions, routes::revoke_session, routes::stream, routes::openapi_json,
+        crate::setup::get_setup, crate::setup::setup_household, crate::setup::setup_owner,
+        crate::setup::setup_complete, crate::system::master_key,
+        crate::system::master_key_confirm, crate::system::get_settings,
+        crate::system::patch_settings, crate::config::import_config,
+        crate::config::export_config,
         feeds::get_household, feeds::patch_household,
         feeds::put_avatar, feeds::delete_avatar, feeds::get_avatar,
         feeds::oauth_start, feeds::oauth_callback, feeds::list_oauth_accounts,
         feeds::list_sources, feeds::create_source, feeds::test_source, feeds::patch_source,
         feeds::delete_source, feeds::sync_source, feeds::list_calendars, feeds::patch_calendar,
-        feeds::list_events, feeds::get_weather, feeds::list_advisories, feeds::dismiss_advisory,
+        feeds::list_events, feeds::get_weather, feeds::list_advisories,
         feeds::list_rules, feeds::create_rule, feeds::patch_rule, feeds::delete_rule,
         feeds::validate_rule, feeds::get_device, feeds::patch_device, feeds::get_dashboard,
         feeds::get_status,
@@ -76,7 +82,10 @@ impl Modify for Security {
         Problem, MemberView, MemberPublic, MemberFull, DashboardSettings,
         LoginReq, LoginResp, MeResponse, ActorView, CreateMemberReq, PatchMemberReq,
         CreateAccountReq, PasswordReq, PinReq, PairDeviceReq, PairDeviceResp, ElevateReq,
-        ElevateResp, SessionView,
+        ElevateResp, SessionView, PasswordBody, OwnPasswordChange, crate::feeds::HouseholdViewExt,
+        crate::setup::SetupHouseholdCreated, SetupStatus, NewSetupHousehold, SetupLocation,
+        NewSetupOwner, MasterKeyRequest, MasterKeyView, SettingSource, SettingKind, SettingView,
+        ConnectionInfo, SystemSettingsView, SystemSettingsPatch, fa_config::ImportReport,
     )),
     modifiers(&Security)
 )]

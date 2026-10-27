@@ -20,6 +20,7 @@ fa-weather.workspace = true
 fa-tasks.workspace = true
 fa-notify.workspace = true
 fa-mail.workspace = true
+fa-config.workspace = true
 axum.workspace = true
 axum-extra.workspace = true
 tower.workspace = true
@@ -33,6 +34,7 @@ serde_json.workspace = true
 chrono.workspace = true
 chrono-tz.workspace = true
 sha2.workspace = true
+base64.workspace = true
 sqlx.workspace = true
 url.workspace = true
 uuid.workspace = true
@@ -43,5 +45,6 @@ utoipa-swagger-ui.workspace = true
 
 [dev-dependencies]
 fa-connectors.workspace = true
+figment.workspace = true
 wiremock.workspace = true
 tower = { workspace = true, features = ["util"] }

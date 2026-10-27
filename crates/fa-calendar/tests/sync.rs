@@ -79,6 +79,8 @@ async fn env(pool: PgPool, server: Option<&MockServer>) -> Env {
         inbox: Default::default(),
         retention_mail: Default::default(),
         bill_lead_days: fa_domain::DEFAULT_BILL_LEAD_DAYS,
+        dashboard_pending_approvals: true,
+        setup_completed_at: None,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     };
@@ -92,6 +94,7 @@ async fn env(pool: PgPool, server: Option<&MockServer>) -> Env {
     let tokens = Arc::new(FakeTokens(Mutex::new(Ok("tok".into()))));
     let cfg = ConnectorConfig {
         allow_http: true,
+        allow_private_hosts: true,
         google_api_base: server
             .map(|s| s.uri())
             .unwrap_or_else(|| "http://127.0.0.1:1".into()),

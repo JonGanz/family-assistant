@@ -36,6 +36,9 @@ pub struct MailConfig {
     pub allow_plain_imap: bool,
     /// `FA_IMAP_TLS_INSECURE`: accept self-signed certificates (tests only).
     pub imap_tls_insecure: bool,
+    /// `FA_ALLOW_PRIVATE_HOSTS`: the server builds `MailDeps::http` with
+    /// `Http::with_policy(_, allow_private_hosts)` (C-05).
+    pub allow_private_hosts: bool,
 }
 
 impl Default for MailConfig {
@@ -44,6 +47,7 @@ impl Default for MailConfig {
             gmail_api_base: fa_connectors::google::DEFAULT_API_BASE.to_owned(),
             allow_plain_imap: false,
             imap_tls_insecure: false,
+            allow_private_hosts: false,
         }
     }
 }

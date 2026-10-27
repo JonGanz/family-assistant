@@ -10,6 +10,8 @@ export default defineConfig({
     vue(),
     VitePWA({
       registerType: 'autoUpdate',
+      // Registered by hand in src/lib/pwa.ts (no workbox-window), and only in a secure context (D-072).
+      injectRegister: false,
       manifest: {
         name: 'Family Assistant',
         short_name: 'Family',

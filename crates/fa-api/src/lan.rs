@@ -54,15 +54,11 @@ const ALLOWED: &[(Method, &str)] = &[
     (Method::GET, "stream"),
     (Method::GET, "household"),
     (Method::GET, "task-lists"),
-    (Method::GET, "inbox"),
     (Method::GET, "members/*/avatar"),
     (Method::POST, "tasks"),
     (Method::POST, "tasks/*/complete"),
     (Method::POST, "tasks/*/reopen"),
     (Method::PATCH, "routine-runs/*/steps/*"),
-    (Method::POST, "advisories/*/dismiss"),
-    (Method::POST, "inbox/*/*/approve"),
-    (Method::POST, "inbox/*/*/reject"),
     (Method::POST, ELEVATE),
 ];
 
@@ -114,6 +110,8 @@ async fn guard(State(cfg): State<LanConfig>, mut req: Request, next: Next) -> Re
     headers.remove(header::COOKIE);
     // The client IP is the peer itself: no proxy sits in front of this listener.
     headers.remove("x-forwarded-for");
+    headers.remove("x-forwarded-proto");
+    headers.remove("x-forwarded-host");
     req.extensions_mut().insert(LanOrigin);
     next.run(req).await
 }

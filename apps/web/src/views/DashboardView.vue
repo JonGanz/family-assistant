@@ -113,7 +113,6 @@ const mmss = computed(
       :data="store.snapshot"
       :now="now"
       burn-in
-      @dismiss="store.dismiss"
       @pick="pick"
       @complete="(id: string) => flow?.beginComplete(id)"
       @tick="(r: string, st: string, d: boolean) => store.tickStep(r, st, d)"

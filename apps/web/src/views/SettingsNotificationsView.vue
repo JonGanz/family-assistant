@@ -10,7 +10,6 @@ import { useMembersStore } from '../stores/members'
 import { useNotifyPrefsStore } from '../stores/notifyPrefs'
 import { useSessionStore } from '../stores/session'
 import { describeError } from './shared'
-import './parts/settings.css'
 
 const session = useSessionStore()
 const members = useMembersStore()
@@ -137,7 +136,7 @@ async function sendTest() {
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader eyebrow="Settings" title="Notifications" />
     <label v-if="choices.length > 1" class="field-inline picker">
       Settings for

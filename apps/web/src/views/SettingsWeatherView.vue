@@ -6,7 +6,6 @@ import PageHeader from '../components/PageHeader.vue'
 import { useRulesStore } from '../stores/rules'
 import RuleEditor from './parts/RuleEditor.vue'
 import { describeError } from './shared'
-import './parts/settings.css'
 
 const rules = useRulesStore()
 /** `null` = closed, `'new'` = adding, otherwise the rule id being edited. */
@@ -32,7 +31,7 @@ const remove = (r: WeatherRuleView) => {
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader eyebrow="Settings" title="Weather">
       <template #actions>
         <button v-if="editing !== 'new'" type="button" class="btn-primary" @click="editing = 'new'">

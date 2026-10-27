@@ -5,7 +5,7 @@ milestone: M3.5
 wave: 2
 depends_on: [T-02]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-config/**", "config/**"]
 decisions: [D-065, D-069, D-072, D-075]
 ---
@@ -37,3 +37,11 @@ You are a sub-agent implementing one task of milestone M3.5 (onboarding and shak
 - [ ] `cargo test -p fa-config` passes (fresh container port 55403 for DB tests)
 - [ ] tests: precedence (env > db > `FA_DEFAULT_*` > built-in), locked keys, password-file insertion with special characters, dry run leaves no rows, import still round-trips
 - [ ] `cargo clippy -p fa-config --all-targets -- -D warnings` and `cargo fmt --check` clean
+
+## Wave 1 outcomes: T-02 (domain + store), read before starting
+- Done; fa-domain 262 tests, fa-store all binaries green on a fresh DB. The main session re-ran fa-domain, fa-store, fa-pipeline, fa-notify and fa-tasks together: 383 passed, 0 failed.
+- New: `fa_domain::system_api` (every contract type; `serde_json::Value` fields use `#[ts(type = "unknown")]`), `fa_store::{InstanceSettingRepo, SetupRepo}` (files `repo/instance_setting.rs`, `repo/setup.rs`), `AdvisoryRepo::retain_rule_advisories`, `NotificationRepo::insert_for_source_adults`, `InboxRepo::pending_by_adult` (one row per active adult, zeros included).
+- Removed: `Action::DismissAdvisory`, `AdvisoryRepo::dismiss`, the advisory dismissed fields, `DashboardView.inbox`. `ApproveEvent` and `ReadInbox` now need an adult user (devices refused, elevated or not).
+- `Household` gained `dashboard_pending_approvals: bool` and `setup_completed_at: Option<DateTime<Utc>>`; every struct literal must set them (tests: `true`, `None`).
+- `pin_lockout` / `UserAccountRepo::lockout` read `FOR UPDATE`; `record_pin_failure` / `record_failure` don't update a currently locked row.
+- **Your breakage to fix:** `crates/fa-config/src/household.rs:536` (Household literal), plus any fa-config test literals.

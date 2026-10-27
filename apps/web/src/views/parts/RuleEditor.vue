@@ -7,7 +7,6 @@ import { useDefinitionsStore } from '../../stores/definitions'
 import { useRulesStore } from '../../stores/rules'
 import { describeError } from '../shared'
 import { useRuleValidation } from './useRuleValidation'
-import './settings.css'
 
 const props = defineProps<{ rule: WeatherRuleView | null }>()
 const emit = defineEmits<{ done: [] }>()
@@ -110,7 +109,7 @@ async function save() {
 </script>
 
 <template>
-  <form class="settings-form editor" @submit.prevent="save">
+  <form class="form editor" @submit.prevent="save">
     <label>Name <input v-model="name" name="rule_name" required /></label>
     <label>
       Condition
@@ -132,25 +131,25 @@ async function save() {
       <button v-for="w in WINDOWS" :key="w" type="button" @click="insert(w)">{{ w }}</button>
     </div>
     <div id="rule-feedback" aria-live="polite">
-      <pre v-if="error" class="settings-error mono" data-testid="rule-error"
+      <pre v-if="error" class="text-danger mono" data-testid="rule-error"
         >{{ condition }}
 {{ marker }}
 {{ error.message }}</pre>
-      <p v-else-if="pending" class="settings-note">Checking…</p>
-      <p v-else-if="failure" class="settings-error">{{ failure }}</p>
-      <p v-else-if="preview" class="settings-ok" data-testid="rule-preview">
+      <p v-else-if="pending" class="muted">Checking…</p>
+      <p v-else-if="failure" class="text-danger">{{ failure }}</p>
+      <p v-else-if="preview" class="text-success" data-testid="rule-preview">
         With the latest forecast this rule
         <strong>{{ preview.matches ? 'would fire' : 'would not fire' }}</strong>
         <template v-if="preview.value != null"> (value {{ preview.value }})</template>
         <template v-if="preview.when"> in the {{ preview.when }}</template
         >.
       </p>
-      <p v-else-if="result?.ok" class="settings-ok">The rule is valid.</p>
+      <p v-else-if="result?.ok" class="text-success">The rule is valid.</p>
     </div>
     <label>
       Message
       <input v-model="message" name="message" required />
-      <span class="settings-note">Use {value}, {when} and {field}.</span>
+      <span class="muted">Use {value}, {when} and {field}.</span>
     </label>
     <label>
       Severity
@@ -174,7 +173,7 @@ async function save() {
           <option value="" disabled>Pick a chore or schedule</option>
           <option v-for="d in defs.items" :key="d.id" :value="d.id">{{ d.title }}</option>
         </select>
-        <span class="settings-note">
+        <span class="muted">
           Pick from the chores in Settings → Tasks. It is made once per day the rule fires.
         </span>
       </label>

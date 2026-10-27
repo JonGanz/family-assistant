@@ -13,7 +13,7 @@ use fa_domain::{
 };
 use fa_store::{
     AdvisoryRepo, AuditRepo, CalendarSourceRepo, DeviceElevationRepo, DeviceRepo, HouseholdRepo,
-    MemberRepo, Store, Tx, UserAccountRepo,
+    MemberRepo, SetupRepo, Store, Tx, UserAccountRepo,
 };
 
 use crate::cli::{
@@ -53,7 +53,9 @@ async fn resolve_household(
 async fn require_household(store: &Store, given: Option<HouseholdId>) -> Result<HouseholdId> {
     resolve_household(store, given)
         .await?
-        .ok_or_else(|| anyhow!("no household yet; run `fa-server config import <file>` first"))
+        .ok_or_else(|| anyhow!(
+            "no household yet; open the app in a browser to run setup, or use `fa-server config import <file>`"
+        ))
 }
 
 /// Every RRULE and weather/season condition must parse before anything is written; all errors are
@@ -90,7 +92,11 @@ pub async fn config(
     action: ConfigAction,
 ) -> Result<()> {
     match action {
-        ConfigAction::Import { file, replace } => {
+        ConfigAction::Import {
+            file,
+            replace,
+            dry_run,
+        } => {
             let text = std::fs::read_to_string(&file)
                 .with_context(|| format!("reading {}", file.display()))?;
             let cfg = HouseholdConfig::from_toml(&text)?;
@@ -101,16 +107,29 @@ pub async fn config(
                 ImportMode::Merge
             };
             let hid = resolve_household(store, household).await?;
-            let report = fa_config::import(store, hid, &cfg, mode).await?;
-            let mut tx = store.tx_for(report.household_id).await?;
-            let seeded = fa_weather::ensure_default_rules(&mut tx).await?;
-            tx.commit().await?;
+            let report = fa_config::import(store, hid, &cfg, mode, dry_run).await?;
+            let seeded = if dry_run {
+                0
+            } else {
+                let mut tx = store.tx_for(report.household_id).await?;
+                let n = fa_weather::ensure_default_rules(&mut tx).await?;
+                // A household created from the CLI is set up by its file: don't send its adults
+                // through the first-run wizard.
+                if report.household_created {
+                    SetupRepo::complete(&mut tx, report.household_id).await?;
+                }
+                tx.commit().await?;
+                n
+            };
             println!("{}", serde_json::to_string_pretty(&report)?);
             if !report.mail_sources_skipped.is_empty() {
                 println!(
                     "connect these in Settings -> Mail (Gmail sources need a Google sign-in): {}",
                     report.mail_sources_skipped.join(", ")
                 );
+            }
+            if dry_run {
+                println!("dry run: nothing was written");
             }
             if seeded > 0 {
                 println!("default weather rules added: {seeded}");
@@ -251,20 +270,25 @@ pub async fn user(store: &Store, household: Option<HouseholdId>, action: UserAct
 
 pub async fn device(
     store: &Store,
-    public_base_url: &str,
+    cfg: &ProcessConfig,
     household: Option<HouseholdId>,
     action: DeviceAction,
 ) -> Result<()> {
     match action {
         DeviceAction::Pair { name } => {
             let hid = require_household(store, household).await?;
-            let paired = DeviceService::new(store.clone(), public_base_url)
+            let paired = DeviceService::new(store.clone(), cfg.effective_base_url())
                 .pair_system(hid, &name)
                 .await?;
             println!("device id: {}", paired.device.id);
             println!("token:     {}", paired.token);
             println!("pair url:  {}", paired.pair_url);
-            if let Some(lan) = crate::serve::lan_base_url() {
+            if let Some(lan) = cfg
+                .lan_dashboard_url
+                .as_deref()
+                .map(|v| v.trim().trim_end_matches('/'))
+                .filter(|v| !v.is_empty())
+            {
                 println!("home network: {lan}/dashboard?device={}", paired.token);
             }
             println!("The token is shown once.");
@@ -517,11 +541,43 @@ mod tests {
     }
 
     #[sqlx::test(migrations = "../../crates/fa-store/migrations")]
+    async fn cli_import_that_creates_the_household_completes_setup(pool: PgPool) {
+        let store = Store::from_pool(pool);
+        let dir = tempfile::tempdir().unwrap();
+        let file = dir.path().join("household.toml");
+        std::fs::write(
+            &file,
+            include_str!("../../../config/examples/household.example.toml"),
+        )
+        .unwrap();
+        let import = |dry_run| ConfigAction::Import {
+            file: file.clone(),
+            replace: false,
+            dry_run,
+        };
+        config(&store, None, import(true)).await.unwrap();
+        let mut conn = store.tx_system().await.unwrap();
+        assert!(
+            SetupRepo::state(&mut conn)
+                .await
+                .unwrap()
+                .household
+                .is_none()
+        );
+        drop(conn);
+        config(&store, None, import(false)).await.unwrap();
+        let mut conn = store.tx_system().await.unwrap();
+        let state = SetupRepo::state(&mut conn).await.unwrap();
+        assert!(state.household.is_some());
+        assert!(state.completed_at.is_some());
+    }
+
+    #[sqlx::test(migrations = "../../crates/fa-store/migrations")]
     async fn cli_paired_token_authenticates(pool: PgPool) {
         let store = Store::from_pool(pool);
         let toml = include_str!("../../../config/examples/household.example.toml");
         let cfg = HouseholdConfig::from_toml(toml).unwrap();
-        let report = fa_config::import(&store, None, &cfg, ImportMode::Merge)
+        let report = fa_config::import(&store, None, &cfg, ImportMode::Merge, false)
             .await
             .unwrap();
         let paired = DeviceService::new(store.clone(), "http://localhost:8080")

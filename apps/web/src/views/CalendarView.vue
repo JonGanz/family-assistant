@@ -111,7 +111,7 @@ const dayNumber = (k: string) => Number(k.slice(8))
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader title="Calendar">
       <template #actions>
         <label class="field-inline">
@@ -144,7 +144,7 @@ const dayNumber = (k: string) => Number(k.slice(8))
         </button>
       </span>
     </div>
-    <StateBlock :error="calendar.error" />
+    <StateBlock :error="calendar.error" :loading="calendar.loading" />
 
     <AgendaList
       v-if="view === 'agenda'"

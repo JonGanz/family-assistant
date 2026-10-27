@@ -110,13 +110,35 @@ describe('panels', () => {
     expect(w.text()).toContain('Whole house')
   })
 
-  it('advisories emit dismiss and carry severity', async () => {
+  it('advisories carry severity and have no dismiss control', () => {
     const w = mount(PanelHost, {
       props: { data: data(), settings: settings(), panel: { kind: 'advisories' }, now: NOW },
     })
     expect(w.find('[data-severity="warning"]').exists()).toBe(true)
-    await w.find('button').trigger('click')
-    expect(w.emitted('dismiss')?.[0]).toEqual(['a1'])
+    expect(w.find('button').exists()).toBe(false)
+  })
+
+  it('members strip shows a count badge only for adults with approvals waiting', () => {
+    const mk = (pa: { member_id: string; count: number }[]) =>
+      mount(PanelHost, {
+        props: {
+          data: data({ pending_approvals: pa } as Partial<DashboardData>),
+          settings: settings(),
+          panel: { kind: 'members' },
+          now: NOW,
+        },
+      })
+    expect(
+      mk([{ member_id: 'm1', count: 3 }])
+        .find('[data-testid="approvals-m1"]')
+        .text(),
+    ).toBe('3')
+    expect(mk([]).find('.approvals').exists()).toBe(false)
+    expect(
+      mk([{ member_id: 'm1', count: 0 }])
+        .find('.approvals')
+        .exists(),
+    ).toBe(false)
   })
 
   it('weather columns convert to points', () => {

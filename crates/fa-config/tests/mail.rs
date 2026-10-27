@@ -143,7 +143,9 @@ fn enrollment_and_calendar_references_are_checked() {
 async fn imports_into_empty_household_and_round_trips(pool: PgPool) {
     let store = Store::from_pool(pool);
     let cfg = HouseholdConfig::from_toml(&full()).unwrap();
-    let r = import(&store, None, &cfg, ImportMode::Merge).await.unwrap();
+    let r = import(&store, None, &cfg, ImportMode::Merge, false)
+        .await
+        .unwrap();
     assert_eq!(r.orgs_created, ["Example Elementary", "Example Utilities"]);
     assert_eq!(r.enrollments_created, ["riley: Example Elementary"]);
     assert_eq!(r.mail_sources_created, ["Family inbox"]);
@@ -210,7 +212,7 @@ async fn imports_into_empty_household_and_round_trips(pool: PgPool) {
 
     // export -> import -> export is identical, and the re-import changes nothing.
     let again = HouseholdConfig::from_toml(&first_toml).unwrap();
-    let r2 = import(&store, Some(hid), &again, ImportMode::Merge)
+    let r2 = import(&store, Some(hid), &again, ImportMode::Merge, false)
         .await
         .unwrap();
     assert!(
@@ -228,7 +230,7 @@ async fn imports_into_empty_household_and_round_trips(pool: PgPool) {
     assert_eq!(first_toml, second);
 
     // Importing the original file again is idempotent too (merge by name / key).
-    let r3 = import(&store, Some(hid), &cfg, ImportMode::Merge)
+    let r3 = import(&store, Some(hid), &cfg, ImportMode::Merge, false)
         .await
         .unwrap();
     assert!(r3.orgs_created.is_empty() && r3.mail_rules_created.is_empty());
@@ -237,7 +239,7 @@ async fn imports_into_empty_household_and_round_trips(pool: PgPool) {
 
     // The same export imports into a fresh household and exports identically.
     let store2_hid = {
-        let r = import(&store, None, &again, ImportMode::Merge)
+        let r = import(&store, None, &again, ImportMode::Merge, false)
             .await
             .unwrap();
         r.household_id
@@ -250,7 +252,9 @@ async fn imports_into_empty_household_and_round_trips(pool: PgPool) {
 async fn changes_are_applied_and_reported(pool: PgPool) {
     let store = Store::from_pool(pool);
     let cfg = HouseholdConfig::from_toml(&full()).unwrap();
-    let r = import(&store, None, &cfg, ImportMode::Merge).await.unwrap();
+    let r = import(&store, None, &cfg, ImportMode::Merge, false)
+        .await
+        .unwrap();
     let hid = r.household_id;
 
     let mut changed = cfg.clone();
@@ -260,7 +264,7 @@ async fn changes_are_applied_and_reported(pool: PgPool) {
     changed.mail_sources[0].poll_minutes = Some(20);
     changed.categories[0].label = "Team sports".into();
     changed.members[2].enrollments[0].class_name = Some("3C".into());
-    let r2 = import(&store, Some(hid), &changed, ImportMode::Merge)
+    let r2 = import(&store, Some(hid), &changed, ImportMode::Merge, false)
         .await
         .unwrap();
     assert_eq!(r2.orgs_updated, ["Example Elementary"]);
@@ -289,14 +293,14 @@ async fn unknown_enrollment_org_writes_nothing(pool: PgPool) {
     let mut cfg = HouseholdConfig::from_toml(EXAMPLE).unwrap();
     cfg.orgs.retain(|o| o.name != "Example Elementary");
     cfg.orgs.iter_mut().for_each(|o| o.ics_calendar = None);
-    let e = import(&store, None, &cfg, ImportMode::Merge)
+    let e = import(&store, None, &cfg, ImportMode::Merge, false)
         .await
         .unwrap_err();
     assert!(e.to_string().contains("Example Elementary"), "{e}");
     // The whole import rolled back: a retry with a valid file creates the household.
     let ok = HouseholdConfig::from_toml(EXAMPLE).unwrap();
     assert!(
-        import(&store, None, &ok, ImportMode::Merge)
+        import(&store, None, &ok, ImportMode::Merge, false)
             .await
             .unwrap()
             .household_created
@@ -312,7 +316,9 @@ async fn approval_mode_round_trips(pool: PgPool) {
         1,
     );
     let cfg = HouseholdConfig::from_toml(&toml).unwrap();
-    let r = import(&store, None, &cfg, ImportMode::Merge).await.unwrap();
+    let r = import(&store, None, &cfg, ImportMode::Merge, false)
+        .await
+        .unwrap();
     let out = export(&store, r.household_id).await.unwrap();
     let sam = out.members.iter().find(|m| m.key == "sam").unwrap();
     assert_eq!(

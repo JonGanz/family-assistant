@@ -17,7 +17,7 @@ function approve() {
 </script>
 
 <template>
-  <li class="settings-form item">
+  <li class="form item">
     <p>
       <strong>{{ contact.email }}</strong> at {{ contact.org_name }}
     </p>
@@ -29,7 +29,7 @@ function approve() {
         <option v-for="m in children" :key="m.id" :value="m.id">{{ m.display_name }}</option>
       </select>
     </label>
-    <p v-if="contact.message" class="settings-note">
+    <p v-if="contact.message" class="muted">
       <RouterLink :to="{ name: 'mail-detail', params: { id: contact.message } }"
         >Open the message that suggested this</RouterLink
       >

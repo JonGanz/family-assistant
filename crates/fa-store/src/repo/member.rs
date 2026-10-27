@@ -259,9 +259,11 @@ impl MemberRepo {
         }
     }
 
+    /// Locks the member row (`FOR UPDATE`) until the transaction ends, so parallel attempts
+    /// serialise between this check and `record_pin_failure`.
     pub async fn pin_lockout(conn: &mut PgConnection, id: MemberId) -> Result<MemberLockout> {
         let r = sqlx::query!(
-            "SELECT pin_failed_attempts, pin_locked_until FROM member WHERE id = $1",
+            "SELECT pin_failed_attempts, pin_locked_until FROM member WHERE id = $1 FOR UPDATE",
             id.as_uuid()
         )
         .fetch_one(conn)
@@ -273,6 +275,7 @@ impl MemberRepo {
     }
 
     /// Records a failed PIN attempt; locks for `lock_secs` once `max_attempts` is reached.
+    /// A member that is already locked is left as it is.
     pub async fn record_pin_failure(
         conn: &mut PgConnection,
         id: MemberId,
@@ -284,18 +287,21 @@ impl MemberRepo {
                  pin_failed_attempts = CASE WHEN pin_failed_attempts + 1 >= $2 THEN 0 ELSE pin_failed_attempts + 1 END,
                  pin_locked_until = CASE WHEN pin_failed_attempts + 1 >= $2
                                          THEN now() + make_interval(secs => $3) ELSE pin_locked_until END
-             WHERE id = $1
+             WHERE id = $1 AND (pin_locked_until IS NULL OR pin_locked_until <= now())
              RETURNING pin_failed_attempts, pin_locked_until",
             id.as_uuid(),
             max_attempts,
             lock_secs as f64
         )
-        .fetch_one(conn)
+        .fetch_optional(&mut *conn)
         .await?;
-        Ok(MemberLockout {
-            failed_attempts: r.pin_failed_attempts,
-            locked_until: r.pin_locked_until,
-        })
+        match r {
+            Some(r) => Ok(MemberLockout {
+                failed_attempts: r.pin_failed_attempts,
+                locked_until: r.pin_locked_until,
+            }),
+            None => Self::pin_lockout(conn, id).await,
+        }
     }
 
     pub async fn clear_pin_failures(conn: &mut PgConnection, id: MemberId) -> Result<()> {

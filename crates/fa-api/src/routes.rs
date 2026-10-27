@@ -10,7 +10,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use fa_domain::{
     Action, Actor, AuditEntry, AuditEntryId, DeviceDto, DeviceId, HouseholdDto, HouseholdId,
     Member, MemberDto, MemberId, MemberPublicDto, MemberView, Resource, Role, UserAccount,
-    UserAccountDto, UserAccountId, validate_password,
+    UserAccountDto, UserAccountId, system_api::OwnPasswordChange, validate_password,
 };
 use fa_store::{
     AuditRepo, ChangeBus, DeviceRepo, HouseholdRepo, MemberAvatarRepo, MemberRepo, SessionRepo, Tx,
@@ -21,10 +21,11 @@ use serde::{Deserialize, Deserializer, Serialize};
 use tokio::sync::broadcast::error::RecvError;
 use utoipa::ToSchema;
 
+use crate::conn::Conn;
 use crate::error::Problem;
 use crate::extract::{ApiJson, ApiPath, ApiQuery, ClientIp};
 use crate::hub::HubEvent;
-use crate::{ApiError, AppState, Auth, SESSION_COOKIE, require};
+use crate::{ApiError, AppState, Auth, require};
 
 pub(crate) type ApiResult<T> = Result<T, ApiError>;
 
@@ -173,6 +174,7 @@ pub struct LoginResp {
 pub async fn login(
     State(s): State<AppState>,
     ClientIp(ip): ClientIp,
+    conn: Conn,
     headers: HeaderMap,
     ApiJson(req): ApiJson<LoginReq>,
 ) -> ApiResult<Response> {
@@ -185,30 +187,32 @@ pub async fn login(
         expires_at: out.expires_at,
     })
     .into_response();
-    set_cookie(&mut res, &out.session_id, max_age, s.cfg.cookie_secure);
+    set_cookie(&mut res, &conn, &s.cfg, &out.session_id, max_age);
     Ok(res)
 }
 
-fn set_cookie(res: &mut Response, value: &str, max_age: u64, secure: bool) {
-    let secure = if secure { "; Secure" } else { "" };
-    let c = format!(
-        "{SESSION_COOKIE}={value}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}{secure}"
-    );
-    if let Ok(v) = HeaderValue::from_str(&c) {
+pub(crate) fn set_cookie(
+    res: &mut Response,
+    conn: &Conn,
+    cfg: &crate::ApiConfig,
+    value: &str,
+    max_age: u64,
+) {
+    if let Ok(v) = HeaderValue::from_str(&conn.session_cookie(cfg, value, max_age)) {
         res.headers_mut().append(SET_COOKIE, v);
     }
 }
 
 #[utoipa::path(post, path = "/api/v1/auth/logout", tag = "auth",
     security(("cookie" = [])), responses((status = 204), (status = 401, body = Problem)))]
-pub async fn logout(State(s): State<AppState>, auth: Auth) -> ApiResult<Response> {
+pub async fn logout(State(s): State<AppState>, conn: Conn, auth: Auth) -> ApiResult<Response> {
     if matches!(auth.actor, Actor::User { .. })
         && let Some(id) = &auth.session_id
     {
         s.auth.logout(id).await?;
     }
     let mut res = StatusCode::NO_CONTENT.into_response();
-    set_cookie(&mut res, "", 0, s.cfg.cookie_secure);
+    set_cookie(&mut res, &conn, &s.cfg, "", 0);
     Ok(res)
 }
 
@@ -232,12 +236,16 @@ pub struct MeResponse {
 #[utoipa::path(get, path = "/api/v1/me", tag = "auth", security(("cookie" = []), ("bearer" = [])),
     responses((status = 200, body = MeResponse), (status = 401, body = Problem)))]
 pub async fn me(State(s): State<AppState>, auth: Auth) -> ApiResult<Json<MeResponse>> {
-    let hid = household(&auth.actor)?;
+    Ok(Json(me_for(&s, &auth.actor).await?))
+}
+
+pub(crate) async fn me_for(s: &AppState, actor: &Actor) -> ApiResult<MeResponse> {
+    let hid = household(actor)?;
     let mut tx = s.store.tx_for(hid).await?;
     let h = HouseholdRepo::get(&mut tx, hid)
         .await?
         .ok_or(ApiError::NotFound)?;
-    let view = match &auth.actor {
+    let view = match actor {
         Actor::User { member_id, .. } => {
             let m = MemberRepo::get(&mut tx, *member_id)
                 .await?
@@ -257,7 +265,7 @@ pub async fn me(State(s): State<AppState>, auth: Auth) -> ApiResult<Json<MeRespo
             let d = DeviceRepo::get(&mut tx, *device_id)
                 .await?
                 .ok_or(ApiError::NotFound)?;
-            let (kind, member) = match &auth.actor {
+            let (kind, member) = match actor {
                 Actor::ElevatedDevice { adult, .. } => {
                     let m = MemberRepo::get(&mut tx, *adult).await?;
                     let mut urls = avatar_urls(&mut tx).await?;
@@ -281,10 +289,10 @@ pub async fn me(State(s): State<AppState>, auth: Auth) -> ApiResult<Json<MeRespo
         Actor::System => return Err(ApiError::Forbidden("forbidden".into())),
     };
     tx.rollback().await?;
-    Ok(Json(MeResponse {
+    Ok(MeResponse {
         actor: view,
         household: HouseholdDto::from(&h.value),
-    }))
+    })
 }
 
 // ---- members ----
@@ -648,31 +656,62 @@ pub struct PasswordReq {
     pub password: String,
 }
 
+/// An adult resetting a child's password sends `PasswordReq`; a member changing their own sends
+/// `OwnPasswordChange` (C-03).
+#[derive(Deserialize, ToSchema)]
+#[serde(untagged)]
+pub enum PasswordBody {
+    Own(OwnPasswordChange),
+    Reset(PasswordReq),
+}
+
 #[utoipa::path(post, path = "/api/v1/members/{id}/account/password", tag = "members",
-    request_body = PasswordReq, params(("id" = String, Path, description = "member id")),
+    request_body = PasswordBody, params(("id" = String, Path, description = "member id")),
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 204), (status = 403, body = Problem), (status = 404, body = Problem),
-              (status = 422, body = Problem)))]
+    responses((status = 204, description = "an own change ends the member's other sessions"),
+              (status = 401, body = Problem, description = "wrong current password"),
+              (status = 403, body = Problem), (status = 404, body = Problem),
+              (status = 422, body = Problem), (status = 423, body = Problem),
+              (status = 429, body = Problem)))]
 pub async fn reset_password(
     State(s): State<AppState>,
     auth: Auth,
+    ClientIp(ip): ClientIp,
     ApiPath(id): ApiPath<MemberId>,
-    ApiJson(req): ApiJson<PasswordReq>,
+    ApiJson(req): ApiJson<PasswordBody>,
 ) -> ApiResult<StatusCode> {
     let hid = household(&auth.actor)?;
     let own = matches!(&auth.actor, Actor::User { member_id, .. } if *member_id == id);
+    if own {
+        let PasswordBody::Own(change) = req else {
+            return Err(ApiError::Unprocessable(
+                "send current_password and new_password".into(),
+            ));
+        };
+        s.auth
+            .change_own_password(
+                &auth.actor,
+                &change.current_password,
+                &change.new_password,
+                auth.session_id.as_deref(),
+                ip,
+            )
+            .await?;
+        return Ok(StatusCode::NO_CONTENT);
+    }
+    let PasswordBody::Reset(req) = req else {
+        return Err(ApiError::Unprocessable("send password".into()));
+    };
     let mut tx = s.store.tx_for(hid).await?;
     let target = MemberRepo::get(&mut tx, id)
         .await?
         .ok_or(ApiError::NotFound)?
         .value;
-    if !own {
-        require(
-            &auth.actor,
-            Action::ManageChildAccount,
-            &Resource::Member(id, target.role),
-        )?;
-    }
+    require(
+        &auth.actor,
+        Action::ManageChildAccount,
+        &Resource::Member(id, target.role),
+    )?;
     validate_password(target.role, &req.password)
         .map_err(|e| ApiError::Unprocessable(e.to_string()))?;
     let account = UserAccountRepo::get_by_member(&mut tx, id)
@@ -680,9 +719,7 @@ pub async fn reset_password(
         .ok_or(ApiError::NotFound)?;
     let hash = hash_blocking(req.password).await?;
     UserAccountRepo::update_password(&mut tx, account.value.id, &hash, account.version).await?;
-    if !own {
-        SessionRepo::delete_for_member(&mut tx, id).await?;
-    }
+    SessionRepo::delete_for_member(&mut tx, id).await?;
     audit(
         &mut tx,
         &auth.actor,
@@ -753,6 +790,7 @@ pub struct PairDeviceResp {
     responses((status = 201, body = PairDeviceResp), (status = 403, body = Problem)))]
 pub async fn pair_device(
     State(s): State<AppState>,
+    conn: Conn,
     auth: Auth,
     ApiJson(req): ApiJson<PairDeviceReq>,
 ) -> ApiResult<Response> {
@@ -762,6 +800,15 @@ pub async fn pair_device(
         ));
     }
     let paired = s.auth.pair_device(&auth.actor, &req.name).await?;
+    // On a secure request the link uses the tailnet address, when one is set.
+    let pair_url = match (&s.cfg.tailnet_base_url, conn.secure) {
+        (Some(base), true) => format!(
+            "{}/dashboard?device={}",
+            base.trim_end_matches('/'),
+            paired.token
+        ),
+        _ => paired.pair_url,
+    };
     Ok((
         StatusCode::CREATED,
         Json(PairDeviceResp {
@@ -774,7 +821,7 @@ pub async fn pair_device(
                 )
             }),
             token: paired.token,
-            pair_url: paired.pair_url,
+            pair_url,
         }),
     )
         .into_response())

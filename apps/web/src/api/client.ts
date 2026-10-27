@@ -69,6 +69,16 @@ export type MakeTaskInput = S['MakeTaskInput']
 export type InboxView = S['InboxView']
 export type InboxItem = S['InboxItem']
 export type InboxCounts = S['InboxCounts']
+export type SetupStatus = S['SetupStatus']
+export type NewSetupHousehold = S['NewSetupHousehold']
+export type NewSetupOwner = S['NewSetupOwner']
+export type SettingView = S['SettingView']
+export type SystemSettingsView = S['SystemSettingsView']
+export type SystemSettingsPatch = S['SystemSettingsPatch']
+export type OwnPasswordChange = S['OwnPasswordChange']
+export type ImportReport = S['ImportReport']
+export type HouseholdViewExt = S['HouseholdViewExt']
+export type PendingApprovals = S['PendingApprovals']
 export type InboxKind = 'event' | 'bill' | 'task' | 'contact'
 export type EventProposalView = S['EventProposalView']
 export type EventApproval = S['EventApproval']
@@ -137,14 +147,64 @@ export const api = {
   elevate: (member_id: string, pin: string) =>
     http.post<S['ElevateResp']>('/api/v1/device/elevate', { member_id, pin }),
 
-  household: () => request<HouseholdView>('/api/v1/household', U),
+  household: () => request<HouseholdViewExt>('/api/v1/household', U),
   patchHousehold: (version: number, b: HouseholdPatch) =>
-    request<HouseholdView>('/api/v1/household', {
+    request<HouseholdViewExt>('/api/v1/household', {
       method: 'PATCH',
       body: b,
       headers: ifMatch(version),
       ...U,
     }),
+
+  createAccount: (id: string, username: string, password: string) =>
+    request<void>(`/api/v1/members/${id}/account`, {
+      method: 'POST',
+      body: { username, password },
+      ...U,
+    }),
+  /** An adult resetting a child's password (no current password). */
+  resetPassword: (id: string, password: string) =>
+    request<void>(`/api/v1/members/${id}/account/password`, {
+      method: 'POST',
+      body: { password },
+      ...U,
+    }),
+  /** Your own password (C-03): needs the current one; other sessions are signed out. */
+  changeOwnPassword: (id: string, b: OwnPasswordChange) =>
+    request<void>(`/api/v1/members/${id}/account/password`, { method: 'POST', body: b, ...U }),
+  setPin: (id: string, pin: string) =>
+    request<void>(`/api/v1/members/${id}/pin`, { method: 'PUT', body: { pin }, ...U }),
+
+  setup: () => request<SetupStatus>('/api/v1/setup', U),
+  setupHousehold: (b: NewSetupHousehold) =>
+    request<{ household_id: string }>('/api/v1/setup/household', { method: 'POST', body: b, ...U }),
+  setupOwner: (b: NewSetupOwner) =>
+    request<MeResponse>('/api/v1/setup/owner', { method: 'POST', body: b, ...U }),
+  setupComplete: () => request<void>('/api/v1/setup/complete', { method: 'POST', ...U }),
+  masterKey: (password: string) =>
+    request<S['MasterKeyView']>('/api/v1/system/master-key', {
+      method: 'POST',
+      body: { password },
+      ...U,
+    }),
+  confirmMasterKey: () =>
+    request<void>('/api/v1/system/master-key/confirm', { method: 'POST', ...U }),
+  systemSettings: () => request<SystemSettingsView>('/api/v1/system/settings', U),
+  patchSystemSettings: (values: SystemSettingsPatch['values']) =>
+    request<SystemSettingsView>('/api/v1/system/settings', {
+      method: 'PATCH',
+      body: { values },
+      ...U,
+    }),
+  exportConfig: () => request<string>('/api/v1/config/export', { asText: true, ...U }),
+  importConfig: (toml: string, dryRun: boolean) =>
+    request<ImportReport>(`/api/v1/config/import?dry_run=${dryRun}`, {
+      method: 'POST',
+      text: toml,
+      ...U,
+    }),
+  /** Liveness of the server after a settings change that restarts parts of it. */
+  readyz: () => request<unknown>('/readyz', U),
 
   /** `from`/`to` are RFC 3339 instants; `to` is exclusive. */
   events: (from: string, to: string, member?: string) => {
@@ -154,9 +214,6 @@ export const api = {
   },
   weather: () => request<WeatherView>('/api/v1/weather', U),
   advisories: () => request<AdvisoryView[]>('/api/v1/advisories', U),
-  /** `device` sends the kiosk's bearer token instead of the session cookie. */
-  dismissAdvisory: (id: string, device = false) =>
-    request<void>(`/api/v1/advisories/${id}/dismiss`, { method: 'POST', bearer: device }),
   /** Kiosk snapshot (device token). */
   dashboard: (days: number, signal?: AbortSignal) =>
     request<DashboardView>(`/api/v1/dashboard?days=${days}`, { signal }),

@@ -17,7 +17,6 @@ const props = withDefaults(
   { settings: undefined, burnIn: false },
 )
 defineEmits<{
-  dismiss: [id: string]
   pick: [id: string]
   complete: [id: string]
   tick: [run: string, step: string, done: boolean]
@@ -82,7 +81,6 @@ const landscape = computed(() => cfg.value.orientation === 'landscape')
             :settings="cfg"
             :panel="a.panel"
             :now="now"
-            @dismiss="(id: string) => $emit('dismiss', id)"
             @pick="(id: string) => $emit('pick', id)"
             @complete="(id: string) => $emit('complete', id)"
             @tick="(r: string, st: string, d: boolean) => $emit('tick', r, st, d)"

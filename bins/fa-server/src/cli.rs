@@ -34,6 +34,12 @@ pub enum Command {
         #[arg(value_enum, default_value = "all")]
         mode: ServeMode,
     },
+    /// Create the master key and database password if absent (runs before any config load).
+    Init {
+        /// Directory for the secrets (default: FA_SECRETS_DIR, else /run/fa-secrets).
+        #[arg(long)]
+        secrets_dir: Option<PathBuf>,
+    },
     /// Apply database migrations and exit.
     Migrate,
     /// Import or export the household TOML.
@@ -95,6 +101,9 @@ pub enum ConfigAction {
         /// Archive keyed members the file no longer lists.
         #[arg(long)]
         replace: bool,
+        /// Report what would change, then roll back.
+        #[arg(long)]
+        dry_run: bool,
     },
     Export {
         /// Write to a file instead of stdout.

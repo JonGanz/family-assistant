@@ -20,22 +20,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/advisories/{id}/dismiss": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["dismiss_advisory"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -242,6 +226,38 @@ export interface paths {
         options?: never;
         head?: never;
         patch: operations["patch_category"];
+        trace?: never;
+    };
+    "/api/v1/config/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["export_config"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/config/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["import_config"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/dashboard": {
@@ -1076,6 +1092,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_setup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/setup/complete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["setup_complete"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/setup/household": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["setup_household"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/setup/owner": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["setup_owner"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/status": {
         parameters: {
             query?: never;
@@ -1106,6 +1186,54 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/master-key": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["master_key"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/master-key/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["master_key_confirm"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/system/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_settings"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch: operations["patch_settings"];
         trace?: never;
     };
     "/api/v1/task-definitions": {
@@ -1597,6 +1725,10 @@ export interface components {
         CompleteTask: {
             member?: null | components["schemas"]["MemberId"];
         };
+        ConnectionInfo: {
+            origin: string;
+            secure: boolean;
+        };
         ContactApproval: {
             member?: null | components["schemas"]["MemberId"];
             name?: string | null;
@@ -1673,9 +1805,9 @@ export interface components {
             advisories: components["schemas"]["AdvisoryView"][];
             events: components["schemas"]["EventView"][];
             household: components["schemas"]["DashboardHousehold"];
-            /** @description Counts of items waiting for approval; the panel fetches `GET /inbox` for the items. */
-            inbox?: components["schemas"]["InboxCounts"];
             members: components["schemas"]["MemberPublicDto"][];
+            /** @description Pending approvals per adult; empty when the household setting is off. */
+            pending_approvals?: components["schemas"]["PendingApprovals"][];
             routines: components["schemas"]["RoutineRunView"][];
             settings: components["schemas"]["DashboardSettings"];
             /** @description Active task lists (the add form offers those with `dashboard_add`). */
@@ -1935,6 +2067,7 @@ export interface components {
             calendar_past_days?: number | null;
             currency?: string | null;
             dashboard_completion_override?: boolean | null;
+            dashboard_pending_approvals?: boolean | null;
             events?: null | components["schemas"]["EventsSettings"];
             gender_terms?: null | components["schemas"]["GenderTerms"];
             inbox?: null | components["schemas"]["InboxSettings"];
@@ -1994,6 +2127,11 @@ export interface components {
             /** Format: int32 */
             weather_retention_days: number;
         };
+        /** @description `HouseholdView` plus the dashboard approvals switch (D-068). */
+        HouseholdViewExt: components["schemas"]["HouseholdView"] & {
+            /** @description Dashboards show how many approvals wait for each adult. */
+            dashboard_pending_approvals: boolean;
+        };
         /** @description IMAP connection settings. Debug output omits the password. */
         ImapSettings: {
             archive_folder?: string | null;
@@ -2018,6 +2156,50 @@ export interface components {
             folders: string[];
             gmail_ext: boolean;
             ok: boolean;
+        };
+        ImportReport: {
+            categories_created: string[];
+            categories_unchanged: string[];
+            categories_updated: string[];
+            enrollments_created: string[];
+            enrollments_unchanged: string[];
+            enrollments_updated: string[];
+            household_created: boolean;
+            household_id: components["schemas"]["HouseholdId"];
+            household_updated: boolean;
+            mail_rules_created: string[];
+            mail_rules_unchanged: string[];
+            mail_rules_updated: string[];
+            mail_sources_created: string[];
+            /** @description Gmail sources that need an OAuth connection made in the UI first. */
+            mail_sources_skipped: string[];
+            mail_sources_unchanged: string[];
+            mail_sources_updated: string[];
+            members_archived: string[];
+            members_created: string[];
+            members_unchanged: string[];
+            members_updated: string[];
+            notify_created: string[];
+            notify_unchanged: string[];
+            notify_updated: string[];
+            orgs_created: string[];
+            orgs_unchanged: string[];
+            orgs_updated: string[];
+            routines_created: string[];
+            routines_unchanged: string[];
+            routines_updated: string[];
+            rules_created: string[];
+            rules_unchanged: string[];
+            rules_updated: string[];
+            sources_created: string[];
+            sources_unchanged: string[];
+            sources_updated: string[];
+            task_definitions_created: string[];
+            task_definitions_unchanged: string[];
+            task_definitions_updated: string[];
+            task_lists_created: string[];
+            task_lists_unchanged: string[];
+            task_lists_updated: string[];
         };
         InboxCounts: {
             /** Format: int64 */
@@ -2241,6 +2423,13 @@ export interface components {
             list?: null | components["schemas"]["TaskListId"];
             title?: string | null;
         };
+        MasterKeyRequest: {
+            password: string;
+        };
+        MasterKeyView: {
+            /** @description Standard base64 of the 32 raw key bytes. */
+            key_base64: string;
+        };
         MeResponse: {
             actor: components["schemas"]["ActorView"];
             household: components["schemas"]["HouseholdDto"];
@@ -2373,6 +2562,26 @@ export interface components {
             /** @description Default true. */
             read_only?: boolean | null;
             visibility?: null | components["schemas"]["MailVisibility"];
+        };
+        NewSetupHousehold: {
+            /** @description The browser's `location.origin`. */
+            base_url: string;
+            /** @description ISO 4217. */
+            currency: string;
+            location?: null | components["schemas"]["SetupLocation"];
+            name: string;
+            /** @description IANA time zone. */
+            tz: string;
+            units: components["schemas"]["Units"];
+        };
+        NewSetupOwner: {
+            /** @description `#rrggbb`. */
+            color?: string | null;
+            display_name: string;
+            password: string;
+            /** @description 4 to 6 digits. */
+            pin?: string | null;
+            username: string;
         };
         /** @description New source. Debug output redacts passwords and URLs. */
         NewSource: {
@@ -2536,6 +2745,10 @@ export interface components {
         };
         /** @enum {string} */
         Orientation: "landscape" | "portrait";
+        OwnPasswordChange: {
+            current_password: string;
+            new_password: string;
+        };
         PairDeviceReq: {
             name: string;
         };
@@ -2552,6 +2765,11 @@ export interface components {
         Panel: Record<string, never> & {
             kind: string;
         };
+        /**
+         * @description An adult resetting a child's password sends `PasswordReq`; a member changing their own sends
+         *     `OwnPasswordChange` (C-03).
+         */
+        PasswordBody: components["schemas"]["OwnPasswordChange"] | components["schemas"]["PasswordReq"];
         PasswordReq: {
             password: string;
         };
@@ -2575,6 +2793,11 @@ export interface components {
              */
             version?: number | null;
         };
+        PendingApprovals: {
+            /** Format: int32 */
+            count: number;
+            member_id: components["schemas"]["MemberId"];
+        };
         PinReq: {
             pin: string;
         };
@@ -2582,6 +2805,11 @@ export interface components {
         PriorityFlag: "normal" | "high";
         /** @description The `application/problem+json` body (RFC 9457). Invalid weather rules add `position` and `message`. */
         Problem: {
+            /**
+             * @description Machine-readable code of the setup and system routes (`setup_required`, `setup_closed`,
+             *     `setting_locked`, `invalid_setting`).
+             */
+            code?: string | null;
             detail: string;
             /** @description Task and routine validation errors: the offending input field. */
             field?: string | null;
@@ -2789,6 +3017,45 @@ export interface components {
             user_agent?: string | null;
         };
         /** @enum {string} */
+        SettingKind: "url" | "bool" | "text" | "secret" | "cidrs";
+        /** @enum {string} */
+        SettingSource: "env" | "db" | "default";
+        SettingView: {
+            is_set: boolean;
+            key: string;
+            kind: components["schemas"]["SettingKind"];
+            /** @description The source is `env`. */
+            locked: boolean;
+            source: components["schemas"]["SettingSource"];
+            /** @description Always `null` for secrets. */
+            value?: Record<string, never> | null;
+        };
+        SetupHouseholdCreated: {
+            /** Format: uuid */
+            household_id: string;
+        };
+        SetupLocation: {
+            label: string;
+            /** Format: double */
+            lat: number;
+            /** Format: double */
+            lon: number;
+        };
+        SetupStatus: {
+            /** @description `setup_completed_at` is set. */
+            completed: boolean;
+            /** @description No household yet. */
+            needed: boolean;
+            /** @description `scheme://host[:port]` of this request. */
+            origin: string;
+            /** @description A household exists but no adult account. */
+            owner_needed: boolean;
+            /** @description This request arrived over HTTPS. */
+            secure: boolean;
+            /** @description Secure and the host ends in `.ts.net`. */
+            via_tailscale: boolean;
+        };
+        /** @enum {string} */
         Severity: "info" | "warning" | "severe";
         SignalPatch: {
             enabled: boolean;
@@ -2885,6 +3152,21 @@ export interface components {
         Strategy: "fixed" | "rotation" | "pool";
         /** @enum {string} */
         SuggestedBy: "default" | "s2" | "user";
+        SystemSettingsPatch: {
+            /** @description `null` resets a key to the default; a secret takes a string. */
+            values: {
+                [key: string]: Record<string, never> | null;
+            };
+        };
+        SystemSettingsView: {
+            connection: components["schemas"]["ConnectionInfo"];
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            key_backup_confirmed_at?: string | null;
+            settings: components["schemas"]["SettingView"][];
+        };
         TaskApproval: {
             assignees?: components["schemas"]["MemberId"][] | null;
             /**
@@ -3196,34 +3478,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdvisoryView"][];
-                };
-            };
-        };
-    };
-    dismiss_advisory: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description advisory id */
-                id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            404: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };
@@ -3925,6 +4179,96 @@ export interface operations {
             };
         };
     };
+    export_config: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description household TOML as an attachment; no secrets */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": unknown;
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    import_config: {
+        parameters: {
+            query?: {
+                /** @description Validate and report without writing anything. */
+                dry_run?: boolean;
+                /** @description Archive keyed members the file no longer lists (default: merge). */
+                replace?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description household TOML, at most 1 MiB */
+        requestBody: {
+            content: {
+                "text/plain": string;
+            };
+        };
+        responses: {
+            /** @description with `dry_run=true` nothing is written */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ImportReport"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_dashboard: {
         parameters: {
             query?: {
@@ -4356,7 +4700,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HouseholdView"];
+                    "application/json": components["schemas"]["HouseholdViewExt"];
                 };
             };
             401: {
@@ -4390,7 +4734,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["HouseholdView"];
+                    "application/json": components["schemas"]["HouseholdViewExt"];
                 };
             };
             403: {
@@ -5386,15 +5730,25 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PasswordReq"];
+                "application/json": components["schemas"]["PasswordBody"];
             };
         };
         responses: {
+            /** @description an own change ends the member's other sessions */
             204: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description wrong current password */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
             };
             403: {
                 headers: {
@@ -5413,6 +5767,22 @@ export interface operations {
                 };
             };
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            429: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6950,6 +7320,131 @@ export interface operations {
             };
         };
     };
+    get_setup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupStatus"];
+                };
+            };
+        };
+    };
+    setup_complete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setup_household: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewSetupHousehold"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupHouseholdCreated"];
+                };
+            };
+            /** @description code `setup_closed` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    setup_owner: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NewSetupOwner"];
+            };
+        };
+        responses: {
+            /** @description sets the fa_session cookie */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeResponse"];
+                };
+            };
+            /** @description code `setup_closed` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_status: {
         parameters: {
             query?: never;
@@ -6993,6 +7488,174 @@ export interface operations {
                 };
                 content: {
                     "text/event-stream": unknown;
+                };
+            };
+        };
+    };
+    master_key: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MasterKeyRequest"];
+            };
+        };
+        responses: {
+            /** @description the key as base64; the response is not cacheable */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MasterKeyView"];
+                };
+            };
+            /** @description wrong password; counts toward the login lockout */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            423: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    master_key_confirm: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description the key backup is recorded as confirmed */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemSettingsView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    patch_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SystemSettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description stored; the server applies the change by restarting its services */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SystemSettingsView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description code `setting_locked`: an environment variable sets the key */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description code `invalid_setting`; `field` is the key */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };

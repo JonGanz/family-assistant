@@ -15,14 +15,14 @@ use chrono::{DateTime, Duration as ChronoDuration, NaiveTime, TimeZone, Utc};
 use fa_domain::api::*;
 use fa_domain::calendar::{HouseholdFlags, Viewer};
 use fa_domain::{
-    Action, Actor, AdvisoryId, CalendarId, CalendarSourceId, DashboardSettings, DeviceId,
-    Household, HouseholdId, MemberId, MemberPublicDto, Resource, Role, RuleStatus, SuggestedBy,
-    WeatherRule, WeatherRuleId,
+    Action, Actor, CalendarId, CalendarSourceId, DashboardSettings, DeviceId, Household,
+    HouseholdId, MemberId, MemberPublicDto, Resource, Role, RuleStatus, SuggestedBy, WeatherRule,
+    WeatherRuleId,
 };
 use fa_store::{
-    AdvisoryRepo, CalendarRepo, CalendarSourceRepo, ChangeBus, DeviceRepo, HouseholdRepo, JobRepo,
-    MemberAvatarRepo, MemberRepo, NewJob, SystemStatusRepo, Tx, WeatherRuleRepo,
-    WeatherSnapshotRepo,
+    AdvisoryRepo, CalendarRepo, CalendarSourceRepo, ChangeBus, DeviceRepo, HouseholdRepo,
+    InboxRepo, JobRepo, MemberAvatarRepo, MemberRepo, NewJob, SystemStatusRepo, Tx,
+    WeatherRuleRepo, WeatherSnapshotRepo,
 };
 use serde::Deserialize;
 use serde_json::json;
@@ -61,29 +61,41 @@ async fn load_household(
     Ok(h)
 }
 
-fn household_view(h: &Household, version: i32, google: bool) -> HouseholdView {
-    HouseholdView {
-        name: h.name.clone(),
-        tz: h.tz.clone(),
-        location: h.location.clone(),
-        units: h.units,
-        calendar_past_days: h.calendar_past_days,
-        calendar_future_days: h.calendar_future_days,
-        weather_retention_days: h.weather_retention_days,
-        private_events_as_busy: h.private_events_as_busy,
-        dashboard_completion_override: h.dashboard_completion_override,
-        now_list_size: h.now_list_size,
-        now_weights: h.now_weights,
-        quiet_from: h.quiet_from,
-        quiet_until: h.quiet_until,
-        google_oauth_enabled: google,
-        currency: h.currency.clone(),
-        gender_terms: h.gender_terms.clone(),
-        events: h.events.clone(),
-        inbox: h.inbox.clone(),
-        retention_mail: h.retention_mail.clone(),
-        bill_lead_days: h.bill_lead_days,
-        version,
+/// `HouseholdView` plus the dashboard approvals switch (D-068).
+#[derive(serde::Serialize, ToSchema)]
+pub struct HouseholdViewExt {
+    #[serde(flatten)]
+    pub view: HouseholdView,
+    /// Dashboards show how many approvals wait for each adult.
+    pub dashboard_pending_approvals: bool,
+}
+
+fn household_view(h: &Household, version: i32, google: bool) -> HouseholdViewExt {
+    HouseholdViewExt {
+        dashboard_pending_approvals: h.dashboard_pending_approvals,
+        view: HouseholdView {
+            name: h.name.clone(),
+            tz: h.tz.clone(),
+            location: h.location.clone(),
+            units: h.units,
+            calendar_past_days: h.calendar_past_days,
+            calendar_future_days: h.calendar_future_days,
+            weather_retention_days: h.weather_retention_days,
+            private_events_as_busy: h.private_events_as_busy,
+            dashboard_completion_override: h.dashboard_completion_override,
+            now_list_size: h.now_list_size,
+            now_weights: h.now_weights,
+            quiet_from: h.quiet_from,
+            quiet_until: h.quiet_until,
+            google_oauth_enabled: google,
+            currency: h.currency.clone(),
+            gender_terms: h.gender_terms.clone(),
+            events: h.events.clone(),
+            inbox: h.inbox.clone(),
+            retention_mail: h.retention_mail.clone(),
+            bill_lead_days: h.bill_lead_days,
+            version,
+        },
     }
 }
 
@@ -104,19 +116,11 @@ fn viewer_of(actor: &Actor) -> ApiResult<Viewer> {
     }
 }
 
-fn acting_member(actor: &Actor) -> Option<MemberId> {
-    match actor {
-        Actor::User { member_id, .. } => Some(*member_id),
-        Actor::ElevatedDevice { adult, .. } => Some(*adult),
-        _ => None,
-    }
-}
-
 // ---- household ----
 
 #[utoipa::path(get, path = "/api/v1/household", tag = "household",
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 200, body = HouseholdView), (status = 401, body = Problem)))]
+    responses((status = 200, body = HouseholdViewExt), (status = 401, body = Problem)))]
 pub async fn get_household(State(s): State<AppState>, auth: Auth) -> ApiResult<Response> {
     require(&auth.actor, Action::ReadDashboard, &Resource::Household)?;
     let h = load_household(&s, household(&auth.actor)?).await?;
@@ -222,7 +226,7 @@ fn validate_household_patch(p: &mut HouseholdPatch) -> ApiResult<()> {
 #[utoipa::path(patch, path = "/api/v1/household", tag = "household", request_body = HouseholdPatch,
     params(("If-Match" = Option<String>, Header, description = "record version")),
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 200, body = HouseholdView), (status = 403, body = Problem),
+    responses((status = 200, body = HouseholdViewExt), (status = 403, body = Problem),
               (status = 409, body = Problem), (status = 422, body = Problem),
               (status = 428, body = Problem)))]
 pub async fn patch_household(
@@ -1167,24 +1171,6 @@ pub async fn list_advisories(
     Ok(Json(active_advisories(&s, household(&auth.actor)?).await?))
 }
 
-#[utoipa::path(post, path = "/api/v1/advisories/{id}/dismiss", tag = "weather",
-    params(("id" = String, Path, description = "advisory id")),
-    security(("cookie" = []), ("bearer" = [])),
-    responses((status = 204), (status = 404, body = Problem)))]
-pub async fn dismiss_advisory(
-    State(s): State<AppState>,
-    auth: Auth,
-    ApiPath(id): ApiPath<AdvisoryId>,
-) -> ApiResult<StatusCode> {
-    require(&auth.actor, Action::DismissAdvisory, &Resource::Household)?;
-    let hid = household(&auth.actor)?;
-    let mut tx = s.store.tx_for(hid).await?;
-    AdvisoryRepo::dismiss(&mut tx, id, acting_member(&auth.actor)).await?;
-    ChangeBus::publish(&mut tx, hid, "advisory.updated", &json!({ "id": id })).await?;
-    tx.commit().await?;
-    Ok(StatusCode::NO_CONTENT)
-}
-
 // ---- weather rules ----
 
 fn rule_view(r: &WeatherRule, version: i32) -> WeatherRuleView {
@@ -1592,6 +1578,18 @@ pub async fn get_dashboard(
         .ok_or(ApiError::NotFound)?
         .value;
     let settings = parse_settings(DeviceRepo::get_settings(&mut tx, device_id).await?);
+    let pending_approvals = if h.dashboard_pending_approvals {
+        InboxRepo::pending_by_adult(&mut tx)
+            .await?
+            .into_iter()
+            .map(|(member_id, n)| PendingApprovals {
+                member_id,
+                count: u32::try_from(n.max(0)).unwrap_or(u32::MAX),
+            })
+            .collect()
+    } else {
+        Vec::new()
+    };
     let urls = avatar_urls(&mut tx).await?;
     let members: Vec<MemberPublicDto> = MemberRepo::list(&mut tx, false)
         .await?
@@ -1650,7 +1648,7 @@ pub async fn get_dashboard(
         tasks,
         routines,
         task_lists: s.services.tasks.list_task_lists(hid).await?,
-        inbox: crate::mail::inbox_counts(&s, hid).await?,
+        pending_approvals,
         weather,
         advisories,
         settings,

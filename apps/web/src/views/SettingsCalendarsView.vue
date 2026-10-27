@@ -14,7 +14,6 @@ import AddSourceForm from './parts/AddSourceForm.vue'
 import SourceCredentials from './parts/SourceCredentials.vue'
 import { describeError } from './shared'
 import { reactive, ref } from 'vue'
-import './parts/settings.css'
 
 const sources = useSourcesStore()
 const household = useHouseholdStore()
@@ -81,7 +80,7 @@ const synced = (s: SourceViewExt) =>
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader eyebrow="Settings" title="Calendars" />
     <ErrorBanner v-if="sources.error" :message="sources.error" />
     <ErrorBanner v-if="sources.conflict" conflict @reload="sources.load()" />

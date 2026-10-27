@@ -3,6 +3,7 @@ import { computed, reactive, ref } from 'vue'
 import type { OAuthAccountView } from '../../../api/client'
 import { mailApi, type NewMailSource } from '../../../api/mailSettings'
 import type { Member } from '../../../api/client'
+import { GOOGLE_NEEDS_HTTPS, isSecure } from '../../../lib/secure'
 import { describeError } from '../../shared'
 
 const props = defineProps<{
@@ -14,7 +15,8 @@ const props = defineProps<{
 const emit = defineEmits<{ create: [b: NewMailSource] }>()
 
 const RETURN_TO = '/settings/mail'
-const provider = ref<'gmail' | 'imap'>('gmail')
+const secure = isSecure()
+const provider = ref<'gmail' | 'imap'>(secure ? 'gmail' : 'imap')
 const form = reactive({
   name: '',
   account: '',
@@ -107,19 +109,21 @@ function submit() {
 </script>
 
 <template>
-  <form class="settings-form" data-testid="add-mail-source" @submit.prevent="submit">
+  <form class="form" data-testid="add-mail-source" @submit.prevent="submit">
     <h2>Add a mail source</h2>
     <label>
       Type
       <select v-model="provider" name="provider">
-        <option value="gmail">Gmail (Google sign-in)</option>
+        <option value="gmail" :disabled="!secure">
+          {{ secure ? 'Gmail (Google sign-in)' : `Gmail (${GOOGLE_NEEDS_HTTPS})` }}
+        </option>
         <option value="imap">IMAP (any provider, app password)</option>
       </select>
     </label>
     <label>Name <input v-model="form.name" name="name" required /></label>
 
     <template v-if="provider === 'gmail'">
-      <p v-if="needsScope" class="settings-note">
+      <p v-if="needsScope" class="muted">
         Your Google account has not been given Gmail access yet.
         <template v-if="googleEnabled">
           <a
@@ -172,7 +176,7 @@ function submit() {
         <button type="button" @click="test">Test connection</button>
         <span
           v-if="testNote"
-          :class="testOk ? 'settings-ok' : 'settings-error'"
+          :class="testOk ? 'text-success' : 'text-danger'"
           role="status"
           data-testid="imap-test"
           >{{ testNote }}</span
@@ -182,12 +186,12 @@ function submit() {
 
     <fieldset>
       <legend>Owners (whose mail this is)</legend>
-      <label v-for="m in adults" :key="m.id" class="inline">
+      <label v-for="m in adults" :key="m.id" class="field-inline">
         <input v-model="form.owners" type="checkbox" :value="m.id" />
         {{ m.display_name }}
       </label>
     </fieldset>
-    <label class="inline">
+    <label class="field-inline">
       <input v-model="form.readOnly" type="checkbox" name="read_only" />
       Read only (never archive, label or mark mail read)
     </label>
@@ -199,7 +203,7 @@ function submit() {
       Filter (optional, Gmail search syntax)
       <input v-model="form.query" name="query" />
     </label>
-    <p v-if="error" class="settings-error" role="alert">{{ error }}</p>
+    <p v-if="error" class="text-danger" role="alert">{{ error }}</p>
     <button type="submit" :disabled="needsScope">Add source</button>
   </form>
 </template>

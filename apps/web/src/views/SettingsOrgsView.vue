@@ -10,7 +10,6 @@ import { useSourcesStore } from '../stores/sources'
 import ChipInput from './parts/settings-mail/ChipInput.vue'
 import EnrollmentsPanel from './parts/settings-mail/EnrollmentsPanel.vue'
 import { describeError } from './shared'
-import './parts/settings.css'
 
 const store = useOrgsStore()
 const members = useMembersStore()
@@ -125,7 +124,7 @@ async function addContact(o: OrgView) {
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader eyebrow="Settings" title="Organizations">
       <template #actions>
         <button v-if="editing === null" type="button" class="btn-primary" @click="open('new')">

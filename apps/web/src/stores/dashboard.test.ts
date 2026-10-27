@@ -3,7 +3,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest'
 import type { DashboardData } from '../dashboard/types'
 
 vi.mock('../api/client', () => ({
-  api: { me: vi.fn(), dashboard: vi.fn(), dismissAdvisory: vi.fn() },
+  api: { me: vi.fn(), dashboard: vi.fn() },
 }))
 vi.mock('../kiosk/taskApi', () => ({
   taskApi: {

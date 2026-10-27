@@ -10,6 +10,7 @@ use tower_sessions::session::Id;
 use crate::error::{AuthError, Result};
 use crate::password::{self, PasswordCheck};
 use crate::service::{ActorIds, AuthService, actor_ids, audit};
+
 use crate::session_store::identity_data;
 
 #[derive(Debug, Clone)]
@@ -41,35 +42,38 @@ fn secs(d: std::time::Duration) -> Result<chrono::Duration> {
     chrono::Duration::from_std(d).map_err(|e| AuthError::Internal(e.to_string()))
 }
 
-impl AuthService {
-    /// Verifies credentials and creates a session. `ip` feeds the per-IP limiter.
-    pub async fn login(
-        &self,
-        username: &str,
-        password: &str,
-        ip: Option<IpAddr>,
-        user_agent: Option<&str>,
-    ) -> Result<LoginOutcome> {
-        // Unknown peer address shares one global bucket instead of skipping limiting.
-        let key = ip.unwrap_or(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED));
-        if !self.ip_limiter.check(key) {
-            return Err(AuthError::RateLimited);
-        }
+/// A password that passed the lockout and hash checks; `tx` holds the account row lock.
+pub(crate) struct Verified {
+    pub tx: fa_store::Tx,
+    pub needs_rehash: bool,
+}
 
-        // Pre-household lookup: system transaction.
-        let mut sys = self.store.tx_system().await?;
-        let found = UserAccountRepo::find_by_username(&mut sys, None, username).await?;
-        sys.rollback().await?;
-        let Some(account) = found.filter(|a| a.value.disabled_at.is_none()) else {
-            self.dummy_verify(password).await;
-            return Err(AuthError::InvalidCredentials);
-        };
-        let account = account.value;
+impl AuthService {
+    /// Checks `password` against the account with the lockout rules of D-019.
+    ///
+    /// The argon2 verify runs with no transaction open (C-12). The lockout row is then read
+    /// `FOR UPDATE` and the outcome is recorded in that same short transaction, so parallel guesses
+    /// are serialised and a lock set by an earlier one is honoured. On success the transaction
+    /// stays open for the caller, with any failure counter already cleared.
+    pub(crate) async fn verify_account(
+        &self,
+        account: &fa_domain::UserAccount,
+        password: &str,
+    ) -> Result<Verified> {
         let ids = ActorIds {
             household: account.household_id,
             member: Some(account.member_id),
             device: None,
         };
+        let mut tx = self.store.tx_for(account.household_id).await?;
+        let lock = UserAccountRepo::lockout(&mut tx, account.id).await?;
+        tx.rollback().await?;
+        if let Some(until) = lock.locked_until.filter(|u| *u > Utc::now()) {
+            return Err(AuthError::Locked { until });
+        }
+
+        let check =
+            password::verify_blocking(password.to_owned(), account.password_hash.clone()).await?;
 
         let mut tx = self.store.tx_for(account.household_id).await?;
         let lock = UserAccountRepo::lockout(&mut tx, account.id).await?;
@@ -77,9 +81,6 @@ impl AuthService {
             tx.rollback().await?;
             return Err(AuthError::Locked { until });
         }
-
-        let check =
-            password::verify_blocking(password.to_owned(), account.password_hash.clone()).await?;
         let PasswordCheck::Match { needs_rehash } = check else {
             let after = UserAccountRepo::record_failure(
                 &mut tx,
@@ -107,6 +108,40 @@ impl AuthService {
             }
             return Err(AuthError::InvalidCredentials);
         };
+        if lock.failed_attempts > 0 || lock.locked_until.is_some() {
+            UserAccountRepo::clear_failures(&mut tx, account.id).await?;
+        }
+        Ok(Verified { tx, needs_rehash })
+    }
+
+    /// Verifies credentials and creates a session. `ip` feeds the per-IP limiter.
+    pub async fn login(
+        &self,
+        username: &str,
+        password: &str,
+        ip: Option<IpAddr>,
+        user_agent: Option<&str>,
+    ) -> Result<LoginOutcome> {
+        // Unknown peer address shares one global bucket instead of skipping limiting.
+        let key = ip.unwrap_or(IpAddr::V4(std::net::Ipv4Addr::UNSPECIFIED));
+        if !self.ip_limiter.check(key) {
+            return Err(AuthError::RateLimited);
+        }
+
+        // Pre-household lookup: system transaction.
+        let mut sys = self.store.tx_system().await?;
+        let found = UserAccountRepo::find_by_username(&mut sys, None, username).await?;
+        sys.rollback().await?;
+        let Some(account) = found.filter(|a| a.value.disabled_at.is_none()) else {
+            self.dummy_verify(password).await;
+            return Err(AuthError::InvalidCredentials);
+        };
+        let account = account.value;
+
+        let Verified {
+            mut tx,
+            needs_rehash,
+        } = self.verify_account(&account, password).await?;
 
         let member = MemberRepo::get(&mut tx, account.member_id)
             .await?
@@ -114,9 +149,6 @@ impl AuthService {
             .filter(|m| m.archived_at.is_none())
             .ok_or(AuthError::InvalidCredentials)?;
 
-        if lock.failed_attempts > 0 || lock.locked_until.is_some() {
-            UserAccountRepo::clear_failures(&mut tx, account.id).await?;
-        }
         if needs_rehash {
             match password::hash_blocking(password.to_owned()).await {
                 Ok(new_hash) => {

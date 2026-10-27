@@ -17,7 +17,6 @@ vi.mock('../api/client', () => ({
   api: {
     me: vi.fn(),
     dashboard: vi.fn().mockRejectedValue(new Error('x')),
-    dismissAdvisory: vi.fn(),
   },
 }))
 import { taskApi } from '../kiosk/taskApi'

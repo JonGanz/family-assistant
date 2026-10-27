@@ -12,7 +12,6 @@ import LayoutEditor from '../dashboard/LayoutEditor.vue'
 import { loadPreviewData, type PreviewData } from '../dashboard/preview'
 import { S } from '../dashboard/strings'
 import type { DashboardSettings } from '../dashboard/types'
-import './parts/settings.css'
 
 const devices = ref<DeviceDto[]>([])
 const name = ref('')
@@ -115,7 +114,7 @@ async function revoke(d: DeviceDto) {
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader eyebrow="Settings" title="Devices" />
     <ErrorBanner v-if="error" :message="error" />
 

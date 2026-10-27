@@ -26,16 +26,16 @@ Outstanding findings and suggestions from the 2026-10-26 repository review (full
 ## Code: security and correctness
 | ID | Sev | Finding | Fix | Size |
 |---|---|---|---|---|
-| C-01b | HIGH | `pin_lockout` is read without `FOR UPDATE`, so parallel guesses pass the check before a failure is recorded (`fa-store/src/repo/member.rs:262`). The per-device limiter added in the review mitigates it; it is a process-wide `OnceLock` with a fixed 5 per 15 min budget | `SELECT … FOR UPDATE` plus `cargo sqlx prepare`; move the limiter budget into `AuthConfig` | QUICK |
-| C-02 | MED | Login lockout has the same read-then-update race (`fa-store/src/repo/account.rs:167`) | `FOR UPDATE` plus a conditional update | QUICK |
-| C-03 | MED | Own-password change needs no current password and leaves other sessions alive (`fa-api/src/routes.rs:663`) | Require `current_password`, revoke other sessions; DTO and web change | LARGER |
-| C-04 | MED | Default trusted proxies include `172.16.0.0/12` (`fa-api/src/extract.rs:147`) | Loopback only; compose sets the sidecar address (D-069) | QUICK |
-| C-05 | MED | Outbound HTTP client checks only the scheme: SSRF through calendar-source test URLs to loopback, private and link-local addresses, through redirects (`fa-connectors/src/http.rs:24`) | Private-network denylist with a custom resolver, `allow_private_hosts` toggle (default off, a Settings, System field per D-075) for local CalDAV, same check in the redirect policy | LARGER |
-| C-08 | LOW | Unelevated devices can read the approval inbox (`fa-domain/src/authz.rs`) | Refuse `ReadInbox` for all devices; remove the dashboard inbox panel (D-068) | QUICK |
-| C-09 | LOW | Anyone can dismiss weather advisories | Remove dismiss; advisories clear when the rule stops matching or `valid_until` passes (D-068) | QUICK |
+| C-01b ✅ done 2026-10-26 (M3.5) | HIGH | `pin_lockout` is read without `FOR UPDATE`, so parallel guesses pass the check before a failure is recorded (`fa-store/src/repo/member.rs:262`). The per-device limiter added in the review mitigates it; it is a process-wide `OnceLock` with a fixed 5 per 15 min budget | `SELECT … FOR UPDATE` plus `cargo sqlx prepare`; move the limiter budget into `AuthConfig` | QUICK |
+| C-02 ✅ done 2026-10-26 (M3.5) | MED | Login lockout has the same read-then-update race (`fa-store/src/repo/account.rs:167`) | `FOR UPDATE` plus a conditional update | QUICK |
+| C-03 ✅ done 2026-10-26 (M3.5) | MED | Own-password change needs no current password and leaves other sessions alive (`fa-api/src/routes.rs:663`) | Require `current_password`, revoke other sessions; DTO and web change | LARGER |
+| C-04 ✅ done 2026-10-26 (M3.5) | MED | Default trusted proxies include `172.16.0.0/12` (`fa-api/src/extract.rs:147`) | Loopback only; compose sets the sidecar address (D-069) | QUICK |
+| C-05 ✅ done 2026-10-26 (M3.5) | MED | Outbound HTTP client checks only the scheme: SSRF through calendar-source test URLs to loopback, private and link-local addresses, through redirects (`fa-connectors/src/http.rs:24`) | Private-network denylist with a custom resolver, `allow_private_hosts` toggle (default off, a Settings, System field per D-075) for local CalDAV, same check in the redirect policy | LARGER |
+| C-08 ✅ done 2026-10-26 (M3.5) | LOW | Unelevated devices can read the approval inbox (`fa-domain/src/authz.rs`) | Refuse `ReadInbox` for all devices; remove the dashboard inbox panel (D-068) | QUICK |
+| C-09 ✅ done 2026-10-26 (M3.5) | LOW | Anyone can dismiss weather advisories | Remove dismiss; advisories clear when the rule stops matching or `valid_until` passes (D-068) | QUICK |
 | C-10 | LOW | AES-GCM secrets carry no AAD, so rows can be swapped between owners by someone with DB write access (`fa-store/src/secret.rs`) | Bind AAD to household, owner and kind; re-encryption migration | LARGER |
-| C-12 | LOW | argon2 verify runs inside an open pooled transaction; a burst exhausts the pool (`login.rs:75`, `pin.rs:76`) | Read, release, verify, then a short transaction to record | QUICK |
-| C-15 | LOW | Session cookie built by hand with `format!`; `cookie_secure=false` behind TLS goes unnoticed (`routes.rs:192`) | Use the `cookie` builder; `Secure` becomes per-request (`FA_COOKIE_SECURE=auto`, D-065), which replaces the startup warning | QUICK |
+| C-12 ✅ done 2026-10-26 (M3.5) | LOW | argon2 verify runs inside an open pooled transaction; a burst exhausts the pool (`login.rs:75`, `pin.rs:76`) | Read, release, verify, then a short transaction to record | QUICK |
+| C-15 ✅ done 2026-10-26 (M3.5) | LOW | Session cookie built by hand with `format!`; `cookie_secure=false` behind TLS goes unnoticed (`routes.rs:192`) | Use the `cookie` builder; `Secure` becomes per-request (`FA_COOKIE_SECURE=auto`, D-065), which replaces the startup warning | QUICK |
 
 ## Code: API consistency and extensibility
 | ID | Finding | Fix | Size |
@@ -47,30 +47,30 @@ Outstanding findings and suggestions from the 2026-10-26 repository review (full
 ## Front end
 | ID | Finding | Fix | Size |
 |---|---|---|---|
-| U-08 | Settings pages are not structurally grouped; `/settings` redirects to Household; `/members` is top-level | Nested `/settings` parent route with a `SettingsLayout` (sidebar on desktop, chips on mobile) and a `SettingsIndexView` of grouped cards (Personal, Household, Sources and rules, System); Members to `/settings/members`, adult-only, **no redirect** (D-070); System hosts the runtime settings (D-075) | LARGER |
-| U-09b | 88 uses of the old `settings-*` classes remain in `views/parts/*` and `components/mail/*`, served by aliases in `views/parts/settings.css`; `.badge` is not in the kit | Migrate to `.form/.muted/.card-list/.text-*`, add `.badge` to `base.css`, delete `settings.css` | QUICK |
-| U-10b | The Tasks and Calendar stores expose no `loading` flag, so those pages show only error and empty states | Add `loading` to both stores and pass it to `StateBlock` | QUICK |
-| U-11b | Two kiosk font systems (`--kiosk-font-*` and `.kiosk { font-size: 28px }`) | Keep one | QUICK |
-| U-12b | View roots are unlabelled `<section>`s; nested pages (`/tasks/:id`, `/mail/:id`) do not mark their parent nav item | `aria-labelledby` on sections; match nav active state on path prefix | QUICK |
-| U-14 | Tabs use the kit styling but no arrow-key handling | Shared `Tabs.vue` with roving tabindex | QUICK |
-| U-15 | No mobile menu: the primary nav wraps rather than collapsing below 40 rem | Scroll row or hamburger with the Settings button kept visible | QUICK |
+| U-08 ✅ done 2026-10-26 (M3.5) | Settings pages are not structurally grouped; `/settings` redirects to Household; `/members` is top-level | Nested `/settings` parent route with a `SettingsLayout` (sidebar on desktop, chips on mobile) and a `SettingsIndexView` of grouped cards (Personal, Household, Sources and rules, System); Members to `/settings/members`, adult-only, **no redirect** (D-070); System hosts the runtime settings (D-075) | LARGER |
+| U-09b ✅ done 2026-10-26 (M3.5) | 88 uses of the old `settings-*` classes remain in `views/parts/*` and `components/mail/*`, served by aliases in `views/parts/settings.css`; `.badge` is not in the kit | Migrate to `.form/.muted/.card-list/.text-*`, add `.badge` to `base.css`, delete `settings.css` | QUICK |
+| U-10b ✅ done 2026-10-26 (M3.5) | The Tasks and Calendar stores expose no `loading` flag, so those pages show only error and empty states | Add `loading` to both stores and pass it to `StateBlock` | QUICK |
+| U-11b ✅ done 2026-10-26 (M3.5) | Two kiosk font systems (`--kiosk-font-*` and `.kiosk { font-size: 28px }`) | Keep one | QUICK |
+| U-12b ✅ done 2026-10-26 (M3.5) | View roots are unlabelled `<section>`s; nested pages (`/tasks/:id`, `/mail/:id`) do not mark their parent nav item | `aria-labelledby` on sections; match nav active state on path prefix | QUICK |
+| U-14 ✅ done 2026-10-26 (M3.5) | Tabs use the kit styling but no arrow-key handling | Shared `Tabs.vue` with roving tabindex | QUICK |
+| U-15 ✅ done 2026-10-26 (M3.5) | No mobile menu: the primary nav wraps rather than collapsing below 40 rem | Scroll row or hamburger with the Settings button kept visible | QUICK |
 | U-16 | The new nav, page shell and kit were verified by lint, tests, typecheck and a production build, not in a browser or on the Echo Show | Visual pass on phone width, desktop and the kiosk | — |
 
 ## Process and tooling
 | ID | Finding | Fix | Size |
 |---|---|---|---|
-| P-02 | No single "what should I do next" page: open questions, H-01..H-11 status, decisions waiting (RUSTSEC-2026-0192), M3 known gaps live in four places | `plan/human-steps.md` with one row per H-step and status, plus `fa.py status` writing `STATUS.md` | LARGER |
+| P-02 ✅ done 2026-10-26 (M3.5 T-01) | No single "what should I do next" page: open questions, H-01..H-11 status, decisions waiting (RUSTSEC-2026-0192), M3 known gaps live in four places | `plan/human-steps.md` with one row per H-step and status, plus `fa.py status` writing `STATUS.md` | LARGER |
 | P-06 | `tools/fa.py` is a library; the skill asks agents for `python3 -c` one-liners whose positional args silently corrupt files | argparse subcommands `new-q`, `new-d`, `resolve`, `supersede`, `log`, `status` with keyword flags (`check` exists) | LARGER |
 | P-07 | Only one skill (`process-answers`) while each milestone repeats plan → rules → briefs → cross-check → waves → integrate → close | `plan-milestone`, `run-wave`, `close-milestone` skills | LARGER |
-| P-08b | M0 and M1 plans have no `## Outcome` section | Backfill | QUICK |
-| P-09 | `plan/M*/_rules.md` is copied and hand-edited per milestone | `plan/_rules-common.md` plus per-milestone deltas | QUICK |
-| P-10 | 5 of 15 M3 briefs cite no decision | `decisions:` key in task front-matter, enforced by `fa.py check` | QUICK |
-| P-14 | CLAUDE.md mixes process rules with implementation trivia (ts-rs, `Date.parse`); disk thresholds differ between CLAUDE.md and `_rules.md` | Move gotchas to `_rules-common.md`; one disk rule | QUICK |
-| P-15 | `fa.py check` has no negative test and `ci.yml` was not YAML-validated after the `docs` job was added | Add a bad-fixture test; run the workflow once | QUICK |
-| P-16 | Not run during the review: `scripts/ci-local.sh`, `scripts/e2e.sh`, `scripts/compose-smoke.sh`, the DB-backed Rust tests | Run before the next milestone starts | — |
+| P-08b ✅ done 2026-10-26 (M3.5 T-01) | M0 and M1 plans have no `## Outcome` section | Backfill | QUICK |
+| P-09 ✅ done 2026-10-26 (M3.5 T-01) | `plan/M*/_rules.md` is copied and hand-edited per milestone | `plan/_rules-common.md` plus per-milestone deltas | QUICK |
+| P-10 ✅ done 2026-10-26 (M3.5 T-01) | 5 of 15 M3 briefs cite no decision | `decisions:` key in task front-matter, enforced by `fa.py check` | QUICK |
+| P-14 ✅ done 2026-10-26 (M3.5 T-01) | CLAUDE.md mixes process rules with implementation trivia (ts-rs, `Date.parse`); disk thresholds differ between CLAUDE.md and `_rules.md` | Move gotchas to `_rules-common.md`; one disk rule | QUICK |
+| P-15 ✅ done 2026-10-26 (M3.5 T-01) | `fa.py check` has no negative test and `ci.yml` was not YAML-validated after the `docs` job was added | Add a bad-fixture test; run the workflow once | QUICK |
+| P-16 ✅ done 2026-10-26 (M3.5) | Not run during the review: `scripts/ci-local.sh`, `scripts/e2e.sh`, `scripts/compose-smoke.sh`, the DB-backed Rust tests | Run before the next milestone starts | — |
 
 ## Suggested order
 1. ~~Answer Q-061 to Q-066~~ (done: D-066 to D-071).
-2. M3.5 ([plan/M3.5.md](plan/M3.5.md)): process items and P-16 first (T-01), then the waves, which carry the QUICK and LARGER items listed above.
+2. ~~M3.5 code~~ (done 2026-10-26: every item listed for it above is closed; see [plan/M3.5.md](plan/M3.5.md), *Outcome*).
 3. The M3.5 shakedown (R-01 to R-04, U-16).
 4. The M4 plan picks up the deferred items: C-10, C-13, C-14, P-06, P-07, and the second code review.

@@ -10,7 +10,6 @@ use crate::dashboard::DashboardSettings;
 use crate::entities::*;
 use crate::ids::*;
 use crate::mail::{EventsSettings, GenderTerms, InboxSettings, MailRetention};
-use crate::mail_api::InboxCounts;
 use crate::tasks::NowWeights;
 use crate::tasks_api::{RoutineRunView, TaskListView, TaskView};
 use crate::timefmt;
@@ -76,6 +75,7 @@ pub struct HouseholdPatch {
     pub weather_retention_days: Option<i32>,
     pub private_events_as_busy: Option<bool>,
     pub dashboard_completion_override: Option<bool>,
+    pub dashboard_pending_approvals: Option<bool>,
     pub now_list_size: Option<i32>,
     pub now_weights: Option<NowWeights>,
     #[serde(default, with = "timefmt::hhmm_opt")]
@@ -384,9 +384,15 @@ pub struct DashboardView {
     pub routines: Vec<RoutineRunView>,
     /// Active task lists (the add form offers those with `dashboard_add`).
     pub task_lists: Vec<TaskListView>,
-    /// Counts of items waiting for approval; the panel fetches `GET /inbox` for the items.
+    /// Pending approvals per adult; empty when the household setting is off.
     #[serde(default)]
-    pub inbox: InboxCounts,
+    pub pending_approvals: Vec<PendingApprovals>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct PendingApprovals {
+    pub member_id: MemberId,
+    pub count: u32,
 }
 
 // ---- status ----

@@ -16,7 +16,7 @@ pub fn default_schedules() -> Vec<(&'static str, &'static str)> {
 }
 
 pub fn handlers(config: WeatherConfig) -> Result<Vec<Arc<dyn JobHandler>>, WeatherError> {
-    let http = Http::new(config.allow_http)?;
+    let http = Http::with_policy(config.allow_http, config.allow_private_hosts)?;
     let shared = Shared { http, config };
     Ok(vec![
         Arc::new(Fetch(shared.clone())),

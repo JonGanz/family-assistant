@@ -3,7 +3,6 @@ import { S } from '../strings'
 import type { PanelProps } from '../types'
 
 defineProps<PanelProps>()
-defineEmits<{ dismiss: [id: string] }>()
 </script>
 
 <template>
@@ -18,13 +17,6 @@ defineEmits<{ dismiss: [id: string] }>()
         role="status"
       >
         <span class="text">{{ a.text }}</span>
-        <button
-          type="button"
-          :aria-label="`${S.dismiss}: ${a.text}`"
-          @click="$emit('dismiss', a.id)"
-        >
-          ✕
-        </button>
       </li>
     </ul>
   </section>
@@ -63,15 +55,5 @@ li.severe {
 }
 .text {
   flex: 1;
-}
-button {
-  min-width: var(--min-touch, 48px);
-  min-height: var(--min-touch, 48px);
-  border: 0;
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: inherit;
-  font-size: inherit;
-  cursor: pointer;
 }
 </style>

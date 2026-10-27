@@ -1,10 +1,13 @@
+use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::path::PathBuf;
 
 use figment::Figment;
-use figment::providers::{Env, Format, Serialized, Toml};
+use figment::providers::Serialized;
 use serde::{Deserialize, Serialize};
 use url::Url;
+
+use crate::runtime::{RUNTIME_KEYS, validate_value};
 
 /// A string that never shows up in `Debug` output or logs.
 #[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -45,8 +48,11 @@ pub struct ProcessConfig {
     pub database_url: String,
     pub bind_addr: String,
     pub master_key_path: PathBuf,
-    pub public_base_url: String,
-    pub cookie_secure: bool,
+    /// `FA_PUBLIC_BASE_URL`: overrides the stored `public_base_url` setting.
+    #[serde(default, deserialize_with = "empty_none")]
+    pub public_base_url: Option<String>,
+    /// `FA_COOKIE_SECURE`: `auto` (default), `true` or `false`.
+    pub cookie_secure: CookieSecure,
     pub log_format: LogFormat,
     pub log_level: String,
     pub web_dist_dir: PathBuf,
@@ -78,6 +84,73 @@ pub struct ProcessConfig {
     /// when unset). For stubs.
     #[serde(default, deserialize_with = "empty_none")]
     pub google_api_base: Option<Url>,
+    /// `FA_DATABASE_PASSWORD_FILE`: file holding the DB password, inserted into `database_url`
+    /// when that URL has none.
+    #[serde(default, deserialize_with = "empty_none")]
+    pub database_password_file: Option<PathBuf>,
+    /// `FA_TAILNET_BASE_URL`: the HTTPS tailnet address.
+    #[serde(default, deserialize_with = "empty_none")]
+    pub tailnet_base_url: Option<String>,
+    /// `FA_NTFY_PUBLIC_URL`: the ntfy address phones subscribe to, when it differs from
+    /// `ntfy_url` (which in compose is the internal `http://ntfy:80`). See `ntfy_subscribe_base`.
+    #[serde(default, deserialize_with = "empty_none")]
+    pub ntfy_public_url: Option<String>,
+    /// `FA_ALLOW_PRIVATE_HOSTS`: let feeds, calendars and the like reach private addresses.
+    pub allow_private_hosts: bool,
+    /// `FA_TRUSTED_PROXIES`: CIDRs whose `X-Forwarded-*` headers are trusted.
+    pub trusted_proxies: Vec<String>,
+    /// `FA_LAN_DASHBOARD_URL`: address of the home-network dashboard listener; unset leaves it off.
+    #[serde(default, deserialize_with = "empty_none")]
+    pub lan_dashboard_url: Option<String>,
+    /// `FA_LAN_DASHBOARD_BIND`.
+    pub lan_dashboard_bind: String,
+    /// `FA_LAN_ALLOWED_CIDRS`: empty means private and loopback ranges.
+    pub lan_allowed_cidrs: Vec<String>,
+    /// `FA_LAN_ALLOW_PIN`.
+    pub lan_allow_pin: bool,
+}
+
+/// When the session cookie carries `Secure`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum CookieSecure {
+    /// Per request: over TLS, or behind a trusted proxy sending `X-Forwarded-Proto: https`.
+    #[default]
+    Auto,
+    Always,
+    Never,
+}
+
+impl Serialize for CookieSecure {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        s.serialize_str(match self {
+            Self::Auto => "auto",
+            Self::Always => "true",
+            Self::Never => "false",
+        })
+    }
+}
+
+impl<'de> Deserialize<'de> for CookieSecure {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum Raw {
+            B(bool),
+            S(String),
+        }
+        match Raw::deserialize(d)? {
+            Raw::B(true) => Ok(Self::Always),
+            Raw::B(false) => Ok(Self::Never),
+            Raw::S(s) => match s.trim().to_ascii_lowercase().as_str() {
+                "auto" | "" => Ok(Self::Auto),
+                "true" | "1" => Ok(Self::Always),
+                "false" | "0" => Ok(Self::Never),
+                _ => Err(serde::de::Error::custom(
+                    "FA_COOKIE_SECURE must be auto, true or false",
+                )),
+            },
+        }
+    }
 }
 
 /// Empty strings mean unset.
@@ -100,7 +173,7 @@ where
 struct Defaults {
     bind_addr: &'static str,
     master_key_path: &'static str,
-    cookie_secure: bool,
+    cookie_secure: CookieSecure,
     log_format: LogFormat,
     log_level: &'static str,
     web_dist_dir: &'static str,
@@ -108,12 +181,17 @@ struct Defaults {
     allow_http_feeds: bool,
     allow_plain_imap: bool,
     imap_tls_insecure: bool,
+    allow_private_hosts: bool,
+    trusted_proxies: [&'static str; 2],
+    lan_dashboard_bind: &'static str,
+    lan_allowed_cidrs: [&'static str; 0],
+    lan_allow_pin: bool,
 }
 
 const DEFAULTS: Defaults = Defaults {
     bind_addr: "127.0.0.1:8080",
     master_key_path: "/run/secrets/fa_master_key",
-    cookie_secure: true,
+    cookie_secure: CookieSecure::Auto,
     log_format: LogFormat::Pretty,
     log_level: "info",
     web_dist_dir: "/srv/web",
@@ -121,17 +199,18 @@ const DEFAULTS: Defaults = Defaults {
     allow_http_feeds: false,
     allow_plain_imap: false,
     imap_tls_insecure: false,
+    allow_private_hosts: false,
+    trusted_proxies: ["127.0.0.0/8", "::1/128"],
+    lan_dashboard_bind: "0.0.0.0:8081",
+    lan_allowed_cidrs: [],
+    lan_allow_pin: false,
 };
 
 impl ProcessConfig {
-    /// Loads from the real environment (and `fa.toml` / `$FA_CONFIG` if present).
+    /// Loads from the real environment (and `fa.toml` / `$FA_CONFIG` if present), without
+    /// stored settings.
     pub fn load() -> Result<Self, ConfigError> {
-        let path = std::env::var("FA_CONFIG").unwrap_or_else(|_| "fa.toml".into());
-        let fig = Self::base_figment()
-            .merge(Toml::file(path))
-            .merge(Env::prefixed("FA_"))
-            .merge(Env::raw().only(&["DATABASE_URL"]));
-        Self::from_figment(fig)
+        Self::load_layered(&BTreeMap::new()).map(|(c, _)| c)
     }
 
     /// Defaults only; merge further providers onto it and pass to [`Self::from_figment`].
@@ -141,9 +220,65 @@ impl ProcessConfig {
 
     pub fn from_figment(fig: Figment) -> Result<Self, ConfigError> {
         let mut cfg: Self = fig.extract().map_err(|e| ConfigError::Load(Box::new(e)))?;
+        cfg.apply_password_file()?;
         cfg.validate()?;
-        cfg.public_base_url = cfg.public_base_url.trim_end_matches('/').to_string();
+        cfg.public_base_url = cfg
+            .public_base_url
+            .map(|u| u.trim_end_matches('/').to_string());
         Ok(cfg)
+    }
+
+    /// `public_base_url`, or `http://localhost:8080` when unset.
+    /// The ntfy base address shown to phones: `ntfy_public_url`; else the tailnet address on
+    /// `:8443` (the compose sidecar's ntfy port); else the app's own host on `:8090` (compose's
+    /// default `FA_NTFY_PORT`); else `ntfy_url`. `None` when notifications are off.
+    pub fn ntfy_subscribe_base(&self) -> Option<String> {
+        let ntfy = self.ntfy_url.as_ref()?;
+        if let Some(u) = &self.ntfy_public_url {
+            return Some(u.trim_end_matches('/').to_owned());
+        }
+        let derive = |base: &str, port: u16| {
+            let mut u = Url::parse(base).ok()?;
+            u.set_port(Some(port)).ok()?;
+            Some(u.as_str().trim_end_matches('/').to_owned())
+        };
+        self.tailnet_base_url
+            .as_deref()
+            .and_then(|t| derive(t, 8443))
+            .or_else(|| {
+                self.public_base_url
+                    .as_deref()
+                    .and_then(|p| derive(p, 8090))
+            })
+            .or_else(|| Some(ntfy.as_str().trim_end_matches('/').to_owned()))
+    }
+
+    pub fn effective_base_url(&self) -> &str {
+        self.public_base_url
+            .as_deref()
+            .unwrap_or("http://localhost:8080")
+    }
+
+    fn apply_password_file(&mut self) -> Result<(), ConfigError> {
+        let Some(path) = &self.database_password_file else {
+            return Ok(());
+        };
+        let raw = std::fs::read_to_string(path).map_err(|e| {
+            ConfigError::Invalid(vec![format!(
+                "FA_DATABASE_PASSWORD_FILE {}: {e}",
+                path.display()
+            )])
+        })?;
+        let pw = raw.trim_end_matches(['\n', '\r']);
+        if pw.is_empty() {
+            return Err(ConfigError::Invalid(vec![format!(
+                "FA_DATABASE_PASSWORD_FILE {} is empty",
+                path.display()
+            )]));
+        }
+        self.database_url =
+            insert_password(&self.database_url, pw).map_err(|e| ConfigError::Invalid(vec![e]))?;
+        Ok(())
     }
 
     fn validate(&self) -> Result<(), ConfigError> {
@@ -159,54 +294,30 @@ impl ProcessConfig {
                 self.bind_addr
             ));
         }
-        let url = self.public_base_url.as_str();
-        let host = url
-            .strip_prefix("https://")
-            .or_else(|| url.strip_prefix("http://"));
-        match host {
-            None => errs.push(format!(
-                "FA_PUBLIC_BASE_URL '{url}' must start with http:// or https://"
-            )),
-            Some(h) if h.trim_end_matches('/').is_empty() => {
-                errs.push("FA_PUBLIC_BASE_URL has no host".to_string())
-            }
-            Some(h) => {
-                let local = h.starts_with("localhost") || h.starts_with("127.0.0.1");
-                if self.cookie_secure && url.starts_with("http://") && !local {
-                    errs.push(
-                        "FA_COOKIE_SECURE=true requires an https:// FA_PUBLIC_BASE_URL \
-                         (or set FA_COOKIE_SECURE=false for plain http)"
-                            .to_string(),
-                    );
-                }
-            }
+        if self.lan_dashboard_bind.parse::<SocketAddr>().is_err() {
+            errs.push(format!(
+                "FA_LAN_DASHBOARD_BIND '{}' is not a valid host:port socket address",
+                self.lan_dashboard_bind
+            ));
         }
         if self
             .google_client_id
             .as_deref()
             .is_some_and(|s| !s.trim().is_empty())
-        {
-            if self
+            && self
                 .google_client_secret
                 .as_ref()
                 .is_none_or(|s| s.expose().trim().is_empty())
-            {
-                errs.push(
-                    "FA_GOOGLE_CLIENT_ID is set but FA_GOOGLE_CLIENT_SECRET is not".to_string(),
-                );
-            }
-            match &self.public_url {
-                None => errs.push(
-                    "FA_PUBLIC_URL is required when FA_GOOGLE_CLIENT_ID is set (OAuth redirect)"
-                        .to_string(),
-                ),
-                Some(u) => match u.scheme() {
-                    "https" => {}
-                    "http" if self.allow_http_feeds => {}
-                    _ => errs.push(format!(
-                        "FA_PUBLIC_URL '{u}' must be https (http only with FA_ALLOW_HTTP_FEEDS=true)"
-                    )),
-                },
+        {
+            errs.push("FA_GOOGLE_CLIENT_ID is set but FA_GOOGLE_CLIENT_SECRET is not".to_string());
+        }
+        if let Ok(serde_json::Value::Object(m)) = serde_json::to_value(self) {
+            for k in RUNTIME_KEYS {
+                if let Some(v) = m.get(k.key).filter(|v| !v.is_null())
+                    && let Err(e) = validate_value(k.key, v)
+                {
+                    errs.push(format!("{}: {e}", k.env));
+                }
             }
         }
         if !matches!(self.open_meteo_url.scheme(), "https" | "http") {
@@ -246,8 +357,46 @@ impl ProcessConfig {
     }
 }
 
+/// Percent-encodes everything but RFC 3986 unreserved characters.
+fn pct_encode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+        if b.is_ascii_alphanumeric() || matches!(b, b'-' | b'.' | b'_' | b'~') {
+            out.push(b as char);
+        } else {
+            out.push_str(&format!("%{b:02X}"));
+        }
+    }
+    out
+}
+
+/// Adds `:password` to the user part of a `postgres://user@host/db` URL; leaves a URL that
+/// already has a password alone.
+fn insert_password(url: &str, password: &str) -> Result<String, String> {
+    let (scheme, rest) = url
+        .split_once("://")
+        .ok_or("DATABASE_URL is not a URL".to_string())?;
+    let end = rest.find(['/', '?', '#']).unwrap_or(rest.len());
+    let (auth, tail) = rest.split_at(end);
+    let Some((userinfo, host)) = auth.rsplit_once('@') else {
+        return Err(
+            "FA_DATABASE_PASSWORD_FILE needs a user name in DATABASE_URL (postgres://user@host/db)"
+                .to_string(),
+        );
+    };
+    if userinfo.contains(':') {
+        return Ok(url.to_string());
+    }
+    Ok(format!(
+        "{scheme}://{userinfo}:{}@{host}{tail}",
+        pct_encode(password)
+    ))
+}
+
 #[cfg(test)]
 mod tests {
+    use figment::providers::{Format, Toml};
+
     use super::*;
 
     fn fig(toml: &str) -> Figment {
@@ -261,9 +410,14 @@ mod tests {
         ))
         .unwrap();
         assert_eq!(c.bind_addr, "127.0.0.1:8080");
-        assert!(c.cookie_secure);
-        assert_eq!(c.public_base_url, "https://h.example.com");
+        assert_eq!(c.cookie_secure, CookieSecure::Auto);
+        assert_eq!(c.public_base_url.as_deref(), Some("https://h.example.com"));
+        assert_eq!(c.trusted_proxies, ["127.0.0.0/8", "::1/128"]);
+        assert_eq!(c.effective_base_url(), "https://h.example.com");
+        assert_eq!(c.lan_dashboard_bind, "0.0.0.0:8081");
         assert!(c.backup_dir.is_none());
+        let none = ProcessConfig::from_figment(fig("database_url='postgres://x'")).unwrap();
+        assert_eq!(none.effective_base_url(), "http://localhost:8080");
         assert!(matches!(
             ProcessConfig::from_figment(fig("")),
             Err(ConfigError::Load(_))
@@ -277,10 +431,40 @@ mod tests {
         ))
         .unwrap_err()
         .to_string();
-        assert!(e.contains("DATABASE_URL") && e.contains("FA_BIND_ADDR") && e.contains("PUBLIC"));
+        assert!(
+            e.contains("DATABASE_URL") && e.contains("FA_BIND_ADDR") && e.contains("PUBLIC"),
+            "{e}"
+        );
     }
 
     const BASE: &str = "database_url='postgres://x'\npublic_base_url='https://h.example.com'\n";
+
+    #[test]
+    fn ntfy_subscribe_base_is_derived_for_phones() {
+        let c = |extra: &str| ProcessConfig::from_figment(fig(&format!("{BASE}{extra}"))).unwrap();
+        assert_eq!(c("").ntfy_subscribe_base(), None, "notifications off");
+        let on = "ntfy_url='http://ntfy:80'\n";
+        assert_eq!(
+            c(on).ntfy_subscribe_base().as_deref(),
+            Some("https://h.example.com:8090")
+        );
+        assert_eq!(
+            c(&format!(
+                "{on}tailnet_base_url='https://family.tail1.ts.net'\n"
+            ))
+            .ntfy_subscribe_base()
+            .as_deref(),
+            Some("https://family.tail1.ts.net:8443")
+        );
+        assert_eq!(
+            c(&format!(
+                "{on}ntfy_public_url='http://192.168.1.10:9000/'\n"
+            ))
+            .ntfy_subscribe_base()
+            .as_deref(),
+            Some("http://192.168.1.10:9000")
+        );
+    }
 
     #[test]
     fn m1_defaults() {
@@ -291,29 +475,14 @@ mod tests {
     }
 
     #[test]
-    fn google_requires_secret_and_public_url() {
+    fn google_requires_secret() {
         let e = ProcessConfig::from_figment(fig(&format!("{BASE}google_client_id='id'")))
             .unwrap_err()
             .to_string();
-        assert!(
-            e.contains("FA_PUBLIC_URL") && e.contains("CLIENT_SECRET"),
-            "{e}"
-        );
-        let ok = format!(
-            "{BASE}google_client_id='id'\ngoogle_client_secret='s3cret'\npublic_url='https://h.ts.net'"
-        );
+        assert!(e.contains("CLIENT_SECRET"), "{e}");
+        let ok = format!("{BASE}google_client_id='id'\ngoogle_client_secret='s3cret'");
         let c = ProcessConfig::from_figment(fig(&ok)).unwrap();
         assert!(!format!("{c:?}").contains("s3cret"));
-    }
-
-    #[test]
-    fn google_public_url_must_be_https_unless_allowed() {
-        let t = format!(
-            "{BASE}google_client_id='id'\ngoogle_client_secret='s'\npublic_url='http://h.lan'"
-        );
-        assert!(ProcessConfig::from_figment(fig(&t)).is_err());
-        let ok = format!("{t}\nallow_http_feeds=true");
-        assert!(ProcessConfig::from_figment(fig(&ok)).is_ok());
     }
 
     #[test]
@@ -364,13 +533,73 @@ mod tests {
     }
 
     #[test]
-    fn insecure_cookie_over_http_rejected() {
+    fn http_base_url_is_allowed_with_any_cookie_mode() {
         let t = "database_url='postgres://x'\npublic_base_url='http://home.lan'";
-        assert!(ProcessConfig::from_figment(fig(t)).is_err());
-        let ok = format!("{t}\ncookie_secure=false\nlog_format='json'");
-        assert_eq!(
-            ProcessConfig::from_figment(fig(&ok)).unwrap().log_format,
-            LogFormat::Json
+        for (v, want) in [
+            ("auto", CookieSecure::Auto),
+            ("true", CookieSecure::Always),
+            ("false", CookieSecure::Never),
+        ] {
+            let c = ProcessConfig::from_figment(fig(&format!("{t}\ncookie_secure='{v}'"))).unwrap();
+            assert_eq!(c.cookie_secure, want);
+        }
+        let c = ProcessConfig::from_figment(fig(&format!("{t}\ncookie_secure=false"))).unwrap();
+        assert_eq!(c.cookie_secure, CookieSecure::Never);
+        assert!(ProcessConfig::from_figment(fig(&format!("{t}\ncookie_secure='x'"))).is_err());
+        let c = ProcessConfig::from_figment(fig(&format!("{t}\nlog_format='json'"))).unwrap();
+        assert_eq!(c.log_format, LogFormat::Json);
+    }
+
+    #[test]
+    fn password_file_is_inserted_and_encoded() {
+        let dir = std::env::temp_dir().join(format!("fa-pw-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let f = dir.join("pw");
+        std::fs::write(&f, "p@ss:w/rd%41 #?\n").unwrap();
+        let t = format!(
+            "database_url='postgres://fa@db:5432/fa?sslmode=disable'\ndatabase_password_file='{}'",
+            f.display()
         );
+        let c = ProcessConfig::from_figment(fig(&t)).unwrap();
+        assert_eq!(
+            c.database_url,
+            "postgres://fa:p%40ss%3Aw%2Frd%2541%20%23%3F@db:5432/fa?sslmode=disable"
+        );
+        let parsed = Url::parse(&c.database_url).unwrap();
+        assert_eq!(
+            percent_decode(parsed.password().unwrap()),
+            "p@ss:w/rd%41 #?"
+        );
+        // A URL that already has a password is left alone.
+        let t2 = format!(
+            "database_url='postgres://fa:own@db/fa'\ndatabase_password_file='{}'",
+            f.display()
+        );
+        let c = ProcessConfig::from_figment(fig(&t2)).unwrap();
+        assert_eq!(c.database_url, "postgres://fa:own@db/fa");
+        // Unreadable file.
+        let e = ProcessConfig::from_figment(fig(
+            "database_url='postgres://fa@db/fa'\ndatabase_password_file='/nonexistent/pw'",
+        ))
+        .unwrap_err()
+        .to_string();
+        assert!(e.contains("FA_DATABASE_PASSWORD_FILE"), "{e}");
+        std::fs::remove_dir_all(dir).ok();
+    }
+
+    fn percent_decode(s: &str) -> String {
+        let b = s.as_bytes();
+        let mut out = Vec::new();
+        let mut i = 0;
+        while i < b.len() {
+            if b[i] == b'%' {
+                out.push(u8::from_str_radix(&s[i + 1..i + 3], 16).unwrap());
+                i += 3;
+            } else {
+                out.push(b[i]);
+                i += 1;
+            }
+        }
+        String::from_utf8(out).unwrap()
     }
 }

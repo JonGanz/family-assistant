@@ -5,7 +5,7 @@ milestone: M3.5
 wave: 0
 depends_on: []
 agent: main session
-status: running
+status: done
 owns: ["arch/**", "plan/**", "tools/**", "CLAUDE.md", ".claude/**"]
 decisions: [D-065, D-066]
 ---

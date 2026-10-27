@@ -161,7 +161,7 @@ defineExpose({ beginComplete, beginAdd })
   transform: translateX(-50%);
   width: max-content;
   max-width: 90%;
-  font-size: var(--kiosk-font-small, 1.5rem);
+  font-size: var(--kiosk-font-small);
 }
 .form {
   display: grid;
@@ -171,7 +171,7 @@ defineExpose({ beginComplete, beginAdd })
   background: var(--color-bg);
   color: var(--color-text);
   border-radius: var(--radius-lg);
-  font-size: var(--kiosk-font-base, 2rem);
+  font-size: var(--kiosk-font-base);
 }
 h2 {
   margin: 0;

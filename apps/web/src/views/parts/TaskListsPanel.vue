@@ -14,7 +14,6 @@ import {
   type ListForm,
   type ListKind,
 } from './listForm'
-import './settings.css'
 
 const lists = useListsStore()
 const editing = ref<string | null>(null)
@@ -59,11 +58,11 @@ async function remove(l: TaskListView) {
   <div>
     <ErrorBanner v-if="lists.error" :message="lists.error" />
     <ErrorBanner v-if="error && editing === null" :message="error" />
-    <ul class="settings-list">
+    <ul class="card-list">
       <li v-for="l in lists.items" :key="l.id" :data-testid="`list-${l.name}`">
         <template v-if="editing !== l.id">
           <strong>{{ l.name }}</strong> <span class="badge">{{ l.kind }}</span>
-          <p class="settings-note">
+          <p class="muted">
             Children add: {{ l.child_can_add === 'own' ? 'their own' : 'no' }} · Calendar:
             {{ calendarDisplayLabel(l.calendar_default) }} ·
             {{ l.completion_policy === 'adult_only' ? 'adults complete' : 'assignee completes' }}
@@ -74,7 +73,7 @@ async function remove(l: TaskListView) {
       </li>
     </ul>
 
-    <form v-if="editing" class="settings-form" @submit.prevent="save">
+    <form v-if="editing" class="form" @submit.prevent="save">
       <h2>{{ editing === 'new' ? 'New list' : 'Edit list' }}</h2>
       <label>Name <input v-model="form.name" name="name" required /></label>
       <label>
@@ -103,7 +102,7 @@ async function remove(l: TaskListView) {
           <option value="own">Yes, for themselves</option>
         </select>
       </label>
-      <label class="inline">
+      <label class="field-inline">
         <input v-model="form.dashboard_add" type="checkbox" name="dashboard_add" />
         Allow adding from the wall dashboard
       </label>
@@ -117,11 +116,11 @@ async function remove(l: TaskListView) {
       </label>
       <fieldset>
         <legend>A claimed task is held</legend>
-        <label class="inline">
+        <label class="field-inline">
           <input v-model="form.claim" type="radio" value="end_of_day" name="claim" /> until the end
           of the day
         </label>
-        <label class="inline">
+        <label class="field-inline">
           <input v-model="form.claim" type="radio" value="minutes" name="claim" /> for a number of
           minutes
         </label>
@@ -136,11 +135,11 @@ async function remove(l: TaskListView) {
           />
         </label>
       </fieldset>
-      <label class="inline">
+      <label class="field-inline">
         <input v-model="form.visible_on_dashboard" type="checkbox" name="visible_on_dashboard" />
         Show on the dashboard
       </label>
-      <label class="inline">
+      <label class="field-inline">
         <input v-model="form.useColor" type="checkbox" name="use_color" /> Colour
         <input v-if="form.useColor" v-model="form.color" type="color" name="color" />
       </label>

@@ -15,6 +15,7 @@ vi.mock('../api/client', () => ({
     patchHousehold: vi.fn(),
     validateRule: vi.fn(),
     me: vi.fn(),
+    setup: vi.fn(),
   },
 }))
 import { api } from '../api/client'

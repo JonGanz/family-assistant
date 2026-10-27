@@ -27,10 +27,10 @@ thiserror.workspace = true
 tracing.workspace = true
 uuid.workspace = true
 tokio.workspace = true
+sqlx.workspace = true
 tower-sessions.workspace = true
 async-trait.workspace = true
 
 [dev-dependencies]
-sqlx.workspace = true
 wiremock.workspace = true
 url.workspace = true

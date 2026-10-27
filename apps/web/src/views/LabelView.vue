@@ -66,7 +66,7 @@ const toggleSample = (e: Event) =>
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader title="Label mail" back="/mail" />
     <StateBlock
       :error="mail.labelError"

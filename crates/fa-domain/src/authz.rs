@@ -57,7 +57,6 @@ pub enum Action {
     ManageCalendarSource,
     ReadCalendar,
     ManageWeatherRules,
-    DismissAdvisory,
     ManageDeviceSettings,
     // M2
     ManageTasks,
@@ -69,7 +68,7 @@ pub enum Action {
 }
 
 impl Action {
-    pub const ALL: [Action; 33] = [
+    pub const ALL: [Action; 32] = [
         Action::ReadMemberPublic,
         Action::ReadMemberFull,
         Action::ManageMember,
@@ -95,7 +94,6 @@ impl Action {
         Action::ManageCalendarSource,
         Action::ReadCalendar,
         Action::ManageWeatherRules,
-        Action::DismissAdvisory,
         Action::ManageDeviceSettings,
         Action::ManageTasks,
         Action::AddTask,
@@ -304,7 +302,8 @@ pub fn authorize(
                 _ => Err(Denied),
             }
         }
-        Action::ApproveEvent => allow(adult_member.is_some()),
+        // Inbox approval: adults only, never a device, elevated or not (D-078).
+        Action::ApproveEvent => allow(adult_user.is_some()),
         // An adult who can read the source; whether it is writable is a service rule.
         Action::GmailAction => match resource {
             Resource::MailSource { owners, visibility } => {
@@ -330,8 +329,8 @@ pub fn authorize(
         },
         // Settings-like (D-019): not on the dashboard, not even elevated.
         Action::ManageMailSetup | Action::ManageBills => allow(adult_user.is_some()),
-        // Devices see counts only (enforced in the service); elevated devices see the items.
-        Action::ReadInbox => allow(adult_user.is_some() || is_device),
+        // D-078: adults only; never a device, elevated or not. Item scoping is in the services.
+        Action::ReadInbox => allow(adult_user.is_some()),
         Action::ManageCalendarSource => match (adult_user, resource) {
             // Household sources, own and children's; never another adult's (D-006).
             (Some(me), Resource::Source { owner, owner_role }) => match owner {
@@ -341,7 +340,7 @@ pub fn authorize(
             },
             _ => Err(Denied),
         },
-        Action::ReadCalendar | Action::DismissAdvisory => allow(true),
+        Action::ReadCalendar => allow(true),
         // D-019: no settings on the dashboard, not even elevated.
         Action::ManageWeatherRules | Action::ManageDeviceSettings => allow(adult_user.is_some()),
         // Settings-like (D-019): not on the dashboard, not even elevated.
@@ -905,7 +904,7 @@ mod tests {
                 (Adult, ALLOW),
                 (Child, DENY),
                 (Device, DENY),
-                (Elevated, ALLOW),
+                (Elevated, DENY),
                 (System, ALLOW),
             ],
         );
@@ -1057,8 +1056,8 @@ mod tests {
             [
                 (Adult, ALLOW),
                 (Child, DENY),
-                (Device, ALLOW),
-                (Elevated, ALLOW),
+                (Device, DENY),
+                (Elevated, DENY),
                 (System, ALLOW),
             ],
         );
@@ -1108,20 +1107,18 @@ mod tests {
                 (System, ALLOW),
             ],
         );
-        for action in [Action::ReadCalendar, Action::DismissAdvisory] {
-            t(
-                action,
-                Resource::Household,
-                c,
-                [
-                    (Adult, ALLOW),
-                    (Child, ALLOW),
-                    (Device, ALLOW),
-                    (Elevated, ALLOW),
-                    (System, ALLOW),
-                ],
-            );
-        }
+        t(
+            Action::ReadCalendar,
+            Resource::Household,
+            c,
+            [
+                (Adult, ALLOW),
+                (Child, ALLOW),
+                (Device, ALLOW),
+                (Elevated, ALLOW),
+                (System, ALLOW),
+            ],
+        );
         for action in [Action::ManageWeatherRules, Action::ManageDeviceSettings] {
             t(action, Resource::Household, c, adult_only);
         }
@@ -1339,7 +1336,6 @@ mod tests {
                 | Action::ManageCalendarSource
                 | Action::ReadCalendar
                 | Action::ManageWeatherRules
-                | Action::DismissAdvisory
                 | Action::ManageDeviceSettings
                 | Action::ManageTasks
                 | Action::AddTask
@@ -1349,6 +1345,6 @@ mod tests {
                 | Action::ManageNotifyPrefs => {}
             }
         }
-        assert_eq!(Action::ALL.iter().collect::<HashSet<_>>().len(), 33);
+        assert_eq!(Action::ALL.iter().collect::<HashSet<_>>().len(), 32);
     }
 }

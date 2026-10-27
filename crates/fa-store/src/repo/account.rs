@@ -164,9 +164,11 @@ impl UserAccountRepo {
         }
     }
 
+    /// Locks the account row (`FOR UPDATE`) until the transaction ends, so parallel attempts
+    /// serialise between this check and `record_failure`.
     pub async fn lockout(conn: &mut PgConnection, id: UserAccountId) -> Result<AccountLockout> {
         let r = sqlx::query!(
-            "SELECT failed_attempts, locked_until FROM user_account WHERE id = $1",
+            "SELECT failed_attempts, locked_until FROM user_account WHERE id = $1 FOR UPDATE",
             id.as_uuid()
         )
         .fetch_one(conn)
@@ -178,6 +180,7 @@ impl UserAccountRepo {
     }
 
     /// Records a failed login; locks for `lock_secs` when `max_attempts` is reached (counter resets).
+    /// An account that is already locked is left as it is.
     pub async fn record_failure(
         conn: &mut PgConnection,
         id: UserAccountId,
@@ -189,18 +192,21 @@ impl UserAccountRepo {
                  failed_attempts = CASE WHEN failed_attempts + 1 >= $2 THEN 0 ELSE failed_attempts + 1 END,
                  locked_until = CASE WHEN failed_attempts + 1 >= $2
                                      THEN now() + make_interval(secs => $3) ELSE locked_until END
-             WHERE id = $1
+             WHERE id = $1 AND (locked_until IS NULL OR locked_until <= now())
              RETURNING failed_attempts, locked_until",
             id.as_uuid(),
             max_attempts,
             lock_secs as f64
         )
-        .fetch_one(conn)
+        .fetch_optional(&mut *conn)
         .await?;
-        Ok(AccountLockout {
-            failed_attempts: r.failed_attempts,
-            locked_until: r.locked_until,
-        })
+        match r {
+            Some(r) => Ok(AccountLockout {
+                failed_attempts: r.failed_attempts,
+                locked_until: r.locked_until,
+            }),
+            None => Self::lockout(conn, id).await,
+        }
     }
 
     pub async fn clear_failures(conn: &mut PgConnection, id: UserAccountId) -> Result<()> {

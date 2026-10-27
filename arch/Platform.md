@@ -37,9 +37,8 @@ The platform that M0 builds and every later milestone depends on. **v4 is the M3
 │  └─ src/gen/         generated TS types (ts-rs) and API client (from OpenAPI)
 ├─ Dockerfile          cargo-chef + node build stages
 ├─ deploy/
-│  ├─ compose.yaml       all services, with profiles: default | tailscale | ai-cpu | gpu (D-033, D-065)
+│  ├─ compose.yaml       all services, with profiles: default | tailscale | ai-cpu | gpu (D-033, D-065); the sidecar's serve config is inline (`configs:`, Compose ≥ 2.23.1)
 │  ├─ compose.build.yaml override: build the image from this checkout (developers, non-amd64 hosts)
-│  ├─ tailscale/serve.json  the sidecar's `tailscale serve` config (443 → app, 8443 → ntfy)
 │  ├─ .env.example       optional overrides only; nothing is required (README.md: install guide)
 │  ├─ systemd/fa-gpu-agent.service
 │  └─ runbooks/           install.md, restore.md, rotate-key.md
@@ -107,7 +106,7 @@ Three layers, each with one owner and one place to edit it (D-065, D-075):
 | Layer | What | Where it lives | Edited by |
 |---|---|---|---|
 | 1. **Infrastructure** | `DATABASE_URL` (or its parts plus `FA_DATABASE_PASSWORD_FILE`), `FA_SECRETS_DIR` / `FA_MASTER_KEY_PATH`, `FA_BIND_ADDR`, `FA_HTTP_PORT`, `FA_HTTP_HOST_IP`, `FA_LOG_LEVEL`, `FA_LOG_FORMAT`, `FA_WEB_DIST_DIR`, `TS_AUTHKEY`, `TS_HOSTNAME` | environment (compose defaults; `.env` optional) | the hoster; needs a restart |
-| 2. **Runtime settings** | public address (`public_base_url`, `tailnet_base_url`), `cookie_secure` (`auto\|true\|false`), ntfy URL and token, Google client ID and secret, plain-HTTP feeds, private hosts for feeds (review C-05), the D-064 listener fields, trusted proxies (D-069), `key_backup_confirmed_at` | `instance_setting` (system-scoped table: `key text PK, value jsonb, secret_id → secret NULL, updated_at`); secrets envelope-encrypted | adults in **Settings, System**; the wizard fills the first values |
+| 2. **Runtime settings** | public address (`public_base_url`, `tailnet_base_url`), `cookie_secure` (`auto\|true\|false`), ntfy URL and token, the ntfy address for phones (`ntfy_public_url`; empty derives the tailnet `:8443` or this host's `:8090`), Google client ID and secret, plain-HTTP feeds, private hosts for feeds (review C-05), the D-064 listener fields, trusted proxies (D-069), `key_backup_confirmed_at` | `instance_setting` (system-scoped table: `key text PK, value jsonb, secret_id → secret NULL, updated_at`); secrets envelope-encrypted | adults in **Settings, System**; the wizard fills the first values |
 | 3. **Household data** | members, sources, lists, rules, pipelines, and so on | per-household tables (RLS) | adults in the UI |
 
 - **Resolution for layer 2:** environment variable > DB > default. A field set by the environment is shown read-only as "set by the server", so every existing `FA_*` variable keeps working and overrides the UI.
@@ -132,7 +131,7 @@ We ship **`deploy/compose.yaml`**, which has every service (D-033, D-065). The d
 | default | `app` | `ghcr.io/jonganz/fa-server:<tag>` | `serve all` (D-076). Publishes `${FA_HTTP_HOST_IP:-0.0.0.0}:${FA_HTTP_PORT:-8080}`, and `${FA_LAN_DASHBOARD_HOST_IP:-127.0.0.1}:8081` for the opt-in D-064 listener. Mounts `fa-secrets` read-only and the backup directory read-only (for `backup.verify`) |
 | default | `ntfy` | `binwiederhier/ntfy:v2.17.0` | Published on `${FA_NTFY_PORT:-8090}`; reached by `app` as `http://ntfy:80` on the compose network |
 | default | `backup` | `prodrigestivill/postgres-backup-local:16` | Nightly, keeping 7 daily, 4 weekly, and 6 monthly. Writes to volume `fa-backups` by default; `BACKUP_DIR` points it at a NAS mount instead (D-005) |
-| `tailscale` | `tailscale` | `tailscale/tailscale:<pinned version>` | `TS_AUTHKEY`, `TS_HOSTNAME` (default `family`), `TS_STATE_DIR` on volume `ts-state`, `TS_USERSPACE=true`, `TS_SERVE_CONFIG=/config/serve.json` (`deploy/tailscale/serve.json`). Fixed address on the compose subnet, which compose passes to `app` as `FA_TRUSTED_PROXIES` (D-069) |
+| `tailscale` | `tailscale` | `tailscale/tailscale:v1.104.2` | `TS_AUTHKEY`, `TS_HOSTNAME` (default `family`), `TS_STATE_DIR` on volume `ts-state`, `TS_USERSPACE=true`, `TS_SERVE_CONFIG` from the inline compose config `ts_serve` (443 → `app:8080`, 8443 → `ntfy:80`). Fixed address `172.30.89.10` on the compose subnet, which compose passes to `app` as `FA_DEFAULT_TRUSTED_PROXIES` (a default, editable in Settings, System; D-069) |
 | `ai-cpu` | `s1-small`, `embed` | pinned sidecar images | M4 (D-025, D-026) |
 | `gpu` | `ollama`, `s1-large` | pinned, NVIDIA runtime | On a GPU node, or on a single machine that runs everything (D-026, D-033) |
 

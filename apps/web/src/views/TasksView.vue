@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Tabs from '../components/Tabs.vue'
 import PageHeader from '../components/PageHeader.vue'
 import StateBlock from '../components/StateBlock.vue'
 import ErrorBanner from '../components/ErrorBanner.vue'
@@ -38,6 +39,13 @@ const viewer = computed<Viewer | null>(() => {
 const tabs = computed<Tab[]>(() =>
   session.isAdult ? ['now', 'mine', 'lists', 'suggested'] : ['now', 'mine', 'lists'],
 )
+const TAB_LABELS: Record<Tab, string> = {
+  now: 'Now',
+  mine: 'Mine',
+  lists: 'Lists',
+  suggested: 'Suggested',
+}
+const tabItems = computed(() => tabs.value.map((key) => ({ key, label: TAB_LABELS[key] })))
 const refs = computed(() => memberRefs(members.items))
 const canAdd = computed(() => addableLists(lists.items, viewer.value).length > 0)
 
@@ -79,7 +87,7 @@ const undo = () => act(() => tasks.undoLast())
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader title="Tasks">
       <template #actions>
         <button v-if="canAdd && !adding" type="button" class="btn-primary" @click="adding = true">
@@ -96,21 +104,9 @@ const undo = () => act(() => tasks.undoLast())
       @done="adding = false"
     />
 
-    <div class="tabs" role="tablist">
-      <button
-        v-for="t in tabs"
-        :key="t"
-        type="button"
-        role="tab"
-        :aria-selected="tab === t"
-        :aria-pressed="tab === t"
-        @click="tab = t"
-      >
-        {{ { now: 'Now', mine: 'Mine', lists: 'Lists', suggested: 'Suggested' }[t] }}
-      </button>
-    </div>
+    <Tabs v-model="tab" :tabs="tabItems" label="Tasks" />
 
-    <StateBlock :error="tasks.error" />
+    <StateBlock :error="tasks.error" :loading="tasks.loading && !tasks.tabs[dataTab]" />
     <ErrorBanner v-if="error" :message="error" />
 
     <template v-if="tab === 'now'">

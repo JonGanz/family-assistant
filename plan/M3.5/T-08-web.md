@@ -5,7 +5,7 @@ milestone: M3.5
 wave: 4
 depends_on: [T-06]
 agent: {model: sonnet, effort: high}
-status: todo
+status: done
 owns: ["apps/web/src/**", "apps/web/package.json", "apps/web/vite.config.ts"]
 decisions: [D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078]
 ---
@@ -65,3 +65,14 @@ You are a sub-agent implementing one task of milestone M3.5 (onboarding and shak
 - [ ] `grep -rn 'crypto.randomUUID\|crypto.subtle\|navigator.clipboard' apps/web/src` finds only `lib/ids` and `lib/copy`
 - [ ] no reference to `InboxPanel`, `/members` (as a route) or advisory dismiss remains
 - [ ] unit tests: router setup redirects (needed, owner_needed, adult not completed, child not redirected), System locked fields, wizard step validation, members badge hidden when the list is empty
+
+## Wave 3 outcomes: T-06 (fa-auth + fa-api)
+- Done. The main session ran `cargo test --workspace --exclude fa-server` on a fresh DB: 694 passed, 0 failed; clippy and fmt clean. `apps/web/src/gen/openapi.json` and `api.d.ts` regenerated (97 paths) with `cargo run -p fa-api --example openapi -- <out>` (same output as `fa-server gen-openapi`, usable while fa-server doesn't compile).
+- Errors: `Problem` has an optional `code` (`setup_required`, `setup_closed`, `setting_locked`, `invalid_setting` with `field` = the key).
+- `GET`/`PATCH /household` return `HouseholdViewExt` = `HouseholdView` flattened + `dashboard_pending_approvals` (OpenAPI only, no ts-rs type).
+- `POST /members/{id}/account/password` takes `PasswordBody` (untagged): **yourself** → `OwnPasswordChange {current_password, new_password}` (a bare `{password}` for yourself is 422); an adult resetting a child still sends `{password}`.
+- Inbox routes are adult-user-only (devices 403). `DashboardView.pending_approvals` replaces `inbox`. The dismiss route is gone. While setup is needed, every `/api/v1/*` except `/setup*` (including `/openapi.json`) answers 409 `setup_required`.
+- `POST /system/master-key/confirm` writes `key_backup_confirmed_at` through `InstanceSettingRepo::set`, which fires `fa_settings`.
+- Setup/household and config import seed the default weather rules (`fa_weather::ensure_default_rules`).
+- Types are regenerated (`src/gen/openapi.json`, `src/gen/api.d.ts`; ts-rs types under `src/gen/types/`). Use them: setup flow on `code: "setup_required"`; Settings, System shows `invalid_setting` next to `field`; the Household page reads/writes `dashboard_pending_approvals` via `HouseholdViewExt`; the own-password form sends `OwnPasswordChange`; `pending_approvals` for the members badge; the inbox is adult-only.
+- If you need a type change, report it; the main session regenerates with `cargo run -p fa-api --example openapi -- apps/web/src/gen/openapi.json` then `corepack pnpm@9 run gen`.

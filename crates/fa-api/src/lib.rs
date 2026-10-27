@@ -1,6 +1,8 @@
 //! fa-api: the axum HTTP API (v1), SSE hub, OpenAPI document and static web serving.
 
 mod bridge;
+mod config;
+mod conn;
 mod error;
 mod extract;
 mod feeds;
@@ -10,6 +12,8 @@ mod mail;
 mod notify;
 mod openapi;
 mod routes;
+mod setup;
+mod system;
 mod tasks;
 
 use std::path::PathBuf;
@@ -18,7 +22,7 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::extract::DefaultBodyLimit;
-use axum::extract::Request;
+use axum::extract::{Request, State};
 use axum::http::{HeaderName, HeaderValue, Method, StatusCode};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
@@ -35,6 +39,7 @@ use tower_http::timeout::TimeoutLayer;
 use tower_http::trace::TraceLayer;
 
 pub use bridge::{deliver, run_bridge, run_bridge_signalled};
+pub use conn::request_is_secure;
 pub use error::{ApiError, Problem};
 pub use extract::IpNet;
 pub use extract::{Auth, require};
@@ -45,17 +50,24 @@ pub use openapi::openapi;
 
 #[derive(Debug, Clone)]
 pub struct ApiConfig {
-    /// `Secure` attribute of the session cookie.
-    pub cookie_secure: bool,
+    /// `Secure` attribute of the session cookie; `Auto` follows the request (see
+    /// [`request_is_secure`]).
+    pub cookie_secure: fa_config::CookieSecure,
+    /// The settings this process started with (System page); pending changes come from the DB.
+    pub runtime: Arc<fa_config::RuntimeSnapshot>,
+    /// Where the master key file is, for the one-time backup download.
+    pub master_key_path: PathBuf,
+    /// Pairing links use this origin on secure requests (`tailnet_base_url`).
+    pub tailnet_base_url: Option<String>,
     /// Built web app; `None` disables static serving.
     pub web_dist_dir: Option<PathBuf>,
     /// Serve Swagger UI at `/api/docs` (development only).
     pub enable_docs: bool,
     pub request_timeout: Duration,
     pub heartbeat_interval: Duration,
-    /// Peers in these networks are trusted reverse proxies (e.g. `tailscale serve` on the host, seen
-    /// from inside Docker as the bridge gateway); for them the client IP is the rightmost
-    /// `X-Forwarded-For` entry, which the proxy appended.
+    /// Peers in these networks are trusted reverse proxies (the Tailscale sidecar, say); for them the
+    /// client IP is the rightmost `X-Forwarded-For` entry, which the proxy appended, and
+    /// `X-Forwarded-Proto` / `X-Forwarded-Host` are believed. Loopback only by default (D-069).
     pub trusted_proxies: Vec<IpNet>,
     /// Base URL of the home-network dashboard listener, when it is on (D-064); pairing then
     /// returns a second link.
@@ -65,7 +77,10 @@ pub struct ApiConfig {
 impl Default for ApiConfig {
     fn default() -> Self {
         Self {
-            cookie_secure: true,
+            cookie_secure: fa_config::CookieSecure::Auto,
+            runtime: Arc::default(),
+            master_key_path: PathBuf::from("/run/fa-secrets/master_key"),
+            tailnet_base_url: None,
             web_dist_dir: None,
             enable_docs: false,
             request_timeout: Duration::from_secs(30),
@@ -94,6 +109,8 @@ pub struct AppState {
     pub services: Services,
     pub hub: Hub,
     pub cfg: Arc<ApiConfig>,
+    /// Set once the household and its first adult exist; until then the setup layer answers.
+    pub(crate) setup_done: Arc<std::sync::atomic::AtomicBool>,
     /// Ends SSE streams on graceful shutdown.
     pub shutdown: CancellationToken,
 }
@@ -112,6 +129,7 @@ impl AppState {
             services,
             hub: Hub::default(),
             cfg: Arc::new(cfg),
+            setup_done: Arc::default(),
             shutdown,
         }
     }
@@ -122,6 +140,24 @@ pub const SESSION_COOKIE: &str = "fa_session";
 
 pub fn router(state: AppState) -> Router {
     let v1 = Router::new()
+        .route("/setup", get(setup::get_setup))
+        .route("/setup/household", post(setup::setup_household))
+        .route("/setup/owner", post(setup::setup_owner))
+        .route("/setup/complete", post(setup::setup_complete))
+        .route("/system/master-key", post(system::master_key))
+        .route(
+            "/system/master-key/confirm",
+            post(system::master_key_confirm),
+        )
+        .route(
+            "/system/settings",
+            get(system::get_settings).patch(system::patch_settings),
+        )
+        .route(
+            "/config/import",
+            post(config::import_config).layer(DefaultBodyLimit::max(config::IMPORT_MAX_BYTES)),
+        )
+        .route("/config/export", get(config::export_config))
         .route("/auth/login", post(routes::login))
         .route("/auth/logout", post(routes::logout))
         .route("/me", get(routes::me))
@@ -232,7 +268,6 @@ pub fn router(state: AppState) -> Router {
         .route("/events", get(feeds::list_events))
         .route("/weather", get(feeds::get_weather))
         .route("/advisories", get(feeds::list_advisories))
-        .route("/advisories/{id}/dismiss", post(feeds::dismiss_advisory))
         .route(
             "/weather-rules",
             get(feeds::list_rules).post(feeds::create_rule),
@@ -344,7 +379,35 @@ pub fn router(state: AppState) -> Router {
             .layer(CompressionLayer::new())
             .layer(middleware::from_fn(csrf)),
     )
+    .layer(middleware::from_fn_with_state(state.clone(), setup_gate))
     .with_state(state)
+}
+
+/// Until the household and its first adult exist, every `/api/v1` call except `/setup*` answers
+/// 409 `setup_required` (D-073).
+async fn setup_gate(State(s): State<AppState>, req: Request, next: Next) -> Response {
+    let path = req.uri().path();
+    let guarded = path.starts_with("/api/v1/")
+        && path != "/api/v1/setup"
+        && !path.starts_with("/api/v1/setup/");
+    if guarded && !s.setup_done.load(std::sync::atomic::Ordering::Relaxed) {
+        match setup::state(&s).await {
+            Ok(st) if st.household.is_some() && st.has_adult_account => {
+                s.setup_done
+                    .store(true, std::sync::atomic::Ordering::Relaxed);
+            }
+            Ok(_) => {
+                return ApiError::coded(
+                    StatusCode::CONFLICT,
+                    "setup_required",
+                    "finish the first-run setup first",
+                )
+                .into_response();
+            }
+            Err(e) => return e.into_response(),
+        }
+    }
+    next.run(req).await
 }
 
 /// Mutating `/api/` requests must carry `X-FA-Request: 1` (cross-site forms cannot set it).

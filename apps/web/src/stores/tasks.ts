@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { api, type TaskPatch, type TaskView } from '../api/client'
 import { isConflict } from '../api/http'
 
@@ -22,6 +22,8 @@ export const useTasksStore = defineStore('tasks', () => {
   /** Calendar ranges: key `from|to` → tasks (RFC 3339 instants, `to` exclusive). */
   const ranges = ref<Record<string, TaskView[]>>({})
   const error = ref<string | null>(null)
+  const pending = ref(0)
+  const loading = computed(() => pending.value > 0)
   const conflict = ref(false)
   const undo = ref<UndoState | null>(null)
   const wanted = new Set<TaskTab>()
@@ -30,20 +32,26 @@ export const useTasksStore = defineStore('tasks', () => {
 
   async function load(tab: TaskTab): Promise<void> {
     wanted.add(tab)
+    pending.value++
     try {
       tabs.value[tab] = await api.tasks(QUERY[tab])
       error.value = null
     } catch (e) {
       error.value = msg(e)
+    } finally {
+      pending.value--
     }
   }
 
   async function loadRange(from: string, to: string): Promise<void> {
+    pending.value++
     try {
       ranges.value[`${from}|${to}`] = await api.tasks({ from, to })
       error.value = null
     } catch (e) {
       error.value = msg(e)
+    } finally {
+      pending.value--
     }
   }
 
@@ -134,6 +142,7 @@ export const useTasksStore = defineStore('tasks', () => {
     tabs,
     ranges,
     error,
+    loading,
     conflict,
     undo,
     load,

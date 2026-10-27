@@ -1,6 +1,12 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { api, type CreateMemberReq, type Member, type PatchMemberReq } from '../api/client'
+import {
+  api,
+  type CreateMemberReq,
+  type Member,
+  type MemberDto,
+  type PatchMemberReq,
+} from '../api/client'
 import { isConflict } from '../api/http'
 import type { LiveEventKind } from '../composables/useLiveStream'
 
@@ -24,9 +30,10 @@ export const useMembersStore = defineStore('members', () => {
     }
   }
 
-  async function create(req: CreateMemberReq): Promise<void> {
-    await api.createMember(req)
+  async function create(req: CreateMemberReq): Promise<MemberDto> {
+    const created = await api.createMember(req)
     await load()
+    return created
   }
 
   /** Returns true on success, false on a 409 conflict (state kept so the UI can offer reload). */

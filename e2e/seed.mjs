@@ -127,10 +127,14 @@ for (;;) {
 
 // ---- M2: notification prefs, lists, definitions, routine, weather rule (fictional) ----
 const NY = "America/New_York";
-const localDate = (offsetDays = 0) =>
-    new Intl.DateTimeFormat("en-CA", { timeZone: NY }).format(
-        new Date(Date.now() + offsetDays * 86_400_000),
-    );
+const localDate = (offsetDays = 0) => {
+    // Calendar-day arithmetic: n * 24 h is a day off across a DST change.
+    const [y, m, d] = new Intl.DateTimeFormat("en-CA", { timeZone: NY })
+        .format(new Date())
+        .split("-")
+        .map(Number);
+    return new Date(Date.UTC(y, m - 1, d + offsetDays)).toISOString().slice(0, 10);
+};
 const today = localDate();
 const byday = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"][
     new Date(`${today}T12:00:00Z`).getUTCDay()

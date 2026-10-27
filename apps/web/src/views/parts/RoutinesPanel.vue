@@ -13,7 +13,6 @@ import {
   routineProblems,
   type RoutineForm,
 } from './routineForm'
-import './settings.css'
 
 const routines = useRoutinesStore()
 const members = useMembersStore()
@@ -78,10 +77,10 @@ async function remove(r: RoutineView) {
   <div>
     <ErrorBanner v-if="routines.error" :message="routines.error" />
     <ErrorBanner v-if="error && editing === null" :message="error" />
-    <ul class="settings-list">
+    <ul class="card-list">
       <li v-for="r in routines.items" :key="r.id" :data-testid="`routine-${r.name}`">
         <strong>{{ r.name }}</strong>
-        <p class="settings-note">
+        <p class="muted">
           {{ r.members.map(nameOf).join(', ') }} · {{ r.starts_at.slice(0, 5) }}–{{
             r.done_by.slice(0, 5)
           }}
@@ -92,12 +91,12 @@ async function remove(r: RoutineView) {
       </li>
     </ul>
 
-    <form v-if="editing" class="settings-form" @submit.prevent="save">
+    <form v-if="editing" class="form" @submit.prevent="save">
       <h2>{{ editing === 'new' ? 'New routine' : 'Edit routine' }}</h2>
       <label>Name <input v-model="form.name" name="name" required /></label>
       <fieldset>
         <legend>Who</legend>
-        <label v-for="m in members.items" :key="m.id" class="inline">
+        <label v-for="m in members.items" :key="m.id" class="field-inline">
           <input
             type="checkbox"
             :checked="form.members.includes(m.id)"
@@ -150,11 +149,11 @@ async function remove(r: RoutineView) {
           <input v-model="form.keywords" name="keywords" />
         </label>
       </template>
-      <label class="inline">
+      <label class="field-inline">
         <input v-model="form.showOnDashboard" type="checkbox" name="show_on_dashboard" />
         Show on the dashboard
       </label>
-      <ul v-if="problems.length" class="settings-note">
+      <ul v-if="problems.length" class="muted">
         <li v-for="p in problems" :key="p">{{ p }}</li>
       </ul>
       <ErrorBanner v-if="routines.conflict" conflict @reload="routines.load()" />

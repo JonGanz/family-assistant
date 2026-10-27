@@ -76,6 +76,8 @@ pub async fn env(pool: PgPool, gmail_base: &str, allow_plain: bool) -> Env {
         inbox: Default::default(),
         retention_mail: Default::default(),
         bill_lead_days: fa_domain::DEFAULT_BILL_LEAD_DAYS,
+        dashboard_pending_approvals: true,
+        setup_completed_at: None,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     };
@@ -96,6 +98,7 @@ pub async fn env(pool: PgPool, gmail_base: &str, allow_plain: bool) -> Env {
             gmail_api_base: gmail_base.to_owned(),
             allow_plain_imap: allow_plain,
             imap_tls_insecure: false,
+            allow_private_hosts: true,
         },
     });
     Env {

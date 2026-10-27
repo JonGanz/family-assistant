@@ -10,8 +10,8 @@ use fa_domain::{
 };
 use fa_pipeline::{Candidate, Evaluator, Pipeline};
 use fa_store::{
-    CalendarRepo, CalendarSourceRepo, ChangeBus, EventFull, EventRepo, JobRepo, NewJob,
-    NotificationRepo, OAuthAccountRepo, OrgRepo, Tx,
+    CalendarRepo, CalendarSourceRepo, ChangeBus, EventFull, EventRepo, JobRepo, MessageRepo,
+    NewJob, NotificationRepo, OAuthAccountRepo, OrgRepo, Tx,
 };
 use serde_json::json;
 
@@ -133,8 +133,13 @@ async fn enqueue_write(tx: &mut Tx, h: HouseholdId, event: EventId, delete: bool
 }
 
 async fn notify(tx: &mut Tx, event: &EventFull, title: &str, key: &str) -> Result<()> {
-    NotificationRepo::insert_for_adults(
+    let source = match event.message_id {
+        Some(m) => MessageRepo::get(tx, m).await?.map(|m| m.source_id),
+        None => None,
+    };
+    NotificationRepo::insert_for_source_adults(
         tx,
+        source,
         NotifyTrigger::ApprovalNeeded,
         "event",
         Some(event.event.id.as_uuid()),

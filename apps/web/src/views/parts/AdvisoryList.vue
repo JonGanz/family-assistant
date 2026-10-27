@@ -2,14 +2,12 @@
 import type { AdvisoryView } from '../../api/client'
 
 defineProps<{ advisories: AdvisoryView[] }>()
-defineEmits<{ dismiss: [id: string] }>()
 </script>
 
 <template>
   <ul v-if="advisories.length" class="advisories" aria-label="Advisories">
     <li v-for="a in advisories" :key="a.id" :class="a.severity">
       <span>{{ a.text }}</span>
-      <button type="button" aria-label="Dismiss" @click="$emit('dismiss', a.id)">✕</button>
     </li>
   </ul>
 </template>
@@ -36,8 +34,5 @@ li.warning {
 }
 li.severe {
   border-left-color: var(--color-danger);
-}
-button {
-  margin-left: auto;
 }
 </style>

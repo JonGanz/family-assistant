@@ -27,6 +27,8 @@ pub struct WeatherConfig {
     pub open_meteo_url: String,
     /// Allow plain-http base URLs (stubs and tests).
     pub allow_http: bool,
+    /// Allows loopback, LAN and other private addresses (C-05).
+    pub allow_private_hosts: bool,
 }
 
 impl Default for WeatherConfig {
@@ -34,6 +36,7 @@ impl Default for WeatherConfig {
         Self {
             open_meteo_url: openmeteo::DEFAULT_BASE.to_string(),
             allow_http: false,
+            allow_private_hosts: false,
         }
     }
 }
@@ -70,7 +73,7 @@ fn parse_tz(h: &Household) -> Tz {
 
 impl WeatherService {
     pub fn new(store: Store, config: WeatherConfig) -> Result<Self, WeatherError> {
-        let http = Http::new(config.allow_http)?;
+        let http = Http::with_policy(config.allow_http, config.allow_private_hosts)?;
         Ok(Self::with_http(store, http, config))
     }
 
@@ -163,11 +166,14 @@ impl WeatherService {
         let rules = WeatherRuleRepo::list(&mut tx, Some(&[RuleStatus::Active])).await?;
         let mut changed = false;
         let mut task_jobs: Vec<(Value, String)> = Vec::new();
+        let mut keep: Vec<String> = Vec::new();
+        let mut all_parsed = true;
         for rule in rules.iter().map(|r| &r.value) {
             let parsed = match dsl::parse(&rule.condition) {
                 Ok(p) => p,
                 Err(e) => {
                     tracing::warn!(rule = %rule.id, error = %e, "weather rule does not parse");
+                    all_parsed = false;
                     continue;
                 }
             };
@@ -205,6 +211,10 @@ impl WeatherService {
             )
             .await?;
             changed |= c;
+            keep.push(key);
+        }
+        if all_parsed {
+            changed |= AdvisoryRepo::retain_rule_advisories(&mut tx, &keep).await? > 0;
         }
         if changed {
             ChangeBus::publish(&mut tx, id, "advisory.updated", &json!({})).await?;

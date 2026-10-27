@@ -14,7 +14,6 @@ import MailSourcesPanel from './parts/settings-mail/MailSourcesPanel.vue'
 import RulesPanel from './parts/settings-mail/RulesPanel.vue'
 import SignalsPanel from './parts/settings-mail/SignalsPanel.vue'
 import { describeError } from './shared'
-import './parts/settings.css'
 
 const store = useMailSettingsStore()
 const members = useMembersStore()
@@ -43,7 +42,7 @@ async function create(b: NewMailSource) {
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader eyebrow="Settings" title="Mail">
       Approval, expiry, currency and retention settings are under
       <RouterLink to="/settings/household">Household</RouterLink>. Schools and clubs are under

@@ -78,7 +78,10 @@ fn mail_services(store: &Store, oauth: &fa_auth::OAuthService) -> fa_api::MailSe
         http: fa_connectors::Http::new(true).unwrap(),
         tokens: std::sync::Arc::new(oauth.clone()),
         key: std::sync::Arc::new(MasterKey::from_bytes(&[7u8; 32], 1).unwrap()),
-        cfg: fa_mail::MailConfig::default(),
+        cfg: fa_mail::MailConfig {
+            allow_private_hosts: true,
+            ..Default::default()
+        },
     }))
 }
 
@@ -102,14 +105,20 @@ fn services(store: &Store) -> Services {
             fa_calendar::CalendarService::new(
                 store.clone(),
                 key(),
-                fa_calendar::ConnectorConfig::default(),
+                fa_calendar::ConnectorConfig {
+                    allow_private_hosts: true,
+                    ..Default::default()
+                },
                 Arc::new(oauth.clone()),
             )
             .unwrap(),
         ),
         weather: fa_weather::WeatherService::new(
             store.clone(),
-            fa_weather::WeatherConfig::default(),
+            fa_weather::WeatherConfig {
+                allow_private_hosts: true,
+                ..Default::default()
+            },
         )
         .unwrap(),
         mail: mail_services(store, &oauth),
@@ -121,6 +130,7 @@ fn services(store: &Store) -> Services {
                 ntfy_url: None,
                 ntfy_token: None,
                 public_base_url: "https://fa.example.com".into(),
+                subscribe_base: None,
             },
         ),
     }
@@ -139,6 +149,8 @@ async fn seed(pool: PgPool) -> Fx {
     HouseholdRepo::insert(
         &mut tx,
         &Household {
+            dashboard_pending_approvals: true,
+            setup_completed_at: None,
             id: hid,
             name: "Example".into(),
             tz: "UTC".into(),
@@ -216,7 +228,7 @@ async fn seed(pool: PgPool) -> Fx {
         auth,
         services(&store),
         ApiConfig {
-            cookie_secure: false,
+            cookie_secure: fa_config::CookieSecure::Never,
             heartbeat_interval: Duration::from_secs(60),
             // Debug-build argon2 is slow when many tests run at once.
             request_timeout: Duration::from_secs(120),
@@ -1121,13 +1133,14 @@ async fn inbox_lists_items_and_devices_get_counts_only(pool: PgPool) {
     assert_eq!(r.json()["items"].as_array().unwrap().len(), 1);
     assert_eq!(r.json()["items"][0]["bill"]["id"], json!(it.bill));
 
-    // A plain device: counts only. An elevated device sees the items.
-    let r = get(&fx, Device, "/api/v1/inbox").await;
-    assert_eq!(r.status, StatusCode::OK, "{}", r.text());
-    assert_eq!(r.json()["items"], json!([]));
-    assert_eq!(r.json()["counts"]["total"], json!(4));
-    let r = get(&fx, Elevated, "/api/v1/inbox").await;
-    assert_eq!(r.json()["items"].as_array().unwrap().len(), 4);
+    // D-068: the inbox is for signed-in adults; devices get 403, elevated or not.
+    for who in [Device, Elevated] {
+        assert_eq!(
+            get(&fx, who, "/api/v1/inbox").await.status,
+            StatusCode::FORBIDDEN,
+            "{who:?}"
+        );
+    }
     assert_eq!(
         get(&fx, Child, "/api/v1/inbox").await.status,
         StatusCode::FORBIDDEN
@@ -1148,10 +1161,22 @@ async fn inbox_lists_items_and_devices_get_counts_only(pool: PgPool) {
         Value::Null
     );
 
-    // The dashboard carries the counts.
+    // The dashboard carries per-adult counts, not the inbox: the owner sees all four, the other
+    // adult only what their sources allow (the household source holds none of them).
     let r = get(&fx, Device, "/api/v1/dashboard").await;
     assert_eq!(r.status, StatusCode::OK, "{}", r.text());
-    assert_eq!(r.json()["inbox"]["total"], json!(4));
+    assert!(r.json().get("inbox").is_none());
+    let pending = r.json()["pending_approvals"].clone();
+    let count_of = |m: MemberId| {
+        pending
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|p| p["member_id"] == json!(m))
+            .map(|p| p["count"].clone())
+    };
+    assert_eq!(count_of(fx.adult), Some(json!(4)));
+    assert_eq!(count_of(fx.adult2), Some(json!(0)));
 
     // Approval is for adults: not children, not plain devices.
     let uri = format!("/api/v1/inbox/bill/{}/approve", it.bill);
@@ -1327,7 +1352,7 @@ async fn inbox_approve_and_reject_each_kind(pool: PgPool) {
     // Task: approve applies the edits first and opens it; reject skips.
     let r = post(
         &fx,
-        Elevated,
+        Adult,
         &inbox("task", &it.task, "approve"),
         Some(json!({"title": "Sign and return the form", "assignees": [fx.adult2]})),
     )
@@ -1542,6 +1567,62 @@ async fn failed_event_writes_are_listed_and_can_be_retried(pool: PgPool) {
     assert_eq!(r.status, StatusCode::NO_CONTENT, "{}", r.text());
 }
 
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn adult_cannot_decide_another_adults_owners_only_item(pool: PgPool) {
+    use Who::*;
+    let fx = seed(pool).await;
+    let mx = seed_mail(&fx).await;
+    let _ = seed_inbox(&fx, &mx).await;
+    let bill = new_bill(&fx, "Water Co", BillStatus::Proposed, Some(mx.m_hidden)).await;
+    let event = new_event(&fx, "Hidden concert", Some(mx.m_hidden), "proposed").await;
+    let task = fa_tasks::TaskService::new(fx.store.clone())
+        .from_mail(fa_tasks::MailTaskRequest {
+            household: Some(fx.hid),
+            message: mx.m_hidden,
+            kind: None,
+            title: "Hidden form".into(),
+            due_at: None,
+            assignees: vec![fx.adult2],
+            mode: fa_tasks::MailTaskMode::Suggest,
+            external_url: None,
+        })
+        .await
+        .unwrap()
+        .expect("task suggested");
+    for (kind, id) in [
+        ("bill", bill.to_string()),
+        ("event", event.to_string()),
+        ("task", task.to_string()),
+    ] {
+        for action in ["approve", "reject"] {
+            let uri = format!("/api/v1/inbox/{kind}/{id}/{action}");
+            assert_eq!(
+                post(&fx, Adult, &uri, None).await.status,
+                StatusCode::FORBIDDEN,
+                "{kind} {action}"
+            );
+        }
+    }
+    // The suggested-task routes outside the inbox are scoped the same way.
+    for action in ["accept", "skip"] {
+        let uri = format!("/api/v1/tasks/{task}/{action}");
+        assert_eq!(
+            post(&fx, Adult, &uri, None).await.status,
+            StatusCode::FORBIDDEN,
+            "{action}"
+        );
+    }
+    // The adult who owns the source may.
+    let r = post(
+        &fx,
+        Adult2,
+        &format!("/api/v1/inbox/bill/{bill}/reject"),
+        None,
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::NO_CONTENT, "{}", r.text());
+}
+
 // ---- bills ----
 
 #[sqlx::test(migrations = "../fa-store/migrations")]
@@ -1635,6 +1716,19 @@ async fn bills_list_and_patch(pool: PgPool) {
         Method::PATCH,
         &format!("/api/v1/bills/{proposed}"),
         &hv3,
+        Some(json!({"status": "dismissed"})),
+    )
+    .await;
+    // The proposal came from another adult's private source: this adult may not decide it (D-078).
+    assert_eq!(r.status, StatusCode::FORBIDDEN, "{}", r.text());
+    let h2 = auth_of(&fx, Adult2);
+    let mut hv4: Vec<(&str, &str)> = h2.iter().map(|(a, b)| (a.as_str(), b.as_str())).collect();
+    hv4.push(("if-match", "1"));
+    let r = send(
+        &fx.app,
+        Method::PATCH,
+        &format!("/api/v1/bills/{proposed}"),
+        &hv4,
         Some(json!({"status": "dismissed"})),
     )
     .await;

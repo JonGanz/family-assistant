@@ -48,8 +48,8 @@ function approve() {
 </script>
 
 <template>
-  <li class="settings-form item">
-    <p v-if="ev.pending_cancel" class="settings-note">
+  <li class="form item">
+    <p v-if="ev.pending_cancel" class="muted">
       Cancellation: remove <strong>{{ ev.title }}</strong> ({{ fmt(ev.start_at, tz) }}) from the
       calendar.
     </p>
@@ -59,7 +59,7 @@ function approve() {
         <label>Starts <input v-model="form.start" type="datetime-local" /></label>
         <label>Ends <input v-model="form.end" type="datetime-local" /></label>
       </template>
-      <p v-else class="settings-note">All day, {{ fmt(ev.start_at, tz).split(',')[0] }}</p>
+      <p v-else class="muted">All day, {{ fmt(ev.start_at, tz).split(',')[0] }}</p>
       <label>
         Calendar
         <select v-model="form.calendar">
@@ -68,7 +68,7 @@ function approve() {
         </select>
       </label>
     </template>
-    <p class="settings-note">
+    <p class="muted">
       <span v-if="ev.from_label">From {{ ev.from_label }}. </span>
       <span v-if="who.length">For {{ who.join(', ') }}. </span>
       Confidence {{ Math.round(ev.confidence * 100) }}%.
@@ -76,7 +76,7 @@ function approve() {
         >Open message</RouterLink
       >
     </p>
-    <p v-if="ev.write_error" class="settings-error" role="alert">
+    <p v-if="ev.write_error" class="text-danger" role="alert">
       Writing to the calendar failed: {{ ev.write_error }}. Approve to retry or reject to drop it.
     </p>
     <div class="actions">

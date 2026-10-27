@@ -14,7 +14,6 @@ import { useMembersStore } from '../stores/members'
 import { describeError } from './shared'
 import ActionsPanel from './parts/message/ActionsPanel.vue'
 import SectionsPanel from './parts/message/SectionsPanel.vue'
-import './parts/settings.css'
 
 const route = useRoute()
 const mail = useMailStore()
@@ -54,7 +53,7 @@ const makeTask = () => guard(() => mail.makeTask(id.value, {}, childId.value || 
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader v-if="!d" title="Message" back="/mail" />
     <ErrorBanner v-if="mail.detailError" :message="mail.detailError" />
     <template v-if="d">

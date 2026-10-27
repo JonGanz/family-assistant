@@ -36,6 +36,8 @@ async fn seed(store: &Store) -> HouseholdId {
         inbox: Default::default(),
         retention_mail: Default::default(),
         bill_lead_days: fa_domain::DEFAULT_BILL_LEAD_DAYS,
+        dashboard_pending_approvals: true,
+        setup_completed_at: None,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     };

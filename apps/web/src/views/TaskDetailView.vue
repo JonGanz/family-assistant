@@ -159,7 +159,7 @@ const stepModels = computed(
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader v-if="!task" title="Task" back="/tasks" />
     <ErrorBanner v-if="loadError" :message="loadError" />
     <template v-if="task">

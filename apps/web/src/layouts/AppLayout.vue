@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, watch } from 'vue'
+import { watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useInboxStore } from '../stores/inbox'
 import { useSessionStore } from '../stores/session'
@@ -7,8 +7,11 @@ import { useSessionStore } from '../stores/session'
 const session = useSessionStore()
 const router = useRouter()
 const route = useRoute()
-const inSettings = computed(() => route.path.startsWith('/settings'))
 const inbox = useInboxStore()
+
+/** A nav item is active for its own path and everything below it (`/tasks/:id` marks Tasks). */
+const under = (p: string) =>
+  p === '/' ? route.path === '/' : route.path === p || route.path.startsWith(`${p}/`)
 
 // Adults only: the inbox badge loads once and then follows SSE `inbox.updated` (stores/live.ts).
 watch(
@@ -31,47 +34,39 @@ async function logout() {
     <header class="app-header">
       <strong>Family Assistant</strong>
       <nav v-if="session.isUser" aria-label="Primary" class="nav-primary">
-        <RouterLink to="/">Today</RouterLink>
-        <RouterLink to="/calendar">Calendar</RouterLink>
-        <RouterLink to="/tasks">Tasks</RouterLink>
-        <RouterLink to="/routines">Routines</RouterLink>
-        <RouterLink to="/members">Members</RouterLink>
+        <RouterLink to="/" :class="{ 'router-link-active': under('/') }">Today</RouterLink>
+        <RouterLink to="/calendar" :class="{ 'router-link-active': under('/calendar') }"
+          >Calendar</RouterLink
+        >
+        <RouterLink to="/tasks" :class="{ 'router-link-active': under('/tasks') }"
+          >Tasks</RouterLink
+        >
+        <RouterLink to="/routines" :class="{ 'router-link-active': under('/routines') }"
+          >Routines</RouterLink
+        >
         <template v-if="session.isAdult">
-          <RouterLink to="/mail">Mail</RouterLink>
-          <RouterLink to="/inbox">
+          <RouterLink to="/mail" :class="{ 'router-link-active': under('/mail') }">Mail</RouterLink>
+          <RouterLink to="/inbox" :class="{ 'router-link-active': under('/inbox') }">
             Inbox
             <span v-if="inbox.total > 0" class="nav-badge" :aria-label="`${inbox.total} waiting`">{{
               inbox.total
             }}</span>
           </RouterLink>
-          <RouterLink to="/bills">Bills</RouterLink>
+          <RouterLink to="/bills" :class="{ 'router-link-active': under('/bills') }"
+            >Bills</RouterLink
+          >
         </template>
       </nav>
       <div v-if="session.isUser" class="header-end">
         <RouterLink
           class="settings-link"
-          :to="session.isAdult ? '/settings/household' : '/settings/notifications'"
-          :class="{ 'router-link-active': inSettings }"
+          to="/settings"
+          :class="{ 'router-link-active': under('/settings') }"
           >Settings</RouterLink
         >
         <button class="logout" @click="logout">Log out</button>
       </div>
     </header>
-    <nav v-if="session.isUser && inSettings" aria-label="Settings" class="nav-sub">
-      <template v-if="session.isAdult">
-        <RouterLink to="/settings/household">Household</RouterLink>
-        <RouterLink to="/settings/calendars">Calendars</RouterLink>
-        <RouterLink to="/settings/mail">Mail</RouterLink>
-        <RouterLink to="/settings/orgs">Organizations</RouterLink>
-        <RouterLink to="/settings/tasks">Tasks</RouterLink>
-        <RouterLink to="/settings/weather">Weather</RouterLink>
-      </template>
-      <RouterLink to="/settings/notifications">Notifications</RouterLink>
-      <template v-if="session.isAdult">
-        <RouterLink to="/settings/devices">Devices</RouterLink>
-        <RouterLink to="/settings/status">Status</RouterLink>
-      </template>
-    </nav>
     <main id="main" class="app-main"><slot /></main>
   </div>
 </template>
@@ -102,6 +97,22 @@ async function logout() {
 }
 .header-end button {
   min-height: 40px;
+}
+@media (max-width: 40rem) {
+  .app-header {
+    gap: 0.25rem 0.75rem;
+  }
+  .header-end {
+    order: 1;
+  }
+  .nav-primary {
+    order: 2;
+    flex: 1 0 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: thin;
+  }
 }
 .nav-badge {
   display: inline-block;

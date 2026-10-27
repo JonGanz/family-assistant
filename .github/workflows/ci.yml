@@ -72,6 +72,8 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - run: python3 tools/fa.py check
+      - run: python3 tools/test_fa.py
+      - run: python3 tools/fa.py check-yaml .github/workflows/*.yml deploy/*.yaml
 
   deny:
     runs-on: ubuntu-latest
@@ -107,3 +109,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - run: scripts/check-example-data.sh
+
+  compose-smoke:
+    # The install file as a user runs it: no .env, built from this checkout (scripts/compose-smoke.sh).
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - run: scripts/compose-smoke.sh

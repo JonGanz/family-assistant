@@ -145,9 +145,10 @@ pub struct IpNet {
 }
 
 impl IpNet {
-    /// Loopback plus Docker's default bridge pool; the API port is only published on 127.0.0.1.
+    /// Loopback only (C-04, D-069); deployments add their proxy's address through
+    /// `trusted_proxies`.
     pub fn default_trusted() -> Vec<Self> {
-        ["127.0.0.0/8", "::1/128", "172.16.0.0/12"]
+        ["127.0.0.0/8", "::1/128"]
             .iter()
             .filter_map(|s| s.parse().ok())
             .collect()
@@ -170,13 +171,15 @@ fn mask_eq(net: &[u8], ip: &[u8], prefix: u8) -> bool {
 
 impl std::str::FromStr for IpNet {
     type Err = String;
+    /// `addr/prefix`, or a bare address meaning that one host.
     fn from_str(s: &str) -> Result<Self, String> {
-        let (addr, prefix) = s
-            .trim()
-            .split_once('/')
-            .ok_or_else(|| format!("{s}: expected addr/prefix"))?;
+        let s = s.trim();
+        let (addr, prefix) = s.split_once('/').unwrap_or((s, ""));
         let addr: std::net::IpAddr = addr.parse().map_err(|e| format!("{s}: {e}"))?;
         let max = if addr.is_ipv4() { 32 } else { 128 };
+        if prefix.is_empty() {
+            return Ok(Self { addr, prefix: max });
+        }
         let prefix: u8 = prefix.parse().map_err(|e| format!("{s}: {e}"))?;
         if prefix > max {
             return Err(format!("{s}: prefix > {max}"));
@@ -193,6 +196,17 @@ fn rightmost_forwarded(header: &str) -> Option<std::net::IpAddr> {
 #[cfg(test)]
 mod tests {
     use super::{IpNet, rightmost_forwarded};
+
+    #[test]
+    fn a_bare_address_is_one_host() {
+        let v4: IpNet = "172.30.89.10".parse().unwrap();
+        assert!(v4.contains("172.30.89.10".parse().unwrap()));
+        assert!(!v4.contains("172.30.89.11".parse().unwrap()));
+        let v6: IpNet = "::1".parse().unwrap();
+        assert!(v6.contains("::1".parse().unwrap()));
+        assert!("10.0.0.0/33".parse::<IpNet>().is_err());
+        assert!("nope".parse::<IpNet>().is_err());
+    }
 
     #[test]
     fn rightmost_forwarded_picks_proxy_appended_entry() {
@@ -216,8 +230,7 @@ mod tests {
         let hit = |s: &str| nets.iter().any(|n| n.contains(s.parse().unwrap()));
         assert!(hit("127.0.0.1"));
         assert!(hit("::1"));
-        assert!(hit("172.18.0.1"));
-        assert!(!hit("172.32.0.1"));
+        assert!(!hit("172.18.0.1"));
         assert!(!hit("100.64.0.7"));
         assert!(!hit("192.168.1.10"));
         assert!("10.0.0.0/33".parse::<IpNet>().is_err());

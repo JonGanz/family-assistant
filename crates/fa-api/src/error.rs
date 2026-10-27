@@ -25,6 +25,10 @@ pub struct Problem {
     /// Task and routine validation errors: the offending input field.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub field: Option<String>,
+    /// Machine-readable code of the setup and system routes (`setup_required`, `setup_closed`,
+    /// `setting_locked`, `invalid_setting`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code: Option<String>,
 }
 
 /// Every API failure; rendered as `application/problem+json` (RFC 9457).
@@ -68,6 +72,14 @@ pub enum ApiError {
     BadGateway(String),
     #[error("{0}")]
     GatewayTimeout(String),
+    /// A conflict or validation failure with a stable `code`; `field` names the setting key.
+    #[error("{message}")]
+    Coded {
+        status: StatusCode,
+        code: &'static str,
+        field: Option<String>,
+        message: String,
+    },
     #[error("locked until {0}")]
     Locked(DateTime<Utc>),
     #[error("too many attempts, slow down")]
@@ -77,6 +89,19 @@ pub enum ApiError {
 }
 
 impl ApiError {
+    pub(crate) fn coded(
+        status: StatusCode,
+        code: &'static str,
+        message: impl Into<String>,
+    ) -> Self {
+        Self::Coded {
+            status,
+            code,
+            field: None,
+            message: message.into(),
+        }
+    }
+
     pub fn status(&self) -> StatusCode {
         match self {
             Self::BadRequest(_) => StatusCode::BAD_REQUEST,
@@ -94,6 +119,7 @@ impl ApiError {
             Self::UnsupportedMedia(_) => StatusCode::UNSUPPORTED_MEDIA_TYPE,
             Self::BadGateway(_) => StatusCode::BAD_GATEWAY,
             Self::GatewayTimeout(_) => StatusCode::GATEWAY_TIMEOUT,
+            Self::Coded { status, .. } => *status,
             Self::Locked(_) => StatusCode::LOCKED,
             Self::RateLimited => StatusCode::TOO_MANY_REQUESTS,
             Self::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
@@ -111,7 +137,12 @@ impl IntoResponse for ApiError {
             }
             other => other.to_string(),
         };
+        let code = match &self {
+            Self::Coded { code, .. } => Some((*code).to_string()),
+            _ => None,
+        };
         let (position, message, field) = match &self {
+            Self::Coded { field, .. } => (None, None, field.clone()),
             Self::RuleInvalid { position, message } => {
                 (Some(*position), Some(message.clone()), None)
             }
@@ -130,6 +161,7 @@ impl IntoResponse for ApiError {
             position,
             message,
             field,
+            code,
         };
         let json = serde_json::to_string(&body).unwrap_or_default();
         let mut res = (status, json).into_response();
@@ -149,6 +181,12 @@ impl From<AuthError> for ApiError {
             AuthError::RateLimited => Self::RateLimited,
             AuthError::Unauthenticated => Self::Unauthenticated,
             AuthError::Forbidden(_) => Self::Forbidden("forbidden".into()),
+            AuthError::SetupClosed => Self::coded(
+                StatusCode::CONFLICT,
+                "setup_closed",
+                "setup has already been done",
+            ),
+            AuthError::Invalid(m) => Self::Unprocessable(m),
             AuthError::Password(e) => Self::Unprocessable(e.to_string()),
             AuthError::Pin(e) => Self::Unprocessable(e.to_string()),
             AuthError::NotFound => Self::NotFound,

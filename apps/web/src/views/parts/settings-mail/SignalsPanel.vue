@@ -18,10 +18,10 @@ async function toggle(key: string, enabled: boolean) {
 
 <template>
   <div>
-    <p v-if="error" class="settings-error" role="alert">{{ error }}</p>
-    <ul class="settings-list">
+    <p v-if="error" class="text-danger" role="alert">{{ error }}</p>
+    <ul class="card-list">
       <li v-for="s in store.signals" :key="s.key">
-        <label class="inline">
+        <label class="field-inline">
           <input
             type="checkbox"
             :checked="s.enabled"
@@ -30,9 +30,7 @@ async function toggle(key: string, enabled: boolean) {
           />
           <span>
             {{ s.description }}
-            <span class="settings-note"
-              >({{ s.decision_point }}, confidence {{ s.confidence }})</span
-            >
+            <span class="muted">({{ s.decision_point }}, confidence {{ s.confidence }})</span>
           </span>
         </label>
       </li>

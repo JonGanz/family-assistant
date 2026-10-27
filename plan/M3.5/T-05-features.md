@@ -5,7 +5,7 @@ milestone: M3.5
 wave: 2
 depends_on: [T-02]
 agent: {model: sonnet, effort: high}
-status: todo
+status: done
 owns: ["crates/fa-weather/**", "crates/fa-mail/**", "crates/fa-calendar/**", "crates/fa-connectors/**", "crates/fa-tasks/src/ingest.rs"]
 decisions: [D-068, D-075, D-078]
 ---
@@ -40,3 +40,11 @@ You are a sub-agent implementing one task of milestone M3.5 (onboarding and shak
 - [ ] `cargo test -p fa-weather -p fa-mail -p fa-calendar -p fa-connectors -p fa-tasks` pass (fresh container port 55405)
 - [ ] new tests: an advisory disappears on the next evaluation when its rule no longer matches; adult A doesn't see or approve an item from adult B's owners-only source but does from a household source; an orphaned item is visible to both; devices are refused; `approval_needed` rows go only to the source's adults; `with_policy(_, false)` refuses `127.0.0.1`, `10.0.0.1`, `169.254.169.254`, a hostname resolving to loopback, and a redirect to a private address, while `with_policy(_, true)` allows them
 - [ ] `cargo clippy` on those crates with `--all-targets -- -D warnings` and `cargo fmt --check` clean
+
+## Wave 1 outcomes: T-02 (domain + store), read before starting
+- Done; fa-domain 262 tests, fa-store all binaries green on a fresh DB. The main session re-ran fa-domain, fa-store, fa-pipeline, fa-notify and fa-tasks together: 383 passed, 0 failed.
+- New: `fa_domain::system_api` (every contract type; `serde_json::Value` fields use `#[ts(type = "unknown")]`), `fa_store::{InstanceSettingRepo, SetupRepo}` (files `repo/instance_setting.rs`, `repo/setup.rs`), `AdvisoryRepo::retain_rule_advisories`, `NotificationRepo::insert_for_source_adults`, `InboxRepo::pending_by_adult` (one row per active adult, zeros included).
+- Removed: `Action::DismissAdvisory`, `AdvisoryRepo::dismiss`, the advisory dismissed fields, `DashboardView.inbox`. `ApproveEvent` and `ReadInbox` now need an adult user (devices refused, elevated or not).
+- `Household` gained `dashboard_pending_approvals: bool` and `setup_completed_at: Option<DateTime<Utc>>`; every struct literal must set them (tests: `true`, `None`).
+- `pin_lockout` / `UserAccountRepo::lockout` read `FOR UPDATE`; `record_pin_failure` / `record_failure` don't update a currently locked row.
+- **Your breakage to fix:** Household literals in `crates/fa-weather/tests/{tasks.rs,service.rs}`, `crates/fa-calendar/tests/{sync.rs,ingest.rs}`, `crates/fa-mail/tests/{sync_common.rs,process_flow.rs}`; `crates/fa-weather/tests/service.rs:139` uses the removed `AdvisoryRepo::dismiss`. Move `InboxRepo::counts` / inbox callers in your crates to the scoped functions. The fa-pipeline, fa-notify and fa-tasks test literals are already fixed by the main session.

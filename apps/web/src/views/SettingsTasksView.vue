@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import Tabs from '../components/Tabs.vue'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import AbsencesPanel from './parts/AbsencesPanel.vue'
@@ -25,20 +26,9 @@ const go = (key: Key) => router.replace({ query: { tab: key } })
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader eyebrow="Settings" title="Tasks" />
-    <div class="tabs" role="tablist">
-      <button
-        v-for="t in TABS"
-        :key="t.key"
-        type="button"
-        role="tab"
-        :aria-selected="tab === t.key"
-        @click="go(t.key)"
-      >
-        {{ t.label }}
-      </button>
-    </div>
+    <Tabs :model-value="tab" :tabs="TABS" label="Task settings" @update:model-value="go" />
     <TaskListsPanel v-if="tab === 'lists'" />
     <DefinitionsPanel v-else-if="tab === 'definitions'" />
     <RoutinesPanel v-else-if="tab === 'routines'" />

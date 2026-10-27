@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { api, type EventView } from '../api/client'
 import { invalidates, type LiveEventData, type LiveEventKind } from '../composables/useLiveStream'
 import { startOfDay } from '../lib/time'
@@ -19,9 +19,12 @@ export const useCalendarStore = defineStore('calendar', () => {
   const byId = ref<Record<string, EventView>>({})
   const held = ref<Held[]>([])
   const error = ref<string | null>(null)
+  const pending = ref(0)
+  const loading = computed(() => pending.value > 0)
   const tzRef = ref('UTC')
 
   async function fetchHeld(h: Held): Promise<void> {
+    pending.value++
     try {
       const list = await api.events(h.from, h.to, h.member)
       for (const id of h.ids) delete byId.value[id]
@@ -30,6 +33,8 @@ export const useCalendarStore = defineStore('calendar', () => {
       error.value = null
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
+    } finally {
+      pending.value--
     }
   }
 
@@ -78,5 +83,5 @@ export const useCalendarStore = defineStore('calendar', () => {
     held.value = []
   }
 
-  return { byId, held, error, ensureRange, eventsIn, invalidate, reset }
+  return { byId, held, error, loading, ensureRange, eventsIn, invalidate, reset }
 })

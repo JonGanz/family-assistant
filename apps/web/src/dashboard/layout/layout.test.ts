@@ -38,6 +38,11 @@ describe('layout engine', () => {
     expect(resolveLayout(s, 'landscape').some((a) => a.panel.kind === 'hologram')).toBe(false)
     expect(s.panels.some((p) => p.kind === 'hologram')).toBe(true)
   })
+  it('ignores a stored inbox panel (D-068)', () => {
+    const s = { ...defaultSettings(), panels: [{ kind: 'clock' }, { kind: 'inbox' }] }
+    expect(resolveLayout(s).map((a) => a.panel.kind)).toEqual(['clock'])
+  })
+
   it('places member_tasks on the right', () => {
     const areas = resolveLayout(PRESETS['Chores board']!, 'landscape')
     expect(areas.find((a) => a.panel.kind === 'member_tasks')!.column).toBe('5 / 13')

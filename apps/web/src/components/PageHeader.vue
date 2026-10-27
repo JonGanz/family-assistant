@@ -15,7 +15,7 @@ defineProps<{
   <header class="page-header">
     <div class="page-header-text">
       <p v-if="eyebrow" class="page-eyebrow">{{ eyebrow }}</p>
-      <h1>
+      <h1 id="page-title">
         <RouterLink v-if="back" class="page-back" :to="back" aria-label="Back">‹</RouterLink>
         {{ title }}
       </h1>

@@ -145,8 +145,12 @@ impl TaskService {
         };
         TaskRepo::set_created_at(&mut tx, id, now).await?;
         if suggest {
-            NotificationRepo::insert_for_adults(
+            let source = MessageRepo::get(&mut tx, req.message)
+                .await?
+                .map(|m| m.source_id);
+            NotificationRepo::insert_for_source_adults(
                 &mut tx,
+                source,
                 NotifyTrigger::ApprovalNeeded,
                 "task",
                 Some(id.as_uuid()),

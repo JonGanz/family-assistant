@@ -100,20 +100,20 @@ async function archive(s: MailSourceView) {
 
 <template>
   <div>
-    <p v-if="error" class="settings-error" role="alert">{{ error }}</p>
-    <ul class="settings-list">
+    <p v-if="error" class="text-danger" role="alert">{{ error }}</p>
+    <ul class="card-list">
       <li v-for="s in store.sources" :key="s.id" :data-testid="`mail-source-${s.name}`">
         <div class="head">
           <strong>{{ s.name }}</strong>
           <span class="badge" :class="s.state" data-testid="state">{{ s.state }}</span>
-          <span class="settings-note">
+          <span class="muted">
             {{ s.provider }} · {{ s.address }} · owners {{ ownerNames(s) }} · {{ s.visibility }} ·
             last sync {{ synced(s) }} · {{ s.message_count }} messages
           </span>
         </div>
-        <p v-if="s.last_error" class="settings-error">{{ s.last_error }}</p>
+        <p v-if="s.last_error" class="text-danger">{{ s.last_error }}</p>
         <div v-if="s.can_manage" class="actions">
-          <label class="inline">
+          <label class="field-inline">
             <input
               type="checkbox"
               :checked="s.read_only"
@@ -126,16 +126,16 @@ async function archive(s: MailSourceView) {
           <button v-else type="button" @click="store.resume(s)">Resume</button>
           <button type="button" @click="startEdit(s)">Edit</button>
           <button type="button" @click="archive(s)">Archive</button>
-          <span v-if="note[s.id]" class="settings-ok" role="status">{{ note[s.id] }}</span>
+          <span v-if="note[s.id]" class="text-success" role="status">{{ note[s.id] }}</span>
         </div>
-        <form v-if="editing === s.id" class="settings-form" @submit.prevent="save(s)">
+        <form v-if="editing === s.id" class="form" @submit.prevent="save(s)">
           <label>Name <input v-model="draft.name" name="name" required /></label>
           <fieldset>
             <legend>Owners</legend>
             <label
               v-for="m in members.filter((x) => x.role === 'adult')"
               :key="m.id"
-              class="inline"
+              class="field-inline"
             >
               <input v-model="draft.owners" type="checkbox" :value="m.id" />
               {{ m.display_name }}
@@ -173,7 +173,7 @@ async function archive(s: MailSourceView) {
         </form>
       </li>
     </ul>
-    <p v-if="!store.sources.length && store.loaded" class="settings-note">No mail sources yet.</p>
+    <p v-if="!store.sources.length && store.loaded" class="muted">No mail sources yet.</p>
   </div>
 </template>
 

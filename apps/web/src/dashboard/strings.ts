@@ -9,7 +9,6 @@ export const S = {
   nothingPlanned: 'Nothing planned',
   noWeather: 'No weather data yet',
   noAdvisories: 'No advisories',
-  dismiss: 'Dismiss',
   feelsLike: 'Feels like',
   wind: 'Wind',
   rainChance: 'Rain',
@@ -35,19 +34,8 @@ export const S = {
   completedToast: (title: string) => `Done: ${title}`,
   routineDone: 'All done. Well done!',
   keyDate: 'Key date',
-  // inbox panel
-  inboxEmpty: 'Nothing waiting for approval',
-  inboxWaiting: (n: number) => `${n} waiting for approval`,
-  inboxUnlock: 'Elevate to review',
-  approve: 'Approve',
-  reject: 'Reject',
-  retryWrite: 'Retry',
-  inboxFailed: 'Could not update that item.',
-  inboxStale: 'This item changed. Refreshed.',
-  inboxCounts: { event: 'Events', bill: 'Bills', task: 'Tasks', contact: 'Contacts' } as Record<
-    string,
-    string
-  >,
+  // members badge
+  approvalsWaiting: (n: number) => `${n} waiting for approval`,
   // layout editor
   layout: 'Layout',
   orientation: 'Orientation',
@@ -89,6 +77,5 @@ export const S = {
     now: 'Now',
     member_tasks: 'Member tasks',
     routine: 'Routine',
-    inbox: 'Inbox',
   } as Record<string, string>,
 }

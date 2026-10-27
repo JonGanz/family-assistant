@@ -194,6 +194,8 @@ async fn env(pool: PgPool) -> Env {
         events: Default::default(),
         inbox: Default::default(),
         retention_mail: Default::default(),
+        dashboard_pending_approvals: true,
+        setup_completed_at: None,
         bill_lead_days: fa_domain::DEFAULT_BILL_LEAD_DAYS,
         created_at: Utc::now(),
         updated_at: Utc::now(),

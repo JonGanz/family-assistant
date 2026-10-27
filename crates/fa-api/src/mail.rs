@@ -45,7 +45,7 @@ use crate::error::Problem;
 use crate::extract::{ApiJson, ApiPath, ApiQuery};
 use crate::feeds::audit_after;
 use crate::routes::{ApiResult, etag, household, parse_version};
-use crate::tasks::{actor_member, opt_body};
+use crate::tasks::opt_body;
 
 /// A JSON body whose fields are all optional: an empty body means `{}`.
 fn body_or_empty<T: serde::de::DeserializeOwned>(b: &Bytes) -> ApiResult<T> {
@@ -1052,14 +1052,6 @@ pub async fn get_inbox(
     Ok(Json(v))
 }
 
-/// Inbox counts (approved events whose write failed are included by the store).
-pub(crate) async fn inbox_counts(
-    s: &AppState,
-    hid: HouseholdId,
-) -> ApiResult<fa_domain::InboxCounts> {
-    Ok(s.services.mail.inbox.counts(hid).await?)
-}
-
 async fn publish_inbox(s: &AppState, hid: HouseholdId) {
     let res = async {
         let mut tx = s.store.tx_for(hid).await?;
@@ -1073,9 +1065,27 @@ async fn publish_inbox(s: &AppState, hid: HouseholdId) {
     }
 }
 
-fn approver(actor: &Actor) -> ApiResult<Option<MemberId>> {
-    require(actor, Action::ApproveEvent, &Resource::Household)?;
-    Ok(actor_member(actor))
+fn approver(actor: &Actor) -> ApiResult<()> {
+    require(actor, Action::ApproveEvent, &Resource::Household)
+}
+
+/// D-078: accepting or skipping a task that came from email needs access to its source mailbox.
+/// Other tasks are not scoped.
+pub(crate) async fn ensure_mail_task_scope(
+    s: &AppState,
+    actor: &Actor,
+    id: TaskId,
+) -> ApiResult<()> {
+    let hid = household(actor)?;
+    let v = s.services.tasks.get_task(hid, id).await?;
+    if v.origin == TaskOrigin::Email {
+        s.services
+            .mail
+            .inbox
+            .ensure_task(hid, viewer_of(actor)?, id)
+            .await?;
+    }
+    Ok(())
 }
 
 #[utoipa::path(post, path = "/api/v1/inbox/{kind}/{id}/approve", tag = "inbox",
@@ -1092,12 +1102,15 @@ pub async fn approve_inbox(
     ApiPath((kind, id)): ApiPath<(InboxKind, Uuid)>,
     body: Bytes,
 ) -> ApiResult<StatusCode> {
-    let by = approver(&auth.actor)?;
+    approver(&auth.actor)?;
+    let viewer = viewer_of(&auth.actor)?;
     let hid = household(&auth.actor)?;
     match kind {
         InboxKind::Event => {
             let a: EventApproval = body_or_empty(&body)?;
             let id = EventId::from(id);
+            s.services.mail.inbox.ensure_event(hid, viewer, id).await?;
+            let by = viewer.member;
             let cancel = pending_cancel(&s, hid, id).await?;
             if cancel {
                 s.services.calendar.approve_cancel(hid, id, by).await?;
@@ -1110,11 +1123,16 @@ pub async fn approve_inbox(
             s.services
                 .mail
                 .inbox
-                .approve_bill(hid, BillId::from(id), p, by)
+                .approve_bill(hid, BillId::from(id), p, viewer)
                 .await?;
         }
         InboxKind::Task => {
             let a: TaskApproval = body_or_empty(&body)?;
+            s.services
+                .mail
+                .inbox
+                .ensure_task(hid, viewer, TaskId::from(id))
+                .await?;
             approve_task(&s, hid, TaskId::from(id), a).await?;
         }
         InboxKind::Contact => {
@@ -1122,7 +1140,7 @@ pub async fn approve_inbox(
             s.services
                 .mail
                 .inbox
-                .approve_contact(hid, ContactSuggestionId::from(id), a, by)
+                .approve_contact(hid, ContactSuggestionId::from(id), a, viewer)
                 .await?;
         }
     }
@@ -1148,11 +1166,14 @@ pub async fn reject_inbox(
     auth: Auth,
     ApiPath((kind, id)): ApiPath<(InboxKind, Uuid)>,
 ) -> ApiResult<StatusCode> {
-    let by = approver(&auth.actor)?;
+    approver(&auth.actor)?;
+    let viewer = viewer_of(&auth.actor)?;
+    let by = viewer.member;
     let hid = household(&auth.actor)?;
     match kind {
         InboxKind::Event => {
             let id = EventId::from(id);
+            s.services.mail.inbox.ensure_event(hid, viewer, id).await?;
             if pending_cancel(&s, hid, id).await? {
                 s.services.calendar.reject_cancel(hid, id, by).await?;
             } else {
@@ -1163,11 +1184,12 @@ pub async fn reject_inbox(
             s.services
                 .mail
                 .inbox
-                .reject_bill(hid, BillId::from(id), by)
+                .reject_bill(hid, BillId::from(id), viewer)
                 .await?;
         }
         InboxKind::Task => {
             let id = TaskId::from(id);
+            s.services.mail.inbox.ensure_task(hid, viewer, id).await?;
             suggested_mail_task(&s, hid, id).await?;
             s.services.tasks.skip(hid, id, by).await?;
             publish_inbox(&s, hid).await;
@@ -1176,7 +1198,7 @@ pub async fn reject_inbox(
             s.services
                 .mail
                 .inbox
-                .reject_contact(hid, ContactSuggestionId::from(id), by)
+                .reject_contact(hid, ContactSuggestionId::from(id), viewer)
                 .await?;
         }
     }
@@ -1368,7 +1390,6 @@ pub async fn patch_bill(
     require(&auth.actor, Action::ManageBills, &Resource::Household)?;
     let expected = parse_version(&headers, None)?;
     let hid = household(&auth.actor)?;
-    let by = actor_member(&auth.actor);
     let mut tx = s.store.tx_for(hid).await?;
     let cur = BillRepo::get(&mut tx, id)
         .await?
@@ -1381,7 +1402,11 @@ pub async fn patch_bill(
     if cur.value.status == BillStatus::Proposed && p.status == Some(BillPatchStatus::Dismissed) {
         // Dismissing a proposal also teaches the pipeline that the message is not a bill.
         tx.rollback().await?;
-        s.services.mail.inbox.reject_bill(hid, id, by).await?;
+        s.services
+            .mail
+            .inbox
+            .reject_bill(hid, id, viewer_of(&auth.actor)?)
+            .await?;
         let mut tx = s.store.tx_for(hid).await?;
         let b = BillRepo::get(&mut tx, id)
             .await?

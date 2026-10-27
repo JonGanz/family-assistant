@@ -41,9 +41,9 @@ watch(tz, loadRange)
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader :title="session.household?.name ?? 'Today'" :subtitle="todayLabel" />
-    <AdvisoryList :advisories="weather.advisories" @dismiss="weather.dismiss" />
+    <AdvisoryList :advisories="weather.advisories" />
     <WeatherCard
       v-if="weather.latest"
       :weather="weather.latest"

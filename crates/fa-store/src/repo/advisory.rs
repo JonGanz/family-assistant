@@ -1,15 +1,15 @@
 use chrono::{DateTime, Utc};
-use fa_domain::{Advisory, AdvisoryId, AdvisorySource, MemberId, Severity, WeatherRuleId};
+use fa_domain::{Advisory, AdvisoryId, AdvisorySource, Severity, WeatherRuleId};
 use sqlx::PgConnection;
 
 use super::{enum_str, parse_enum};
-use crate::{Result, StoreError};
+use crate::Result;
 
 pub struct AdvisoryRepo;
 
 impl AdvisoryRepo {
     /// Inserts or refreshes the advisory with this `dedupe_key` for the transaction's household.
-    /// Returns its id and whether anything changed. A dismissed advisory is never touched.
+    /// Returns its id and whether anything changed.
     #[allow(clippy::too_many_arguments)]
     pub async fn upsert_by_dedupe(
         conn: &mut PgConnection,
@@ -29,8 +29,7 @@ impl AdvisoryRepo {
                  rule_id = EXCLUDED.rule_id, text = EXCLUDED.text, severity = EXCLUDED.severity,
                  valid_from = EXCLUDED.valid_from, valid_until = EXCLUDED.valid_until,
                  source = EXCLUDED.source
-             WHERE advisory.dismissed_at IS NULL
-               AND (advisory.rule_id, advisory.text, advisory.severity, advisory.valid_from,
+             WHERE (advisory.rule_id, advisory.text, advisory.severity, advisory.valid_from,
                     advisory.valid_until, advisory.source)
                    IS DISTINCT FROM
                    (EXCLUDED.rule_id, EXCLUDED.text, EXCLUDED.severity, EXCLUDED.valid_from,
@@ -59,12 +58,12 @@ impl AdvisoryRepo {
         Ok((id.into(), false))
     }
 
-    /// Not dismissed and not expired at `now`, newest severity first.
+    /// Not expired at `now`, newest severity first.
     pub async fn active(conn: &mut PgConnection, now: DateTime<Utc>) -> Result<Vec<Advisory>> {
         let rows = sqlx::query!(
             "SELECT id, household_id, rule_id, text, severity, valid_from, valid_until, source,
-                    dedupe_key, dismissed_at, dismissed_by
-             FROM advisory WHERE dismissed_at IS NULL AND valid_until > $1
+                    dedupe_key
+             FROM advisory WHERE valid_until > $1
              ORDER BY CASE severity WHEN 'severe' THEN 0 WHEN 'warning' THEN 1 ELSE 2 END, valid_from, id",
             now
         )
@@ -82,34 +81,20 @@ impl AdvisoryRepo {
                     valid_until: r.valid_until,
                     source: parse_enum(&r.source)?,
                     dedupe_key: r.dedupe_key,
-                    dismissed_at: r.dismissed_at,
-                    dismissed_by: r.dismissed_by.map(Into::into),
                 })
             })
             .collect()
     }
 
-    /// Idempotent; keeps the first dismissal.
-    pub async fn dismiss(
-        conn: &mut PgConnection,
-        id: AdvisoryId,
-        by_member: Option<MemberId>,
-    ) -> Result<()> {
-        let n = sqlx::query!(
-            "UPDATE advisory SET dismissed_at = COALESCE(dismissed_at, now()),
-                    dismissed_by = CASE WHEN dismissed_at IS NULL THEN $2 ELSE dismissed_by END
-             WHERE id = $1",
-            id.as_uuid(),
-            by_member.map(|m| m.as_uuid())
+    /// Deletes `source = 'rule'` advisories whose `dedupe_key` is not in `keep`; `s2` advisories stay.
+    pub async fn retain_rule_advisories(conn: &mut PgConnection, keep: &[String]) -> Result<u64> {
+        Ok(sqlx::query!(
+            "DELETE FROM advisory WHERE source = 'rule' AND NOT (dedupe_key = ANY($1))",
+            keep
         )
         .execute(conn)
         .await?
-        .rows_affected();
-        if n == 0 {
-            Err(StoreError::NotFound)
-        } else {
-            Ok(())
-        }
+        .rows_affected())
     }
 
     pub async fn delete_expired(conn: &mut PgConnection, before: DateTime<Utc>) -> Result<u64> {

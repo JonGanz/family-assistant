@@ -555,10 +555,8 @@ test("visibility: household sources are readable by both adults, never by a chil
   expect((await riley.get(`${api}/mail-sources`)).status()).toBe(403);
   expect((await riley.get(`${api}/inbox`)).status()).toBe(403);
   expect([401, 403]).toContain((await device.get(`${api}/messages`)).status());
-  // A device without elevation gets counts only.
-  const view = await (await device.get(`${api}/inbox`)).json();
-  expect(view.items).toHaveLength(0);
-  expect(view.counts).toHaveProperty("total");
+  // D-068: the inbox is for adult users only; a device is refused, elevated or not.
+  expect((await device.get(`${api}/inbox`)).status()).toBe(403);
 });
 
 test("visibility: an 'owners' source is hidden from the other adult", async () => {

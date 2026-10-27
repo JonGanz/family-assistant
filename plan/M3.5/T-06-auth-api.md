@@ -5,7 +5,7 @@ milestone: M3.5
 wave: 3
 depends_on: [T-02, T-03]
 agent: {model: sonnet, effort: high}
-status: todo
+status: done
 owns: ["crates/fa-auth/**", "crates/fa-api/**"]
 decisions: [D-065, D-068, D-069, D-070, D-072, D-073, D-074, D-075, D-078]
 ---
@@ -71,3 +71,27 @@ You are a sub-agent implementing one task of milestone M3.5 (onboarding and shak
   - `pending_approvals` respects the household switch;
   - C-03: a wrong current password gives 401, and success revokes the other sessions
 - [ ] `cargo clippy -p fa-auth -p fa-api --all-targets -- -D warnings` and `cargo fmt --check` clean
+
+## Wave 1 outcomes: T-02 (domain + store), read before starting
+- Done; fa-domain 262 tests, fa-store all binaries green on a fresh DB. The main session re-ran fa-domain, fa-store, fa-pipeline, fa-notify and fa-tasks together: 383 passed, 0 failed.
+- New: `fa_domain::system_api` (every contract type; `serde_json::Value` fields use `#[ts(type = "unknown")]`), `fa_store::{InstanceSettingRepo, SetupRepo}` (files `repo/instance_setting.rs`, `repo/setup.rs`), `AdvisoryRepo::retain_rule_advisories`, `NotificationRepo::insert_for_source_adults`, `InboxRepo::pending_by_adult` (one row per active adult, zeros included).
+- Removed: `Action::DismissAdvisory`, `AdvisoryRepo::dismiss`, the advisory dismissed fields, `DashboardView.inbox`. `ApproveEvent` and `ReadInbox` now need an adult user (devices refused, elevated or not).
+- `Household` gained `dashboard_pending_approvals: bool` and `setup_completed_at: Option<DateTime<Utc>>`; every struct literal must set them (tests: `true`, `None`).
+- `pin_lockout` / `UserAccountRepo::lockout` read `FOR UPDATE`; `record_pin_failure` / `record_failure` don't update a currently locked row.
+- **Your breakage to fix:** `crates/fa-api/src/feeds.rs` (`Action::DismissAdvisory` ~1179, `AdvisoryRepo::dismiss` ~1182, `DashboardView { inbox }` ~1653) and Household literals in `crates/fa-auth/tests/{auth.rs,oauth.rs}`. **`pin_lockout`/`lockout` must be read in the same transaction as `record_*`** so `FOR UPDATE` serialises attempts (`fa-auth/src/pin.rs` ~91 and the login path); with C-12, keep that: read+lock, release nothing until recorded, or re-read under lock after the verify. The device limiter in `pin.rs` was changed by the main session during the baseline (burst 6, refund on success); move it into `AuthConfig` (C-01b) keeping that behaviour.
+
+## Wave 2 outcomes: T-03 (fa-config)
+- Done; `cargo test -p fa-config` green on a fresh DB. Exports: `fa_config::{runtime, CookieSecure, RUNTIME_KEYS, RuntimeKey, RuntimeSnapshot, validate_value, create_household}`. `RuntimeSnapshot::{views(), source(key), is_locked(key)}`; `ProcessConfig::load_layered(&BTreeMap<String, Value>)` (plus a testable `load_layered_from`); `load()` = `load_layered` with an empty map.
+- `public_base_url: Option<String>` → use `effective_base_url()`; `cookie_secure: CookieSecure`; new fields as in the contract. `public_url` (`FA_PUBLIC_URL`) still exists, with no required check.
+- **Empty env vars count as unset** (they neither lock nor hide the DB value): `FA_TRUSTED_PROXIES=""` no longer means "trust none"; an empty list comes from the DB. A key set in `fa.toml` counts as `env`/locked.
+- `load_layered` expects **decrypted** secrets (`ntfy_token`, `google_client_secret`) as plain strings in the map; an invalid DB value is skipped with a warning naming only the key.
+- `create_household` returns `ImportError`; `import(store, hid, cfg, mode, dry_run)`; `ImportReport: ToSchema`.
+- An empty `lan_allowed_cidrs` means private and loopback: map it to `LanConfig::default_allowed()`.
+
+## Wave 2 outcomes: T-05 (feature crates)
+- Done. The main session ran all compiling crates together on a fresh DB: 603 passed, 0 failed; clippy and fmt clean.
+- `InboxService`: `counts(household, viewer)`; `approve_bill/reject_bill/approve_contact/reject_contact` take `viewer: Viewer`; any non-adult viewer (devices too) gets `MailError::Forbidden`. New public guards **`InboxService::{ensure_message, ensure_event, ensure_task}`**: event approve/edit/reject and suggested-task accept/dismiss live in fa-calendar/fa-tasks, so the **API must call these first**.
+- `Http::with_policy(allow_http, allow_private_hosts)`, `ConnectorError::PrivateHost` (→ `CalendarError::Invalid`). `ConnectorConfig`, `WeatherConfig`, `MailConfig` have `allow_private_hosts` (default false). `MailDeps::http` is built by the server. IMAP (raw `TcpStream`) is **not** guarded; C-05 covers HTTP only (known gap).
+- Advisory clearing after each successful evaluation; nothing is cleared if any active rule fails to parse.
+- `approval_needed` goes only to the source's adults (two mail tests now expect one row).
+- **Your breakage:** `crates/fa-api/src/mail.rs` ~1060 `inbox.counts(hid)` needs a `Viewer`; inbox approve/reject handlers pass a `Viewer` and are adult-only; call `ensure_event`/`ensure_task` before event and suggested-task actions; test fixtures in `crates/fa-api/tests/*.rs` need `allow_private_hosts: true` in `ConnectorConfig`/`MailConfig`/`WeatherConfig` literals and `Http::with_policy(.., true)` where they hit local stubs.

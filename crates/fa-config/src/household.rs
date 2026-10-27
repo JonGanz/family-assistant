@@ -2,6 +2,7 @@ use std::collections::HashSet;
 
 use chrono::{NaiveDate, Utc};
 use fa_domain::Role;
+use fa_domain::system_api::NewSetupHousehold;
 use fa_domain::timefmt::{format_hhmm, parse_hhmm};
 use fa_domain::{
     AuditEntry, AuditEntryId, Gender, Household, HouseholdId, Location, Member, MemberId,
@@ -257,7 +258,7 @@ pub enum ImportMode {
     Replace,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, utoipa::ToSchema)]
 pub struct ImportReport {
     pub household_id: HouseholdId,
     pub household_created: bool,
@@ -468,12 +469,14 @@ fn apply(m: &mut Member, c: &MemberConfig) -> bool {
 }
 
 /// Imports `cfg` into the store. Creates the household when missing (with `household_id` if
-/// given, else a fresh id). Never touches accounts, PINs or secrets.
+/// given, else a fresh id). Never touches accounts, PINs or secrets. A dry run does all the
+/// work inside the transaction and builds the report, then rolls back.
 pub async fn import(
     store: &Store,
     household_id: Option<HouseholdId>,
     cfg: &HouseholdConfig,
     mode: ImportMode,
+    dry_run: bool,
 ) -> Result<ImportReport, ImportError> {
     cfg.validate()?;
     let hid = household_id.unwrap_or_default();
@@ -530,52 +533,40 @@ pub async fn import(
 
     match HouseholdRepo::get(&mut tx, hid).await? {
         None => {
-            let now = Utc::now();
-            HouseholdRepo::insert(
-                &mut tx,
-                &Household {
-                    id: hid,
-                    name: cfg.household.name.clone(),
-                    tz: cfg.household.tz.clone(),
-                    location,
-                    meal_plan_horizon_weeks: 2,
-                    dashboard_completion_override: sec
-                        .dashboard_completion_override
-                        .unwrap_or(true),
-                    units: sec.units.unwrap_or(DEFAULT_UNITS),
-                    calendar_past_days: sec
-                        .calendar_past_days
-                        .unwrap_or(DEFAULT_CALENDAR_PAST_DAYS),
-                    calendar_future_days: sec
-                        .calendar_future_days
-                        .unwrap_or(DEFAULT_CALENDAR_FUTURE_DAYS),
-                    weather_retention_days: sec
-                        .weather_retention_days
-                        .unwrap_or(DEFAULT_WEATHER_RETENTION_DAYS),
-                    private_events_as_busy: sec
-                        .private_events_as_busy
-                        .unwrap_or(DEFAULT_PRIVATE_EVENTS_AS_BUSY),
-                    now_list_size: sec.now_list_size.unwrap_or(7),
-                    now_weights: sec.now_weights.unwrap_or_default(),
-                    quiet_from: quiet(sec.quiet_from.as_deref(), 21),
-                    quiet_until: quiet(sec.quiet_until.as_deref(), 7),
-                    currency: sec
-                        .currency
-                        .clone()
-                        .unwrap_or_else(|| fa_domain::DEFAULT_CURRENCY.to_string()),
-                    gender_terms: gender_terms(sec, Default::default()),
-                    disabled_signals: disabled_signals(sec),
-                    events: events(sec, Default::default()),
-                    inbox: inbox(sec, Default::default()),
-                    retention_mail: retention(cfg, Default::default()),
-                    bill_lead_days: sec
-                        .bill_lead_days
-                        .unwrap_or(fa_domain::DEFAULT_BILL_LEAD_DAYS),
-                    created_at: now,
-                    updated_at: now,
-                },
-            )
-            .await?;
+            let mut h = new_household(
+                hid,
+                &cfg.household.name,
+                &cfg.household.tz,
+                location,
+                sec.units.unwrap_or(DEFAULT_UNITS),
+                sec.currency
+                    .clone()
+                    .unwrap_or_else(|| fa_domain::DEFAULT_CURRENCY.to_string()),
+            );
+            h.dashboard_completion_override = sec.dashboard_completion_override.unwrap_or(true);
+            h.calendar_past_days = sec.calendar_past_days.unwrap_or(DEFAULT_CALENDAR_PAST_DAYS);
+            h.calendar_future_days = sec
+                .calendar_future_days
+                .unwrap_or(DEFAULT_CALENDAR_FUTURE_DAYS);
+            h.weather_retention_days = sec
+                .weather_retention_days
+                .unwrap_or(DEFAULT_WEATHER_RETENTION_DAYS);
+            h.private_events_as_busy = sec
+                .private_events_as_busy
+                .unwrap_or(DEFAULT_PRIVATE_EVENTS_AS_BUSY);
+            h.now_list_size = sec.now_list_size.unwrap_or(7);
+            h.now_weights = sec.now_weights.unwrap_or_default();
+            h.quiet_from = quiet(sec.quiet_from.as_deref(), 21);
+            h.quiet_until = quiet(sec.quiet_until.as_deref(), 7);
+            h.gender_terms = gender_terms(sec, Default::default());
+            h.disabled_signals = disabled_signals(sec);
+            h.events = events(sec, Default::default());
+            h.inbox = inbox(sec, Default::default());
+            h.retention_mail = retention(cfg, Default::default());
+            h.bill_lead_days = sec
+                .bill_lead_days
+                .unwrap_or(fa_domain::DEFAULT_BILL_LEAD_DAYS);
+            HouseholdRepo::insert(&mut tx, &h).await?;
             report.household_created = true;
         }
         Some(v) => {
@@ -762,9 +753,102 @@ pub async fn import(
         },
     )
     .await?;
-    tx.commit().await?;
-    tracing::info!(household = %hid, ?mode, "household config imported");
+    if dry_run {
+        tx.rollback().await?;
+        tracing::info!(household = %hid, ?mode, "household config import dry run");
+    } else {
+        tx.commit().await?;
+        tracing::info!(household = %hid, ?mode, "household config imported");
+    }
     Ok(report)
+}
+
+/// A household with every setting at its default.
+fn new_household(
+    id: HouseholdId,
+    name: &str,
+    tz: &str,
+    location: Option<Location>,
+    units: Units,
+    currency: String,
+) -> Household {
+    let now = Utc::now();
+    Household {
+        id,
+        name: name.to_string(),
+        tz: tz.to_string(),
+        location,
+        meal_plan_horizon_weeks: 2,
+        dashboard_completion_override: true,
+        units,
+        calendar_past_days: DEFAULT_CALENDAR_PAST_DAYS,
+        calendar_future_days: DEFAULT_CALENDAR_FUTURE_DAYS,
+        weather_retention_days: DEFAULT_WEATHER_RETENTION_DAYS,
+        private_events_as_busy: DEFAULT_PRIVATE_EVENTS_AS_BUSY,
+        now_list_size: 7,
+        now_weights: Default::default(),
+        quiet_from: quiet(None, 21),
+        quiet_until: quiet(None, 7),
+        currency,
+        gender_terms: Default::default(),
+        disabled_signals: vec![],
+        events: Default::default(),
+        inbox: Default::default(),
+        retention_mail: Default::default(),
+        bill_lead_days: fa_domain::DEFAULT_BILL_LEAD_DAYS,
+        dashboard_pending_approvals: true,
+        setup_completed_at: None,
+        created_at: now,
+        updated_at: now,
+    }
+}
+
+/// Creates a household with defaults from the setup wizard's first step.
+pub async fn create_household(
+    store: &Store,
+    new: &NewSetupHousehold,
+) -> Result<HouseholdId, ImportError> {
+    let mut errs = Vec::new();
+    let name = new.name.trim();
+    if name.is_empty() {
+        errs.push("household name must not be empty".to_string());
+    }
+    if new.tz.parse::<chrono_tz::Tz>().is_err() {
+        errs.push(format!("'{}' is not an IANA time zone", new.tz));
+    }
+    let currency = new.currency.trim().to_ascii_uppercase();
+    if currency.len() != 3 || !currency.chars().all(|c| c.is_ascii_alphabetic()) {
+        errs.push(format!(
+            "'{}' is not an ISO 4217 currency code",
+            new.currency
+        ));
+    }
+    if let Some(l) = &new.location
+        && !((-90.0..=90.0).contains(&l.lat) && (-180.0..=180.0).contains(&l.lon))
+    {
+        errs.push("location latitude or longitude is out of range".to_string());
+    }
+    if !errs.is_empty() {
+        return Err(HouseholdTomlError::Invalid(errs).into());
+    }
+    let id = HouseholdId::new();
+    let h = new_household(
+        id,
+        name,
+        &new.tz,
+        new.location.as_ref().map(|l| Location {
+            lat: l.lat,
+            lon: l.lon,
+            label: l.label.clone(),
+        }),
+        new.units,
+        currency,
+    );
+    let mut tx = store.tx_system().await?;
+    HouseholdRepo::insert(&mut tx, &h).await?;
+    tx.commit().await?;
+    tracing::info!(household = %id, "household created");
+    Ok(id)
 }
 
 fn gender_terms(sec: &HouseholdSection, current: fa_domain::GenderTerms) -> fa_domain::GenderTerms {

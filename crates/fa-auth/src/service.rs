@@ -8,7 +8,7 @@ use fa_store::{AuditRepo, Store};
 
 use crate::config::AuthConfig;
 use crate::error::{AuthError, Result};
-use crate::limiter::IpRateLimiter;
+use crate::limiter::{IpRateLimiter, KeyedRateLimiter};
 use crate::password;
 
 /// Hooks for security events. TODO: wire a notification (ntfy) implementation after M0.
@@ -25,6 +25,7 @@ pub struct AuthService {
     pub(crate) store: Store,
     pub(crate) cfg: Arc<AuthConfig>,
     pub(crate) ip_limiter: Arc<IpRateLimiter>,
+    pub(crate) device_limiter: Arc<KeyedRateLimiter<DeviceId>>,
     pub(crate) events: Arc<dyn AuthEvents>,
 }
 
@@ -37,10 +38,15 @@ impl fmt::Debug for AuthService {
 impl AuthService {
     pub fn new(store: Store, cfg: AuthConfig) -> Self {
         let ip_limiter = Arc::new(IpRateLimiter::new(cfg.ip_burst, cfg.ip_refill));
+        let device_limiter = Arc::new(KeyedRateLimiter::new(
+            cfg.device_pin_burst,
+            cfg.device_pin_refill,
+        ));
         Self {
             store,
             cfg: Arc::new(cfg),
             ip_limiter,
+            device_limiter,
             events: Arc::new(NoEvents),
         }
     }

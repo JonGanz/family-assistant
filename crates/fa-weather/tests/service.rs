@@ -34,6 +34,8 @@ async fn household(store: &Store, located: bool, units: Units) -> HouseholdId {
         calendar_past_days: 30,
         calendar_future_days: 400,
         weather_retention_days: 7,
+        dashboard_pending_approvals: true,
+        setup_completed_at: None,
         private_events_as_busy: true,
         now_list_size: 7,
         now_weights: fa_domain::tasks::NowWeights::default(),
@@ -65,6 +67,7 @@ async fn service(pool: &PgPool, server: &MockServer) -> (Store, WeatherService) 
         WeatherConfig {
             open_meteo_url: server.uri(),
             allow_http: true,
+            allow_private_hosts: true,
         },
     )
     .unwrap();
@@ -98,7 +101,7 @@ async fn advisory_rows(pool: &PgPool) -> i64 {
 }
 
 #[sqlx::test(migrations = "../fa-store/migrations")]
-async fn fetch_evaluate_dedupe_dismiss(pool: PgPool) {
+async fn fetch_evaluate_dedupe(pool: PgPool) {
     let server = serve(Some(frosty().api_body())).await;
     let (store, svc) = service(&pool, &server).await;
     let h = household(&store, true, Units::Metric).await;
@@ -134,15 +137,31 @@ async fn fetch_evaluate_dedupe_dismiss(pool: PgPool) {
 
     svc.evaluate_at(h, now()).await.unwrap();
     assert_eq!(advisory_rows(&pool).await, 1);
+}
 
-    let mut tx = store.tx_for(h).await.unwrap();
-    AdvisoryRepo::dismiss(&mut tx, adv[0].id, None)
-        .await
-        .unwrap();
-    tx.commit().await.unwrap();
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn advisory_clears_when_the_rule_stops_matching(pool: PgPool) {
+    let server = serve(Some(frosty().api_body())).await;
+    let (store, svc) = service(&pool, &server).await;
+    let h = household(&store, true, Units::Metric).await;
+    svc.fetch(h).await.unwrap();
     svc.evaluate_at(h, now()).await.unwrap();
-    assert!(active(&store, h).await.is_empty());
     assert_eq!(advisory_rows(&pool).await, 1);
+
+    // A failed fetch changes nothing.
+    let broken = serve(None).await;
+    let (_, bad) = service(&pool, &broken).await;
+    assert!(bad.fetch(h).await.is_err());
+    svc.evaluate_at(h, now()).await.unwrap();
+    assert_eq!(advisory_rows(&pool).await, 1);
+
+    // The forecast warms up: the next evaluation removes the advisory.
+    let warm = Synth::new(now(), 48).set("temperature_2m", |_| Some(8.0));
+    let server = serve(Some(warm.api_body())).await;
+    let (_, svc) = service(&pool, &server).await;
+    svc.fetch(h).await.unwrap();
+    svc.evaluate_at(h, now()).await.unwrap();
+    assert_eq!(advisory_rows(&pool).await, 0);
 }
 
 #[sqlx::test(migrations = "../fa-store/migrations")]
@@ -270,7 +289,14 @@ async fn default_rules_are_idempotent(pool: PgPool) {
 
 #[sqlx::test(migrations = "../fa-store/migrations")]
 async fn validate_previews_against_latest_snapshot(pool: PgPool) {
-    let server = serve(Some(frosty().api_body())).await;
+    // The preview evaluates against the wall clock, so this forecast must start at the current
+    // hour (a fixed date stops overlapping "next 48h" two days later).
+    let hour = chrono::DurationRound::duration_trunc(Utc::now(), chrono::Duration::hours(1))
+        .expect("hour");
+    let body = Synth::new(hour, 48)
+        .set("temperature_2m", |i| Some(if i >= 6 { -3.0 } else { 8.0 }))
+        .api_body();
+    let server = serve(Some(body)).await;
     let (store, svc) = service(&pool, &server).await;
     let h = household(&store, true, Units::Metric).await;
 

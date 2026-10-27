@@ -53,6 +53,8 @@ async fn seed(pool: PgPool) -> Fx {
     HouseholdRepo::insert(
         &mut tx,
         &Household {
+            dashboard_pending_approvals: true,
+            setup_completed_at: None,
             id: h,
             name: "Example".into(),
             tz: "UTC".into(),

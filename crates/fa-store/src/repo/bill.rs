@@ -399,4 +399,41 @@ impl InboxRepo {
         .await?;
         Ok(InboxCounts::new(event, bill, task, contact))
     }
+
+    /// Pending items per active adult of the transaction's household, scoped by D-078: an item
+    /// reaches its source through `message_id` (events, bills, contact suggestions) or
+    /// `task.source_ref->>'message_id'` (email tasks), then `message.source_id`. The adults
+    /// who may see it are the source's owners, or all adults for a `household` source. An item
+    /// without a source (message deleted) or with an archived one counts for every adult.
+    pub async fn pending_by_adult(conn: &mut PgConnection) -> Result<Vec<(MemberId, i64)>> {
+        let rows: Vec<(uuid::Uuid, i64)> = sqlx::query_as(
+            "WITH item AS (
+               SELECT message_id FROM event
+                WHERE origin = 'extracted' AND (status = 'proposed' OR (status = 'written' AND pending_cancel)
+                   OR (status = 'approved' AND write_error IS NOT NULL))
+               UNION ALL SELECT message_id FROM bill WHERE status = 'proposed'
+               UNION ALL SELECT message_id FROM contact_suggestion WHERE status = 'proposed'
+               UNION ALL SELECT CASE WHEN source_ref->>'message_id' ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                                     THEN (source_ref->>'message_id')::uuid END
+                           FROM task
+                          WHERE status = 'suggested' AND origin = 'email' AND archived_at IS NULL
+             ), scoped AS (
+               SELECT s.id AS source_id, s.visibility, s.archived_at
+                 FROM item i
+                 LEFT JOIN message m ON m.id = i.message_id
+                 LEFT JOIN mail_source s ON s.id = m.source_id
+             )
+             SELECT a.id, count(sc.*) FILTER (WHERE
+                        sc.source_id IS NULL OR sc.archived_at IS NOT NULL OR sc.visibility = 'household'
+                        OR EXISTS (SELECT 1 FROM mail_source_owner o
+                                    WHERE o.source_id = sc.source_id AND o.member_id = a.id))
+               FROM member a
+               LEFT JOIN scoped sc ON true
+              WHERE a.role = 'adult' AND a.archived_at IS NULL AND a.household_id = app_household()
+              GROUP BY a.id, a.created_at ORDER BY a.created_at, a.id",
+        )
+        .fetch_all(conn)
+        .await?;
+        Ok(rows.into_iter().map(|(id, n)| (id.into(), n)).collect())
+    }
 }

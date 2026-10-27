@@ -54,7 +54,10 @@ fn mail_services(store: &Store, oauth: &fa_auth::OAuthService) -> fa_api::MailSe
         http: fa_connectors::Http::new(true).unwrap(),
         tokens: std::sync::Arc::new(oauth.clone()),
         key: std::sync::Arc::new(MasterKey::from_bytes(&[7u8; 32], 1).unwrap()),
-        cfg: fa_mail::MailConfig::default(),
+        cfg: fa_mail::MailConfig {
+            allow_private_hosts: true,
+            ..Default::default()
+        },
     }))
 }
 
@@ -68,6 +71,8 @@ async fn seed(pool: PgPool) -> Fx {
     HouseholdRepo::insert(
         &mut tx,
         &Household {
+            dashboard_pending_approvals: true,
+            setup_completed_at: None,
             id: h,
             name: "Example".into(),
             tz: "UTC".into(),
@@ -133,14 +138,20 @@ async fn seed(pool: PgPool) -> Fx {
             fa_calendar::CalendarService::new(
                 store.clone(),
                 MasterKey::from_bytes(&[7u8; 32], 1).unwrap(),
-                fa_calendar::ConnectorConfig::default(),
+                fa_calendar::ConnectorConfig {
+                    allow_private_hosts: true,
+                    ..Default::default()
+                },
                 std::sync::Arc::new(oauth.clone()),
             )
             .unwrap(),
         ),
         weather: fa_weather::WeatherService::new(
             store.clone(),
-            fa_weather::WeatherConfig::default(),
+            fa_weather::WeatherConfig {
+                allow_private_hosts: true,
+                ..Default::default()
+            },
         )
         .unwrap(),
         tasks: std::sync::Arc::new(fa_tasks::TaskService::new(store.clone())),
@@ -150,6 +161,7 @@ async fn seed(pool: PgPool) -> Fx {
                 ntfy_url: None,
                 ntfy_token: None,
                 public_base_url: "https://fa.example.com".into(),
+                subscribe_base: None,
             },
         ),
         mail: mail_services(&store, &oauth),
@@ -160,7 +172,7 @@ async fn seed(pool: PgPool) -> Fx {
         auth,
         services,
         ApiConfig {
-            cookie_secure: false,
+            cookie_secure: fa_config::CookieSecure::Never,
             ..ApiConfig::default()
         },
         CancellationToken::new(),

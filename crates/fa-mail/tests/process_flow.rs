@@ -105,6 +105,8 @@ async fn env(pool: PgPool) -> Env {
         inbox: Default::default(),
         retention_mail: Default::default(),
         bill_lead_days: DEFAULT_BILL_LEAD_DAYS,
+        dashboard_pending_approvals: true,
+        setup_completed_at: None,
         created_at: Utc::now(),
         updated_at: Utc::now(),
     };
@@ -449,7 +451,7 @@ test!(low_confidence_bill_is_proposed_with_approval_rows, e, {
     .fetch_all(&e.pool)
     .await
     .unwrap();
-    assert_eq!(rows.len(), 2, "one row per adult");
+    assert_eq!(rows.len(), 1, "only the owner of the source is notified");
     assert!(rows.iter().all(|r| r.1.as_deref() == Some("/inbox")));
     assert!(rows.iter().all(|r| r.0.starts_with("approval:bill:")));
 });
@@ -493,7 +495,7 @@ test!(permission_slip_suggests_a_task_and_a_contact, e, {
     assert_eq!(
         e.count("SELECT count(*) FROM notification WHERE dedupe_key LIKE 'approval:contact:%'")
             .await,
-        2
+        1
     );
 });
 
@@ -1001,6 +1003,14 @@ async fn inbox_fixture(e: &Env) -> (BillId, ContactSuggestionId, EventId, TaskId
 test!(inbox_lists_all_kinds_by_viewer, e, {
     let (bill, contact, event, task) = inbox_fixture(&e).await;
     let inbox = InboxService::new(e.store.clone());
+    // approval_needed rows go only to adults who can read the owners-only source.
+    let to: Vec<uuid::Uuid> = sqlx::query_scalar(
+        "SELECT DISTINCT member_id FROM notification WHERE trigger = 'approval_needed'",
+    )
+    .fetch_all(&e.pool)
+    .await
+    .unwrap();
+    assert_eq!(to, vec![e.pat.as_uuid()]);
     let v = inbox.list(e.h, e.pat()).await.unwrap();
     assert_eq!(v.counts, InboxCounts::new(1, 1, 1, 1));
     assert_eq!(v.items.len(), 4);
@@ -1038,30 +1048,111 @@ test!(inbox_lists_all_kinds_by_viewer, e, {
         .unwrap();
     assert_eq!(only_bills.items.len(), 1);
 
-    // Sam is an adult but cannot read the source: items show, message links do not.
-    let sam = inbox.list(e.h, Viewer::adult(e.sam)).await.unwrap();
-    assert_eq!(sam.items.len(), 4);
-    assert!(sam.items.iter().all(|i| match i {
+    // Sam is an adult but cannot read the owners-only source: nothing shows, nothing is allowed.
+    let sam = Viewer::adult(e.sam);
+    let v = inbox.list(e.h, sam).await.unwrap();
+    assert!(v.items.is_empty());
+    assert_eq!(v.counts.total, 0);
+    assert_eq!(inbox.counts(e.h, sam).await.unwrap().total, 0);
+    assert!(matches!(
+        inbox
+            .approve_bill(
+                e.h,
+                bill,
+                BillPatch {
+                    payee: None,
+                    amount_minor: None,
+                    currency: None,
+                    due_on: None,
+                    account_hint: None,
+                    status: None,
+                },
+                sam
+            )
+            .await,
+        Err(MailError::Forbidden)
+    ));
+    assert!(matches!(
+        inbox.reject_bill(e.h, bill, sam).await,
+        Err(MailError::Forbidden)
+    ));
+    assert!(matches!(
+        inbox
+            .approve_contact(
+                e.h,
+                contact,
+                ContactApproval {
+                    name: None,
+                    role: None,
+                    member: None
+                },
+                sam
+            )
+            .await,
+        Err(MailError::Forbidden)
+    ));
+    assert!(matches!(
+        inbox.reject_contact(e.h, contact, sam).await,
+        Err(MailError::Forbidden)
+    ));
+    assert!(matches!(
+        inbox.ensure_event(e.h, sam, event).await,
+        Err(MailError::Forbidden)
+    ));
+    assert!(matches!(
+        inbox.ensure_task(e.h, sam, task).await,
+        Err(MailError::Forbidden)
+    ));
+    assert!(inbox.ensure_event(e.h, e.pat(), event).await.is_ok());
+
+    // A household-visible source is readable by every adult.
+    sqlx::query("UPDATE mail_source SET visibility = 'household'")
+        .execute(&e.pool)
+        .await
+        .unwrap();
+    let v = inbox.list(e.h, sam).await.unwrap();
+    assert_eq!(v.items.len(), 4);
+    assert!(inbox.ensure_event(e.h, sam, event).await.is_ok());
+
+    // Orphaned items (the source is archived) show for every adult, without links.
+    sqlx::query("UPDATE mail_source SET visibility = 'owners', archived_at = now()")
+        .execute(&e.pool)
+        .await
+        .unwrap();
+    let v = inbox.list(e.h, sam).await.unwrap();
+    assert_eq!(v.items.len(), 4);
+    assert!(v.items.iter().all(|i| match i {
         InboxItem::Event { event } => event.message.is_none() && event.external_url.is_none(),
         InboxItem::Bill { bill } => bill.message.is_none(),
         InboxItem::Contact { contact } => contact.message.is_none(),
         InboxItem::Task { .. } => true,
     }));
 
-    // Devices: counts only, unless elevated. Children: nothing.
-    let plain = Viewer {
-        device: true,
-        ..Default::default()
-    };
-    let v = inbox.list(e.h, plain).await.unwrap();
-    assert!(v.items.is_empty());
-    assert_eq!(v.counts.total, 4);
-    let elevated = Viewer {
-        device: true,
-        elevated: true,
-        ..Default::default()
-    };
-    assert_eq!(inbox.list(e.h, elevated).await.unwrap().items.len(), 4);
+    // Devices, elevated or not, and children are refused.
+    for device in [
+        Viewer {
+            device: true,
+            ..Default::default()
+        },
+        Viewer {
+            device: true,
+            elevated: true,
+            ..Default::default()
+        },
+    ] {
+        assert!(matches!(
+            inbox.list(e.h, device).await,
+            Err(MailError::Forbidden)
+        ));
+        assert!(matches!(
+            inbox.counts(e.h, device).await,
+            Err(MailError::Forbidden)
+        ));
+        assert!(matches!(
+            inbox.reject_bill(e.h, bill, device).await,
+            Err(MailError::Forbidden)
+        ));
+    }
     let child = Viewer {
         member: Some(e.ava),
         role: Some(Role::Child),
@@ -1131,10 +1222,7 @@ test!(inbox_bill_approve_and_reject, e, {
         account_hint: None,
         status: None,
     };
-    let v = inbox
-        .approve_bill(e.h, keep, patch, Some(e.pat))
-        .await
-        .unwrap();
+    let v = inbox.approve_bill(e.h, keep, patch, e.pat()).await.unwrap();
     assert_eq!(v.status, BillStatus::Open);
     assert_eq!(v.amount_minor, 5250);
     assert_eq!(v.due_on, chrono::NaiveDate::from_ymd_opt(2026, 11, 30));
@@ -1154,14 +1242,14 @@ test!(inbox_bill_approve_and_reject, e, {
                 account_hint: None,
                 status: None,
             },
-            None,
+            e.pat(),
         )
         .await
         .unwrap();
     assert_eq!(again.status, BillStatus::Open);
     assert_eq!(e.jobs("tasks.from_bill").await.len(), 1);
 
-    let v = inbox.reject_bill(e.h, drop, Some(e.pat)).await.unwrap();
+    let v = inbox.reject_bill(e.h, drop, e.pat()).await.unwrap();
     assert_eq!(v.status, BillStatus::Dismissed);
     // Both answers are human decisions on `email.is_bill`.
     let human: Vec<(serde_json::Value, bool)> = sqlx::query_as(
@@ -1188,12 +1276,12 @@ test!(inbox_bill_approve_and_reject, e, {
                     account_hint: None,
                     status: None,
                 },
-                None
+                e.pat()
             )
             .await,
         Err(MailError::Conflict)
     ));
-    assert_eq!(inbox.counts(e.h).await.unwrap().bill, 0);
+    assert_eq!(inbox.counts(e.h, e.pat()).await.unwrap().bill, 0);
 });
 
 test!(inbox_contact_approve_and_reject, e, {
@@ -1231,7 +1319,7 @@ test!(inbox_contact_approve_and_reject, e, {
                 role: Some(ContactRole::Teacher),
                 member: None,
             },
-            Some(e.pat),
+            e.pat(),
         )
         .await
         .unwrap();
@@ -1248,11 +1336,8 @@ test!(inbox_contact_approve_and_reject, e, {
     .await
     .unwrap();
     assert_eq!(linked, 1);
-    inbox
-        .reject_contact(e.h, newcomer, Some(e.pat))
-        .await
-        .unwrap();
-    assert_eq!(inbox.counts(e.h).await.unwrap().contact, 0);
+    inbox.reject_contact(e.h, newcomer, e.pat()).await.unwrap();
+    assert_eq!(inbox.counts(e.h, e.pat()).await.unwrap().contact, 0);
     // The rejected address is remembered: the same sender is not suggested again.
     let again = e
         .insert(
@@ -1283,7 +1368,7 @@ test!(inbox_contact_approve_and_reject, e, {
                     role: None,
                     member: None
                 },
-                None
+                e.pat()
             )
             .await,
         Err(MailError::Conflict)
@@ -1325,7 +1410,7 @@ test!(expiry_marks_stale_proposals, e, {
     );
     assert_eq!(
         InboxService::new(e.store.clone())
-            .counts(e.h)
+            .counts(e.h, e.pat())
             .await
             .unwrap()
             .total,

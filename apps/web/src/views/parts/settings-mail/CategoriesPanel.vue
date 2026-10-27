@@ -73,7 +73,7 @@ async function add() {
 
 <template>
   <div>
-    <p v-if="error" class="settings-error" role="alert">{{ error }}</p>
+    <p v-if="error" class="text-danger" role="alert">{{ error }}</p>
     <table class="cats">
       <thead>
         <tr>
@@ -115,7 +115,7 @@ async function add() {
             />
           </td>
           <td>
-            <label v-for="a in ACTIONS" :key="a.key" class="inline">
+            <label v-for="a in ACTIONS" :key="a.key" class="field-inline">
               <input
                 type="checkbox"
                 :checked="c.auto_actions.includes(a.key)"
@@ -148,12 +148,12 @@ async function add() {
         </tr>
       </tbody>
     </table>
-    <p class="settings-note">
+    <p class="muted">
       Auto actions only run on sources that are not read only. Archiving a category keeps its old
       mail labelled.
     </p>
 
-    <form class="settings-form" data-testid="add-category" @submit.prevent="add">
+    <form class="form" data-testid="add-category" @submit.prevent="add">
       <h3>Add a category</h3>
       <label>
         Key (lower case letters, digits, underscore)
@@ -166,12 +166,12 @@ async function add() {
           <option v-for="b in BEHAVIOURS" :key="b.key" :value="b.key">{{ b.label }}</option>
         </select>
       </label>
-      <label class="inline">
+      <label class="field-inline">
         <input v-model="form.notify" type="checkbox" /> Notify if time-sensitive
       </label>
       <fieldset>
         <legend>Automatic actions</legend>
-        <label v-for="a in ACTIONS" :key="a.key" class="inline">
+        <label v-for="a in ACTIONS" :key="a.key" class="field-inline">
           <input v-model="form.actions" type="checkbox" :value="a.key" /> {{ a.label }}
         </label>
       </fieldset>

@@ -1,0 +1,11 @@
+# Overlay: build fa-server from this checkout instead of pulling the release image.
+#   docker compose -f compose.yaml -f compose.build.yaml up -d --build
+services:
+  init:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile

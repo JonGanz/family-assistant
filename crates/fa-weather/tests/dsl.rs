@@ -141,6 +141,19 @@ fn today_window_ends_at_local_midnight() {
 }
 
 #[test]
+fn today_window_includes_the_current_hour() {
+    // 21:30 UTC = 23:30 CEST: only index 11 (21:00Z) is left in the day.
+    let s = base().at("temperature_2m", 11, Some(25.0));
+    let now = utc(2026, 10, 24, 21, 30);
+    let e = ev(&s, "max(temp_c, today) > 0", now);
+    assert_eq!(e.value, Some(25.0));
+    assert_eq!(
+        e.when,
+        Some((utc(2026, 10, 24, 21, 0), utc(2026, 10, 24, 22, 0)))
+    );
+}
+
+#[test]
 fn tonight_before_18_starts_at_18_and_crosses_dst() {
     // index 5 = 15:00Z (before the window), index 6 = 16:00Z = 18:00 CEST.
     let s = base()

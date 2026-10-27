@@ -1,12 +1,12 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { api, type HouseholdPatch, type HouseholdView } from '../api/client'
+import { api, type HouseholdPatch, type HouseholdViewExt } from '../api/client'
 import { isConflict } from '../api/http'
 import type { LiveEventKind } from '../composables/useLiveStream'
 import { useSessionStore } from './session'
 
 export const useHouseholdStore = defineStore('household', () => {
-  const view = ref<HouseholdView | null>(null)
+  const view = ref<HouseholdViewExt | null>(null)
   const error = ref<string | null>(null)
   const conflict = ref(false)
   const loaded = ref(false)

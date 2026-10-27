@@ -23,6 +23,7 @@ pub fn weather_config(cfg: &ProcessConfig) -> WeatherConfig {
     WeatherConfig {
         open_meteo_url: cfg.open_meteo_url.as_str().to_owned(),
         allow_http: cfg.allow_http_feeds,
+        allow_private_hosts: cfg.allow_private_hosts,
     }
 }
 
@@ -30,7 +31,8 @@ pub fn notify_config(cfg: &ProcessConfig) -> fa_notify::NotifyConfig {
     fa_notify::NotifyConfig {
         ntfy_url: cfg.ntfy_url.as_ref().map(|u| u.as_str().to_owned()),
         ntfy_token: cfg.ntfy_token.as_ref().map(|t| t.expose().to_owned()),
-        public_base_url: cfg.public_base_url.clone(),
+        public_base_url: link_base(cfg),
+        subscribe_base: cfg.ntfy_subscribe_base(),
     }
 }
 
@@ -47,11 +49,14 @@ fn google_client(cfg: &ProcessConfig) -> Option<GoogleOAuth> {
     Some(GoogleOAuth::new(id, secret))
 }
 
-/// The base of the OAuth redirect: `FA_PUBLIC_URL`, else the public base URL of the app.
-fn public_url(cfg: &ProcessConfig) -> String {
+/// The base of the OAuth redirect and of links in notifications: `FA_PUBLIC_URL`, else the
+/// tailnet address when set, else the effective public base URL.
+fn link_base(cfg: &ProcessConfig) -> String {
     cfg.public_url
         .as_ref()
-        .map_or_else(|| cfg.public_base_url.clone(), |u| u.as_str().to_owned())
+        .map(|u| u.as_str())
+        .or(cfg.tailnet_base_url.as_deref())
+        .unwrap_or_else(|| cfg.effective_base_url())
         .trim_end_matches('/')
         .to_owned()
 }
@@ -77,13 +82,14 @@ pub fn mail_deps(
         .is_some_and(|u| u.scheme() == "http");
     Ok(Arc::new(MailDeps {
         store: store.clone(),
-        http: Http::new(cfg.allow_http_feeds || stub)?,
+        http: Http::with_policy(cfg.allow_http_feeds || stub, cfg.allow_private_hosts)?,
         tokens: Arc::new(oauth.clone()),
         key: Arc::new(load_key(cfg)?),
         cfg: MailConfig {
             gmail_api_base: google_api_base(cfg),
             allow_plain_imap: cfg.allow_plain_imap,
             imap_tls_insecure: cfg.imap_tls_insecure,
+            allow_private_hosts: cfg.allow_private_hosts,
         },
     }))
 }
@@ -93,8 +99,8 @@ pub fn build_services(cfg: &ProcessConfig, store: &Store) -> Result<Services> {
         store.clone(),
         load_key(cfg)?,
         google_client(cfg),
-        public_url(cfg),
-        Http::new(cfg.allow_http_feeds)?,
+        link_base(cfg),
+        Http::with_policy(cfg.allow_http_feeds, cfg.allow_private_hosts)?,
     );
     let calendar = CalendarService::new(
         store.clone(),
@@ -102,6 +108,7 @@ pub fn build_services(cfg: &ProcessConfig, store: &Store) -> Result<Services> {
         ConnectorConfig {
             allow_http: cfg.allow_http_feeds,
             google_api_base: google_api_base(cfg),
+            allow_private_hosts: cfg.allow_private_hosts,
         },
         Arc::new(oauth.clone()),
     )?;

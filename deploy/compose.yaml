@@ -1,0 +1,189 @@
+# Family Assistant: the install file (M3.5). One download, no .env needed.
+#   curl -fsSLO <raw URL of this file> && docker compose up -d
+# Optional: copy .env.example to .env to change ports, version, backups or Tailscale.
+# Requires Docker Compose 2.23.1 or newer (inline `configs: content:`).
+#
+#   Core node (default):          docker compose up -d
+#   With Tailscale HTTPS:         docker compose --profile tailscale up -d
+#   CPU sidecars (M4):            docker compose --profile ai-cpu up -d
+#   GPU node or single machine:   docker compose --profile gpu up -d
+#   Build from a checkout:        docker compose -f compose.yaml -f compose.build.yaml up -d --build
+
+name: fa
+
+x-fa-server: &fa-server
+  image: ghcr.io/jonganz/fa-server:${FA_VERSION:-latest}
+  restart: unless-stopped
+  networks: [fa]
+
+services:
+  # One-shot: creates the master key and the database password in the fa-secrets volume.
+  # Never overwrites existing files.
+  init:
+    <<: *fa-server
+    restart: "no"
+    user: "0:0"
+    command: ["init"]
+    volumes:
+      - fa-secrets:/run/fa-secrets
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    networks: [fa]
+    depends_on:
+      init:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_USER: fa
+      POSTGRES_DB: fa
+      POSTGRES_PASSWORD_FILE: /run/fa-secrets/db_password
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - fa-secrets:/run/fa-secrets:ro
+    # Not published to the host on purpose.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fa -d fa"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    <<: *fa-server
+    command: ["serve", "all"]
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://fa@postgres:5432/fa
+      FA_DATABASE_PASSWORD_FILE: /run/fa-secrets/db_password
+      FA_MASTER_KEY_PATH: /run/fa-secrets/master_key
+      FA_BIND_ADDR: 0.0.0.0:8080
+      FA_LOG_FORMAT: json
+      FA_LOG_LEVEL: ${FA_LOG_LEVEL:-info}
+      FA_BACKUP_DIR: /backups
+      # Defaults, not locks: the UI (Settings, System) can change them (D-075).
+      FA_DEFAULT_NTFY_URL: http://ntfy:80
+      FA_DEFAULT_TRUSTED_PROXIES: 127.0.0.0/8,::1/128,172.30.89.10/32
+    ports:
+      - "${FA_HTTP_HOST_IP:-0.0.0.0}:${FA_HTTP_PORT:-8080}:8080"
+    volumes:
+      - fa-secrets:/run/fa-secrets:ro
+      - ${BACKUP_DIR:-fa-backups}:/backups:ro
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8080/readyz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
+
+  ntfy:
+    image: binwiederhier/ntfy:v2.17.0
+    restart: unless-stopped
+    networks: [fa]
+    command: ["serve"]
+    environment:
+      NTFY_BASE_URL: ${NTFY_BASE_URL:-http://localhost:8090}
+      NTFY_CACHE_FILE: /var/cache/ntfy/cache.db
+      # iPhones only: relay wake-ups through ntfy.sh (see .env.example).
+      NTFY_UPSTREAM_BASE_URL: ${NTFY_UPSTREAM_BASE_URL:-}
+    ports:
+      - "${FA_HTTP_HOST_IP:-0.0.0.0}:${FA_NTFY_PORT:-8090}:80"
+    volumes:
+      - ntfy-cache:/var/cache/ntfy
+
+  backup:
+    image: prodrigestivill/postgres-backup-local:16
+    restart: unless-stopped
+    networks: [fa]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: fa
+      POSTGRES_USER: fa
+      POSTGRES_PASSWORD_FILE: /run/fa-secrets/db_password
+      POSTGRES_EXTRA_OPTS: "-Fc"
+      SCHEDULE: "@daily"
+      BACKUP_KEEP_DAYS: 7
+      BACKUP_KEEP_WEEKS: 4
+      BACKUP_KEEP_MONTHS: 6
+      HEALTHCHECK_PORT: 8080
+    volumes:
+      - fa-secrets:/run/fa-secrets:ro
+      - ${BACKUP_DIR:-fa-backups}:/backups
+
+  # ---- profile tailscale: HTTPS on your tailnet (D-065, D-077) ------------------
+  tailscale:
+    profiles: ["tailscale"]
+    image: tailscale/tailscale:v1.104.2
+    restart: unless-stopped
+    hostname: ${TS_HOSTNAME:-family}
+    networks:
+      fa:
+        ipv4_address: 172.30.89.10
+    environment:
+      TS_AUTHKEY: ${TS_AUTHKEY:-}
+      TS_HOSTNAME: ${TS_HOSTNAME:-family}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "true"
+      TS_SERVE_CONFIG: /config/serve.json
+    volumes:
+      - ts-state:/var/lib/tailscale
+    configs:
+      - source: ts_serve
+        target: /config/serve.json
+    depends_on:
+      - app
+
+  # ---- profile ai-cpu (M4): placeholders, not functional yet --------------------
+  # s1-small:
+  #   profiles: ["ai-cpu"]
+  #   image: <pinned System One sidecar image@sha256:...>   # D-025, D-026
+
+  # ---- profile gpu: GPU node, or a single machine that runs everything ---------
+  ollama:
+    profiles: ["gpu"]
+    image: ollama/ollama:latest   # pin a version or digest for production
+    restart: unless-stopped
+    networks: [fa]
+    ports:
+      - "${OLLAMA_BIND:-127.0.0.1}:11434:11434"
+    volumes:
+      - ollama-models:/root/.ollama
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+networks:
+  fa:
+    ipam:
+      config:
+        - subnet: 172.30.89.0/24
+
+configs:
+  # `$$` keeps ${TS_CERT_DOMAIN} literal: Tailscale fills it in, Compose must not.
+  ts_serve:
+    content: |
+      {
+        "TCP": { "443": { "HTTPS": true }, "8443": { "HTTPS": true } },
+        "Web": {
+          "$${TS_CERT_DOMAIN}:443": { "Handlers": { "/": { "Proxy": "http://app:8080" } } },
+          "$${TS_CERT_DOMAIN}:8443": { "Handlers": { "/": { "Proxy": "http://ntfy:80" } } }
+        }
+      }
+
+volumes:
+  fa-secrets:
+  pgdata:
+  fa-backups:
+  ntfy-cache:
+  ts-state:
+  ollama-models:

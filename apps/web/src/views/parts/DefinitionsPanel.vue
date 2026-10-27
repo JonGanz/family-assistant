@@ -12,7 +12,6 @@ import { useMembersStore } from '../../stores/members'
 import { describeError } from '../shared'
 import DefinitionEditor from './DefinitionEditor.vue'
 import { formFromView, toPatch } from './definitionForm'
-import './settings.css'
 
 const route = useRoute()
 const defs = useDefinitionsStore()
@@ -51,16 +50,16 @@ const remove = (d: TaskDefinitionView) => {
     <ErrorBanner v-if="defs.error" :message="defs.error" />
     <ErrorBanner v-if="defs.conflict && editing === null" conflict @reload="defs.load()" />
     <ErrorBanner v-if="error" :message="error" />
-    <p v-if="lists.loaded && lists.items.length === 0" class="settings-note">
+    <p v-if="lists.loaded && lists.items.length === 0" class="muted">
       Create a list first (Lists tab).
     </p>
-    <ul class="settings-list">
+    <ul class="card-list">
       <li v-for="d in defs.items" :key="d.id" :data-testid="`def-${d.title}`">
         <template v-if="editing !== d.id">
           <strong>{{ d.title }}</strong>
           <span v-if="d.paused" class="badge needs_reauth">paused</span>
           <span v-if="d.condition_ok === false" class="badge">waiting for weather</span>
-          <p class="settings-note">
+          <p class="muted">
             {{ listName(d.list) }} · {{ scheduleSummary(d.schedule) }} · {{ d.strategy }}
             <template v-if="d.next_due_at"> · next {{ d.next_due_at.slice(0, 10) }}</template>
           </p>

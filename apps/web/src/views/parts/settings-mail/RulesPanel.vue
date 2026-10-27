@@ -107,11 +107,11 @@ const toggleEnabled = async (id: string, v: boolean) => {
 
 <template>
   <div>
-    <p v-if="error && editing === null" class="settings-error" role="alert">{{ error }}</p>
-    <ul class="settings-list">
+    <p v-if="error && editing === null" class="text-danger" role="alert">{{ error }}</p>
+    <ul class="card-list">
       <li v-for="r in store.rules" :key="r.id" :data-testid="`rule-${r.name}`">
         <div class="head">
-          <label class="inline">
+          <label class="field-inline">
             <input
               type="checkbox"
               :checked="r.enabled"
@@ -120,7 +120,7 @@ const toggleEnabled = async (id: string, v: boolean) => {
             />
             <strong>{{ r.name }}</strong>
           </label>
-          <span class="settings-note">
+          <span class="muted">
             {{ dpLabel(r.decision_point) }} = {{ String(r.value) }} when
             {{ describeConditions(r.conditions) }} (priority {{ r.priority }})
           </span>
@@ -129,15 +129,10 @@ const toggleEnabled = async (id: string, v: boolean) => {
         </div>
       </li>
     </ul>
-    <p v-if="!store.rules.length && store.loaded" class="settings-note">No rules yet.</p>
+    <p v-if="!store.rules.length && store.loaded" class="muted">No rules yet.</p>
     <button v-if="editing === null" type="button" @click="open('new')">Add a rule</button>
 
-    <form
-      v-if="editing !== null"
-      class="settings-form"
-      data-testid="rule-form"
-      @submit.prevent="save"
-    >
+    <form v-if="editing !== null" class="form" data-testid="rule-form" @submit.prevent="save">
       <h3>{{ editing === 'new' ? 'New rule' : 'Edit rule' }}</h3>
       <label>Name <input v-model="form.name" name="name" required /></label>
       <label>
@@ -230,9 +225,9 @@ const toggleEnabled = async (id: string, v: boolean) => {
           step="0.05"
         />
       </label>
-      <label class="inline"><input v-model="form.enabled" type="checkbox" /> Enabled</label>
+      <label class="field-inline"><input v-model="form.enabled" type="checkbox" /> Enabled</label>
 
-      <p v-if="error" class="settings-error" role="alert" data-testid="rule-error">{{ error }}</p>
+      <p v-if="error" class="text-danger" role="alert" data-testid="rule-error">{{ error }}</p>
       <div>
         <button type="button" @click="test">Test on recent mail</button>
         <button type="submit">Save</button>

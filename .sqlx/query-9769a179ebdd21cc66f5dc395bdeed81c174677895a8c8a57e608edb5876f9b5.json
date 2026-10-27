@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "INSERT INTO advisory (id, household_id, rule_id, text, severity, valid_from, valid_until,\n                                   source, dedupe_key)\n             VALUES ($1, app_household(), $2, $3, $4, $5, $6, $7, $8)\n             ON CONFLICT (household_id, dedupe_key) DO UPDATE SET\n                 rule_id = EXCLUDED.rule_id, text = EXCLUDED.text, severity = EXCLUDED.severity,\n                 valid_from = EXCLUDED.valid_from, valid_until = EXCLUDED.valid_until,\n                 source = EXCLUDED.source\n             WHERE (advisory.rule_id, advisory.text, advisory.severity, advisory.valid_from,\n                    advisory.valid_until, advisory.source)\n                   IS DISTINCT FROM\n                   (EXCLUDED.rule_id, EXCLUDED.text, EXCLUDED.severity, EXCLUDED.valid_from,\n                    EXCLUDED.valid_until, EXCLUDED.source)\n             RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Timestamptz",
+        "Timestamptz",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "9769a179ebdd21cc66f5dc395bdeed81c174677895a8c8a57e608edb5876f9b5"
+}

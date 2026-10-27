@@ -3,12 +3,14 @@ import { computed, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import AppLayout from './layouts/AppLayout.vue'
 import KioskLayout from './layouts/KioskLayout.vue'
+import SetupLayout from './layouts/SetupLayout.vue'
 import { useHouseholdStore } from './stores/household'
 import { useLiveStore } from './stores/live'
 import { useSessionStore } from './stores/session'
 
 const route = useRoute()
-const layout = computed(() => (route.meta.layout === 'kiosk' ? KioskLayout : AppLayout))
+const LAYOUTS = { kiosk: KioskLayout, setup: SetupLayout, app: AppLayout }
+const layout = computed(() => LAYOUTS[route.meta.layout ?? 'app'])
 
 const session = useSessionStore()
 const household = useHouseholdStore()

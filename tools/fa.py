@@ -105,6 +105,30 @@ def edit(path, pairs):
 import os
 
 
+def check_yaml(files):
+    """Parses each file with PyYAML, or with js-yaml from the web app's node_modules. Returns errors."""
+    try:
+        import yaml
+    except ImportError:
+        yaml = None
+    if yaml:
+        bad = []
+        for f in files:
+            try:
+                yaml.safe_load(open(f, encoding="utf-8"))
+            except Exception as e:  # noqa: BLE001
+                bad.append(f"{f}: {e}")
+        return bad
+    libs = sorted(glob.glob("apps/web/node_modules/.pnpm/js-yaml@*/node_modules/js-yaml"))
+    if not libs:
+        return ["no YAML parser: install PyYAML or run `corepack pnpm@9 install` in apps/web"]
+    js = ("const y=require(process.argv[1]),fs=require('fs');let bad=0;"
+          "for(const f of process.argv.slice(2)){try{y.load(fs.readFileSync(f,'utf8'))}catch(e){console.log(f+': '+e.message);bad=1}}"
+          "process.exit(bad)")
+    r = subprocess.run(["node", "-e", js, os.path.abspath(libs[-1]), *files], capture_output=True, text=True)
+    return [l for l in r.stdout.splitlines() if l] or ([r.stderr.strip()] if r.returncode else [])
+
+
 def parse_fm(path):
     """Return dict of front-matter keys (raw string values) or None if there is none."""
     lines = open(path, encoding="utf-8").read().split("\n")
@@ -214,9 +238,14 @@ def check():
 if __name__ == "__main__":
     import argparse, sys
     ap = argparse.ArgumentParser(prog="fa.py")
-    ap.add_argument("cmd", choices=["check"])
-    ap.parse_args()
+    ap.add_argument("cmd", choices=["check", "check-yaml"])
+    ap.add_argument("files", nargs="*")
+    a = ap.parse_args()
     os.chdir(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+    if a.cmd == "check-yaml":
+        bad = check_yaml(a.files)
+        print("\n".join(bad) if bad else f"yaml OK ({len(a.files)} file(s))")
+        sys.exit(1 if bad else 0)
     e = check()
     for line in e:
         print(line)

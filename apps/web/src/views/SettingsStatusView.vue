@@ -6,7 +6,6 @@ import PageHeader from '../components/PageHeader.vue'
 import { formatTime } from '../lib/time'
 import { useHouseholdStore } from '../stores/household'
 import { describeError } from './shared'
-import './parts/settings.css'
 
 const household = useHouseholdStore()
 const status = ref<StatusView | null>(null)
@@ -32,7 +31,7 @@ function when(iso: string | null | undefined): string {
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader eyebrow="Settings" title="Status">
       <template #actions>
         <button type="button" @click="load">Refresh</button>

@@ -188,6 +188,10 @@ pub struct Household {
     pub inbox: crate::mail::InboxSettings,
     pub retention_mail: crate::mail::MailRetention,
     pub bill_lead_days: i32,
+    /// Dashboard shows a per-adult pending-approvals count.
+    pub dashboard_pending_approvals: bool,
+    /// Set when the setup wizard is finished (RFC 3339 on the wire).
+    pub setup_completed_at: Option<DateTime<Utc>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }

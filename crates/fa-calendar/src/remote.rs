@@ -22,6 +22,8 @@ use crate::expand::{ExpandOptions, expand, local_to_utc};
 pub struct ConnectorConfig {
     /// Allows plain `http://` feeds (LAN CalDAV servers and tests).
     pub allow_http: bool,
+    /// Allows loopback, LAN and other private addresses (C-05).
+    pub allow_private_hosts: bool,
     /// Base URL of the Google APIs (`https://www.googleapis.com`).
     pub google_api_base: String,
 }
@@ -30,6 +32,7 @@ impl Default for ConnectorConfig {
     fn default() -> Self {
         Self {
             allow_http: false,
+            allow_private_hosts: false,
             google_api_base: fa_connectors::google::DEFAULT_API_BASE.to_owned(),
         }
     }

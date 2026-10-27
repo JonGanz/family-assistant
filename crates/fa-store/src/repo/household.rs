@@ -47,6 +47,8 @@ struct Row {
     mail_content_policy: String,
     mail_examples_per_category: i32,
     mail_max_pending_days: i32,
+    dashboard_pending_approvals: bool,
+    setup_completed_at: Option<DateTime<Utc>>,
     version: i32,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
@@ -97,6 +99,8 @@ impl TryFrom<Row> for Versioned<Household> {
                     max_pending_days: r.mail_max_pending_days,
                 },
                 bill_lead_days: r.bill_lead_days,
+                dashboard_pending_approvals: r.dashboard_pending_approvals,
+                setup_completed_at: r.setup_completed_at,
                 created_at: r.created_at,
                 updated_at: r.updated_at,
             },
@@ -121,15 +125,17 @@ impl HouseholdRepo {
                                     events_extract_threshold, events_route_threshold, bill_lead_days,
                                     inbox_task_expiry_days, inbox_contact_expiry_days,
                                     mail_content_policy, mail_examples_per_category,
-                                    mail_max_pending_days)
+                                    mail_max_pending_days, dashboard_pending_approvals,
+                                    setup_completed_at)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-                     $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29)
+                     $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
              RETURNING id, name, tz, location_lat, location_lon, location_label,
                        meal_plan_horizon_weeks, dashboard_completion_override, units,
                        calendar_past_days, calendar_future_days, weather_retention_days,
                     private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, currency, gender_terms, disabled_signals, events_auto_write, events_extract_threshold,
                        events_route_threshold, bill_lead_days, inbox_task_expiry_days, inbox_contact_expiry_days,
-                       mail_content_policy, mail_examples_per_category, mail_max_pending_days, version,
+                       mail_content_policy, mail_examples_per_category, mail_max_pending_days, dashboard_pending_approvals,
+                       setup_completed_at, version,
                        created_at, updated_at",
             h.id.as_uuid(),
             h.name,
@@ -159,7 +165,9 @@ impl HouseholdRepo {
             h.inbox.contact_expiry_days,
             enum_str(&h.retention_mail.content_policy),
             h.retention_mail.examples_per_category,
-            h.retention_mail.max_pending_days
+            h.retention_mail.max_pending_days,
+            h.dashboard_pending_approvals,
+            h.setup_completed_at
         )
         .fetch_one(conn)
         .await?;
@@ -177,7 +185,8 @@ impl HouseholdRepo {
                        calendar_past_days, calendar_future_days, weather_retention_days,
                     private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, currency, gender_terms, disabled_signals, events_auto_write, events_extract_threshold,
                        events_route_threshold, bill_lead_days, inbox_task_expiry_days, inbox_contact_expiry_days,
-                       mail_content_policy, mail_examples_per_category, mail_max_pending_days, version,
+                       mail_content_policy, mail_examples_per_category, mail_max_pending_days, dashboard_pending_approvals,
+                       setup_completed_at, version,
                     created_at, updated_at
              FROM household WHERE id = $1",
             id.as_uuid()
@@ -196,7 +205,8 @@ impl HouseholdRepo {
                        calendar_past_days, calendar_future_days, weather_retention_days,
                     private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, currency, gender_terms, disabled_signals, events_auto_write, events_extract_threshold,
                        events_route_threshold, bill_lead_days, inbox_task_expiry_days, inbox_contact_expiry_days,
-                       mail_content_policy, mail_examples_per_category, mail_max_pending_days, version,
+                       mail_content_policy, mail_examples_per_category, mail_max_pending_days, dashboard_pending_approvals,
+                       setup_completed_at, version,
                     created_at, updated_at
              FROM household ORDER BY created_at, id"
         )
@@ -226,8 +236,8 @@ impl HouseholdRepo {
                     events_route_threshold = $23, bill_lead_days = $24, inbox_task_expiry_days = $25,
                     inbox_contact_expiry_days = $26, mail_content_policy = $27,
                     mail_examples_per_category = $28, mail_max_pending_days = $29,
-                    version = version + 1
-             WHERE id = $1 AND version = $30
+                    dashboard_pending_approvals = $30, version = version + 1
+             WHERE id = $1 AND version = $31
              RETURNING version",
             h.id.as_uuid(),
             h.name,
@@ -258,6 +268,7 @@ impl HouseholdRepo {
             enum_str(&h.retention_mail.content_policy),
             h.retention_mail.examples_per_category,
             h.retention_mail.max_pending_days,
+            h.dashboard_pending_approvals,
             expected_version
         )
         .fetch_optional(&mut *conn)
@@ -303,8 +314,9 @@ impl HouseholdRepo {
                     mail_content_policy = COALESCE($25, mail_content_policy),
                     mail_examples_per_category = COALESCE($26, mail_examples_per_category),
                     mail_max_pending_days = COALESCE($27, mail_max_pending_days),
+                    dashboard_pending_approvals = COALESCE($28, dashboard_pending_approvals),
                     version = version + 1
-             WHERE id = $1 AND version = $28
+             WHERE id = $1 AND version = $29
              RETURNING version",
             id.as_uuid(),
             p.name,
@@ -333,6 +345,7 @@ impl HouseholdRepo {
             p.retention_mail.as_ref().map(|r| enum_str(&r.content_policy)),
             p.retention_mail.as_ref().map(|r| r.examples_per_category),
             p.retention_mail.as_ref().map(|r| r.max_pending_days),
+            p.dashboard_pending_approvals,
             expected_version
         )
         .fetch_optional(&mut *conn)

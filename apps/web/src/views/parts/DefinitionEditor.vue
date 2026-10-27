@@ -22,7 +22,6 @@ import {
   type Strategy,
 } from './definitionForm'
 import { useDefinitionValidation } from './useDefinitionValidation'
-import './settings.css'
 
 const props = defineProps<{ definition: TaskDefinitionView | null; today: string }>()
 const emit = defineEmits<{ done: [] }>()
@@ -97,7 +96,7 @@ async function save() {
 </script>
 
 <template>
-  <form class="settings-form editor" @submit.prevent="save">
+  <form class="form editor" @submit.prevent="save">
     <label>Title <input v-model="form.title" name="title" required /></label>
     <label>
       List
@@ -113,7 +112,7 @@ async function save() {
 
     <fieldset>
       <legend>Schedule</legend>
-      <label class="inline">
+      <label class="field-inline">
         <input
           type="radio"
           name="schedule_kind"
@@ -122,7 +121,7 @@ async function save() {
         />
         Every N days after it's done
       </label>
-      <label class="inline">
+      <label class="field-inline">
         <input
           type="radio"
           name="schedule_kind"
@@ -143,7 +142,7 @@ async function save() {
       </label>
       <template v-else>
         <RruleBuilder v-model="form.rrule" />
-        <p v-if="rruleError" class="settings-error" data-testid="rrule-error">
+        <p v-if="rruleError" class="text-danger" data-testid="rrule-error">
           {{ rruleError.message }}
         </p>
       </template>
@@ -168,12 +167,10 @@ async function save() {
             {{ { roll_over: 'Roll over', auto_skip: 'Skip it', pile_up: 'Pile up' }[k] }}
           </option>
         </select>
-        <span class="settings-note" data-testid="on-missed-help">{{
-          ON_MISSED_HELP[form.onMissed]
-        }}</span>
+        <span class="muted" data-testid="on-missed-help">{{ ON_MISSED_HELP[form.onMissed] }}</span>
       </label>
       <div v-if="result?.next_dates.length" data-testid="next-dates">
-        <span class="settings-note">Next dates:</span>
+        <span class="muted">Next dates:</span>
         <ul class="dates">
           <li v-for="d in result.next_dates" :key="d">{{ d }}</li>
         </ul>
@@ -193,9 +190,9 @@ async function save() {
           <option value="rotation">Rotation</option>
           <option value="pool">Pool</option>
         </select>
-        <span class="settings-note">{{ STRATEGY_HELP[form.strategy] }}</span>
+        <span class="muted">{{ STRATEGY_HELP[form.strategy] }}</span>
       </label>
-      <label v-for="m in members.items" :key="m.id" class="inline">
+      <label v-for="m in members.items" :key="m.id" class="field-inline">
         <input
           type="checkbox"
           :checked="form.candidates.includes(m.id)"
@@ -227,7 +224,7 @@ async function save() {
             <option value="assignee_completion">only the person whose turn it is does it</option>
           </select>
         </label>
-        <label class="inline">
+        <label class="field-inline">
           <input v-model="form.skipAdvances" type="checkbox" name="skip_advances" />
           Skipping it also moves the turn on
         </label>
@@ -244,7 +241,7 @@ async function save() {
 
     <fieldset>
       <legend>Season (optional)</legend>
-      <label class="inline">
+      <label class="field-inline">
         <input v-model="form.seasonOn" type="checkbox" name="season_on" /> Only in part of the year
       </label>
       <template v-if="form.seasonOn">
@@ -278,23 +275,23 @@ async function save() {
         />
       </label>
       <div aria-live="polite">
-        <pre v-if="conditionError" class="settings-error mono" data-testid="condition-error"
+        <pre v-if="conditionError" class="text-danger mono" data-testid="condition-error"
           >{{ form.condition }}
 {{ marker }}
 {{ conditionError.message }}</pre>
-        <p v-else-if="pending" class="settings-note">Checking…</p>
-        <p v-else-if="failure" class="settings-error">{{ failure }}</p>
-        <p v-else-if="form.condition.trim() && result?.ok" class="settings-ok">
+        <p v-else-if="pending" class="muted">Checking…</p>
+        <p v-else-if="failure" class="text-danger">{{ failure }}</p>
+        <p v-else-if="form.condition.trim() && result?.ok" class="text-success">
           The condition is valid.
         </p>
       </div>
     </fieldset>
 
-    <label class="inline"
+    <label class="field-inline"
       ><input v-model="form.paused" type="checkbox" name="paused" /> Paused</label
     >
 
-    <ul v-if="problems.length" class="settings-note">
+    <ul v-if="problems.length" class="muted">
       <li v-for="p in problems" :key="p">{{ p }}</li>
     </ul>
     <ErrorBanner v-if="defs.conflict" conflict @reload="defs.load()" />

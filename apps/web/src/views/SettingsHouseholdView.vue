@@ -5,7 +5,6 @@ import ErrorBanner from '../components/ErrorBanner.vue'
 import PageHeader from '../components/PageHeader.vue'
 import { useHouseholdStore } from '../stores/household'
 import { describeError } from './shared'
-import './parts/settings.css'
 
 const household = useHouseholdStore()
 const form = reactive({
@@ -20,6 +19,7 @@ const form = reactive({
   retention: 7,
   asBusy: true,
   override: true,
+  pendingBadge: true,
   nowSize: 7,
   wDue: 1,
   wFlag: 0.5,
@@ -65,6 +65,7 @@ function fill() {
   form.retention = v.weather_retention_days
   form.asBusy = v.private_events_as_busy
   form.override = v.dashboard_completion_override
+  form.pendingBadge = v.dashboard_pending_approvals
   form.nowSize = v.now_list_size
   form.wDue = v.now_weights.due
   form.wFlag = v.now_weights.flag
@@ -138,6 +139,7 @@ async function save() {
       weather_retention_days: form.retention,
       private_events_as_busy: form.asBusy,
       dashboard_completion_override: form.override,
+      dashboard_pending_approvals: form.pendingBadge,
       now_list_size: form.nowSize,
       now_weights: { due: form.wDue, flag: form.wFlag, weather: form.wWeather },
       quiet_from: form.quietFrom,
@@ -171,7 +173,7 @@ async function reload() {
 </script>
 
 <template>
-  <section>
+  <section aria-labelledby="page-title">
     <PageHeader eyebrow="Settings" title="Household" />
     <form class="form" @submit.prevent="save">
       <label class="field">Name <input v-model="form.name" name="name" required /></label>
@@ -359,6 +361,10 @@ async function reload() {
           <input v-model.number="form.maxPending" name="max_pending_days" type="number" min="1" />
         </label>
       </fieldset>
+      <label class="field-inline">
+        <input v-model="form.pendingBadge" name="dashboard_pending_approvals" type="checkbox" />
+        Show each adult how many approvals wait for them on the dashboard (a count only)
+      </label>
       <label class="field-inline">
         <input v-model="form.asBusy" name="private_events_as_busy" type="checkbox" />
         Show adults' private events as "Busy" to children and on the dashboard

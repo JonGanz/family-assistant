@@ -22,6 +22,13 @@ export function visibleMembers(data: DashboardData, settings: DashboardSettings)
   return data.members.filter((m) => ids.has(m.id))
 }
 
+/** Pending approvals per member id; members with none (or a switched-off household) are absent. */
+export function approvalCounts(data: DashboardData): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const p of data.pending_approvals ?? []) if (p.count > 0) out[p.member_id] = p.count
+  return out
+}
+
 export function toEventLike(e: EventView): EventLike {
   return {
     id: e.id,
