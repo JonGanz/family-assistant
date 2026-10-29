@@ -13,7 +13,7 @@ const today = computed(() => dayKey(props.now, tz.value))
 const members = computed(() => props.data.members.map(toMemberLike))
 const keyDates = computed(() => datedTasks(props.data, tz.value, false))
 const groups = computed(() => {
-  const events = visibleEvents(props.data, props.settings).map(toEventLike)
+  const events = visibleEvents(props.data, props.settings).map((e) => toEventLike(e, members.value))
   const days = Math.max(1, props.settings.agenda_days)
   return [...groupByDay(events, tz.value, today.value, days)].map(([key, list]) => ({
     key,

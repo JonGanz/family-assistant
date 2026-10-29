@@ -7,7 +7,9 @@ use fa_domain::api::{
     CalendarPatch, CalendarView, EventView, RemoteCalendar as RemoteCalendarDto, SourcePatch,
     SourceTestResult, SourceView,
 };
-use fa_domain::calendar::{CalendarMeta, EventMeta, HouseholdFlags, Viewer, mask, view};
+use fa_domain::calendar::{
+    CalendarMeta, EventMeta, HouseholdFlags, Viewer, mask, merge_duplicates, view,
+};
 use fa_domain::{
     AccessTokenProvider, Calendar, CalendarId, CalendarSource, CalendarSourceId, EventId,
     Household, HouseholdId, MemberId, SecretKind, SourceKind, SourceState,
@@ -644,7 +646,7 @@ impl CalendarService {
                 .and_then(|s| s.get("external_url"))
                 .and_then(|u| u.as_str())
                 .map(str::to_owned);
-            out.push(mask(EventView {
+            out.push(EventView {
                 id: e.id,
                 calendar: e.calendar,
                 title: e.title,
@@ -657,11 +659,14 @@ impl CalendarService {
                 end_date: e.end_date,
                 members: ids,
                 color: r.color,
+                colors: vec![],
+                merged: false,
                 visibility,
                 external_url,
-            }));
+            });
         }
-        Ok(out)
+        // Merge on the unmasked views, then blank the Busy ones.
+        Ok(merge_duplicates(out).into_iter().map(mask).collect())
     }
 
     // ---- sync ----
@@ -915,6 +920,8 @@ fn sample_view(o: &NewOccurrence, color: Option<String>) -> EventView {
         end_date: o.end_date,
         members: vec![],
         color,
+        colors: vec![],
+        merged: false,
         visibility: fa_domain::Visibility::Full,
         external_url: None,
     }

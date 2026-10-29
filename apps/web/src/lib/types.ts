@@ -13,6 +13,8 @@ export interface EventLike {
   end_date?: string | null
   members: string[]
   color: string
+  /** More than one: the event is merged from several calendars; the stripe shows each. */
+  colors?: string[]
   visibility: Visibility
   source_url?: string | null
 }

@@ -2010,6 +2010,9 @@ export interface components {
             all_day: boolean;
             calendar?: null | components["schemas"]["CalendarId"];
             color?: string | null;
+            /** @description One calendar colour per merged copy of the event (see `merge_duplicates`); empty when any
+             *     copy has no colour, so the client falls back to the members' colours. */
+            colors?: string[];
             description?: string | null;
             /** Format: date-time */
             end_at: string;
@@ -2019,6 +2022,8 @@ export interface components {
             id: components["schemas"]["EventId"];
             location?: string | null;
             members: components["schemas"]["MemberId"][];
+            /** @description True when several calendars' copies of the same event were folded into this one. */
+            merged?: boolean;
             /** Format: date-time */
             start_at: string;
             /** Format: date */

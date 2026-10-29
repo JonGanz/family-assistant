@@ -9779,6 +9779,13 @@
               "null"
             ]
           },
+          "colors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "One calendar colour per merged copy of the event (see `merge_duplicates`); empty when any\ncopy has no colour, so the client falls back to the members' colours."
+          },
           "description": {
             "type": [
               "string",
@@ -9816,6 +9823,10 @@
             "items": {
               "$ref": "#/components/schemas/MemberId"
             }
+          },
+          "merged": {
+            "type": "boolean",
+            "description": "True when several calendars' copies of the same event were folded into this one."
           },
           "start_at": {
             "type": "string",

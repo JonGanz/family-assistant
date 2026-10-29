@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { stripeStyle } from '../lib/eventColors'
 import { formatRange } from '../lib/time'
 import type { EventLike, MemberLike } from '../lib/types'
 import MemberChip from './MemberChip.vue'
@@ -18,7 +19,7 @@ const chips = computed(() =>
 </script>
 
 <template>
-  <article class="event-card" :class="{ busy }" :style="{ borderLeftColor: event.color }">
+  <article class="event-card" :class="{ busy }" :style="stripeStyle(event)">
     <div class="time">{{ formatRange(event, tz, locale) }}</div>
     <div class="body">
       <div class="title">{{ busy ? 'Busy' : (event.title ?? '') }}</div>

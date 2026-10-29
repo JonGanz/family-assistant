@@ -1,4 +1,5 @@
 import type { DashboardData, DashboardSettings, EventView } from './types'
+import { eventColors } from '../lib/eventColors'
 import type { EventLike, MemberLike } from '../lib/types'
 import type { MemberPublic } from './types'
 
@@ -29,7 +30,8 @@ export function approvalCounts(data: DashboardData): Record<string, number> {
   return out
 }
 
-export function toEventLike(e: EventView): EventLike {
+export function toEventLike(e: EventView, members: MemberLike[] = []): EventLike {
+  const colors = eventColors(e, members, FALLBACK)
   return {
     id: e.id,
     title: e.title,
@@ -40,7 +42,8 @@ export function toEventLike(e: EventView): EventLike {
     start_date: e.start_date,
     end_date: e.end_date,
     members: e.members,
-    color: e.color ?? FALLBACK,
+    color: e.color ?? colors[0],
+    colors,
     visibility: e.visibility,
     source_url: e.external_url,
   }

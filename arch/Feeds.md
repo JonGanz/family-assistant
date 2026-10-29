@@ -2,7 +2,7 @@
 title: Feeds — calendar read & weather
 scope: calendar sync (Google, CalDAV, ICS), Google OAuth accounts, weather fetch, WeatherRules, advisories, cross-process change events
 status: draft
-updated: 2026-10-26
+updated: 2026-10-28
 drawio: Feeds.drawio
 drawio_src: src/Feeds.py
 depends_on: [D-004, D-006, D-008, D-014, D-017, D-018, D-019, D-023, D-034, D-035, D-036, D-068]
@@ -91,6 +91,9 @@ An event's members are the members of its calendar. A calendar with no members i
 | Child user | Events on calendars linked to them, plus household calendars. Adult-owned private events are busy when `private_events_as_busy` is on |
 | Dashboard device | All enabled calendars. Adult-owned private events are busy when `private_events_as_busy` is on |
 | Elevated device | Same as the dashboard device. Elevation is only for actions |
+
+### 3.6 The same event on several calendars
+`GET /events` folds copies of one event from **different calendars** into one `EventView` (`fa_domain::calendar::merge_duplicates`, run on the unmasked views, before `mask`). Two copies match when the title and location (trimmed, whitespace collapsed, case ignored), the start and end, the all-day flag and the visibility are equal. The merged event keeps the first copy's id and details and has `members` as the union, `merged: true` and `colors` (one calendar colour per copy). If any copy has no calendar colour, `colors` is empty and the client uses the members' colours. Two events on one calendar and events without a calendar never merge. The client draws the left stripe in equal bands, one per colour, and the member chips show every member. Nothing is stored: the rows stay separate, so each calendar's sync and write-back is unaffected.
 
 ## 4. Weather
 - `weather.fetch` runs on the cron `*/30 * * * *` (editable in the schedule settings). It skips when the household has no location. It calls Open-Meteo `/v1/forecast` with `current`, `hourly` (48 h), and `daily` (7 days) in metric units and the household tz, then stores a `weather_snapshot`.

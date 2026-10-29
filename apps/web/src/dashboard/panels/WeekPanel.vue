@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { textColorFor } from '../../lib/contrast'
 import { dayKey, formatRange, groupByDay } from '../../lib/time'
-import { toEventLike, visibleEvents } from '../filter'
+import { toEventLike, toMemberLike, visibleEvents } from '../filter'
 import { S } from '../strings'
 import { datedTasks } from '../tasksModel'
 import type { PanelProps } from '../types'
@@ -10,9 +10,10 @@ import type { PanelProps } from '../types'
 const props = defineProps<PanelProps>()
 const tz = computed(() => props.data.household.tz)
 const today = computed(() => dayKey(props.now, tz.value))
+const members = computed(() => props.data.members.map(toMemberLike))
 const chips = computed(() => datedTasks(props.data, tz.value, true))
 const cols = computed(() => {
-  const events = visibleEvents(props.data, props.settings).map(toEventLike)
+  const events = visibleEvents(props.data, props.settings).map((e) => toEventLike(e, members.value))
   return [...groupByDay(events, tz.value, today.value, 7)].map(([key, list]) => {
     const d = new Date(`${key}T12:00:00Z`)
     return {

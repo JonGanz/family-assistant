@@ -1,4 +1,5 @@
 import type { EventView, Member } from '../api/client'
+import { eventColors } from '../lib/eventColors'
 import type { EventLike, MemberLike } from '../lib/types'
 
 const FALLBACK_COLOR = '#2f6fed'
@@ -14,7 +15,7 @@ export function memberLikes(members: Member[]): MemberLike[] {
 
 /** Adapts the API event to the shared EventCard shape (colour fallback, 'from ↗' link). */
 export function toEventLike(ev: EventView, members: MemberLike[] = []): EventLike {
-  const first = members.find((m) => ev.members.includes(m.id))
+  const colors = eventColors(ev, members, FALLBACK_COLOR)
   return {
     id: ev.id,
     title: ev.title,
@@ -25,7 +26,8 @@ export function toEventLike(ev: EventView, members: MemberLike[] = []): EventLik
     start_date: ev.start_date ?? null,
     end_date: ev.end_date ?? null,
     members: ev.members,
-    color: ev.color ?? first?.color ?? FALLBACK_COLOR,
+    color: colors[0],
+    colors,
     visibility: ev.visibility,
     source_url: ev.external_url ?? null,
   }

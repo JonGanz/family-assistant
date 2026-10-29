@@ -6,6 +6,7 @@ import DateRangeNav from '../components/DateRangeNav.vue'
 import EventCard from '../components/EventCard.vue'
 import UndoToast from '../components/tasks/UndoToast.vue'
 import { rangeFor, shiftAnchor } from '../composables/useRange'
+import { stripeStyle } from '../lib/eventColors'
 import { addDays, dayKey, formatDayHeading, groupByDay, startOfDay } from '../lib/time'
 import type { RangeMode } from '../lib/types'
 import { useCalendarStore } from '../stores/calendar'
@@ -201,7 +202,7 @@ const dayNumber = (k: string) => Number(k.slice(8))
             v-for="e in list.slice(0, 3)"
             :key="e.id"
             :class="{ busy: e.visibility === 'busy' }"
-            :style="{ borderLeftColor: e.color }"
+            :style="stripeStyle(e)"
           >
             {{ e.visibility === 'busy' ? 'Busy' : e.title }}
           </li>

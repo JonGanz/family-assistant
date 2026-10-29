@@ -1,8 +1,12 @@
 //! Event visibility (arch/Feeds.md §3.5, D-036). Pure; shared by fa-calendar and fa-api.
 
+use std::collections::HashMap;
+
+use chrono::{DateTime, NaiveDate, Utc};
+
 use crate::api::EventView;
 use crate::entities::{Role, Visibility};
-use crate::ids::MemberId;
+use crate::ids::{CalendarId, MemberId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct EventMeta {
@@ -66,6 +70,92 @@ pub fn mask(mut ev: EventView) -> EventView {
         ev.external_url = None;
     }
     ev
+}
+
+fn norm(s: &str) -> String {
+    s.split_whitespace()
+        .collect::<Vec<_>>()
+        .join(" ")
+        .to_lowercase()
+}
+
+/// Folds copies of one event from different calendars (same title, time and location, compared
+/// after trimming, collapsing whitespace and ignoring case) into the first copy: the members are
+/// the union and `colors` holds each copy's calendar colour. Call it on unmasked views, so two
+/// different private events that both show as "Busy" never merge. Two events of one calendar, and
+/// events without a calendar, are never merged.
+pub fn merge_duplicates(events: Vec<EventView>) -> Vec<EventView> {
+    type Key = (
+        String,
+        DateTime<Utc>,
+        DateTime<Utc>,
+        bool,
+        Option<NaiveDate>,
+        Option<NaiveDate>,
+        String,
+        Visibility,
+    );
+    struct Group {
+        ev: EventView,
+        cals: Vec<CalendarId>,
+        colors: Vec<Option<String>>,
+    }
+    let mut groups: Vec<Group> = Vec::new();
+    let mut index: HashMap<Key, Vec<usize>> = HashMap::new();
+    for ev in events {
+        let key: Key = (
+            norm(&ev.title),
+            ev.start_at,
+            ev.end_at,
+            ev.all_day,
+            ev.start_date,
+            ev.end_date,
+            norm(ev.location.as_deref().unwrap_or("")),
+            ev.visibility,
+        );
+        let target = ev.calendar.and_then(|c| {
+            index
+                .get(&key)?
+                .iter()
+                .copied()
+                .find(|&i| !groups[i].cals.contains(&c))
+        });
+        match target {
+            Some(i) => {
+                let g = &mut groups[i];
+                g.cals.extend(ev.calendar);
+                g.colors.push(ev.color);
+                for m in ev.members {
+                    if !g.ev.members.contains(&m) {
+                        g.ev.members.push(m);
+                    }
+                }
+            }
+            None => {
+                index.entry(key).or_default().push(groups.len());
+                groups.push(Group {
+                    cals: ev.calendar.into_iter().collect(),
+                    colors: vec![ev.color.clone()],
+                    ev,
+                });
+            }
+        }
+    }
+    groups
+        .into_iter()
+        .map(|g| {
+            let mut ev = g.ev;
+            ev.merged = g.colors.len() > 1;
+            if g.colors.iter().all(Option::is_some) {
+                for c in g.colors.into_iter().flatten() {
+                    if !ev.colors.contains(&c) {
+                        ev.colors.push(c);
+                    }
+                }
+            }
+            ev
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -147,6 +237,8 @@ mod tests {
             end_date: None,
             members: vec![MemberId::new()],
             color: Some("#fff".into()),
+            colors: vec![],
+            merged: false,
             visibility: vis,
             external_url: Some("https://example.com/e".into()),
         }
@@ -161,5 +253,58 @@ mod tests {
         assert!(m.location.is_none() && m.description.is_none() && m.external_url.is_none());
         assert_eq!(m.members.len(), 1);
         assert_eq!(m.color.as_deref(), Some("#fff"));
+    }
+
+    fn copy(cal: CalendarId, color: Option<&str>, title: &str) -> EventView {
+        let mut e = ev(Visibility::Full);
+        e.title = title.into();
+        e.calendar = Some(cal);
+        e.color = color.map(Into::into);
+        e
+    }
+
+    #[test]
+    fn merges_copies_from_different_calendars() {
+        let mut a = copy(CalendarId::new(), Some("#111111"), "Soccer ");
+        a.location = Some("Main St".into());
+        let mut b = copy(CalendarId::new(), Some("#222222"), "soccer");
+        b.start_at = a.start_at;
+        b.end_at = a.end_at;
+        b.location = Some("  main  st".into());
+        let (ma, mb) = (a.members[0], b.members[0]);
+        let out = merge_duplicates(vec![a, b]);
+        assert_eq!(out.len(), 1);
+        assert!(out[0].merged);
+        assert_eq!(out[0].colors, ["#111111", "#222222"]);
+        assert_eq!(out[0].members, [ma, mb]);
+    }
+
+    #[test]
+    fn keeps_events_that_differ_or_share_a_calendar() {
+        let cal = CalendarId::new();
+        let a = copy(cal, Some("#111111"), "Soccer");
+        let mut same_cal = a.clone();
+        same_cal.id = crate::ids::EventId::new();
+        let mut other_time = copy(CalendarId::new(), Some("#222222"), "Soccer");
+        other_time.start_at = a.start_at;
+        other_time.end_at = a.end_at + chrono::Duration::hours(1);
+        let mut no_cal = a.clone();
+        no_cal.calendar = None;
+        assert_eq!(
+            merge_duplicates(vec![a, same_cal, other_time, no_cal]).len(),
+            4
+        );
+    }
+
+    #[test]
+    fn a_copy_without_a_colour_leaves_colors_empty() {
+        let a = copy(CalendarId::new(), Some("#111111"), "Soccer");
+        let mut b = copy(CalendarId::new(), None, "Soccer");
+        b.start_at = a.start_at;
+        b.end_at = a.end_at;
+        b.location = a.location.clone();
+        let out = merge_duplicates(vec![a, b]);
+        assert_eq!(out.len(), 1);
+        assert!(out[0].merged && out[0].colors.is_empty());
     }
 }

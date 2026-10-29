@@ -241,6 +241,13 @@ pub struct EventView {
     pub end_date: Option<NaiveDate>,
     pub members: Vec<MemberId>,
     pub color: Option<String>,
+    /// One calendar colour per merged copy of the event (see `merge_duplicates`); empty when any
+    /// copy has no colour, so the client falls back to the members' colours.
+    #[serde(default)]
+    pub colors: Vec<String>,
+    /// True when several calendars' copies of the same event were folded into this one.
+    #[serde(default)]
+    pub merged: bool,
     pub visibility: Visibility,
     pub external_url: Option<String>,
 }
