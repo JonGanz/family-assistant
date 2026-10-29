@@ -1,6 +1,6 @@
 ---
 title: Design Questions Index
-updated: 2026-10-26
+updated: 2026-10-29
 ---
 
 # Design Questions
@@ -28,7 +28,14 @@ decisions: []
 ```
 
 ## Open
-_None. The next question number is Q-073._
+| ID | Title | Batch |
+|---|---|---|
+| [Q-073](Q-073-theme-catalogue.md) | Which colour themes does the app ship, and how do light and dark pair up? | 19 |
+| [Q-074](Q-074-member-colour-hues.md) | Do members pick a named hue instead of a hex colour? | 19 |
+| [Q-075](Q-075-theme-scope.md) | Who chooses the theme: household, member, or device? | 19 |
+| [Q-076](Q-076-custom-themes.md) | Can a household add its own themes? | 19 |
+
+The next question number is Q-077.
 
 ## Resolved
 | ID | Title | Decisions |
