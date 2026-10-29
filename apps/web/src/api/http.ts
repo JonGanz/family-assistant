@@ -83,7 +83,9 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   }
   if (res.status === 204) return undefined as T
   if (opts.asText) return (await res.text()) as T
-  return (await res.json()) as T
+  // Some routes answer 202 with no body (e.g. a queued sync).
+  const text = await res.text()
+  return (text ? JSON.parse(text) : undefined) as T
 }
 
 /**

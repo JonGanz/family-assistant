@@ -214,6 +214,14 @@ fn rule_starts(
     ctx: &mut Ctx<'_>,
 ) -> Vec<NaiveDateTime> {
     use rrule::{RRuleSet, Tz as RTz};
+    // A series cut off before its own start (providers do this on "this and following" edits) has no
+    // occurrences; the rrule crate rejects it as invalid, so don't hand it over.
+    let until = rule.split(';').find_map(|p| p.strip_prefix("UNTIL="));
+    if let Some(u) = until.and_then(|u| NaiveDateTime::parse_from_str(u, "%Y%m%dT%H%M%SZ").ok())
+        && u < base
+    {
+        return Vec::new();
+    }
     let text = format!("DTSTART:{}Z\nRRULE:{rule}", base.format("%Y%m%dT%H%M%S"));
     let set: RRuleSet = match text.parse() {
         Ok(s) => s,

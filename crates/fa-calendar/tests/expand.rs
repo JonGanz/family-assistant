@@ -156,3 +156,10 @@ fn dst_change_weekly_and_all_day() {
     assert_eq!(a.end_at, utc(2026, 10, 27, 23, 0));
     assert_eq!(a.end_date, NaiveDate::from_ymd_opt(2026, 10, 28));
 }
+
+#[test]
+fn until_before_start_keeps_only_the_first_event_without_warning() {
+    let e = wide("until_before_start.ics", Tz::UTC);
+    assert_eq!(of(&e, "cut-off@example.com").len(), 1);
+    assert!(e.warnings.is_empty());
+}
