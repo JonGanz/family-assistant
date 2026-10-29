@@ -2,10 +2,10 @@
 title: Frontend
 scope: Vue PWA structure, routes, first-run wizard, settings structure, dashboard (kiosk) design and layout config, data flow (REST + SSE), offline and insecure-context behaviour
 status: draft
-updated: 2026-10-26
+updated: 2026-10-29
 drawio: Frontend.drawio
 drawio_src: src/Frontend.py
-depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078]
+depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078, D-079, D-080, D-081]
 milestone: M3.5
 ---
 
@@ -21,6 +21,7 @@ apps/web/src/
 ├─ stores/         Pinia: setup, session, members, household, calendar, weather, sources, devices, dashboard, tasks, mail, inbox, system
 ├─ composables/    useLiveStream (SSE → store invalidation), useUnits, useRange, useClock, useSecureContext
 ├─ components/     shared UI: PageHeader, StateBlock, MemberChip, Avatar, PinPad, EventCard, WeatherIcon, DateRangeNav, ErrorBanner, Tabs
+├─ themes/         theme catalogue as data (D-079): one file per family, the token set, `applyTheme`, the device's saved choice (§3d)
 ├─ lib/            platform shims: ids (randomId), copy (clipboard fallback), pwa (conditional service worker)
 ├─ setup/          the first-run wizard: SetupLayout + one component per step (§2a)
 ├─ views/          app-shell screens (§3); settings/ holds SettingsLayout, SettingsIndexView and the settings pages
@@ -31,7 +32,7 @@ apps/web/src/
 ```
 - **API types:** one source only. `gen/api.d.ts` comes from the server's OpenAPI, which the server derives from its DTOs (`utoipa::ToSchema`).
 - **State:** stores fetch over REST and keep normalised data by ID. They never poll. They refresh when an SSE event invalidates their data (§5).
-- **No UI framework.** Plain CSS with design tokens and the UI kit in `styles/base.css` (colour, spacing, type scale, `.form`, `.card-list`, `.badge`), plus a `kiosk` scale for viewing distance. That keeps the bundle small for Silk on Fire OS.
+- **No UI framework.** Plain CSS with design tokens and the UI kit in `styles/base.css` (colour tokens come from the active theme, §3d; spacing, type scale, `.form`, `.card-list`, `.badge`), plus a `kiosk` scale for viewing distance. That keeps the bundle small for Silk on Fire OS.
 - **Dates:** `Intl.DateTimeFormat` in the household tz (from `/household`, not the browser's tz), with no date library. Recurrence is already expanded by the server.
 
 ### 1.1 Secure and insecure contexts (D-072)
@@ -122,8 +123,8 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 
 | Group | Pages (path under `/settings/`) | Guard |
 |---|---|---|
-| Personal | `account` (password, sessions), `notifications` (own, plus children's for adults; §3a) | user |
-| Household | `household` (name, tz, location, units, currency, calendar window, Now list weights, quiet hours, dashboard pending-approvals badge), **`members`** (add, edit, avatar, colour, role, account and password reset, PIN, aliases, gender and relevance tags, interests, hobbies and responsibilities), `tasks` (lists, definitions, routines, absences) | adult |
+| Personal | `account` (password, sessions), `appearance` (this device's theme, §3d), `notifications` (own, plus children's for adults; §3a) | user |
+| Household | `household` (name, tz, location, units, currency, calendar window, Now list weights, quiet hours, dashboard pending-approvals badge), **`members`** (add, edit, avatar, hue, role, account and password reset, PIN, aliases, gender and relevance tags, interests, hobbies and responsibilities), `tasks` (lists, definitions, routines, absences) | adult |
 | Sources and rules | `calendars`, `weather`, `mail`, `orgs` | adult |
 | System | `system` (below), `devices` (pairing + dashboard layout editor, §4), `status` | adult |
 
@@ -134,6 +135,26 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
   - **Master key backup:** a warning card until an adult has confirmed a backup; it reopens the step-6 Copy/Download flow (needs a recent login or elevation).
   - **Household file:** **Export** downloads TOML (no secrets). **Import** uploads TOML, shows a dry-run diff (created, changed, skipped, errors with positions), then applies on confirmation (D-018).
 
+## 3d. Themes (D-079, D-080, D-081)
+**Catalogue.** `themes/` holds one data file per family: Catppuccin, Nord, Dracula, Gruvbox, Solarized, Tokyo Night, Rosé Pine, Kanagawa. A family lists the light and/or dark variants its project publishes (Catppuccin has Latte and three dark flavours). Every variant fills the same tokens:
+- **neutrals:** `bg`, `surface`, `surface-2`, `border`, `muted`, `text`;
+- **hues:** `red`, `orange`, `yellow`, `green`, `cyan`, `blue`, `purple`, `pink`. A palette without a native hue supplies its nearest colour.
+
+`applyTheme` writes the tokens as CSS custom properties on `<html>` (`--color-bg`, `--color-surface`, `--color-text`, `--hue-red`…). The existing names in `base.css` stay as aliases, so components keep working: `--color-accent` is the `blue` hue, and `--color-danger`, `--color-warning` and `--color-success` are `red`, `yellow` and `green`. Source and licence of each palette are recorded next to its file.
+
+**Mode.** A device's choice is `{family, variant?, mode}` with `mode` one of `auto | light | dark`.
+- A family with **both** light and dark variants follows the mode. In the app, `auto` follows the device's `prefers-color-scheme`. On the kiosk, `auto` is dark between sunset and sunrise (from the weather data).
+- A family with **one** variant always uses it, at any time of day. The mode picker is hidden for it.
+- A family with several variants in one mode (Catppuccin dark) lets the user pick the variant.
+
+**Where the choice lives** (D-081; there is no household setting):
+- **App devices:** `localStorage` key `fa.theme`, edited in **Settings → Personal → Appearance** by any signed-in member. It does not follow a person to another device. Until a choice is made the app uses its shipped default (a technical choice: Catppuccin, `auto`).
+- **Kiosk and dashboard devices:** `device.settings.theme`, set by an adult in Settings → Devices (the layout editor's live preview uses it). The kiosk uses the same catalogue and never picks a theme itself (D-019).
+
+**Member colours** (D-080). A member's `color` is a hue name. The client uses `var(--hue-<name>)` for chips, the agenda and task items. `eventColors` falls back from the event's own calendar colour (still hex, from outside) to the member's hue. The member picker shows the current theme's swatches.
+
+**Contrast** (build-time unit test over every variant): `text` and `muted` on `bg` and on both surfaces at least 4.5:1; each hue on `bg` at least 3:1 (stripes, chips, accents); `on-accent` on `blue`. A failing value is corrected in the theme data, never adjusted at run time.
+
 ## 4. Dashboard (kiosk shell)
 The dashboard is **at-a-glance only** (D-068): date and time, weather with advisories, agenda, tasks, routines, and the household's members. **Nothing derived from email** appears on it: no inbox panel, no titles, senders or approvals, elevated or not. The one exception is a **pending-approvals count badge per adult** on the `members` strip (D-078), which the household setting `dashboard_pending_approvals` (default on) can turn off.
 
@@ -141,7 +162,7 @@ The dashboard is **at-a-glance only** (D-068): date and time, weather with advis
 The layout is data held in `device.settings` and edited by adults in Settings → Devices. It is never edited on the dashboard itself (D-019).
 ```json
 { "orientation": "landscape" | "portrait",
-  "theme": "auto" | "light" | "dark",       // auto = dark between sunset and sunrise (from weather)
+  "theme": { "family": "<id>", "variant": "<id>?", "mode": "auto" | "light" | "dark" },  // §3d; auto = dark between sunset and sunrise (from weather)
   "agenda_days": 3,
   "members": "all" | ["<member-id>", ...],
   "panels": [ {"kind": "clock"}, {"kind": "weather", "hourly": true},
@@ -167,7 +188,7 @@ The layout is data held in `device.settings` and edited by adults in Settings �
 - **Offline:** the last snapshot is saved to localStorage with `savedAt`. While the stream is down, the dashboard shows the cache with a quiet "last updated hh:mm" badge. Where a service worker runs (secure contexts only, §1.1) it also caches the app shell and avatar images; over plain HTTP the snapshot is the offline story.
 - **Access paths:** the dashboard works on the main listener (HTTP or HTTPS, D-072) and on the optional restricted home-network listener (D-064); pairing shows a link and QR code for each available address.
 - **Day rollover:** at midnight in the household tz, the dashboard refetches. The nightly reload (D-011) stays as a backstop.
-- **Burn-in:** in dark theme the content shifts by a few pixels every 10 minutes. The M0 keep-alive is unchanged.
+- **Burn-in:** whenever the active variant is dark the content shifts by a few pixels every 10 minutes. The M0 keep-alive is unchanged.
 
 ## 5. Live data flow (page "Live update")
 1. The worker commits a change and calls `ChangeBus::publish` (`pg_notify`) inside the transaction.

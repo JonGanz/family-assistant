@@ -1,12 +1,12 @@
 ---
 id: Q-076
 title: Can a household add its own themes?
-status: open
+status: resolved
 batch: 19
 area: frontend
 created: 2026-10-29
-resolved:
-decisions: []
+resolved: 2026-10-29
+decisions: [D-079]
 ---
 
 # Q-076: Can a household add its own themes?

@@ -28,14 +28,7 @@ decisions: []
 ```
 
 ## Open
-| ID | Title | Batch |
-|---|---|---|
-| [Q-073](Q-073-theme-catalogue.md) | Which colour themes does the app ship, and how do light and dark pair up? | 19 |
-| [Q-074](Q-074-member-colour-hues.md) | Do members pick a named hue instead of a hex colour? | 19 |
-| [Q-075](Q-075-theme-scope.md) | Who chooses the theme: household, member, or device? | 19 |
-| [Q-076](Q-076-custom-themes.md) | Can a household add its own themes? | 19 |
-
-The next question number is Q-077.
+_None. The next question number is Q-077._
 
 ## Resolved
 | ID | Title | Decisions |
@@ -112,3 +105,7 @@ The next question number is Q-077.
 | [Q-070](resolved/Q-070-settings-in-ui.md) | Which server settings move from environment variables into the UI? | D-075 |
 | [Q-071](resolved/Q-071-container-layout.md) | How many app containers does the default compose file run? | D-076 |
 | [Q-072](resolved/Q-072-image-distribution.md) | How do households get the app: a pulled image or a local build? | D-077 |
+| [Q-073](resolved/Q-073-theme-catalogue.md) | Which colour themes does the app ship, and how do light and dark pair up? | D-079 |
+| [Q-074](resolved/Q-074-member-colour-hues.md) | Do members pick a named hue instead of a hex colour? | D-080 |
+| [Q-075](resolved/Q-075-theme-scope.md) | Who chooses the theme: household, member, or device? | D-081 |
+| [Q-076](resolved/Q-076-custom-themes.md) | Can a household add its own themes? | D-079 |

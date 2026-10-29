@@ -1,12 +1,12 @@
 ---
 id: Q-073
 title: Which colour themes does the app ship, and how do light and dark pair up?
-status: open
+status: resolved
 batch: 19
 area: frontend
 created: 2026-10-29
-resolved:
-decisions: []
+resolved: 2026-10-29
+decisions: [D-079]
 ---
 
 # Q-073: Which colour themes does the app ship, and how do light and dark pair up?

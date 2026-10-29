@@ -1,12 +1,12 @@
 ---
 id: Q-074
 title: Do members pick a named hue instead of a hex colour?
-status: open
+status: resolved
 batch: 19
 area: frontend
 created: 2026-10-29
-resolved:
-decisions: []
+resolved: 2026-10-29
+decisions: [D-080]
 ---
 
 # Q-074: Do members pick a named hue instead of a hex colour?

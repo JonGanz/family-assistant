@@ -16,10 +16,11 @@ live = b("composables\nuseLiveStream · useUnits · useRange · useClock", 60, 3
 client = b("api/client.ts + http.ts\nX-FA-Request · bearer opt-in · If-Match", 340, 440, 400, 60, COMP)
 gen = b("gen/api.d.ts\n(generated from openapi.json)", 780, 440, 200, 60, COMP)
 sw = b("service worker (vite-plugin-pwa)\nsecure contexts only · shell + avatar cache", 60, 440, 240, 60, COMP)
-ls = b("localStorage\ndevice token · dashboard snapshot", 60, 560, 240, 50, COMP)
+ls = b("localStorage\ndevice token · dashboard snapshot · fa.theme", 60, 560, 240, 50, COMP)
+themes = b("themes/ (D-079..D-081)\ncatalogue as data · applyTheme → CSS tokens\nper-device choice · kiosk: device.settings.theme", 800, 650, 200, 90, COMP)
 srv = b("«external» fa-api /api/v1 (REST, SSE)", 1080, 400, 280, 60, EXT)
 for s, t, l in [(router, setup, ""), (setup, stores, ""), (router, app, ""), (router, kiosk, ""), (app, stores, ""), (kiosk, stores, ""), (kiosk, kmod, ""),
-                (stores, client, ""), (live, stores, "invalidate"), (client, gen, "types"), (kmod, ls, ""), (stores, ls, "snapshot cache")]:
+                (stores, client, ""), (live, stores, "invalidate"), (client, gen, "types"), (kmod, ls, ""), (stores, ls, "snapshot cache"), (themes, ls, "fa.theme"), (app, themes, ""), (kiosk, themes, "")]:
     e(s, t, l)
 e(client, srv, "HTTP(S) JSON", False); e(live, srv, "SSE /stream", False)
 b("No UI framework: plain CSS tokens, Intl dates in household tz", 780, 560, 220, 70, NOTE)

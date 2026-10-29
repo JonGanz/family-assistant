@@ -87,3 +87,6 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-076](D-076-single-container.md) | One app container; no split layout | accepted | Q-071 | arch/Platform.md |
 | [D-077](D-077-ghcr-amd64.md) | Release images on GHCR, amd64 only for now | accepted | Q-072 | arch/Platform.md, README.md |
 | [D-078](D-078-private-approvals.md) | Approvals are private to the adults who may see the source mail; the dashboard shows only a count per adult | accepted | Q-063 | arch/Ingest.md, arch/Domain.md, arch/Frontend.md |
+| [D-079](D-079-theme-catalogue.md) | The app ships a catalogue of popular terminal themes, as built-in data | accepted | Q-073, Q-076 | arch/Frontend.md |
+| [D-080](D-080-member-hue-colours.md) | Members choose a named hue; existing members migrate to blue | accepted | Q-074 | arch/Frontend.md, arch/Domain.md |
+| [D-081](D-081-theme-per-device.md) | The theme is chosen per device, with an app-shipped default and no household setting | accepted | Q-075 | arch/Frontend.md |

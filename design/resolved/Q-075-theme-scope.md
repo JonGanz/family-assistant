@@ -1,12 +1,12 @@
 ---
 id: Q-075
 title: Who chooses the theme: household, member, or device?
-status: open
+status: resolved
 batch: 19
 area: frontend
 created: 2026-10-29
-resolved:
-decisions: []
+resolved: 2026-10-29
+decisions: [D-081]
 ---
 
 # Q-075: Who chooses the theme: household, member, or device?
