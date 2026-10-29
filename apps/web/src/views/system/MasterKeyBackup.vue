@@ -24,7 +24,9 @@ async function reveal() {
   } catch (e) {
     const status = (e as { status?: number }).status
     error.value =
-      status === 401 ? 'That password is wrong.' : describeError(e, 'Could not show the key.')
+      status === 401
+        ? 'That is not your login password. Use the one you set for your own account, not a PIN.'
+        : describeError(e, 'Could not show the key.')
   } finally {
     busy.value = false
   }
@@ -51,13 +53,18 @@ async function confirm() {
 <template>
   <div class="master-key" data-testid="master-key-backup">
     <p>
-      The master key encrypts the passwords and tokens this server stores. If the server's disk is
-      lost and you have no copy of the key, those secrets cannot be recovered. Keep a copy somewhere
-      safe, such as a password manager.
+      The master key encrypts the passwords and tokens this server stores. It was created
+      automatically when the server first started, so there is nothing for you to choose. If the
+      server's disk is lost and you have no copy of the key, those secrets cannot be recovered. Keep
+      a copy somewhere safe, such as a password manager.
+    </p>
+    <p v-if="!key">
+      To show the key, enter your own login password, the one you set for your account in the setup.
+      This only confirms that it is you. It is not a password for the key.
     </p>
     <form v-if="!key" class="form" @submit.prevent="reveal">
       <label class="field">
-        Your password, to show the key
+        Your login password
         <input
           v-model="password"
           name="master_key_password"

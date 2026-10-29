@@ -136,10 +136,10 @@ test('access: the detected address is stored; a notifications server can be set'
 
 test('master key: shown only with the password, and the backup must be confirmed', async () => {
   await expect(page.getByRole('button', { name: 'Next' })).toBeDisabled()
-  await page.getByLabel('Your password, to show the key').fill('not-my-password')
+  await page.getByLabel('Your login password').fill('not-my-password')
   await page.getByRole('button', { name: 'Show the key' }).click()
   await expect(page.getByRole('alert')).toBeVisible()
-  await page.getByLabel('Your password, to show the key').fill(OWNER.pass)
+  await page.getByLabel('Your login password').fill(OWNER.pass)
   await page.getByRole('button', { name: 'Show the key' }).click()
   const key = page.getByTestId('master-key')
   await expect(key).toBeVisible()
