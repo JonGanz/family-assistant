@@ -26,3 +26,4 @@ A member's `color` is a free-form hex string. Event stripes, chips and task item
 
 ## Answer
 <!-- answer below this line -->
+Hue name only. Not out in production, just migrate everyone to blue for now.

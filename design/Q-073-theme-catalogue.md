@@ -25,3 +25,4 @@ Today the theme is only `auto|light|dark` over a few CSS variables. The proposal
 
 ## Answer
 <!-- answer below this line -->
+Option A. If a theme doesn't have a dark and/or light theme, then use the one it has the entire time (ie, disregard time of day -- show a dark theme in the middle of the day if the selected theme only has dark mode).

@@ -25,3 +25,4 @@ Each theme is a small set of values: neutral levels and the named hues. Shipped 
 
 ## Answer
 <!-- answer below this line -->
+Option A.

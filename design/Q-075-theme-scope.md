@@ -26,3 +26,4 @@ The user has said the kiosk (`/dashboard`) must use the same theme as the rest o
 
 ## Answer
 <!-- answer below this line -->
+Configurable per device. Each user can select their own theme on their device. An application shipped default, not household default (just select a theme on first launch). The kiosk uses whatever the device is configured to use.
