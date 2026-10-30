@@ -1,7 +1,6 @@
 //! fa-api: the axum HTTP API (v1), SSE hub, OpenAPI document and static web serving.
 
 mod bridge;
-mod config;
 mod conn;
 mod error;
 mod extract;
@@ -176,11 +175,6 @@ pub fn router(state: AppState) -> Router {
             get(system::get_settings).patch(system::patch_settings),
         )
         .route("/system/about", get(system::get_about))
-        .route(
-            "/config/import",
-            post(config::import_config).layer(DefaultBodyLimit::max(config::IMPORT_MAX_BYTES)),
-        )
-        .route("/config/export", get(config::export_config))
         .route("/auth/login", post(routes::login))
         .route("/auth/logout", post(routes::logout))
         .route("/me", get(routes::me))

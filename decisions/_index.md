@@ -26,7 +26,7 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-015](D-015-meal-plan-grocery.md) | Configurable meal-plan horizon; grocery lists generated from selected meals; dashboard can add items | accepted | Q-014 | arch/Overall.md |
 | [D-016](D-016-batched-llm-cpu-triage.md) | LLM work is batched; optional small CPU triage model on the core node | superseded → D-022 | Q-015, Q-020 | arch/Overall.md |
 | [D-017](D-017-weather-rules-advisories.md) | Weather: configurable location, deterministic threshold rules, LLM-suggested advisories | accepted | Q-016 | arch/Overall.md |
-| [D-018](D-018-hybrid-config.md) | Hybrid configuration: file bootstrap/import-export, UI is source of truth thereafter | accepted | Q-017 | arch/Overall.md |
+| [D-018](D-018-hybrid-config.md) | Hybrid configuration: file bootstrap/import-export, UI is source of truth thereafter | superseded → D-089 | Q-017 | arch/Overall.md |
 | [D-019](D-019-dashboard-pin-policy.md) | Dashboard PIN policy | accepted | Q-018 | arch/Overall.md |
 | [D-020](D-020-gpu-node-agent.md) | GPU node (Linux): Wake-on-LAN, auto-wake by schedule/queue depth, yields to gaming via agent | accepted | Q-019 | arch/Overall.md |
 | [D-021](D-021-living-grocery-list.md) | One living grocery list with a pantry-staples check section | accepted | Q-021 | arch/Overall.md |
@@ -97,3 +97,4 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-086](D-086-no-calendar-colours.md) | Calendars have no colour; an event is coloured by its members | accepted | (instruction) | arch/Frontend.md, arch/Feeds.md, arch/Domain.md |
 | [D-087](D-087-week-view-no-scroll.md) | The Week view never scrolls; a cell that is too full folds items into "+N" | accepted | (instruction) | arch/Frontend.md |
 | [D-088](D-088-second-adult-setup.md) | An adult can set up another adult until that adult claims their account | accepted | Q-077 | arch/Domain.md, arch/Frontend.md |
+| [D-089](D-089-remove-household-toml.md) | Remove the household TOML import and export | accepted | [, ] | arch/Overall.md, arch/Platform.md, arch/Frontend.md, arch/Feeds.md, arch/Ingest.md, arch/Tasks.md |

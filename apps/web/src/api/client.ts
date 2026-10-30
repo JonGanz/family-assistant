@@ -77,7 +77,6 @@ export type SystemSettingsView = S['SystemSettingsView']
 export type AboutView = S['AboutView']
 export type SystemSettingsPatch = S['SystemSettingsPatch']
 export type OwnPasswordChange = S['OwnPasswordChange']
-export type ImportReport = S['ImportReport']
 export type HouseholdViewExt = S['HouseholdViewExt']
 export type PendingApprovals = S['PendingApprovals']
 export type InboxKind = 'event' | 'bill' | 'task' | 'contact'
@@ -196,13 +195,6 @@ export const api = {
     request<SystemSettingsView>('/api/v1/system/settings', {
       method: 'PATCH',
       body: { values },
-      ...U,
-    }),
-  exportConfig: () => request<string>('/api/v1/config/export', { asText: true, ...U }),
-  importConfig: (toml: string, dryRun: boolean) =>
-    request<ImportReport>(`/api/v1/config/import?dry_run=${dryRun}`, {
-      method: 'POST',
-      text: toml,
       ...U,
     }),
   /** Liveness of the server after a settings change that restarts parts of it. */

@@ -32,7 +32,6 @@ async fn main() -> Result<()> {
                     println!("migrations applied");
                     Ok(())
                 }
-                Command::Config { action } => ops::config(&store, cli.household, action).await,
                 Command::User { action } => ops::user(&store, cli.household, action).await,
                 Command::Device { action } => {
                     let cfg = serve::layered_config(&cfg, &store).await;

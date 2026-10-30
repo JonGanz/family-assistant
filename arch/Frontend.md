@@ -2,7 +2,7 @@
 title: Frontend
 scope: Vue PWA structure, routes, first-run wizard, settings structure, dashboard (kiosk) design and layout config, data flow (REST + SSE), offline and insecure-context behaviour
 status: draft
-updated: 2026-10-29
+updated: 2026-10-30
 drawio: Frontend.drawio
 drawio_src: src/Frontend.py
 depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078, D-079, D-080, D-081]
@@ -74,7 +74,7 @@ Shown when no household exists. It is **open to whoever opens the app first** (D
 | 4. Family | Add adults and children (role, display name, colour, optional grade and aliases), each with an optional login and PIN. Reuses the member editor components | existing `/api/v1/members` routes |
 | 5. Access and notifications | Public address(es) (prefilled from step 1; LAN and tailnet both kept when the sidecar is up), notifications on or off with "Send a test" | `PATCH /system/settings` |
 | 6. Master key backup | The key as text with **Copy** and **Download** buttons; continuing needs "I stored it somewhere safe" ticked (D-074) | `POST /system/master-key/confirm` |
-| 7. Start | Starter chores and routines (D-047), or **Import a household file** (TOML upload with a dry-run preview, D-018). Then links to Calendars, Mail and Devices (pair the wall screen) | existing routes |
+| 7. Start | Nothing is added for you (D-047). Links to Calendars, Mail and Devices (pair the wall screen) | existing routes |
 
 - Each step saves when you press Next; `GET /setup` returns the step to resume at, so a reload or a second device continues where it stopped.
 - Back keeps values; steps 4–7 can be skipped and done later in Settings.
@@ -133,7 +133,6 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
   - **Runtime settings:** public address(es), ntfy URL and token, Google client ID and secret, plain-HTTP feeds, private hosts for feeds, the home-network dashboard listener (D-064), trusted proxies (D-069). Each field shows its source: editable when stored in the DB; **locked with "set by the server"** when an environment variable overrides it. Secrets are write-only ("set" / "not set", replace, clear). Fields that need a restart (listeners) say so after saving.
   - **Connection:** a plain statement such as "This page is served over HTTP" or "HTTPS via Tailscale (`https://family.<tailnet>.ts.net`)". No warning styling.
   - **Master key backup:** a warning card until an adult has confirmed a backup; it reopens the step-6 Copy/Download flow (needs a recent login or elevation).
-  - **Household file:** **Export** downloads TOML (no secrets). **Import** uploads TOML, shows a dry-run diff (created, changed, skipped, errors with positions), then applies on confirmation (D-018).
 
 **Second adult (D-088).** In Settings → Members an adult can create another adult with a username and initial password (no PIN, no grade) and edit them until they claim the account; a claimed adult is read-only to others. A session whose account still has the initial password is redirected to Account with a banner until the password is changed.
 
@@ -218,5 +217,5 @@ The layout is data held in `device.settings` and edited by adults in Settings �
   - the settings flows for ICS and weather rules work;
   - **first run** (M3.5): an empty database redirects every route to `/setup`; the wizard creates the household, owner, a child and confirms the key backup; `/setup` is then closed;
   - the whole suite runs over plain HTTP from a non-localhost address (insecure context, §1.1);
-  - Settings, System shows env-set fields as locked; TOML import dry-run then apply;
+  - Settings, System shows env-set fields as locked;
   - the dashboard has no advisory dismiss control and no inbox panel; a child sees no `/settings/members`.

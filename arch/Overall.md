@@ -2,7 +2,7 @@
 title: Overall Architecture
 scope: system
 status: draft
-updated: 2026-10-26
+updated: 2026-10-30
 drawio: Overall.drawio
 drawio_src: src/Overall.py
 depends_on: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012, D-013, D-014, D-015, D-017, D-018, D-019, D-020, D-021, D-023, D-024, D-025, D-026, D-027, D-028, D-029, D-031, D-032, D-033, D-034, D-035, D-036, D-037, D-038, D-039, D-040, D-041, D-042, D-043, D-044, D-045, D-046, D-047, D-048, D-049, D-050, D-051, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-064, D-065, D-066, D-067, D-068, D-069, D-070, D-071, D-072, D-073, D-074, D-075, D-076, D-077]
@@ -21,7 +21,7 @@ v8 re-derives the design from PROJECT.md and all accepted decisions (D-001 to D-
 ## Principles
 1. **It works without AI, and AI makes it better.** Every decision is a **configurable pipeline** of stages: rules → kNN → System One → LLM → human. Every pipeline ends in a deterministic or human stage (D-002, D-024, D-029).
 2. **Hardware-adaptive.** Models are registered backends on whatever nodes exist. The system probes the hardware and suggests profiles, and nothing is hard-wired to the reference machines (D-026).
-3. **Members come first, and everything is configured in the UI.** A first-run wizard sets up the household (D-065); the UI owns configuration after that, including non-infrastructure server settings (D-075). TOML import and export stay as an optional upload and download (D-018). There is no PII in the repo (D-004).
+3. **Members come first, and everything is configured in the UI.** A first-run wizard sets up the household (D-065); the UI owns configuration after that, including non-infrastructure server settings (D-075). There is no household file import or export (D-089). There is no PII in the repo (D-004).
 4. **Our code is Rust and Vue.** Third-party model servers can be containerised Python sidecars (D-003, D-025).
 5. **Local and private.** Nothing is exposed to the internet. The whole app is served on the home network over plain HTTP by default; HTTPS and access from outside come from an optional Tailscale sidecar or the hoster's own proxy (D-010 as amended by D-065, D-072). If in doubt, make it a toggle.
 6. **Keeps only what helps.** Email content is kept only as far as it helps local learning, under a configurable retention policy. Every derived item keeps a provenance link back to its source, and Gmail stays the system of record (D-034).
@@ -43,7 +43,7 @@ The final model choices come from `fa-eval` on the household's labelled sample (
 | Crate | Responsibility |
 |---|---|
 | `fa-api` | Axum REST + SSE, sessions, RBAC, device sessions with adult PIN step-up (D-006, D-019) |
-| `fa-config` | Process config and runtime settings (env > DB > default, D-075); versioned TOML import and export, also from the UI (D-018, D-029) |
+| `fa-config` | Process config and runtime settings (env > DB > default, D-075); no household file import or export (D-089) |
 | `fa-auth` | Passwords, sessions, devices, PIN step-up, `Policy::authorize` (see Platform.md §5) |
 | `fa-jobs` | Postgres job queue and cron schedule (see Platform.md §7) |
 | `fa-connectors` | Gmail, IMAP, Google Calendar, CalDAV, ICS, Open-Meteo |
@@ -89,7 +89,7 @@ The detailed model is in **[Domain.md](Domain.md)**. Summary:
 1. **Decision pipeline (generic):** for each enabled stage in order: is a backend available (preference list)? If not, apply `on_unavailable` (skip, wait, or queue). Run it. If the result is ≥ the threshold, accept and record the `Decision`. Otherwise go to the next stage. The last stage is always deterministic or human.
 2. **Email:** poll (content held, `pending`) → the `email.category`, `email.time_sensitive`, `email.is_bill`, and `email.member_link` pipelines run (a time-sensitive result sends a notification now) → for extraction-worthy categories, S2 extraction is queued while the deterministic extractors give a first pass → emit events, tasks, and bills, each with a `SourceRef` (Gmail link) → `processed` → the retention policy keeps or purges content (D-034). Corrections go into `CategoryLabel`. Purged content is re-fetched from Gmail when needed.
 3. **Event:** dedupe → `event.calendar_route` pipeline → write it, or send it to the approval inbox, which adults work through in the app (`/inbox`); the dashboard never shows it (D-068).
-0. **First run:** `docker compose up -d` → `init` creates secrets → the first browser visit finds no household and opens `/setup` (open to the first visitor, D-073) → household, first adult, family, access and notifications, master-key backup, starter chores or a TOML import → setup closes for good.
+0. **First run:** `docker compose up -d` → `init` creates secrets → the first browser visit finds no household and opens `/setup` (open to the first visitor, D-073) → household, first adult, family, access and notifications, master-key backup → setup closes for good.
 4. **Hardware onboarding (M4.1):** a node reports its hardware → the profile suggester proposes backends from the catalogue and a pipeline preset → an adult accepts it in the Backends screen.
 5. **Pipeline change:** edit in Pipeline settings → dry-run on the eval sample and recent history → compare before and after → save a new version (rollback is possible).
 6. **GPU wake (M4.1):** schedule or queue → WoL → agent `available` → on-demand backends come up → queued stages drain → auto-suspend. A game starting means `busy_gaming`.

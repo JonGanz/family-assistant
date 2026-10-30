@@ -39,7 +39,7 @@ b("Family Assistant: Components (UML 2), DRAFT v8", 20, 10, 700, 30, TITLE)
 b("«subsystem» fa-server (Rust workspace)", 260, 50, 760, 740, FRAME)
 W, H = 220, 46
 api = b("«component» fa-api (+RBAC, PIN step-up)", 290, 100, W, H, COMP)
-cfg = b("«component» fa-config (settings, import/export)", 530, 100, W, H, COMP)
+cfg = b("«component» fa-config (process and runtime settings)", 530, 100, W, H, COMP)
 wrk = b("«component» fa-jobs (+ fa-auth in fa-api)", 770, 100, W, H, COMP)
 pip = b("«component» fa-pipeline (decision engine)", 530, 190, W, H, COMP)
 con = b("«component» fa-connectors", 770, 190, W, H, COMP)

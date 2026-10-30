@@ -110,14 +110,9 @@ put_event vet 9 "Vet Visit"
 
 echo "== seed household"
 "$BIN" migrate
-"$BIN" config import config/examples/household.example.toml
 export FA_E2E_USER=alex@example.com FA_E2E_PASSWORD=correct-horse-battery-staple
 export FA_E2E_CHILD_USER=riley@example.com FA_E2E_CHILD_PASSWORD=dino1234
 export FA_E2E_SAM_USER=sam@example.com FA_E2E_SAM_PASSWORD=sam-and-alex-share-chores
-printf '%s\n' "$FA_E2E_PASSWORD" | "$BIN" user add --member alex --username "$FA_E2E_USER" --password-stdin
-printf '%s\n' "$FA_E2E_SAM_PASSWORD" | "$BIN" user add --member sam --username "$FA_E2E_SAM_USER" --password-stdin
-printf '%s\n' "$FA_E2E_CHILD_PASSWORD" | "$BIN" user add --member riley --username "$FA_E2E_CHILD_USER" --password-stdin
-"$BIN" weather fetch
 
 echo "== empty-database instances for the setup specs (:$SETUP_PORT API, :$WIZARD_PORT UI)"
 # Own database each, no seeded household, and no FA_ALLOW_PRIVATE_HOSTS (the setup spec checks
@@ -163,6 +158,11 @@ export FA_E2E_BIN=$BIN
 export FA_E2E_IMAP_PORT=$IMAP_PORT FA_E2E_SMTP_PORT=$SMTP_PORT
 export FA_E2E_NTFY=$FA_NTFY_URL FA_E2E_PG_CONTAINER=$PROJECT-pg
 export FA_E2E_LAN_URL=$FA_LAN_DASHBOARD_URL
+echo "== seed the example household (through the setup API), logins and weather"
+node e2e/seed-household.mjs || { dump_logs; exit 1; }
+printf '%s\n' "$FA_E2E_SAM_PASSWORD" | "$BIN" user add --member sam --username "$FA_E2E_SAM_USER" --password-stdin
+printf '%s\n' "$FA_E2E_CHILD_PASSWORD" | "$BIN" user add --member riley --username "$FA_E2E_CHILD_USER" --password-stdin
+"$BIN" weather fetch
 echo "== seed sources, wait for first sync and weather"
 node e2e/seed.mjs "$FA_E2E_SEED" || { dump_logs; exit 1; }
 

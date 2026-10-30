@@ -97,9 +97,7 @@ pub async fn setup_household(
     let hid = fa_config::create_household(&s.store, &new)
         .await
         .map_err(|e| match e {
-            fa_config::ImportError::Config(fa_config::HouseholdTomlError::Invalid(errs)) => {
-                ApiError::Unprocessable(errs.join("; "))
-            }
+            fa_config::HouseholdError::Invalid(errs) => ApiError::Unprocessable(errs.join("; ")),
             other => ApiError::Internal(other.to_string()),
         })?;
     // An environment variable that sets the key wins; there is nothing to store then.

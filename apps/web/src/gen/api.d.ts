@@ -228,38 +228,6 @@ export interface paths {
         patch: operations["patch_category"];
         trace?: never;
     };
-    "/api/v1/config/export": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get: operations["export_config"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/config/import": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post: operations["import_config"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/dashboard": {
         parameters: {
             query?: never;
@@ -2187,50 +2155,6 @@ export interface components {
             folders: string[];
             gmail_ext: boolean;
             ok: boolean;
-        };
-        ImportReport: {
-            categories_created: string[];
-            categories_unchanged: string[];
-            categories_updated: string[];
-            enrollments_created: string[];
-            enrollments_unchanged: string[];
-            enrollments_updated: string[];
-            household_created: boolean;
-            household_id: components["schemas"]["HouseholdId"];
-            household_updated: boolean;
-            mail_rules_created: string[];
-            mail_rules_unchanged: string[];
-            mail_rules_updated: string[];
-            mail_sources_created: string[];
-            /** @description Gmail sources that need an OAuth connection made in the UI first. */
-            mail_sources_skipped: string[];
-            mail_sources_unchanged: string[];
-            mail_sources_updated: string[];
-            members_archived: string[];
-            members_created: string[];
-            members_unchanged: string[];
-            members_updated: string[];
-            notify_created: string[];
-            notify_unchanged: string[];
-            notify_updated: string[];
-            orgs_created: string[];
-            orgs_unchanged: string[];
-            orgs_updated: string[];
-            routines_created: string[];
-            routines_unchanged: string[];
-            routines_updated: string[];
-            rules_created: string[];
-            rules_unchanged: string[];
-            rules_updated: string[];
-            sources_created: string[];
-            sources_unchanged: string[];
-            sources_updated: string[];
-            task_definitions_created: string[];
-            task_definitions_unchanged: string[];
-            task_definitions_updated: string[];
-            task_lists_created: string[];
-            task_lists_unchanged: string[];
-            task_lists_updated: string[];
         };
         InboxCounts: {
             /** Format: int64 */
@@ -4222,96 +4146,6 @@ export interface operations {
                 };
             };
             428: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    export_config: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description household TOML as an attachment; no secrets */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "text/plain": unknown;
-                };
-            };
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-        };
-    };
-    import_config: {
-        parameters: {
-            query?: {
-                /** @description Validate and report without writing anything. */
-                dry_run?: boolean;
-                /** @description Archive keyed members the file no longer lists (default: merge). */
-                replace?: boolean;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** @description household TOML, at most 1 MiB */
-        requestBody: {
-            content: {
-                "text/plain": string;
-            };
-        };
-        responses: {
-            /** @description with `dry_run=true` nothing is written */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ImportReport"];
-                };
-            };
-            403: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-            413: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-            415: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Problem"];
-                };
-            };
-            422: {
                 headers: {
                     [name: string]: unknown;
                 };

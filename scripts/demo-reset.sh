@@ -27,20 +27,23 @@ cargo build -p fa-server
 docker compose -f deploy/compose.dev.yaml up -d --wait postgres ntfy
 scripts/dev-key.sh
 cargo run -p fa-server -- migrate
-cargo run -p fa-server -- config import config/examples/household.example.toml
-
-# Example logins (local-only passwords; the CLI reads one line from stdin when piped)
-echo 'example-adult-pass1' | cargo run -p fa-server -- user add --member alex  --username alex@example.com --password-stdin
-echo 'kid1'                | cargo run -p fa-server -- user add --member riley --username riley@example.com --password-stdin
-echo '1234'                | cargo run -p fa-server -- pin set --member alex --pin-stdin
 
 # --- 4. Offline fixtures: fake weather (freezing + rain) and sample ICS calendars on :18091 ---
 node e2e/stubs/server.mjs 18091 > /dev/null 2>&1 &
 export FA_OPEN_METEO_URL=http://127.0.0.1:18091
+
+# Start the app in the background so the example household can be seeded through the setup API.
+cargo run -p fa-server -- serve all > .dev/serve.log 2>&1 &
+for _ in $(seq 120); do curl -fsS http://127.0.0.1:8080/readyz >/dev/null 2>&1 && break; sleep 1; done
+export FA_E2E_BASE_URL=http://127.0.0.1:8080
+FA_E2E_USER=alex@example.com FA_E2E_PASSWORD=example-adult-pass1 FA_E2E_PIN=1234 node e2e/seed-household.mjs
+
+# Example login for a child (local-only password; the CLI reads one line from stdin when piped)
+echo 'kid1' | cargo run -p fa-server -- user add --member riley --username riley@example.com --password-stdin
 cargo run -p fa-server -- weather fetch
 
 # --- 5. Pair a dashboard device (prints its URL) ---
 cargo run -p fa-server -- device pair --name kitchen
 
-# --- 6. Run API + worker in the foreground (Ctrl-C to stop) ---
-cargo run -p fa-server -- serve all
+# --- 6. API + worker keep running in the background; Ctrl-C stops everything ---
+wait

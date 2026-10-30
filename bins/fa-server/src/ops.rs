@@ -6,19 +6,19 @@ use std::path::Path;
 use anyhow::{Context, Result, anyhow, bail};
 use chrono::Utc;
 use fa_auth::{AccountService, DeviceService};
-use fa_config::{HouseholdConfig, ImportMode, ProcessConfig};
+use fa_config::ProcessConfig;
 use fa_domain::calendar::{HouseholdFlags, Viewer};
 use fa_domain::{
     Actor, AuditEntry, AuditEntryId, CalendarSourceId, HouseholdId, Member, Role, validate_pin,
 };
 use fa_store::{
     AdvisoryRepo, AuditRepo, CalendarSourceRepo, DeviceElevationRepo, DeviceRepo, HouseholdRepo,
-    MemberRepo, SetupRepo, Store, Tx, UserAccountRepo,
+    MemberRepo, Store, Tx, UserAccountRepo,
 };
 
 use crate::cli::{
-    CalendarAction, ConfigAction, DeviceAction, MailAction, NotifyAction, PinAction, TasksAction,
-    UserAction, WeatherAction,
+    CalendarAction, DeviceAction, MailAction, NotifyAction, PinAction, TasksAction, UserAction,
+    WeatherAction,
 };
 use crate::wiring;
 
@@ -53,102 +53,7 @@ async fn resolve_household(
 async fn require_household(store: &Store, given: Option<HouseholdId>) -> Result<HouseholdId> {
     resolve_household(store, given)
         .await?
-        .ok_or_else(|| anyhow!(
-            "no household yet; open the app in a browser to run setup, or use `fa-server config import <file>`"
-        ))
-}
-
-/// Every RRULE and weather/season condition must parse before anything is written; all errors are
-/// reported together with their location.
-fn check_config(cfg: &HouseholdConfig) -> Result<()> {
-    let mut errors = Vec::new();
-    for (title, rrule) in cfg.rrules() {
-        if let Err(m) = fa_tasks::validate_rrule(rrule) {
-            errors.push(format!("task definition '{title}': invalid rrule: {m}"));
-        }
-    }
-    for (label, condition) in cfg.conditions() {
-        if let Err(e) = fa_weather::validate_condition(condition) {
-            errors.push(format!(
-                "{label}: invalid condition at position {}: {}",
-                e.position, e.message
-            ));
-        }
-    }
-    if errors.is_empty() {
-        Ok(())
-    } else {
-        bail!(
-            "{} error(s) in the household file:\n  {}",
-            errors.len(),
-            errors.join("\n  ")
-        )
-    }
-}
-
-pub async fn config(
-    store: &Store,
-    household: Option<HouseholdId>,
-    action: ConfigAction,
-) -> Result<()> {
-    match action {
-        ConfigAction::Import {
-            file,
-            replace,
-            dry_run,
-        } => {
-            let text = std::fs::read_to_string(&file)
-                .with_context(|| format!("reading {}", file.display()))?;
-            let cfg = HouseholdConfig::from_toml(&text)?;
-            check_config(&cfg)?;
-            let mode = if replace {
-                ImportMode::Replace
-            } else {
-                ImportMode::Merge
-            };
-            let hid = resolve_household(store, household).await?;
-            let report = fa_config::import(store, hid, &cfg, mode, dry_run).await?;
-            let seeded = if dry_run {
-                0
-            } else {
-                let mut tx = store.tx_for(report.household_id).await?;
-                let n = fa_weather::ensure_default_rules(&mut tx).await?;
-                // A household created from the CLI is set up by its file: don't send its adults
-                // through the first-run wizard.
-                if report.household_created {
-                    SetupRepo::complete(&mut tx, report.household_id).await?;
-                }
-                tx.commit().await?;
-                n
-            };
-            println!("{}", serde_json::to_string_pretty(&report)?);
-            if !report.mail_sources_skipped.is_empty() {
-                println!(
-                    "connect these in Settings -> Mail (Gmail sources need a Google sign-in): {}",
-                    report.mail_sources_skipped.join(", ")
-                );
-            }
-            if dry_run {
-                println!("dry run: nothing was written");
-            }
-            if seeded > 0 {
-                println!("default weather rules added: {seeded}");
-            }
-        }
-        ConfigAction::Export { out } => {
-            let hid = require_household(store, household).await?;
-            let toml = fa_config::export(store, hid).await?.to_toml()?;
-            match out {
-                Some(path) => {
-                    std::fs::write(&path, toml)
-                        .with_context(|| format!("writing {}", path.display()))?;
-                    println!("wrote {}", path.display());
-                }
-                None => print!("{toml}"),
-            }
-        }
-    }
-    Ok(())
+        .ok_or_else(|| anyhow!("no household yet; open the app in a browser to run setup"))
 }
 
 /// Reads a secret from the first stdin line, or prompts (without echo on a terminal).
@@ -208,11 +113,19 @@ async fn audit(
     Ok(())
 }
 
-async fn member_by_key(tx: &mut Tx, hid: HouseholdId, key: &str) -> Result<Member> {
-    Ok(MemberRepo::get_by_config_key(tx, hid, key)
+/// Finds an active member by display name (case-insensitive).
+async fn member_by_name(tx: &mut Tx, _hid: HouseholdId, name: &str) -> Result<Member> {
+    let mut found: Vec<Member> = MemberRepo::list(tx, false)
         .await?
-        .ok_or_else(|| anyhow!("no member with key '{key}'"))?
-        .value)
+        .into_iter()
+        .map(|m| m.value)
+        .filter(|m| m.display_name.eq_ignore_ascii_case(name.trim()))
+        .collect();
+    match found.len() {
+        0 => bail!("no member named '{name}'"),
+        1 => Ok(found.remove(0)),
+        _ => bail!("several members are named '{name}'"),
+    }
 }
 
 pub async fn user(store: &Store, household: Option<HouseholdId>, action: UserAction) -> Result<()> {
@@ -225,7 +138,7 @@ pub async fn user(store: &Store, household: Option<HouseholdId>, action: UserAct
         } => {
             let hid = require_household(store, household).await?;
             let mut tx = store.tx_for(hid).await?;
-            let m = member_by_key(&mut tx, hid, &member).await?;
+            let m = member_by_name(&mut tx, hid, &member).await?;
             if m.archived_at.is_some() {
                 bail!("member '{member}' is archived");
             }
@@ -446,7 +359,7 @@ pub async fn notify(
     let NotifyAction::Test { member } = action;
     let hid = require_household(store, household).await?;
     let mut tx = store.tx_for(hid).await?;
-    let m = member_by_key(&mut tx, hid, &member).await?;
+    let m = member_by_name(&mut tx, hid, &member).await?;
     tx.rollback().await?;
     let svc = fa_notify::NotifyService::new(store.clone(), wiring::notify_config(cfg));
     match svc.send_test(hid, m.id).await {
@@ -511,7 +424,7 @@ pub async fn pin(store: &Store, household: Option<HouseholdId>, action: PinActio
     let PinAction::Set { member, pin_stdin } = action;
     let hid = require_household(store, household).await?;
     let mut tx = store.tx_for(hid).await?;
-    let m = member_by_key(&mut tx, hid, &member).await?;
+    let m = member_by_name(&mut tx, hid, &member).await?;
     if m.role != Role::Adult {
         bail!("only adults have a PIN");
     }
@@ -528,8 +441,6 @@ pub async fn pin(store: &Store, household: Option<HouseholdId>, action: PinActio
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fa_auth::{AuthConfig, AuthService};
-    use sqlx::PgPool;
 
     #[test]
     fn gen_openapi_writes_document() {
@@ -538,103 +449,5 @@ mod tests {
         gen_openapi(&out).unwrap();
         let v: serde_json::Value = serde_json::from_slice(&std::fs::read(&out).unwrap()).unwrap();
         assert!(v["paths"]["/api/v1/me"].is_object());
-    }
-
-    #[sqlx::test(migrations = "../../crates/fa-store/migrations")]
-    async fn cli_import_that_creates_the_household_completes_setup(pool: PgPool) {
-        let store = Store::from_pool(pool);
-        let dir = tempfile::tempdir().unwrap();
-        let file = dir.path().join("household.toml");
-        std::fs::write(
-            &file,
-            include_str!("../../../config/examples/household.example.toml"),
-        )
-        .unwrap();
-        let import = |dry_run| ConfigAction::Import {
-            file: file.clone(),
-            replace: false,
-            dry_run,
-        };
-        config(&store, None, import(true)).await.unwrap();
-        let mut conn = store.tx_system().await.unwrap();
-        assert!(
-            SetupRepo::state(&mut conn)
-                .await
-                .unwrap()
-                .household
-                .is_none()
-        );
-        drop(conn);
-        config(&store, None, import(false)).await.unwrap();
-        let mut conn = store.tx_system().await.unwrap();
-        let state = SetupRepo::state(&mut conn).await.unwrap();
-        assert!(state.household.is_some());
-        assert!(state.completed_at.is_some());
-    }
-
-    #[sqlx::test(migrations = "../../crates/fa-store/migrations")]
-    async fn cli_paired_token_authenticates(pool: PgPool) {
-        let store = Store::from_pool(pool);
-        let toml = include_str!("../../../config/examples/household.example.toml");
-        let cfg = HouseholdConfig::from_toml(toml).unwrap();
-        let report = fa_config::import(&store, None, &cfg, ImportMode::Merge, false)
-            .await
-            .unwrap();
-        let paired = DeviceService::new(store.clone(), "http://localhost:8080")
-            .pair_system(report.household_id, "Kitchen")
-            .await
-            .unwrap();
-        let auth = AuthService::new(store.clone(), AuthConfig::default());
-        let device = auth.authenticate_bearer(&paired.token).await.unwrap();
-        assert_eq!(device.id, paired.device.id);
-    }
-
-    #[test]
-    fn config_import_rejects_a_bad_rule_with_its_name_and_position() {
-        let toml = include_str!("../../../config/examples/household.example.toml");
-        let mut cfg = HouseholdConfig::from_toml(toml).unwrap();
-        check_config(&cfg).unwrap();
-        cfg.weather_rules.push(fa_config::WeatherRuleConfig {
-            name: "Broken".into(),
-            condition: "temperature >>> 3".into(),
-            action: fa_domain::RuleAction::Alert,
-            severity: fa_domain::Severity::Info,
-            message: "x".into(),
-            status: fa_domain::RuleStatus::Active,
-            task_mode: None,
-            task_definition: None,
-        });
-        let err = check_config(&cfg).unwrap_err().to_string();
-        assert!(
-            err.contains("'Broken'") && err.contains("position"),
-            "{err}"
-        );
-    }
-
-    #[test]
-    fn config_import_reports_every_bad_rrule_and_season_condition() {
-        let toml = include_str!("../../../config/examples/household.example.toml");
-        let extra = r#"
-[[task_lists]]
-name = "Chores"
-
-[[task_definitions]]
-list = "Chores"
-title = "Bins"
-rrule = "FREQ=SOMETIMES"
-candidates = ["alex"]
-
-[[task_definitions]]
-list = "Chores"
-title = "Mow"
-rrule = "FREQ=WEEKLY"
-season_condition = "temperature >>> 3"
-candidates = ["alex"]
-"#;
-        let cfg = HouseholdConfig::from_toml(&format!("{toml}\n{extra}")).unwrap();
-        let err = check_config(&cfg).unwrap_err().to_string();
-        assert!(err.contains("2 error(s)"), "{err}");
-        assert!(err.contains("'Bins'") && err.contains("rrule"), "{err}");
-        assert!(err.contains("'Mow'") && err.contains("position"), "{err}");
     }
 }

@@ -2,7 +2,7 @@
 title: Platform
 scope: code layout, runtime, security, deployment, backups, dev workflow
 status: draft
-updated: 2026-10-26
+updated: 2026-10-30
 drawio: Platform.drawio
 drawio_src: src/Platform.py
 depends_on: [D-002, D-003, D-004, D-005, D-006, D-010, D-018, D-019, D-020, D-023, D-025, D-026, D-031, D-032, D-033, D-034, D-035, D-064, D-065, D-069, D-072, D-073, D-074, D-075, D-076, D-077]
@@ -11,7 +11,7 @@ milestone: M0
 
 # Platform (DRAFT v4)
 
-The platform that M0 builds and every later milestone depends on. **v4 is the M3.5 Onboarding re-derivation** (D-065, D-069, D-072 to D-077): one compose file with one app container, plain HTTP by default with an optional Tailscale sidecar for HTTPS and remote access, generated secrets, runtime settings in the UI, and a first-run wizard instead of a TOML file and admin commands.
+The platform that M0 builds and every later milestone depends on. **v4 is the M3.5 Onboarding re-derivation** (D-065, D-069, D-072 to D-077): one compose file with one app container, plain HTTP by default with an optional Tailscale sidecar for HTTPS and remote access, generated secrets, runtime settings in the UI, and a first-run wizard instead of a TOML file and admin commands (the household TOML was removed entirely, D-089).
 
 ## 1. Repository & workspace layout (page "Packages")
 ```
@@ -23,7 +23,7 @@ The platform that M0 builds and every later milestone depends on. **v4 is the M3
 ├─ crates/
 │  ├─ fa-domain        entities, IDs, enums, DTOs (ts-rs export), policy types
 │  ├─ fa-store         sqlx repos, migrations/, RLS session setup, Secret crypto
-│  ├─ fa-config        process config (figment) + household TOML schema, import/export
+│  ├─ fa-config        process config and runtime settings (figment); creates the household for the wizard
 │  ├─ fa-auth          passwords, sessions, devices, PIN step-up, RBAC policy
 │  ├─ fa-jobs          Postgres job queue + scheduler
 │  ├─ fa-api           axum routers, OpenAPI (utoipa), SSE hub
@@ -42,7 +42,6 @@ The platform that M0 builds and every later milestone depends on. **v4 is the M3
 │  ├─ .env.example       optional overrides only; nothing is required (README.md: install guide)
 │  ├─ systemd/fa-gpu-agent.service
 │  └─ runbooks/           install.md, restore.md, rotate-key.md
-├─ config/examples/    household.example.toml (fictional family, D-004)
 └─ justfile            optional dev shortcuts (thin wrappers; CI and the Docker build never depend on `just`)
 ```
 **Dependency rule:** `fa-domain` depends on nothing internal. Feature crates depend on `fa-domain`, `fa-store`, and `fa-jobs`, never on each other's internals; they talk through traits defined in `fa-domain`. Only `fa-api` and the bins wire everything together.
@@ -53,7 +52,7 @@ The platform that M0 builds and every later milestone depends on. **v4 is the M3
 | Async / HTTP | tokio, axum, tower-http (compression, trace, static files, timeouts) |
 | DB | sqlx (postgres, uuid, chrono, json, migrate), with compile-time checked queries (offline `.sqlx` data kept in git) |
 | Time | chrono + chrono-tz, rrule |
-| Serialisation | serde, serde_json, toml |
+| Serialisation | serde, serde_json |
 | Config | figment (env + file) for process config |
 | Auth / crypto | argon2, tower-sessions with a Postgres store, rand, aes-gcm, sha2 |
 | API docs / types | utoipa (+ Swagger UI in dev), ts-rs |
@@ -112,7 +111,7 @@ Three layers, each with one owner and one place to edit it (D-065, D-075):
 - **Resolution for layer 2:** environment variable > DB > default. A field set by the environment is shown read-only as "set by the server", so every existing `FA_*` variable keeps working and overrides the UI.
 - **Reload:** a change publishes `pg_notify('fa_settings')`, and the process re-reads the settings handle that every consumer (notify client, OAuth, pairing links, proxy trust) reads through. Listener and bind changes say "restart needed".
 - **Public address:** the wizard stores the browser's `location.origin`; links produced without a request (notification click URLs) use the stored value only.
-- **Household TOML (D-018)** is no longer part of setup. Import (upload with a dry-run preview) and export (download) are in Settings, System, through `POST /api/v1/config/import` and `GET /api/v1/config/export`, the same code as `fa-server config import|export`. Secrets are excluded from export.
+- **No household file (D-089).** The household TOML import and export (D-018) were removed; the database and the UI are the source of truth. The optional process-level `fa.toml` stays and holds process and runtime settings only.
 
 ## 7. Jobs & scheduling
 - `job` table: `kind, payload jsonb, run_at, priority, attempts, max_attempts, locked_by, locked_until, idempotency_key UNIQUE`. Workers claim jobs with `FOR UPDATE SKIP LOCKED` and retry with exponential backoff. Jobs that keep failing are marked `dead` and shown on the status page.
@@ -152,7 +151,7 @@ We ship **`deploy/compose.yaml`**, which has every service (D-033, D-065). The d
 ## 10. Dev workflow
 - `just dev` brings up Postgres in compose, then runs `cargo watch` for `serve all` and `pnpm dev` (with Vite proxying to the api).
 - `just test` runs nextest and vitest. `just e2e` runs Playwright against compose. `just gen` regenerates the TS types and OpenAPI client.
-- Seed data comes from `config/examples/household.example.toml` (a fictional family). No real data goes in fixtures (D-004).
+- Seed data for development and e2e comes from `e2e/seed-household.mjs`, which creates a fictional family through the setup API. No real data goes in fixtures (D-004).
 - **CI (GitHub Actions, D-032):**
   - `ci.yml`: fmt, clippy `-D warnings`, nextest with a Postgres service, cargo deny (advisories and licences), gitleaks, the example-data check, sqlx offline check, and web lint, typecheck, vitest, and build.
   - `release-image.yml` (on `v*` tags): the `linux/amd64` `fa-server` image to **public** GHCR (D-077), plus the `fa-gpu-agent` binary as a release asset.
@@ -160,7 +159,7 @@ We ship **`deploy/compose.yaml`**, which has every service (D-033, D-065). The d
 ## 11. M0 definition of done
 1. The workspace builds, and GitHub Actions `ci.yml` is green: fmt, clippy, tests, cargo deny, and the web checks.
 2. Migrations exist for Identity, Audit, Secret, job, and schedule, with RLS on.
-3. `config import` of the example household works, and `config export` round-trips it.
+3. The example household can be created through the setup API (`e2e/seed-household.mjs`).
 4. Login, logout, and sessions work. The RBAC policy has tests. Device pairing and PIN elevation work.
 5. The Vue shell has login, a member list, and a `/dashboard` placeholder with a device token, an SSE heartbeat, and the keep-alive measures.
 6. `deploy/compose.example.yaml` (default profile) comes up on the core node, `tailscale serve` is reachable from a phone, a backup lands on the NAS, and the restore rehearsal passes.

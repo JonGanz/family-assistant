@@ -5,7 +5,6 @@ import { ApiError, problemCode } from '../api/http'
 import ErrorBanner from '../components/ErrorBanner.vue'
 import PageHeader from '../components/PageHeader.vue'
 import { describeError } from './shared'
-import HouseholdFile from './system/HouseholdFile.vue'
 import MasterKeyBackup from './system/MasterKeyBackup.vue'
 import { buildPatch, connectionText, draftFrom, metaFor, type Draft } from './system/settingsModel'
 
@@ -196,11 +195,6 @@ function backedUp() {
         </p>
         <button type="submit" class="btn-primary" :disabled="applying">Save</button>
       </form>
-
-      <section class="card" aria-label="Household file">
-        <h2>Household file</h2>
-        <HouseholdFile />
-      </section>
     </template>
   </section>
 </template>

@@ -40,8 +40,7 @@ impl Modify for Security {
         crate::setup::get_setup, crate::setup::setup_household, crate::setup::setup_owner,
         crate::setup::setup_complete, crate::system::master_key,
         crate::system::master_key_confirm, crate::system::get_settings,
-        crate::system::patch_settings, crate::system::get_about, crate::config::import_config,
-        crate::config::export_config,
+        crate::system::patch_settings, crate::system::get_about,
         feeds::get_household, feeds::patch_household,
         feeds::put_avatar, feeds::delete_avatar, feeds::get_avatar,
         feeds::oauth_start, feeds::oauth_callback, feeds::list_oauth_accounts,
@@ -85,7 +84,7 @@ impl Modify for Security {
         ElevateResp, SessionView, PasswordBody, OwnPasswordChange, crate::feeds::HouseholdViewExt,
         crate::setup::SetupHouseholdCreated, SetupStatus, NewSetupHousehold, SetupLocation,
         NewSetupOwner, fa_domain::theme::Hue, fa_domain::theme::ThemeChoice, fa_domain::theme::ThemeMode, MasterKeyRequest, MasterKeyView, SettingSource, SettingKind, SettingView,
-        ConnectionInfo, AboutView, SystemSettingsView, SystemSettingsPatch, fa_config::ImportReport,
+        ConnectionInfo, AboutView, SystemSettingsView, SystemSettingsPatch,
     )),
     modifiers(&Security)
 )]

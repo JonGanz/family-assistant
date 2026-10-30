@@ -2,7 +2,7 @@
 title: Tasks — lists, recurrence, assignment, routines, notifications
 scope: task lists, recurring definitions, occurrences and steps, assignment strategies, absences, completion policy, the Now list, routines, season and weather triggers, calendar display, ntfy notifications
 status: draft
-updated: 2026-10-25
+updated: 2026-10-30
 drawio: Tasks.drawio
 drawio_src: src/Tasks.py
 depends_on: [D-006, D-010, D-013, D-017, D-018, D-019, D-023, D-027, D-029, D-031, D-035, D-036, D-037, D-038, D-039, D-040, D-041, D-042, D-043, D-044, D-045, D-046, D-047, D-048, D-049, D-050]
@@ -138,7 +138,7 @@ All of these are editable per list (D-045, D-046). A task can change its own `ca
 | `routine_nudge` | A set time before `done_by` (default 10 min) while steps remain | off |
 
 ### 5.2 Delivery
-- Each member's topic is a random 24-character name, generated when preferences are first saved. It acts as the capability (ntfy's standard model) and never contains household specifics. The API returns it only to that member and to adults, and `config export` leaves it out.
+- Each member's topic is a random 24-character name, generated when preferences are first saved. It acts as the capability (ntfy's standard model) and never contains household specifics. The API returns it only to that member and to adults.
 - `fa-server` publishes to `FA_NTFY_URL` with an optional `FA_NTFY_TOKEN` (bearer). Without `FA_NTFY_URL`, notifications are disabled and the settings screen says so. Settings → Notifications shows the subscribe URL and a QR code.
 - Hosters who want more than topic secrecy enable ntfy's own access control (`auth-default-access: deny-all`, a write token for `fa-server`, read access per topic). `deploy/README.md` documents it; the app doesn't manage ntfy users.
 - Producers (fa-tasks now, M3 later) insert outbox rows unconditionally, deduplicated by `dedupe_key`. `notify.send` runs every minute and decides: it drops rows whose trigger the member has turned off, holds rows during quiet hours (household default or the member's override), groups each member's remaining rows that are at least 60 seconds old into one message ("3 new tasks"), publishes, and retries failures with backoff (at most 5 attempts).
@@ -173,8 +173,8 @@ All of these are editable per list (D-045, D-046). A task can change its own `ca
 | Skip, accept suggested | ✗ | ✓ | ✗ | ✗ (adult's own session) |
 | Notification preferences | own | own and children's | ✗ | ✗ |
 
-## 8. Configuration (D-018)
-The household TOML gains `[[task_list]]`, `[[task_definition]]`, `[[routine]]`, and per-member `notify` tables (triggers and quiet hours, without topics: topics are regenerated on import). `config export` writes them back. The example household gets no task data (D-047).
+## 8. Configuration
+Lists, definitions, routines and per-member notification preferences are edited in the UI and stored in the database. There is no household file (D-089). The example household gets no task data (D-047).
 
 ## 9. Frontend (summary)
 Frontend.md gets the M2 screens with the M2 plan:

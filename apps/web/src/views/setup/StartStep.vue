@@ -3,11 +3,8 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { api } from '../../api/client'
 import ErrorBanner from '../../components/ErrorBanner.vue'
-import { useHouseholdStore } from '../../stores/household'
-import { useMembersStore } from '../../stores/members'
 import { useSetupStore } from '../../stores/setup'
 import { describeError } from '../shared'
-import HouseholdFile from '../system/HouseholdFile.vue'
 import StepButtons from './StepButtons.vue'
 
 const setup = useSetupStore()
@@ -33,24 +30,12 @@ async function finish(to: string) {
     busy.value = false
   }
 }
-
-function imported() {
-  void useHouseholdStore().load()
-  void useMembersStore().load()
-}
 </script>
 
 <template>
   <form class="form" data-testid="step-start" @submit.prevent="finish('/')">
     <h2>Start</h2>
-    <p>
-      Nothing is added for you: start with an empty calendar and task list, or bring a household
-      file you exported from another install.
-    </p>
-    <fieldset>
-      <legend>Import a household file (optional)</legend>
-      <HouseholdFile :exportable="false" @applied="imported" />
-    </fieldset>
+    <p>Nothing is added for you: you start with an empty calendar and task list.</p>
     <p>Afterwards, connect your calendars and mail, and pair the wall screen:</p>
     <ul class="row">
       <li>

@@ -56,7 +56,7 @@ test('Settings index: groups, and System and Members are there for an adult', as
   ).toHaveCount(0)
 })
 
-test('System: the connection is stated as a fact; a server-set value is locked; the household file previews', async () => {
+test('System: the connection is stated as a fact; a server-set value is locked', async () => {
   const page = adultPage
   await page.goto('/settings/system')
   await expect(page.getByRole('heading', { name: 'System', level: 1 })).toBeVisible()
@@ -67,20 +67,6 @@ test('System: the connection is stated as a fact; a server-set value is locked; 
   await expect(pub).toContainText(/Set by the server/)
   // A key that nobody set is not locked.
   await expect(page.getByTestId('setting-tailnet_base_url').locator('input')).toBeEnabled()
-
-  const [download] = await Promise.all([
-    page.waitForEvent('download'),
-    page.getByRole('button', { name: 'Export household file' }).click(),
-  ])
-  expect(download.suggestedFilename()).toBe('household.toml')
-
-  // A dry-run preview of the example file: nothing is written until Apply, which this test never presses.
-  await page
-    .locator('input[name=household_file]')
-    .setInputFiles('../../config/examples/household.example.toml')
-  const preview = page.getByTestId('import-preview')
-  await expect(preview).toContainText('Preview')
-  await expect(preview.getByRole('button', { name: 'Apply' })).toBeVisible()
 })
 
 test('Settings, Household: the per-adult dashboard count is a setting', async () => {

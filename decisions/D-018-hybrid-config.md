@@ -1,13 +1,15 @@
 ---
 id: D-018
 title: Hybrid configuration: file bootstrap/import-export, UI is source of truth thereafter
-status: accepted
+status: superseded
 date: 2026-10-23
 source_questions: [Q-017]
 supersedes:
-superseded_by:
+superseded_by: D-089
 affects: [arch/Overall.md]
 ---
+
+> **Superseded by [D-089](D-089-remove-household-toml.md).** The household TOML import and export were removed; the database and UI are the source of truth.
 
 # D-018: Hybrid configuration: file bootstrap/import-export, UI is source of truth thereafter
 

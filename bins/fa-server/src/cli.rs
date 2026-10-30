@@ -42,11 +42,6 @@ pub enum Command {
     },
     /// Apply database migrations and exit.
     Migrate,
-    /// Import or export the household TOML.
-    Config {
-        #[command(subcommand)]
-        action: ConfigAction,
-    },
     /// Manage login accounts.
     User {
         #[command(subcommand)]
@@ -95,27 +90,9 @@ pub enum Command {
 }
 
 #[derive(Debug, Subcommand)]
-pub enum ConfigAction {
-    Import {
-        file: PathBuf,
-        /// Archive keyed members the file no longer lists.
-        #[arg(long)]
-        replace: bool,
-        /// Report what would change, then roll back.
-        #[arg(long)]
-        dry_run: bool,
-    },
-    Export {
-        /// Write to a file instead of stdout.
-        #[arg(long)]
-        out: Option<PathBuf>,
-    },
-}
-
-#[derive(Debug, Subcommand)]
 pub enum UserAction {
     Add {
-        /// Member key from the household TOML.
+        /// Member display name (case-insensitive).
         #[arg(long)]
         member: String,
         #[arg(long)]
@@ -159,7 +136,7 @@ pub enum WeatherAction {
 pub enum NotifyAction {
     /// Publish a test notification to a member's topic and print the subscribe URL.
     Test {
-        /// Member key from the household TOML.
+        /// Member display name (case-insensitive).
         #[arg(long)]
         member: String,
     },

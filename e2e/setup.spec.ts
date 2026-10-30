@@ -1,5 +1,4 @@
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import {
   expect,
   test,
@@ -414,39 +413,4 @@ test("an advisory disappears when its rule stops matching the forecast", async (
   } finally {
     await mild(false);
   }
-});
-
-// ---- the household file ---------------------------------------------------------------------
-
-test("config export downloads TOML; import previews with a dry run, then writes the same thing", async () => {
-  const exp = await owner.get("/api/v1/config/export");
-  expect(exp.ok()).toBeTruthy();
-  expect(exp.headers()["content-disposition"]).toContain('filename="household.toml"');
-  const exported = await exp.text();
-  expect(exported).toContain("Example household");
-  expect(exported).not.toContain(PASSWORD);
-
-  const memberCount = async (): Promise<number> => {
-    const m: J = await (await owner.get("/api/v1/members")).json();
-    return (Array.isArray(m) ? m : (m.items ?? m.members)).length;
-  };
-  const before = await memberCount();
-  const file = readFileSync("../config/examples/household.example.toml", "utf8");
-  const post = (dry: boolean, data: string) =>
-    owner.post(`/api/v1/config/import?dry_run=${dry}`, { data, headers: { "Content-Type": "text/plain" } });
-
-  const dry = await post(true, file);
-  expect(dry.status(), await dry.text()).toBe(200);
-  const preview: J = await dry.json();
-  expect(preview.members_created).toEqual(["alex", "sam", "riley", "jordan"]);
-  expect(await memberCount()).toBe(before); // a dry run writes nothing
-
-  const bad = await post(true, "this is = [not valid");
-  expect(bad.status()).toBeGreaterThanOrEqual(400);
-  expect(bad.status()).toBeLessThan(500);
-
-  const real = await post(false, file);
-  expect(real.status(), await real.text()).toBe(200);
-  expect((await real.json()).members_created).toEqual(preview.members_created);
-  expect(await memberCount()).toBe(before + 4);
 });

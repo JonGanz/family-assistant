@@ -2,7 +2,7 @@
 title: Feeds — calendar read & weather
 scope: calendar sync (Google, CalDAV, ICS), Google OAuth accounts, weather fetch, WeatherRules, advisories, cross-process change events
 status: draft
-updated: 2026-10-28
+updated: 2026-10-30
 drawio: Feeds.drawio
 drawio_src: src/Feeds.py
 depends_on: [D-004, D-006, D-008, D-014, D-017, D-018, D-019, D-023, D-034, D-035, D-036, D-068]
@@ -133,10 +133,8 @@ op        := <= | < | >= | > | == | !=
 
 The S2-suggested rules and LLM advisories of D-017 come in M4. Weather-driven tasks come in M2.
 
-## 5. Configuration (D-018)
-- The household TOML gains `[household] units`, `calendar_past_days`, `calendar_future_days`, `weather_retention_days`, `private_events_as_busy`, plus `[[calendar_sources]]` and `[[weather_rules]]`.
-- Calendar sources are **exported without secrets**: Google sources export as a placeholder that needs reconnecting, CalDAV without the password, and ICS without the URL. On import, these sources come in **disabled** with the state `needs_reauth`, and the UI asks for the missing credential.
-- `calendar_sources[].calendars[]` carries `remote_id`, `enabled` and `members` (member keys), so linking survives a round trip.
+## 5. Configuration
+All of this is edited in Settings and stored in the database. There is no household file (D-089, which removed the TOML import and export of D-018).
 
 ## 6. Cross-process change events (ChangeBus)
 The api and the worker are separate processes (Platform.md §3), so the worker can't use the api's in-process SSE `Hub`. The bridge works like this:

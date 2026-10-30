@@ -48,10 +48,6 @@ export interface RequestOptions {
   raw?: Blob
   headers?: Record<string, string>
   signal?: AbortSignal
-  /** Plain-text payload (household TOML import); wins over `body`. */
-  text?: string
-  /** Read the answer as text instead of JSON (household TOML export). */
-  asText?: boolean
   /** Send the stored device token (default true). User-session calls pass false. */
   bearer?: boolean
 }
@@ -66,9 +62,6 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
   if (opts.raw) {
     headers['Content-Type'] = opts.raw.type || 'application/octet-stream'
     body = opts.raw
-  } else if (opts.text !== undefined) {
-    headers['Content-Type'] = 'text/plain'
-    body = opts.text
   } else if (opts.body !== undefined) {
     headers['Content-Type'] = 'application/json'
     body = JSON.stringify(opts.body)
@@ -82,7 +75,6 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
     throw new ApiError(res.status, problem)
   }
   if (res.status === 204) return undefined as T
-  if (opts.asText) return (await res.text()) as T
   // Some routes answer 202 with no body (e.g. a queued sync).
   const text = await res.text()
   return (text ? JSON.parse(text) : undefined) as T

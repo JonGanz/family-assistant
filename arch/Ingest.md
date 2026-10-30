@@ -2,7 +2,7 @@
 title: Ingest — email, rules pipeline, bills, linking, approvals
 scope: Mail sources (Gmail API and IMAP) and sync, message storage and retention, the decision pipeline engine (rules-only preset), deterministic classifiers and extractors, orgs, contacts and enrollments, bills, event proposals and calendar writes, the approval inbox, email tasks, the labelling view
 status: draft
-updated: 2026-10-26
+updated: 2026-10-30
 drawio: Ingest.drawio
 drawio_src: src/Ingest.py
 depends_on: [D-001, D-004, D-006, D-007, D-008, D-009, D-010, D-012, D-013, D-014, D-018, D-019, D-023, D-024, D-027, D-028, D-029, D-034, D-035, D-036, D-044, D-045, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-068, D-070, D-071, D-078]
@@ -145,7 +145,7 @@ A `mail_rule` holds a list of conditions, all of which must match (AND). Each ha
 - **Fields:** `from_addr`, `from_domain` (matches subdomains), `to`, `subject`, `body`, `gmail_label`, `header:<Name>`, `has_attachment_type`, `org_kind`, `org`, `source`.
 - **Ops:** `is`, `in`, `contains_any` (whole word, case-insensitive), `matches` (regex, length-limited), `exists`.
 
-Rules are evaluated by priority, and the first match for a decision point wins. Rules are data: they are edited in the UI and exported to TOML (D-018).
+Rules are evaluated by priority, and the first match for a decision point wins. Rules are data: they are edited in the UI.
 
 ### 6.2 Built-in signals (each can be turned off)
 | Signal | Decision point → value | Confidence |
@@ -278,19 +278,8 @@ Summarising a long newsletter per child is System 2 work (M4).
 | `inbox.expire` | hourly | Marks stale proposals `expired` (D-061) |
 | `mail.retention` | daily | The D-034 policy: purge content, mark expired after `max_pending_days` |
 
-## 14. Configuration (D-018)
-The household TOML gains:
-- `[[orgs]]`, with `contacts` and the ICS feed name;
-- `[[members]].enrollments` and `aliases`;
-- `[[mail_sources]]`, with its provider, address, owners, visibility, read-only, backfill, query, folders (IMAP) and poll interval. Credentials (OAuth or the app password) are entered in the UI, so the import leaves the source in `needs_reauth`;
-- `[[members]].gender`, `relevance_tags`, and `[household.gender_terms]`;
-- `[household.events]` (`auto_write`, thresholds) and `[household.inbox]` (expiry);
-- `[[mail_rules]]`;
-- `[[categories]]` (behaviour, notify, auto actions, email tasks);
-- `[retention.mail]`;
-- the thresholds.
-
-Secrets are never exported.
+## 14. Configuration
+Organizations, enrollments, mail sources, rules, categories, retention, events and inbox settings and thresholds are edited in Settings and stored in the database. There is no household file (D-089). Credentials are entered in the UI.
 
 ## 15. Frontend (summary; detail in Frontend.md v3)
 New app screens:

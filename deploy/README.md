@@ -80,7 +80,7 @@ The wizard asks for:
    backups, so without it a restored backup has every calendar and mail sign-in locked, and you would add
    them all again. You must tick "I stored it somewhere safe" to continue. **Settings, System** warns
    until you do.
-7. **Start:** starter chores, or **import a household file**, then links to calendars, mail and devices.
+7. **Start:** links to calendars, mail and devices.
 
 Plain HTTP on a home network is a supported mode: login, the wall screen, pairing and notifications all
 work over it. Traffic on your Wi-Fi is not encrypted, though. For HTTPS, and for reaching the app from
@@ -434,14 +434,11 @@ Everyday setup needs no command line. For recovery and scripting, `fa-server` ru
 ```sh
 alias fa='docker compose exec app fa-server'
 fa user reset-password --username alex          # forgot a password (asks for a new one)
-fa user add --member <key> --username <name>    # an account for an existing member (members are keyed in the household file)
-fa pin set --member <key>                       # an adult's PIN
+fa user add --member <name> --username <name>   # an account for an existing member (by display name)
+fa pin set --member <name>                      # an adult's PIN
 fa device pair --name kitchen                   # prints a pairing link
-fa config export > household.toml               # the household as TOML (no secrets)
-fa config import --dry-run /dev/stdin < household.toml   # preview what an import would change
 ```
-`config import` (without `--dry-run`) writes the file; it is also in **Settings, System, Household file**
-(upload with a preview). Everything else the wizard does can be done in Settings. If you lose the master key, see
+Everything else the wizard does can be done in Settings. If you lose the master key, see
 [`runbooks/restore.md`](runbooks/restore.md).
 
 ## 10. Reference

@@ -64,21 +64,18 @@ links, so it is needed by every `fa-server` command. Local settings live in [`.e
 `fa-server` reads [`.env.dev`](.env.dev) itself when it runs from the repository root (variables
 already set in your environment win), so no shell setup is needed, whichever shell you use.
 
-### 3. Load the example household and create accounts
-`config/examples/household.example.toml` is a fictional family with a location, so weather works
-right away. Create the database tables first (`serve api` would do it too, but the commands below
-need them now), load the household, then give members logins and an adult a PIN:
+### 3. Create the example household and accounts
+`e2e/seed-household.mjs` creates a fictional family (with a location, so weather works right away) through
+the first-run setup API and completes the setup, so the browser shows the login page and not the wizard.
+It needs the app running, so `scripts/demo-reset.sh` starts the app in the background, seeds it and gives
+Riley (a child) a login. To do the same by hand, with the app already running (`cargo run -p fa-server -- serve all`):
 ```bash
-cargo run -p fa-server -- migrate
-cargo run -p fa-server -- config import config/examples/household.example.toml
-cargo run -p fa-server -- user add --member alex --username alex@example.com    # prompts for a password (adults: 12+ chars)
-cargo run -p fa-server -- user add --member riley --username riley@example.com  # a child (4+ chars)
-cargo run -p fa-server -- pin set --member alex                                  # 4-6 digit PIN for dashboard approvals
+FA_E2E_BASE_URL=http://127.0.0.1:8080 FA_E2E_USER=alex@example.com FA_E2E_PASSWORD='a-long-example-passphrase' \
+  FA_E2E_PIN=1234 node e2e/seed-household.mjs        # Alex, the first adult, with a dashboard PIN
+cargo run -p fa-server -- user add --member riley --username riley@example.com  # a child (4+ chars); prompts for a password
 ```
-The import also adds the 8 default weather rules and a disabled example calendar source, and, because it
-creates the household, it marks the first-run setup complete, so the browser shows the login page and not the
-wizard. (To try the wizard instead, start with an empty database and skip this step.) `.env.dev` sets
-`FA_ALLOW_PRIVATE_HOSTS=true` so the local stubs below are reachable.
+(Node 22.18 or later runs the script directly. To try the wizard instead, start with an empty database and
+skip this step.) `.env.dev` sets `FA_ALLOW_PRIVATE_HOSTS=true` so the local stubs below are reachable.
 Forgotten a password? `cargo run -p fa-server -- user reset-password --username alex@example.com`.
 
 ### 4. Get a weather forecast
@@ -151,9 +148,7 @@ as `alex@example.com` and:
 6. Pair a device (step 7) and open **Edit layout**: add the **Now**, **Member tasks** and
    **Routine** panels. On the dashboard, completing a task or step asks "Who did it?" first. That
    needs the household's *dashboard completion override*, which is on by default: switch it off
-   under **Settings, Household** ("Allow ticking off tasks on dashboards") or with
-   `dashboard_completion_override = false` in the `[household]` table of the household TOML
-   (omitted: left as it is; new households start with it on). With it off, dashboard panels are
+   under **Settings, Household** ("Allow ticking off tasks on dashboards"). With it off, dashboard panels are
    read-only.
 
 ### 9. Phone notifications
@@ -185,8 +180,8 @@ server only.) Then, as `alex@example.com`:
    `family@example.com`, server `127.0.0.1`, port `13143`, any app password. Press **Test
    connection**: it says "Connected". Leave *Read only* ticked and press **Add source**.
 2. Send it a few fictional mails. The ones in [`e2e/fixtures/mail/`](e2e/fixtures/mail/) are written
-   for the example household (they come from the school and the biller of
-   `config/examples/household.example.toml`):
+   for the example household (they come from the school and the biller that
+   `e2e/seed-household.mjs` creates):
    ```bash
    for m in teacher-invite newsletter bill permission-slip unknown-teacher; do
      node e2e/send-mail.mjs --port 13025 --to family@example.com --fixture "$m"
@@ -221,9 +216,7 @@ Events of a calendar with no members are shown for the whole household.
 | **ICS link** | **ICS link**, then the URL | Any `.ics` URL (school calendars, sports clubs, public holidays) |
 
 Links and passwords are stored encrypted and never shown again; replace them with *Change link or
-password*. Sources are polled by the worker (every 15 minutes for Google and CalDAV, hourly for ICS links, which is also a `poll_minutes` setting in the TOML) and **Sync now** forces it.
-`config export` never contains secrets, and a source imported from a TOML file starts disabled with
-*needs reauth* until you add its link or password in the UI.
+password*. Sources are polled by the worker (every 15 minutes for Google and CalDAV, hourly for ICS links) and **Sync now** forces it.
 
 **Privacy (D-036):** an adult's private events show as **Busy** on the dashboard and to children.
 The household switch is in **Settings, Household**. Children only see events of calendars that
@@ -232,11 +225,9 @@ include them or no member.
 Known limitation: a saved household location cannot be cleared from the UI.
 
 ## Weather and the household location
-Set the location, time zone and units in **Settings, Household** (or in the `[household]` table of
-the TOML: `tz`, `location = { label, lat, lon }`, `units = "metric" | "imperial"`). Without a
+Set the location, time zone and units in **Settings, Household**. Without a
 location the app has no forecast. **Settings, Household** also sets the **first day of the week**
-(Monday or Sunday, default Monday), which the dashboard's Week view uses. The same table also has `calendar_past_days`,
-`calendar_future_days`, `weather_retention_days` and `private_events_as_busy`.
+(Monday or Sunday, default Monday), which the dashboard's Week view uses.
 
 The forecast is fetched from Open-Meteo every 30 minutes by the worker. **Weather rules**
 (**Settings, Weather**) turn it into dashboard advisories, for example `min(temp_c, tonight) <= 0`
@@ -287,7 +278,7 @@ Missing weather never blocks a chore.
   (**Release** gives it back; claims expire).
 
 **Absences** (Settings, Tasks, Absences) record who is away from when to when, and rotation and
-pool assignment respect them. Absences are operational data, not part of the TOML export.
+pool assignment respect them.
 Completing, reopening and skipping are written to the audit log with who and from which device.
 **Undo** (reopen within 10 minutes of completing) puts the chore's schedule and rotation back as
 they were; reopening later only reopens the task.
@@ -304,9 +295,9 @@ skipped the next day. Phones show progress per member (children see their own); 
 
 ### The Now list
 **Now** is the short list of what to do next: the top few open tasks (7 by default; **Settings,
-Household**, or `now_list_size` in the TOML) by a score that rises as a task approaches its due time and keeps
+Household**) by a score that rises as a task approaches its due time and keeps
 rising while overdue, plus a bonus for high priority and for tasks made by a weather rule. The
-weights are `now_weights` (`due`, `flag`, `weather`) in the TOML. On a phone, **Tasks, Now** lists yours first,
+weights (`due`, `flag`, `weather`) are in **Settings, Household**. On a phone, **Tasks, Now** lists yours first,
 then the household's. The dashboard **Now** panel shows the same list and can be filtered by member
 or list in the layout editor.
 
@@ -345,74 +336,6 @@ arrives as "3 updates" with the titles listed. A failed send is retried with gro
 attempts). **Children's copies**: set a child's *copy to* to an adult and that adult receives every
 notification of the child, prefixed with the child's name, subject to the adult's own triggers and
 quiet hours. Tapping a notification opens the app (the link uses the public address, **Settings, System**).
-
-### Household TOML
-All of this can be written in the household TOML (`fa-server config import`), which checks every
-RRULE, weather condition and season condition first and lists all the errors before writing
-anything. Topics and absences are never exported. The example below shows only the new keys:
-put them into your household file next to its existing `[household]` (which also needs `name`,
-`tz` and so on), `[[members]]` and calendar tables. It assumes the members `alex` and `riley` and
-the *School calendar* source of `config/examples/household.example.toml`:
-```toml
-[household]
-now_list_size = 5
-now_weights = { due = 1.0, flag = 0.75, weather = 0.5 }
-quiet_from = "20:30"
-quiet_until = "06:45"
-
-[[members]]
-key = "riley"
-display_name = "Riley"
-role = "child"
-[members.notify]
-triggers = ["assigned", "due_soon"]   # assigned|overdue|digest|due_soon|routine_nudge|source_reauth
-due_soon_minutes = 90
-nudge_minutes = 5
-quiet_from = "21:30"
-quiet_until = "07:30"
-copy_to = "alex"                      # adult member key
-
-[[task_lists]]
-name = "Chores"
-kind = "chores"                       # chores|homework|general
-claim_ttl_minutes = 60                # omitted: until the end of the local day
-color = "#44aa88"
-
-[[task_definitions]]
-list = "Chores"
-title = "Take out the bins"
-steps = ["Recycling", "Rubbish"]
-rrule = "FREQ=WEEKLY;BYDAY=TU"        # or every_days = 3 (exactly one of the two)
-start_date = "2026-01-06"
-due_time = "19:00"
-lead_days = 1
-candidates = ["alex", "riley"]        # member keys, in order
-strategy = "rotation"                 # fixed|rotation|pool
-season_from = "04-01"
-season_until = "10-31"
-season_condition = "min(temp_c, today) > 5"
-
-[[routines]]
-name = "Morning"
-members = ["riley"]
-starts_at = "07:00"
-done_by = "08:00"
-day_filter = "school_days"
-school_calendar = "School calendar/School"   # "source name/calendar name"
-no_school_match = ["holiday", "inset"]
-steps = [{ text = "Brush teeth", target_time = "07:10" }, { text = "Pack bag" }]
-
-[[weather_rules]]
-name = "Bins in the rain"
-condition = "sum(precip_mm, next 24h) > 5"
-action = "task"
-severity = "info"
-message = "Rain tomorrow"
-task_mode = "suggest"                 # create (default)|suggest
-task_definition = "Take out the bins" # title, or "List/Title" if ambiguous
-```
-Import is idempotent by name or title within a list. `weather_rules` may point at a chore
-(`task_definition`) from the same file.
 
 ## Mail, inbox and bills
 Mail ingest turns the household's email into a short list of things that need a decision. The
@@ -460,8 +383,7 @@ tried on past mail before saving, and win over the signals.
 match) and sender addresses, an optional ICS feed and default calendar, a **contact mode**
 (*suggest* new senders at the domain for confirmation, add them *automatically*, or *manual*), and
 for billers a **bill template** (regular expressions for the amount, the due date and the account).
-Contacts are the teachers, coaches and offices. A child's **enrollment** (on **Settings, Organizations**, or
-`[[members.enrollments]]` in the TOML) records the organization, grade, class and the contacts
+Contacts are the teachers, coaches and offices. A child's **enrollment** (on **Settings, Organizations**) records the organization, grade, class and the contacts
 there, which is how "grade 3 families" mail from the school reaches the right child. Members (on **Members**) also
 have aliases (nicknames), a gender and relevance tags (such as `soccer`) that help the linking.
 
@@ -501,93 +423,6 @@ records your confirmation, and fixing a chip records your answer as a human deci
 evaluation sample* to count a message toward the held-out set; the progress bar counts labelled
 messages of that sample (200 by default).
 
-### Household TOML
-The mail settings are in the household TOML too (`config import`/`export`); secrets are never
-included, an IMAP source imported from a file starts as *needs reauth* until its password is typed
-in the UI, and **Gmail sources are not created by import** (connect them in Settings, Mail; the
-import prints which it skipped). Calendar references are `"<calendar source key>/<remote id>"`.
-See [`config/examples/household.example.toml`](config/examples/household.example.toml). The new
-tables, next to the existing ones:
-```toml
-[household]
-currency = "USD"
-bill_lead_days = 3
-disabled_signals = []                  # built-in signal keys to switch off
-gender_terms = { female = ["girls", "girl's"], male = ["boys", "boy's"] }
-
-[household.events]                     # extracted events
-auto_write = false                     # true: write high-confidence events without asking
-extract_threshold = 0.9
-route_threshold = 0.9
-
-[household.inbox]
-task_expiry_days = 14
-contact_expiry_days = 14
-
-[retention.mail]
-content_policy = "keep_for_learning"   # purge_after_processing | keep_for_learning | keep_all
-examples_per_category = 200
-max_pending_days = 14
-
-[[members]]
-key = "riley"
-display_name = "Riley"
-role = "child"
-aliases = ["Ri"]
-gender = "female"                      # female | male | other
-relevance_tags = ["soccer"]
-[members.notify]
-approval_mode = "batched"              # immediate | batched | digest | off
-
-[[members.enrollments]]
-org = "Example Elementary"
-grade = "3"
-class = "3B"
-from = "2026-09-01"
-contacts = ["teacher@example.edu"]
-
-[[orgs]]
-name = "Example Elementary"
-kind = "school"                        # school | daycare | club | biller | other
-domains = ["example.edu"]
-senders = ["office@example.edu"]
-default_calendar = "school/ics"
-contact_mode = "suggest"               # suggest | auto | manual
-
-[[orgs.contacts]]
-name = "Ms. Teacher"
-email = "teacher@example.edu"
-role = "teacher"
-
-[[mail_sources]]
-name = "Family inbox"
-provider = "imap"                      # gmail sources are connected in the UI instead
-address = "family@example.com"
-owners = ["alex"]
-visibility = "household"               # owners | household
-read_only = true
-backfill_days = 30
-poll_minutes = 5
-[mail_sources.imap]
-host = "imap.example.com"
-username = "family@example.com"
-folders = ["INBOX"]
-
-[[categories]]                         # only those that differ from the defaults
-key = "promotions"
-label = "Promotions"
-behaviour = "ignore"                   # ignore | keep | extract
-auto_actions = ["label"]               # label | archive | mark_read
-
-[[mail_rules]]
-name = "Soccer club mail is for Riley"
-decision_point = "email.member_link"
-priority = 10
-conditions = [{ field = "from_domain", op = "is", values = ["club.example.com"] }]
-value = ["riley"]
-confidence = 0.9
-```
-
 ## The dashboard layout
 Each paired device has its own layout: **Settings, Devices, Edit layout** lets you pick a preset,
 orientation, theme, agenda length, and add, remove and reorder panels (clock, weather (which also shows advisories and upcoming thunderstorms),
@@ -619,7 +454,7 @@ published palette; mark anything derived in a comment), then list it in `FAMILIE
 `research/R-002-theme-palettes.md`.
 
 ## Configuration reference
-Settings come from environment variables (`FA_*` and `DATABASE_URL`), and an optional `fa.toml`
+Settings come from environment variables (`FA_*` and `DATABASE_URL`), and an optional `fa.toml` (process settings only, never household data)
 (path in `FA_CONFIG`; a key set there counts as an environment value). Local defaults are in
 [`.env.dev`](.env.dev); the deployment's compose variables are in [`deploy/.env.example`](deploy/.env.example)
 (all optional).
@@ -679,11 +514,10 @@ value. Saving a changed setting restarts the app by itself in about a second, on
 | `serve [all\|api\|worker]` | Run the server. `api` also runs migrations and the live-update bridge, `worker` runs the jobs, `all` is both in one process (what compose runs) |
 | `init [--secrets-dir <dir>]` | Create the master key and the database password in the secrets folder if absent, never overwriting. Runs before any config loading; compose runs it as the one-shot `init` service |
 | `migrate` | Apply migrations and exit |
-| `config import <file> [--replace] [--dry-run]` / `config export [--out f]` | Household TOML in and out. Import validates RRULEs, weather conditions and season conditions first (naming each one and the position) and fails before writing anything if any is invalid. `--dry-run` prints the report and writes nothing. It seeds the default weather rules, and an import that creates the household marks the first-run setup complete. Export never includes secrets or notification topics. Both are in **Settings, System, Household file** too |
 | `tasks run-now` | One pass of `tasks.materialize`, `tasks.tick` and `routines.materialize` in this process: new tasks and routine runs appear at once instead of within a minute |
-| `notify test --member <key>` | Publishes a test notification to a member's topic and prints the subscribe address. Fails clearly if no ntfy server is set |
-| `user add --member <key> --username <u>` / `user reset-password` | Accounts (add `--password-stdin` to script it). A recovery and scripting tool: the wizard and Settings, Members cover everyday use |
-| `pin set --member <key>` | An adult's PIN (recovery and scripting, as above) |
+| `notify test --member <name>` | Publishes a test notification to a member's topic and prints the subscribe address. Fails clearly if no ntfy server is set |
+| `user add --member <name> --username <u>` / `user reset-password` | Accounts (add `--password-stdin` to script it). `<name>` is the member's display name. A recovery and scripting tool: the wizard and Settings, Members cover everyday use |
+| `pin set --member <name>` | An adult's PIN (recovery and scripting, as above) |
 | `device pair --name <n>` / `device revoke <id>` | Dashboard devices. Pairing uses the saved settings and prints the home-network link too when that address is set |
 | `mail sync-now [--source <name>]` | One sync pass of every mail source (or the named one), then processes the new messages, in this process. Needs `FA_ALLOW_PLAIN_IMAP` for a plain-IMAP server |
 | `mail process-now` | Process the household's pending messages in this process |
@@ -760,7 +594,7 @@ curl -fsSLO https://raw.githubusercontent.com/JonGanz/family-assistant/<release-
 docker compose up -d
 ```
 then open `http://<server>:8080` and **finish the setup wizard right away**: nothing else protects the first
-visit. No `.env`, key files or household file are needed: the one-shot `init` service creates the master key and
+visit. No `.env` or key files are needed: the one-shot `init` service creates the master key and
 the database password in the `fa-secrets` volume, and the wizard creates the household, the logins, the public address, the
 notification settings and shows the master key to back up. Until the first release image is published
 (human step H-12), build locally: `GIT_COMMIT=$(git rev-parse --short=12 HEAD) docker compose -f deploy/compose.yaml -f deploy/compose.build.yaml up -d --build` (the variable is optional; it is the commit that Settings, System, About shows).
