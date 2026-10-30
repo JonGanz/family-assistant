@@ -118,7 +118,7 @@ async function logout() {
   display: inline-block;
   min-width: 1.4em;
   padding: 0 0.4em;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--color-accent);
   color: var(--color-bg);
   font-size: 0.8em;

@@ -55,7 +55,7 @@ ul {
 .approvals {
   min-width: 1.6em;
   padding: 0 var(--space-2);
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--color-accent);
   color: var(--color-bg);
   font-size: var(--font-size-sm);

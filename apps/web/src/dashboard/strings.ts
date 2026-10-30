@@ -8,7 +8,8 @@ export const S = {
   busy: 'Busy',
   nothingPlanned: 'Nothing planned',
   noWeather: 'No weather data yet',
-  noAdvisories: 'No advisories',
+  today: 'Today',
+  thunderForecast: 'Thunderstorms forecast',
   feelsLike: 'Feels like',
   wind: 'Wind',
   rainChance: 'Rain',
@@ -80,7 +81,6 @@ export const S = {
   panelNames: {
     clock: 'Clock',
     weather: 'Weather',
-    advisories: 'Advisories',
     agenda: 'Agenda',
     week: 'Week',
     members: 'Members',

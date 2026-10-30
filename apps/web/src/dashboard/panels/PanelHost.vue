@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, type Component } from 'vue'
 import type { PanelProps } from '../types'
-import AdvisoriesPanel from './AdvisoriesPanel.vue'
 import AgendaPanel from './AgendaPanel.vue'
 import ClockPanel from './ClockPanel.vue'
 import MemberTasksPanel from './MemberTasksPanel.vue'
@@ -22,7 +21,6 @@ defineEmits<{
 const REGISTRY: Record<string, Component> = {
   clock: ClockPanel,
   weather: WeatherPanel,
-  advisories: AdvisoriesPanel,
   agenda: AgendaPanel,
   week: WeekPanel,
   members: MembersPanel,

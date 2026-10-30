@@ -59,7 +59,7 @@ onMounted(async () => {
 .stepper li {
   padding: 0 var(--space-2);
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: 0;
   color: var(--color-muted);
 }
 .stepper li.on {

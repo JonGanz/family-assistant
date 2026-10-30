@@ -73,7 +73,7 @@ const groups = computed(() => visibleGroups(session.isAdult))
     flex: none;
     white-space: nowrap;
     border: 1px solid var(--color-border);
-    border-radius: 999px;
+    border-radius: 0;
   }
   .settings-group {
     display: none;

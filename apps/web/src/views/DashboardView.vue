@@ -232,7 +232,7 @@ footer button {
 }
 .stale {
   padding: 0 var(--space-3);
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--color-warning);
   color: var(--color-bg);
   font-size: var(--font-size-sm);

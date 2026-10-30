@@ -57,7 +57,7 @@ li {
   gap: var(--space-1);
   padding: 0 var(--space-2);
   border: 1px solid var(--color-border);
-  border-radius: 999px;
+  border-radius: 0;
   font-size: var(--font-size-sm);
 }
 li button {

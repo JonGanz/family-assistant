@@ -116,7 +116,7 @@ function toggleMember(id: string) {
 .chip {
   min-height: 44px;
   padding: 0 var(--space-3);
-  border-radius: 999px;
+  border-radius: 0;
   border: 1px solid var(--color-border);
   background: transparent;
   color: inherit;

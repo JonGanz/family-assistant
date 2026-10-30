@@ -39,7 +39,7 @@ const rows = computed(() =>
   Math.max(1, ...areas.value.map((a) => Number(a.row.split('/')[1]?.trim() ?? '2') - 1)),
 )
 /** Portrait rows share the height by weight, so a long list scrolls inside its panel. */
-const WEIGHT: Record<string, number> = { clock: 1, weather: 2, advisories: 1, agenda: 4, now: 5 }
+const WEIGHT: Record<string, number> = { clock: 1, weather: 2, agenda: 4, now: 5 }
 const portraitRows = computed(() =>
   areas.value.map((a) => `minmax(0, ${WEIGHT[a.panel.kind] ?? 4}fr)`).join(' '),
 )

@@ -14,7 +14,7 @@ const fg = computed(() => textOn(props.color))
 .member-chip {
   display: inline-block;
   padding: 0 var(--space-2);
-  border-radius: 999px;
+  border-radius: 0;
   font-size: var(--font-size-sm);
   line-height: 1.6;
   white-space: nowrap;

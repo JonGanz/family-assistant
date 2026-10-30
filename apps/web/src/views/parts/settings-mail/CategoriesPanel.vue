@@ -208,6 +208,6 @@ td {
   display: inline-block;
   width: 0.75rem;
   height: 0.75rem;
-  border-radius: 50%;
+  border-radius: 0;
 }
 </style>

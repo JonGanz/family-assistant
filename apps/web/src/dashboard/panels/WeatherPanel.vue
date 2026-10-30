@@ -21,6 +21,20 @@ const weekday = (d: string) =>
   new Intl.DateTimeFormat(undefined, { weekday: 'short', timeZone: 'UTC' }).format(
     new Date(`${d}T12:00:00Z`),
   )
+const THUNDER = new Set([95, 96, 99])
+/** Upcoming days (today included) whose forecast code is a thunderstorm. */
+const thunderDays = computed(() => days.value.filter((d) => THUNDER.has(d.code)))
+const thunderText = computed(() => {
+  const ds = thunderDays.value
+  if (!ds.length) return ''
+  const first = ds[0]!
+  const name = first.date === days.value[0]?.date ? S.today : weekday(first.date)
+  return `${S.thunderForecast}: ${name}${ds.length > 1 ? ` +${ds.length - 1}` : ''}`
+})
+const notices = computed(() => [
+  ...props.data.advisories.map((a) => ({ id: a.id, text: a.text, severity: a.severity as string })),
+  ...(thunderText.value ? [{ id: 'thunder', text: thunderText.value, severity: 'warning' }] : []),
+])
 const hour = (label: string) => (label ? label.slice(0, 2) : '')
 </script>
 
@@ -40,6 +54,17 @@ const hour = (label: string) => (label ? label.slice(0, 2) : '')
             {{ S.wind }} {{ formatQuantity(cur.wind, 'speed', units) }}
           </div>
         </div>
+        <ul v-if="notices.length" class="notices" aria-label="Advisories">
+          <li
+            v-for="n in notices"
+            :key="n.id"
+            :class="n.severity"
+            :data-severity="n.severity"
+            role="status"
+          >
+            {{ n.text }}
+          </li>
+        </ul>
       </div>
       <ul v-if="hours.length" class="hours" aria-label="Next hours">
         <li v-for="(h, i) in hours" :key="i">
@@ -83,6 +108,26 @@ const hour = (label: string) => (label ? label.slice(0, 2) : '')
 .extra {
   font-size: var(--font-size-base);
   color: var(--color-muted);
+}
+.notices {
+  margin-left: auto;
+  display: grid;
+  gap: var(--space-1);
+  align-content: center;
+  min-width: 0;
+  --sev: var(--color-accent);
+}
+.notices li {
+  padding: var(--space-1) var(--space-2);
+  border-left: 6px solid var(--sev);
+  background: var(--color-surface);
+}
+.notices li.warning {
+  --sev: var(--color-warning);
+}
+.notices li.severe {
+  --sev: var(--color-danger);
+  font-weight: 600;
 }
 ul {
   list-style: none;

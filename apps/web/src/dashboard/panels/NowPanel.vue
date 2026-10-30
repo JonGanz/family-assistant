@@ -63,7 +63,7 @@ h2 {
   min-width: 4rem;
   min-height: 4rem;
   border: 0;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--color-accent);
   color: var(--color-on-accent);
   font-size: 2.5rem;

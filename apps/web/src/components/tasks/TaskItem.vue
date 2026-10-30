@@ -97,7 +97,7 @@ const overdue = computed(() => !done.value && isOverdue(props.task.dueAt, props.
   display: inline-block;
   margin-right: var(--space-2);
   padding: 0 0.45em;
-  border-radius: 999px;
+  border-radius: 0;
   background: var(--color-danger);
   color: var(--color-bg);
   font-weight: 700;

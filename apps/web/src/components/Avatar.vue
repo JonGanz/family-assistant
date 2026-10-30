@@ -31,7 +31,7 @@ const fg = computed(() => textOn(props.color))
 .avatar {
   display: inline-block;
   border: 3px solid;
-  border-radius: 50%;
+  border-radius: 0;
   overflow: hidden;
   vertical-align: middle;
 }

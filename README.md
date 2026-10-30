@@ -589,7 +589,7 @@ confidence = 0.9
 
 ## The dashboard layout
 Each paired device has its own layout: **Settings, Devices, Edit layout** lets you pick a preset,
-orientation, theme, agenda length, and add, remove and reorder panels (clock, weather, advisories,
+orientation, theme, agenda length, and add, remove and reorder panels (clock, weather (which also shows advisories and upcoming thunderstorms),
 agenda, week, members, now, member tasks, routine), with a live preview of the device. The layout is stored on the server, so
 the screen picks it up on its next refresh.
 

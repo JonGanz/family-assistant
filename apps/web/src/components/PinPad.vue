@@ -58,7 +58,7 @@ defineExpose({ clear: () => (pin.value = '') })
 button {
   height: 5rem;
   font-size: 2rem;
-  border-radius: 0.75rem;
+  border-radius: 0;
   border: 1px solid var(--color-border);
   background: var(--color-surface);
   color: var(--color-text);

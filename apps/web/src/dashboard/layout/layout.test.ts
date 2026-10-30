@@ -14,7 +14,6 @@ describe('layout engine', () => {
     expect(defaultSettings().panels.map((p) => p.kind)).toEqual([
       'clock',
       'weather',
-      'advisories',
       'agenda',
       'now',
       'routine',
@@ -31,12 +30,12 @@ describe('layout engine', () => {
     expect(col('agenda')).toBe('5 / 13')
     expect(col('now')).toBe('1 / 5')
     expect(col('routine')).toBe('5 / 13')
-    expect(areas.find((a) => a.panel.kind === 'agenda')!.row).toBe('1 / 3')
-    expect(areas.find((a) => a.panel.kind === 'routine')!.row).toBe('3 / 5')
+    expect(areas.find((a) => a.panel.kind === 'agenda')!.row).toBe('1 / 2')
+    expect(areas.find((a) => a.panel.kind === 'routine')!.row).toBe('2 / 4')
   })
   it('portrait stacks full width', () => {
     const areas = resolveLayout(defaultSettings(), 'portrait')
-    expect(areas.map((a) => a.row)).toEqual(['1 / 2', '2 / 3', '3 / 4', '4 / 5', '5 / 6', '6 / 7'])
+    expect(areas.map((a) => a.row)).toEqual(['1 / 2', '2 / 3', '3 / 4', '4 / 5', '5 / 6'])
     expect(areas.every((a) => a.column === '1 / 13')).toBe(true)
   })
   it('drops unknown panels from the grid but keeps them in the data', () => {

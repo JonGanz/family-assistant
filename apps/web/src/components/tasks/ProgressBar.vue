@@ -38,14 +38,14 @@ const p = computed(() => progress(props.done, props.total))
   flex: 1;
   height: 0.6rem;
   background: var(--color-border);
-  border-radius: 999px;
+  border-radius: 0;
   overflow: hidden;
 }
 .fill {
   height: 100%;
   min-width: 0;
   background: var(--color-accent);
-  border-radius: 999px;
+  border-radius: 0;
   transition:
     width 0.4s ease,
     background-color 0.3s ease;

@@ -46,7 +46,7 @@ const label = (h: string) => h.charAt(0).toUpperCase() + h.slice(1)
 .dot {
   width: 2rem;
   height: 2rem;
-  border-radius: 50%;
+  border-radius: 0;
   border: 2px solid var(--color-border);
 }
 .swatch input:checked + .dot {

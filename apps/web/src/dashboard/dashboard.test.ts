@@ -110,11 +110,19 @@ describe('panels', () => {
     expect(w.text()).toContain('Whole house')
   })
 
-  it('advisories carry severity and have no dismiss control', () => {
+  it('weather panel shows advisories and an upcoming thunderstorm', () => {
+    const daily = {
+      time: ['2026-10-29', '2026-10-30', '2026-10-31'],
+      weather_code: [1, 2, 95],
+    }
+    const d = data({
+      weather: { current: { weather_code: 1, temperature_2m: 10 }, daily },
+    } as unknown as Partial<DashboardData>)
     const w = mount(PanelHost, {
-      props: { data: data(), settings: settings(), panel: { kind: 'advisories' }, now: NOW },
+      props: { data: d, settings: settings(), panel: { kind: 'weather' }, now: NOW },
     })
-    expect(w.find('[data-severity="warning"]').exists()).toBe(true)
+    expect(w.find('[data-severity="warning"]').text()).toContain('Frost tonight')
+    expect(w.text()).toContain('Thunderstorms forecast')
     expect(w.find('button').exists()).toBe(false)
   })
 

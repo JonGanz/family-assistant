@@ -3,7 +3,6 @@ import type { ThemeChoice } from '../../themes'
 export type PanelKind =
   | 'clock'
   | 'weather'
-  | 'advisories'
   | 'agenda'
   | 'week'
   | 'members'
@@ -34,7 +33,6 @@ export interface GridArea {
 export const KNOWN_PANELS: readonly string[] = [
   'clock',
   'weather',
-  'advisories',
   'agenda',
   'week',
   'members',
@@ -56,7 +54,6 @@ export const PRESETS: Record<string, DashboardSettings> = {
     panels: [
       { kind: 'clock' },
       { kind: 'weather', hourly: true },
-      { kind: 'advisories' },
       { kind: 'agenda' },
       { kind: 'now' },
       { kind: 'routine' },
@@ -73,7 +70,6 @@ export const PRESETS: Record<string, DashboardSettings> = {
     panels: [
       { kind: 'clock' },
       { kind: 'weather', hourly: false },
-      { kind: 'advisories' },
       { kind: 'week' },
     ],
   },
@@ -117,10 +113,10 @@ export function defaultSettings(): DashboardSettings {
   return structuredClone(PRESETS[DEFAULT_PRESET]!)
 }
 
-const LEFT = new Set(['clock', 'weather', 'advisories', 'members', 'now'])
+const LEFT = new Set(['clock', 'weather', 'members', 'now'])
 
 /**
- * Landscape: 12-column grid, left 4 columns hold clock/weather/advisories/members/now,
+ * Landscape: 12-column grid, left 4 columns hold clock/weather/members/now,
  * right 8 hold agenda/week/member_tasks/routine. Portrait: full-width rows in panel order.
  * Unknown panel kinds are dropped here but remain in `settings.panels`.
  */
