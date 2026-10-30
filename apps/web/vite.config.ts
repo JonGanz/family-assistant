@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process'
 import { fileURLToPath, URL } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { VitePWA } from 'vite-plugin-pwa'
@@ -5,7 +6,27 @@ import { defineConfig } from 'vitest/config'
 
 const backend = 'http://127.0.0.1:8080'
 
+/** The commit this bundle was built from: `GIT_COMMIT` (Docker build arg) wins over `git`. */
+function gitCommit(): string {
+  const fromEnv = process.env.GIT_COMMIT?.trim()
+  if (fromEnv) return fromEnv
+  try {
+    const run = (c: string) =>
+      execSync(c, { stdio: ['ignore', 'pipe', 'ignore'] })
+        .toString()
+        .trim()
+    const hash = run('git rev-parse --short=12 HEAD')
+    return run('git status --porcelain') ? `${hash}-dirty` : hash
+  } catch {
+    return ''
+  }
+}
+
 export default defineConfig({
+  define: {
+    __APP_COMMIT__: JSON.stringify(gitCommit()),
+    __APP_BUILT_AT__: JSON.stringify(new Date().toISOString()),
+  },
   plugins: [
     vue(),
     VitePWA({

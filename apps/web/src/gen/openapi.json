@@ -6021,6 +6021,41 @@
         ]
       }
     },
+    "/api/v1/system/about": {
+      "get": {
+        "tags": [
+          "system"
+        ],
+        "operationId": "get_about",
+        "responses": {
+          "200": {
+            "description": "version and commit of the running server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AboutView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
     "/api/v1/system/master-key": {
       "post": {
         "tags": [
@@ -8091,6 +8126,32 @@
   },
   "components": {
     "schemas": {
+      "AboutView": {
+        "type": "object",
+        "required": [
+          "version"
+        ],
+        "properties": {
+          "built_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "RFC 3339 time the server binary was built, when known."
+          },
+          "commit": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Short git commit the server was built from; `None` when the build had no git data."
+          },
+          "version": {
+            "type": "string",
+            "description": "The server's crate version."
+          }
+        }
+      },
       "ActorView": {
         "type": "object",
         "required": [

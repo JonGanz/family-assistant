@@ -74,6 +74,7 @@ export type NewSetupHousehold = S['NewSetupHousehold']
 export type NewSetupOwner = S['NewSetupOwner']
 export type SettingView = S['SettingView']
 export type SystemSettingsView = S['SystemSettingsView']
+export type AboutView = S['AboutView']
 export type SystemSettingsPatch = S['SystemSettingsPatch']
 export type OwnPasswordChange = S['OwnPasswordChange']
 export type ImportReport = S['ImportReport']
@@ -189,6 +190,7 @@ export const api = {
     }),
   confirmMasterKey: () =>
     request<void>('/api/v1/system/master-key/confirm', { method: 'POST', ...U }),
+  about: () => request<AboutView>('/api/v1/system/about', U),
   systemSettings: () => request<SystemSettingsView>('/api/v1/system/settings', U),
   patchSystemSettings: (values: SystemSettingsPatch['values']) =>
     request<SystemSettingsView>('/api/v1/system/settings', {

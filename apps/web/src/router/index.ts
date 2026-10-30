@@ -153,6 +153,12 @@ export const routes: RouteRecordRaw[] = [
         meta: adult,
       },
       {
+        path: 'about',
+        name: 'settings-about',
+        component: () => import('../views/SettingsAboutView.vue'),
+        meta: adult,
+      },
+      {
         path: 'status',
         name: 'settings-status',
         component: () => import('../views/SettingsStatusView.vue'),

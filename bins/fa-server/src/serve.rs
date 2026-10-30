@@ -191,6 +191,11 @@ async fn start_pass(
                 enable_docs: docs_enabled(),
                 trusted_proxies: parse_cidrs(&cfg.trusted_proxies, "trusted_proxies")?,
                 lan_base_url: lan_base_url.clone(),
+                build: fa_api::BuildInfo {
+                    version: env!("CARGO_PKG_VERSION").to_owned(),
+                    commit: option_env!("FA_GIT_COMMIT").map(str::to_owned),
+                    built_at: option_env!("FA_BUILD_TIME").map(str::to_owned),
+                },
                 ..ApiConfig::default()
             },
             cancel.clone(),

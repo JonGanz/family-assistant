@@ -14,7 +14,14 @@ export default tseslint.config(
     languageOptions: { parserOptions: { parser: tseslint.parser } },
   },
   {
-    languageOptions: { globals: { ...globals.browser, ...globals.node } },
+    languageOptions: {
+      globals: {
+        ...globals.browser,
+        ...globals.node,
+        __APP_COMMIT__: 'readonly',
+        __APP_BUILT_AT__: 'readonly',
+      },
+    },
     rules: { 'vue/multi-word-component-names': 'off' },
   },
   prettier,

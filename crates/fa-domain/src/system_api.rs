@@ -133,6 +133,19 @@ dto!(
 );
 
 dto!(
+    pub struct AboutView {
+        /// The server's crate version.
+        pub version: String,
+        /// Short git commit the server was built from; `None` when the build had no git data.
+        #[ts(as = "Option<String>", optional = nullable)]
+        pub commit: Option<String>,
+        /// RFC 3339 time the server binary was built, when known.
+        #[ts(as = "Option<String>", optional = nullable)]
+        pub built_at: Option<String>,
+    }
+);
+
+dto!(
     pub struct SystemSettingsView {
         pub settings: Vec<SettingView>,
         pub connection: ConnectionInfo,

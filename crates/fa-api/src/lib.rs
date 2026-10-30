@@ -72,6 +72,27 @@ pub struct ApiConfig {
     /// Base URL of the home-network dashboard listener, when it is on (D-064); pairing then
     /// returns a second link.
     pub lan_base_url: Option<String>,
+    /// What this binary was built from, for Settings, System, About.
+    pub build: BuildInfo,
+}
+
+/// Version and provenance of the running binary; the server fills it from build-time data.
+#[derive(Debug, Clone)]
+pub struct BuildInfo {
+    pub version: String,
+    pub commit: Option<String>,
+    /// RFC 3339.
+    pub built_at: Option<String>,
+}
+
+impl Default for BuildInfo {
+    fn default() -> Self {
+        Self {
+            version: env!("CARGO_PKG_VERSION").to_owned(),
+            commit: None,
+            built_at: None,
+        }
+    }
 }
 
 impl Default for ApiConfig {
@@ -87,6 +108,7 @@ impl Default for ApiConfig {
             heartbeat_interval: Duration::from_secs(15),
             trusted_proxies: IpNet::default_trusted(),
             lan_base_url: None,
+            build: BuildInfo::default(),
         }
     }
 }
@@ -153,6 +175,7 @@ pub fn router(state: AppState) -> Router {
             "/system/settings",
             get(system::get_settings).patch(system::patch_settings),
         )
+        .route("/system/about", get(system::get_about))
         .route(
             "/config/import",
             post(config::import_config).layer(DefaultBodyLimit::max(config::IMPORT_MAX_BYTES)),

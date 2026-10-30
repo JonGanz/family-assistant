@@ -139,6 +139,7 @@ We ship **`deploy/compose.yaml`**, which has every service (D-033, D-065). The d
 - **Local build:** `compose.build.yaml` adds `build:` from the checkout (`docker compose -f compose.yaml -f compose.build.yaml up -d --build`), for developers and non-amd64 hosts. No split api/worker override is shipped (D-076).
 - **Tailscale on the host** (v3): still possible as an advanced alternative (`tailscale serve` on the host to `127.0.0.1:8080`, with `FA_TRUSTED_PROXIES` set to the Docker gateway). WoL from the core node (M4.1) needs host networking or a host-level helper, decided in AI.md.
 - The image is multi-stage: cargo-chef builds the Rust binaries, and node builds `apps/web`. The result is a debian-slim runtime with the web bundle at `/srv/web`.
+- **Build provenance:** `GET /api/v1/system/about` (adult) returns the crate version, the commit and the build time. `fa-server`'s `build.rs` takes the commit from `FA_GIT_COMMIT` (the Docker build arg `GIT_COMMIT`, because `.git` is not in the image) or from `git`, with `-dirty` for uncommitted changes. The web bundle is stamped the same way by `vite.config.ts`.
 - **GPU node:** `docker compose --profile gpu up ollama s1-large`. `fa-gpu-agent` runs **natively** from the release binary and `deploy/systemd/fa-gpu-agent.service`, because it needs host process visibility, `nvidia-smi`, and `systemctl suspend` (D-020).
 
 ## 9. Backups & restore

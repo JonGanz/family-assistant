@@ -91,6 +91,12 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
         adult: true,
       },
       { to: '/settings/status', label: 'Status', blurb: 'What is syncing and when.', adult: true },
+      {
+        to: '/settings/about',
+        label: 'About',
+        blurb: 'Version and commit of the server and of this page.',
+        adult: true,
+      },
     ],
   },
 ]

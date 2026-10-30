@@ -1330,3 +1330,29 @@ async fn member_colours_are_hues(pool: PgPool) {
             .any(|m| m["color"] == "purple")
     );
 }
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn about_shows_the_build_to_adults_only(pool: PgPool) {
+    let a = app_with(
+        pool,
+        ApiConfig {
+            build: fa_api::BuildInfo {
+                version: "1.2.3".into(),
+                commit: Some("abc123def456".into()),
+                built_at: Some("2026-10-29T12:00:00Z".into()),
+            },
+            ..ApiConfig::default()
+        },
+        AuthConfig::default(),
+    )
+    .await;
+    let cookie = setup(&a).await;
+    let r = send(&a, Method::GET, "/api/v1/system/about", &cookie, None).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text());
+    let j = r.json();
+    assert_eq!(j["version"], "1.2.3");
+    assert_eq!(j["commit"], "abc123def456");
+    assert_eq!(j["built_at"], "2026-10-29T12:00:00Z");
+    let r = send(&a, Method::GET, "/api/v1/system/about", "", None).await;
+    assert_eq!(r.status, StatusCode::UNAUTHORIZED, "{}", r.text());
+}

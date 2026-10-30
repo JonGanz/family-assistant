@@ -759,7 +759,7 @@ then open `http://<server>:8080` and **finish the setup wizard right away**: not
 visit. No `.env`, key files or household file are needed: the one-shot `init` service creates the master key and
 the database password in the `fa-secrets` volume, and the wizard creates the household, the logins, the public address, the
 notification settings and shows the master key to back up. Until the first release image is published
-(human step H-12), build locally: `docker compose -f deploy/compose.yaml -f deploy/compose.build.yaml up -d --build`.
+(human step H-12), build locally: `GIT_COMMIT=$(git rev-parse --short=12 HEAD) docker compose -f deploy/compose.yaml -f deploy/compose.build.yaml up -d --build` (the variable is optional; it is the commit that Settings, System, About shows).
 
 | Want | Do |
 |---|---|

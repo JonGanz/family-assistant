@@ -126,7 +126,7 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 | Personal | `account` (password, sessions), `appearance` (this device's theme, §3d), `notifications` (own, plus children's for adults; §3a) | user |
 | Household | `household` (name, tz, location, units, currency, calendar window, Now list weights, quiet hours, dashboard pending-approvals badge), **`members`** (add, edit, avatar, hue, role, account and password reset, PIN, aliases, gender and relevance tags, interests, hobbies and responsibilities), `tasks` (lists, definitions, routines, absences) | adult |
 | Sources and rules | `calendars`, `weather`, `mail`, `orgs` | adult |
-| System | `system` (below), `devices` (pairing + dashboard layout editor, §4), `status` | adult |
+| System | `system` (below), `devices` (pairing + dashboard layout editor, §4), `status`, `about` (server version, commit and build time, next to the same for this page's bundle; a banner when the two commits differ, which means the browser is showing a stale cached app) | adult |
 
 - **Members** (D-070): adults only, since other features rely on member details. Children see members on the dashboard's `members` strip, not in the app. A child sees only the Personal group.
 - **Settings, System** (D-075, D-074, D-072):

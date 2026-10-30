@@ -28,6 +28,10 @@ COPY .sqlx .sqlx
 COPY config config
 COPY crates crates
 COPY bins bins
+# `.git` is not in the image, so the commit comes in as a build arg (shown in Settings, System, About).
+# Declared last so a new commit rebuilds only fa-server, not the dependencies.
+ARG GIT_COMMIT=
+ENV FA_GIT_COMMIT=${GIT_COMMIT}
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
     cargo build --release -p fa-server
@@ -40,6 +44,8 @@ COPY apps/web/package.json apps/web/pnpm-lock.yaml ./
 RUN --mount=type=cache,target=/root/.local/share/pnpm/store \
     corepack pnpm@9 install --frozen-lockfile
 COPY apps/web/ ./
+ARG GIT_COMMIT=
+ENV GIT_COMMIT=${GIT_COMMIT}
 RUN corepack pnpm@9 run build
 
 # ---- Runtime ----

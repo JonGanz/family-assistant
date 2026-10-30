@@ -14,7 +14,7 @@ use base64::engine::general_purpose::STANDARD;
 use chrono::{DateTime, Utc};
 use fa_config::runtime::runtime_key;
 use fa_domain::system_api::{
-    ConnectionInfo, MasterKeyRequest, MasterKeyView, SettingSource, SettingView,
+    AboutView, ConnectionInfo, MasterKeyRequest, MasterKeyView, SettingSource, SettingView,
     SystemSettingsPatch, SystemSettingsView,
 };
 use fa_domain::{Action, Resource};
@@ -268,4 +268,17 @@ pub async fn patch_settings(
         tx.commit().await?;
     }
     Ok(Json(settings_view(&s, &conn).await?))
+}
+
+#[utoipa::path(get, path = "/api/v1/system/about", tag = "system", security(("cookie" = [])),
+    responses((status = 200, body = AboutView, description = "version and commit of the running server"),
+              (status = 403, body = Problem)))]
+pub async fn get_about(State(state): State<AppState>, auth: Auth) -> ApiResult<Json<AboutView>> {
+    adult(&auth.actor)?;
+    let b = &state.cfg.build;
+    Ok(Json(AboutView {
+        version: b.version.clone(),
+        commit: b.commit.clone(),
+        built_at: b.built_at.clone(),
+    }))
 }

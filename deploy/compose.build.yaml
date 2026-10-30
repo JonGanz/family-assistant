@@ -1,11 +1,16 @@
 # Overlay: build fa-server from this checkout instead of pulling the release image.
-#   docker compose -f compose.yaml -f compose.build.yaml up -d --build
+#   GIT_COMMIT=$(git rev-parse --short=12 HEAD) docker compose -f compose.yaml -f compose.build.yaml up -d --build
+# (GIT_COMMIT is optional: it is what Settings, System, About shows as the commit.)
 services:
   init:
     build:
       context: ..
       dockerfile: Dockerfile
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-}
   app:
     build:
       context: ..
       dockerfile: Dockerfile
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-}
