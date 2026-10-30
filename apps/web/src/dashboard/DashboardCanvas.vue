@@ -305,6 +305,7 @@ const shift = computed(() =>
   min-height: 0;
 }
 .weekview .cell {
+  position: relative;
   min-height: 0;
   overflow: hidden;
 }

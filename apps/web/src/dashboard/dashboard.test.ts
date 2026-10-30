@@ -244,10 +244,10 @@ describe('panels', () => {
       disconnect() {}
     }
     globalThis.ResizeObserver = RO as never
-    // Every cell reports 300 x 120 px (one column, two rows of slots).
+    // Every cell reports 200 x 120 px: too narrow to split, two rows of slots.
     const w0 = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth')
     const h0 = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight')
-    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, value: 300 })
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, value: 200 })
     Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, value: 120 })
     try {
       const d = data()

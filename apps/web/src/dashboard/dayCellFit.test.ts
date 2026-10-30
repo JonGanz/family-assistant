@@ -9,12 +9,18 @@ describe('fitCell', () => {
   it('puts "+N" in the last slot when they do not fit', () => {
     expect(fitCell(5, 200, 170, 16)).toEqual({ shown: 2, more: 3, cols: 1 })
   })
-  it('uses two columns when each stays wide enough', () => {
+  it('splits into two columns only when one column is not enough', () => {
     expect(fitCell(6, 500, 120, 16)).toEqual({ shown: 3, more: 3, cols: 2 })
     expect(fitCell(4, 500, 120, 16)).toEqual({ shown: 4, more: 0, cols: 2 })
   })
-  it('keeps one column when the cell is narrow', () => {
-    expect(fitCell(6, 300, 120, 16).cols).toBe(1)
+  it('keeps one column while the items fit, even in a wide cell', () => {
+    expect(fitCell(2, 500, 120, 16)).toEqual({ shown: 2, more: 0, cols: 1 })
+  })
+  it('keeps full width when a half would be too narrow', () => {
+    expect(fitCell(6, 200, 120, 16).cols).toBe(1)
+  })
+  it('splits a cell the width of a typical five-person dashboard', () => {
+    expect(fitCell(4, 330, 120, 16).cols).toBe(2)
   })
   it('shows only "+N" when not even one slot fits beside it', () => {
     expect(fitCell(3, 200, 40, 16)).toEqual({ shown: 0, more: 3, cols: 1 })

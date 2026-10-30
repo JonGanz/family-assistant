@@ -142,11 +142,13 @@ const rows = computed(() =>
 </template>
 
 <style scoped>
-.weektable,
-table {
-  height: 100%;
+.weektable {
+  /* Absolute, so its height is definite (the cell is positioned) and the rows can share it. */
+  position: absolute;
+  inset: 0;
 }
 table {
+  height: 100%;
   display: flex;
   flex-direction: column;
   width: 100%;
