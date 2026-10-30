@@ -72,6 +72,29 @@ describe('setup redirects', () => {
   })
 })
 
+describe('forced password change', () => {
+  const signInForced = () =>
+    m.me.mockResolvedValue({
+      actor: { kind: 'user', member: { id: 'x', role: 'adult' } },
+      household: { name: 'H' },
+      must_change_password: true,
+    } as never)
+
+  it('sends every route to the Account page until the password is changed', async () => {
+    m.setup.mockResolvedValue(status() as never)
+    signInForced()
+    expect(await authGuard(to('home', 'user'))).toEqual({ name: 'settings-account' })
+    expect(await authGuard(to('settings-members', 'adult'))).toEqual({ name: 'settings-account' })
+    expect(await authGuard(to('settings-account', 'user'))).toBe(true)
+  })
+
+  it('does not redirect once the flag is false', async () => {
+    m.setup.mockResolvedValue(status() as never)
+    signIn('adult')
+    expect(await authGuard(to('home', 'user'))).toBe(true)
+  })
+})
+
 describe('routes', () => {
   const paths = (rs: typeof routes, base = ''): string[] =>
     rs.flatMap((r) => [

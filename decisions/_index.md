@@ -96,3 +96,4 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-085](D-085-dashboard-home-detail-modals.md) | The dashboard Home view shows compact weather and events, with details in a modal | accepted | (instruction) | arch/Frontend.md |
 | [D-086](D-086-no-calendar-colours.md) | Calendars have no colour; an event is coloured by its members | accepted | (instruction) | arch/Frontend.md, arch/Feeds.md, arch/Domain.md |
 | [D-087](D-087-week-view-no-scroll.md) | The Week view never scrolls; a cell that is too full folds items into "+N" | accepted | (instruction) | arch/Frontend.md |
+| [D-088](D-088-second-adult-setup.md) | An adult can set up another adult until that adult claims their account | accepted | Q-077 | arch/Domain.md, arch/Frontend.md |

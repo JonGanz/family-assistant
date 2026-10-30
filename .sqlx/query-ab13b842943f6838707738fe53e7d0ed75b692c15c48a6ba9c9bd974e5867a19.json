@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, household_id, member_id, username, password_hash, disabled_at, created_at, version\n             FROM user_account WHERE member_id = $1",
+  "query": "SELECT id, household_id, member_id, username, password_hash, disabled_at, initial_password, created_at, version\n             FROM user_account WHERE id = $1",
   "describe": {
     "columns": [
       {
@@ -35,11 +35,16 @@
       },
       {
         "ordinal": 6,
+        "name": "initial_password",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "version",
         "type_info": "Int4"
       }
@@ -57,8 +62,9 @@
       false,
       true,
       false,
+      false,
       false
     ]
   },
-  "hash": "20d18db4fe0ce5394f6b2abf5dd4dfd53953c75de3f772201fbedcd3b5c28834"
+  "hash": "ab13b842943f6838707738fe53e7d0ed75b692c15c48a6ba9c9bd974e5867a19"
 }

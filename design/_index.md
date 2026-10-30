@@ -28,11 +28,7 @@ decisions: []
 ```
 
 ## Open
-| ID | Title | Batch |
-|---|---|---|
-| [Q-077](Q-077-adding-another-adult.md) | How is a second adult added and set up? | 20 |
-
-_The next question number is Q-078._
+_None. The next question number is Q-078._
 
 ## Resolved
 | ID | Title | Decisions |
@@ -113,3 +109,4 @@ _The next question number is Q-078._
 | [Q-074](resolved/Q-074-member-colour-hues.md) | Do members pick a named hue instead of a hex colour? | D-080 |
 | [Q-075](resolved/Q-075-theme-scope.md) | Who chooses the theme: household, member, or device? | D-081 |
 | [Q-076](resolved/Q-076-custom-themes.md) | Can a household add its own themes? | D-079 |
+| [Q-077](resolved/Q-077-adding-another-adult.md) | How is a second adult added and set up? | D-088 |

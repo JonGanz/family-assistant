@@ -182,6 +182,7 @@ async fn setup_state_and_household_columns(pool: PgPool) {
             username: "ada".into(),
             password_hash: "hash".into(),
             disabled_at: None,
+            initial_password: false,
             created_at: Utc::now(),
         },
     )
@@ -293,6 +294,7 @@ async fn login_lockout_counts_parallel_failures(pool: PgPool) {
         username: "ada".into(),
         password_hash: "hash".into(),
         disabled_at: None,
+        initial_password: false,
         created_at: Utc::now(),
     };
     let mut tx = store.tx_system().await.unwrap();

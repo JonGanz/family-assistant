@@ -135,6 +135,8 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
   - **Master key backup:** a warning card until an adult has confirmed a backup; it reopens the step-6 Copy/Download flow (needs a recent login or elevation).
   - **Household file:** **Export** downloads TOML (no secrets). **Import** uploads TOML, shows a dry-run diff (created, changed, skipped, errors with positions), then applies on confirmation (D-018).
 
+**Second adult (D-088).** In Settings → Members an adult can create another adult with a username and initial password (no PIN, no grade) and edit them until they claim the account; a claimed adult is read-only to others. A session whose account still has the initial password is redirected to Account with a banner until the password is changed.
+
 ## 3d. Themes (D-079, D-080, D-081)
 **Catalogue.** `themes/` holds one data file per family: Catppuccin, Nord, Dracula, Gruvbox, Solarized, Tokyo Night, Rosé Pine, Kanagawa, seoul256 (D-083; dark 233–239 and light 252–256 as variants). Nord also has a light Snow Storm variant (D-083). A family lists the light and/or dark variants its project publishes (Catppuccin has Latte and three dark flavours). Every variant fills the same tokens:
 - **neutrals:** `bg`, `surface`, `surface-2`, `border`, `muted`, `text`, `on-accent` (text on a hue-coloured fill);

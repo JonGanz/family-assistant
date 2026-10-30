@@ -2305,6 +2305,11 @@ export interface components {
             expires_at: string;
             /** Format: uuid */
             member_id: string;
+            /**
+             * @description True while the password was set by another adult; the client sends the user to the
+             *     Account page to choose their own.
+             */
+            must_change_password: boolean;
             role: string;
         };
         /** Format: uuid */
@@ -2464,6 +2469,8 @@ export interface components {
         MeResponse: {
             actor: components["schemas"]["ActorView"];
             household: components["schemas"]["HouseholdDto"];
+            /** @description True while the signed-in account still has the password another adult set. */
+            must_change_password: boolean;
         };
         /** Format: uuid */
         MemberAwayId: string;
@@ -2491,6 +2498,8 @@ export interface components {
             has_pin: boolean;
             hobbies: string[];
             id: components["schemas"]["MemberId"];
+            /** @description True while the login's password was set by another adult (an adult not yet claimed). */
+            initial_password?: boolean;
             interests: string[];
             relevance_tags?: string[];
             responsibilities: string[];

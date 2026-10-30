@@ -296,6 +296,8 @@ const shift = computed(() =>
    same gap at the bottom as at the top, the table takes what the bar leaves. Nothing scrolls: a cell folds what does not fit into "+N". */
 .main.full .grid {
   flex: 1;
+  /* Stretch, not start: the table is absolutely positioned, so the stack has no content height. */
+  align-items: stretch;
   box-sizing: border-box;
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;

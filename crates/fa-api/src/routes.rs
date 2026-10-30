@@ -94,13 +94,48 @@ pub(crate) async fn avatar_urls(
         .collect())
 }
 
+/// The authorization resource for acting on a member: an adult other than the actor who has not
+/// claimed their account (no account, or `initial_password`) is `UnclaimedAdult` (Q-077).
+pub(crate) async fn member_resource(
+    conn: &mut sqlx::PgConnection,
+    actor: &Actor,
+    id: MemberId,
+    role: Role,
+) -> ApiResult<Resource> {
+    let own = matches!(actor, Actor::User { member_id, .. } if *member_id == id);
+    if role == Role::Adult && !own {
+        let unclaimed = UserAccountRepo::get_by_member(conn, id)
+            .await?
+            .is_none_or(|a| a.value.initial_password);
+        if unclaimed {
+            return Ok(Resource::UnclaimedAdult(id));
+        }
+    }
+    Ok(Resource::Member(id, role))
+}
+
+/// True when the member's account still has the password another adult chose.
+pub(crate) async fn must_change_password(
+    s: &AppState,
+    household: HouseholdId,
+    member: MemberId,
+) -> ApiResult<bool> {
+    let mut tx = s.store.tx_for(household).await?;
+    let flag = UserAccountRepo::get_by_member(&mut tx, member)
+        .await?
+        .is_some_and(|a| a.value.initial_password);
+    tx.rollback().await?;
+    Ok(flag)
+}
+
 fn member_view(
     m: &Member,
     version: i32,
-    has_account: bool,
+    account: Option<bool>,
     avatar_url: Option<String>,
 ) -> serde_json::Value {
-    let mut dto = MemberDto::from_member(m, has_account);
+    let mut dto = MemberDto::from_member(m, account.is_some());
+    dto.initial_password = account == Some(true);
     dto.avatar_url = avatar_url;
     dto.version = version;
     serde_json::to_value(dto).unwrap_or_default()
@@ -165,6 +200,9 @@ pub struct LoginResp {
     #[schema(value_type = String)]
     pub role: Role,
     pub expires_at: DateTime<Utc>,
+    /// True while the password was set by another adult; the client sends the user to the
+    /// Account page to choose their own.
+    pub must_change_password: bool,
 }
 
 #[utoipa::path(post, path = "/api/v1/auth/login", tag = "auth", request_body = LoginReq,
@@ -185,6 +223,7 @@ pub async fn login(
         member_id: out.member_id,
         role: out.role,
         expires_at: out.expires_at,
+        must_change_password: must_change_password(&s, out.household_id, out.member_id).await?,
     })
     .into_response();
     set_cookie(&mut res, &conn, &s.cfg, &out.session_id, max_age);
@@ -231,6 +270,8 @@ pub struct MeResponse {
     pub actor: ActorView,
     #[schema(value_type = HouseholdDto)]
     pub household: HouseholdDto,
+    /// True while the signed-in account still has the password another adult set.
+    pub must_change_password: bool,
 }
 
 #[utoipa::path(get, path = "/api/v1/me", tag = "auth", security(("cookie" = []), ("bearer" = [])),
@@ -245,14 +286,15 @@ pub(crate) async fn me_for(s: &AppState, actor: &Actor) -> ApiResult<MeResponse>
     let h = HouseholdRepo::get(&mut tx, hid)
         .await?
         .ok_or(ApiError::NotFound)?;
+    let mut must_change = false;
     let view = match actor {
         Actor::User { member_id, .. } => {
             let m = MemberRepo::get(&mut tx, *member_id)
                 .await?
                 .ok_or(ApiError::NotFound)?;
-            let has_account = UserAccountRepo::get_by_member(&mut tx, *member_id)
-                .await?
-                .is_some();
+            let account = UserAccountRepo::get_by_member(&mut tx, *member_id).await?;
+            must_change = account.as_ref().is_some_and(|a| a.value.initial_password);
+            let has_account = account.is_some();
             let mut dto = MemberDto::from_member(&m.value, has_account);
             dto.avatar_url = avatar_urls(&mut tx).await?.remove(member_id);
             ActorView {
@@ -292,6 +334,7 @@ pub(crate) async fn me_for(s: &AppState, actor: &Actor) -> ApiResult<MeResponse>
     Ok(MeResponse {
         actor: view,
         household: HouseholdDto::from(&h.value),
+        must_change_password: must_change,
     })
 }
 
@@ -312,10 +355,10 @@ pub async fn list_members(
     let members = MemberRepo::list(&mut tx, false).await?;
     let urls = avatar_urls(&mut tx).await?;
     let out = if full {
-        let accounts: std::collections::HashSet<MemberId> = UserAccountRepo::list(&mut tx)
+        let accounts: std::collections::HashMap<MemberId, bool> = UserAccountRepo::list(&mut tx)
             .await?
             .into_iter()
-            .map(|a| a.value.member_id)
+            .map(|a| (a.value.member_id, a.value.initial_password))
             .collect();
         members
             .iter()
@@ -323,7 +366,7 @@ pub async fn list_members(
                 member_view(
                     &m.value,
                     m.version,
-                    accounts.contains(&m.value.id),
+                    accounts.get(&m.value.id).copied(),
                     urls.get(&m.value.id).cloned(),
                 )
             })
@@ -443,7 +486,7 @@ pub async fn create_member(
     )
     .await?;
     tx.commit().await?;
-    let body = member_view(&stored.value, stored.version, false, None);
+    let body = member_view(&stored.value, stored.version, None, None);
     Ok((
         StatusCode::CREATED,
         [(ETAG, etag(stored.version))],
@@ -513,11 +556,8 @@ pub async fn patch_member(
     let current = MemberRepo::get(&mut tx, id)
         .await?
         .ok_or(ApiError::NotFound)?;
-    require(
-        &auth.actor,
-        Action::ManageMember,
-        &Resource::Member(id, current.value.role),
-    )?;
+    let resource = member_resource(&mut tx, &auth.actor, id, current.value.role).await?;
+    require(&auth.actor, Action::ManageMember, &resource)?;
     let mut m = current.value;
     if let Some(n) = req.display_name {
         m.display_name = clean_name(&n)?;
@@ -562,7 +602,9 @@ pub async fn patch_member(
         None,
     )
     .await?;
-    let has_account = UserAccountRepo::get_by_member(&mut tx, id).await?.is_some();
+    let has_account = UserAccountRepo::get_by_member(&mut tx, id)
+        .await?
+        .map(|a| a.value.initial_password);
     let url = avatar_urls(&mut tx).await?.remove(&id);
     ChangeBus::publish(
         &mut tx,
@@ -603,7 +645,7 @@ pub async fn create_account(
         .map(|m| m.value)
         .filter(|m| m.archived_at.is_none())
         .ok_or(ApiError::NotFound)?;
-    let resource = Resource::Member(id, target.role);
+    let resource = member_resource(&mut tx, &auth.actor, id, target.role).await?;
     match target.role {
         Role::Child => require(&auth.actor, Action::ManageChildAccount, &resource)?,
         Role::Adult => require(&auth.actor, Action::ManageMember, &resource)?,
@@ -624,6 +666,7 @@ pub async fn create_account(
         username,
         password_hash,
         disabled_at: None,
+        initial_password: target.role == Role::Adult,
         created_at: Utc::now(),
     };
     let stored = UserAccountRepo::insert(&mut tx, &account).await?;
@@ -707,11 +750,11 @@ pub async fn reset_password(
         .await?
         .ok_or(ApiError::NotFound)?
         .value;
-    require(
-        &auth.actor,
-        Action::ManageChildAccount,
-        &Resource::Member(id, target.role),
-    )?;
+    let resource = member_resource(&mut tx, &auth.actor, id, target.role).await?;
+    match target.role {
+        Role::Child => require(&auth.actor, Action::ManageChildAccount, &resource)?,
+        Role::Adult => require(&auth.actor, Action::ManageMember, &resource)?,
+    }
     validate_password(target.role, &req.password)
         .map_err(|e| ApiError::Unprocessable(e.to_string()))?;
     let account = UserAccountRepo::get_by_member(&mut tx, id)
@@ -719,6 +762,9 @@ pub async fn reset_password(
         .ok_or(ApiError::NotFound)?;
     let hash = hash_blocking(req.password).await?;
     UserAccountRepo::update_password(&mut tx, account.value.id, &hash, account.version).await?;
+    if target.role == Role::Adult {
+        UserAccountRepo::set_initial_password(&mut tx, account.value.id, true).await?;
+    }
     SessionRepo::delete_for_member(&mut tx, id).await?;
     audit(
         &mut tx,

@@ -13,6 +13,11 @@ export const useSessionStore = defineStore('session', () => {
   const member = computed(
     () => (me.value?.actor.member ?? null) as { id: string; role: string } | null,
   )
+  const mustChangePassword = computed(
+    () =>
+      isUser.value &&
+      (me.value as { must_change_password?: boolean } | null)?.must_change_password === true,
+  )
   const isAdult = computed(() => isUser.value && member.value?.role === 'adult')
 
   async function load(force = false): Promise<void> {
@@ -40,5 +45,17 @@ export const useSessionStore = defineStore('session', () => {
     }
   }
 
-  return { me, loaded, kind, isUser, isAdult, household, member, load, login, logout }
+  return {
+    me,
+    loaded,
+    kind,
+    isUser,
+    isAdult,
+    household,
+    member,
+    mustChangePassword,
+    load,
+    login,
+    logout,
+  }
 })

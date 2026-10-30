@@ -201,6 +201,9 @@ export async function authGuard(to: RouteLocationNormalized): Promise<true | Rou
   if (!auth) return true
   await session.load()
   if (!session.isUser) return { name: 'login', query: { redirect: to.fullPath } }
+  // A password another adult chose must be replaced before anything else (the server enforces it too).
+  if (session.mustChangePassword)
+    return to.name === 'settings-account' ? true : { name: 'settings-account' }
   if (status && !status.completed && session.isAdult) return { name: 'setup' }
   if (auth === 'adult' && !session.isAdult) return { name: 'home' }
   return true

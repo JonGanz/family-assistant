@@ -49,7 +49,7 @@ This is the full UML class model, split into packages (bounded contexts). Each p
 | Add a one-off task | own, on lists with `child_can_add = own` (D-045) | ✓ | on lists with `dashboard_add` | ✓ |
 | Manage lists, definitions, routines, absences; skip | ✗ | ✓ | ✗ | ✗ |
 | Add a grocery item | ✓ | ✓ | ✓ | ✓ |
-| Manage members (details, accounts, PINs) (D-070) | ✗ | ✓ | ✗ | ✗ |
+| Manage members (details, accounts, PINs) (D-070) | ✗ | ✓ for children, themself and an **unclaimed** adult (no account yet, or still on the password another adult set, D-088); never a claimed adult. PINs: own only | ✗ | ✗ |
 | See members (names, avatars, colours) | on the dashboard | ✓ | ✓ | ✓ |
 | Read the approval inbox; approve items; mail actions (D-068, D-078) | ✗ | items from sources they may see | ✗ (pending count per adult only) | ✗ (count only) |
 | Household and child settings, pipelines | ✗ | ✓ | ✗ | ✗ |

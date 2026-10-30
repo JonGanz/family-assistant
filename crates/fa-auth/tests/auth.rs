@@ -93,6 +93,7 @@ async fn seed(pool: PgPool) -> Fx {
                 username: user.into(),
                 password_hash: hash_password(pw).unwrap(),
                 disabled_at: None,
+                initial_password: false,
                 created_at: Utc::now(),
             },
         )

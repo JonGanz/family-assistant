@@ -32,6 +32,7 @@ async function save() {
     await api.changeOwnPassword(id, { current_password: form.current, new_password: form.next })
     Object.assign(form, { current: '', next: '', again: '' })
     message.value = 'Password changed. Your other sessions were signed out.'
+    await session.load(true)
   } catch (e) {
     const status = (e as { status?: number }).status
     error.value =
@@ -47,6 +48,9 @@ async function save() {
 <template>
   <section aria-labelledby="page-title">
     <PageHeader eyebrow="Personal" title="Account" />
+    <p v-if="session.mustChangePassword" class="text-danger" role="alert" data-testid="must-change">
+      Another adult chose your password. Please choose your own before you continue.
+    </p>
     <form class="form" data-testid="own-password" @submit.prevent="save">
       <h2>Change your password</h2>
       <label class="field">

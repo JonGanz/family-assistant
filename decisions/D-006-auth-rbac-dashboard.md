@@ -9,6 +9,8 @@ superseded_by:
 affects: [arch/Overall.md, arch/Frontend.md (future)]
 ---
 
+> Refined by D-088: another adult can set up an adult who has not yet claimed their account.
+
 # D-006: Per-user logins with role-based access; shared dashboard with per-action member selection
 
 ## Context

@@ -107,6 +107,9 @@ impl Action {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Resource {
     Member(MemberId, Role),
+    /// An adult who has no account yet, or whose password another adult set and who has not
+    /// replaced it (D-006, Q-077): any adult may set them up.
+    UnclaimedAdult(MemberId),
     Household,
     Device(DeviceId),
     Session {
@@ -249,7 +252,7 @@ pub fn authorize(
         Action::ManageMember => match (adult_user, resource) {
             // Adults manage children and themself, never another adult.
             (Some(me), Resource::Member(id, role)) => allow(*role == Role::Child || *id == me),
-            (Some(_), Resource::Household) => allow(true),
+            (Some(_), Resource::Household | Resource::UnclaimedAdult(_)) => allow(true),
             _ => Err(Denied),
         },
         Action::ManageChildAccount => match (adult_user, resource) {
@@ -589,6 +592,44 @@ mod tests {
         t(
             Action::ManageMember,
             m_adult_other.clone(),
+            c,
+            [
+                (Adult, DENY),
+                (Child, DENY),
+                (Device, DENY),
+                (Elevated, DENY),
+                (System, ALLOW),
+            ],
+        );
+        // ...unless that adult has not claimed their account yet (Q-077).
+        t(
+            Action::ManageMember,
+            Resource::UnclaimedAdult(f.adult2),
+            c,
+            [
+                (Adult, ALLOW),
+                (Child, DENY),
+                (Device, DENY),
+                (Elevated, DENY),
+                (System, ALLOW),
+            ],
+        );
+        // The PIN and the child-account action never open up for an unclaimed adult.
+        t(
+            Action::SetOwnPin,
+            Resource::UnclaimedAdult(f.adult2),
+            c,
+            [
+                (Adult, DENY),
+                (Child, DENY),
+                (Device, DENY),
+                (Elevated, DENY),
+                (System, ALLOW),
+            ],
+        );
+        t(
+            Action::ManageChildAccount,
+            Resource::UnclaimedAdult(f.adult2),
             c,
             [
                 (Adult, DENY),

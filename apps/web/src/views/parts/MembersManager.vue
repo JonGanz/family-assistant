@@ -12,6 +12,7 @@ import StateBlock from '../../components/StateBlock.vue'
 import { hueVar, type Hue } from '../../lib/hues'
 import { describeError } from '../shared'
 import { useMembersStore } from '../../stores/members'
+import { useSessionStore } from '../../stores/session'
 
 const members = useMembersStore()
 
@@ -42,6 +43,12 @@ const creating = reactive({
 })
 const createErrors = ref<Record<string, string>>({})
 const error = ref('')
+const createdNote = ref('')
+
+const session = useSessionStore()
+/** A claimed adult other than the signed-in one cannot be edited (D-006). */
+const claimedByOther = (m: Member) =>
+  m.role === 'adult' && m.id !== session.member?.id && m.has_account && !m.initial_password
 
 const csv = (s: string) =>
   s
@@ -131,7 +138,11 @@ async function reload() {
 
 async function create() {
   error.value = ''
-  createErrors.value = validateNewMember(creating)
+  createdNote.value = ''
+  createErrors.value = validateNewMember({
+    ...creating,
+    pin: creating.role === 'adult' ? '' : creating.pin,
+  })
   if (Object.keys(createErrors.value).length) return
   try {
     const made = await members.create({
@@ -143,16 +154,19 @@ async function create() {
     })
     const user = creating.username.trim()
     if (user) await api.createAccount(made.id, user, creating.password)
-    if (creating.pin) await api.setPin(made.id, creating.pin)
+    if (creating.pin && creating.role === 'child') await api.setPin(made.id, creating.pin)
     await members.load()
-    Object.assign(creating, {
-      display_name: '',
-      grade: '',
-      aliases: [],
-      username: '',
-      password: '',
-      pin: '',
-    })
+    createdNote.value =
+      user && creating.role === 'adult'
+        ? 'They must change this password at first sign-in.'
+        : Object.assign(creating, {
+            display_name: '',
+            grade: '',
+            aliases: [],
+            username: '',
+            password: '',
+            pin: '',
+          })
   } catch (e) {
     error.value = describeError(e, 'Create failed.')
     await members.load()
@@ -179,7 +193,14 @@ async function create() {
           />
           <strong>{{ m.display_name }}</strong>
           <em>{{ m.role }}</em>
-          <button v-if="m.version !== undefined" class="btn-sm" @click="startEdit(m)">Edit</button>
+          <button
+            v-if="m.version !== undefined && !claimedByOther(m)"
+            class="btn-sm"
+            @click="startEdit(m)"
+          >
+            Edit
+          </button>
+          <span v-else-if="claimedByOther(m)" class="muted">Manages their own profile</span>
         </template>
         <form v-else class="form form-wide" @submit.prevent="save(m)">
           <label class="field"
@@ -278,7 +299,9 @@ async function create() {
       /></label>
       <ChipInput v-model="creating.aliases" label="Also known as (names used in mail)" />
       <fieldset>
-        <legend>Login and PIN (optional)</legend>
+        <legend>
+          {{ creating.role === 'adult' ? 'Login (optional)' : 'Login and PIN (optional)' }}
+        </legend>
         <label class="field"
           >Username <input v-model="creating.username" name="new_username" autocomplete="off"
         /></label>
@@ -296,7 +319,11 @@ async function create() {
         <p v-if="createErrors.password" class="text-danger" role="alert">
           {{ createErrors.password }}
         </p>
-        <label class="field"
+        <p v-if="creating.role === 'adult'" class="muted">
+          The adult sets their own PIN after signing in, and must change this password at first
+          sign-in.
+        </p>
+        <label v-if="creating.role === 'child'" class="field"
           >PIN (4 to 6 digits)
           <input
             v-model="creating.pin"
@@ -308,6 +335,9 @@ async function create() {
         <p v-if="createErrors.pin" class="text-danger" role="alert">{{ createErrors.pin }}</p>
       </fieldset>
       <button type="submit" class="btn-primary">Add</button>
+      <p v-if="createdNote" class="text-success" role="status" data-testid="created-note">
+        {{ createdNote }}
+      </p>
     </form>
   </div>
 </template>

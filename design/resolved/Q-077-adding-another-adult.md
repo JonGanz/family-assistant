@@ -1,12 +1,12 @@
 ---
 id: Q-077
 title: How is a second adult added and set up?
-status: open
+status: resolved
 batch: 20
 area: security
 created: 2026-10-30
-resolved:
-decisions: []
+resolved: 2026-10-30
+decisions: [D-088]
 ---
 # Q-077: How is a second adult added and set up?
 

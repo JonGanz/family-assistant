@@ -77,6 +77,7 @@ impl AccountService {
             username,
             password_hash: hash_blocking(password.to_owned()).await?,
             disabled_at: None,
+            initial_password: false,
             created_at: Utc::now(),
         };
         UserAccountRepo::insert(&mut tx, &account).await?;

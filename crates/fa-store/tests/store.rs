@@ -231,9 +231,23 @@ async fn config_key_unique_and_lockouts(pool: PgPool) {
         username: "Alice".into(),
         password_hash: "hash".into(),
         disabled_at: None,
+        initial_password: true,
         created_at: Utc::now(),
     };
     UserAccountRepo::insert(&mut tx, &acct).await.unwrap();
+    let got = UserAccountRepo::get_by_member(&mut tx, m)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(got.value.initial_password);
+    UserAccountRepo::set_initial_password(&mut tx, acct.id, false)
+        .await
+        .unwrap();
+    let got = UserAccountRepo::get(&mut tx, acct.id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert!(!got.value.initial_password);
     tx.commit().await.unwrap();
 
     // login lookup before the household is known, case-insensitive
@@ -348,6 +362,7 @@ async fn devices_sessions_secrets_jobs(pool: PgPool) {
                 username: "u".into(),
                 password_hash: "x".into(),
                 disabled_at: None,
+                initial_password: false,
                 created_at: Utc::now(),
             };
             UserAccountRepo::insert(&mut tx, &a).await.unwrap().value.id

@@ -20,6 +20,7 @@ struct Row {
     username: String,
     password_hash: String,
     disabled_at: Option<DateTime<Utc>>,
+    initial_password: bool,
     created_at: DateTime<Utc>,
     version: i32,
 }
@@ -35,6 +36,7 @@ impl From<Row> for Versioned<UserAccount> {
                 username: r.username,
                 password_hash: r.password_hash,
                 disabled_at: r.disabled_at,
+                initial_password: r.initial_password,
                 created_at: r.created_at,
             },
         }
@@ -48,14 +50,15 @@ impl UserAccountRepo {
     ) -> Result<Versioned<UserAccount>> {
         let row = sqlx::query_as!(
             Row,
-            "INSERT INTO user_account (id, household_id, member_id, username, password_hash)
-             VALUES ($1, $2, $3, $4, $5)
-             RETURNING id, household_id, member_id, username, password_hash, disabled_at, created_at, version",
+            "INSERT INTO user_account (id, household_id, member_id, username, password_hash, initial_password)
+             VALUES ($1, $2, $3, $4, $5, $6)
+             RETURNING id, household_id, member_id, username, password_hash, disabled_at, initial_password, created_at, version",
             a.id.as_uuid(),
             a.household_id.as_uuid(),
             a.member_id.as_uuid(),
             a.username,
-            a.password_hash
+            a.password_hash,
+            a.initial_password
         )
         .fetch_one(conn)
         .await?;
@@ -68,7 +71,7 @@ impl UserAccountRepo {
     ) -> Result<Option<Versioned<UserAccount>>> {
         let row = sqlx::query_as!(
             Row,
-            "SELECT id, household_id, member_id, username, password_hash, disabled_at, created_at, version
+            "SELECT id, household_id, member_id, username, password_hash, disabled_at, initial_password, created_at, version
              FROM user_account WHERE id = $1",
             id.as_uuid()
         )
@@ -83,7 +86,7 @@ impl UserAccountRepo {
     ) -> Result<Option<Versioned<UserAccount>>> {
         let row = sqlx::query_as!(
             Row,
-            "SELECT id, household_id, member_id, username, password_hash, disabled_at, created_at, version
+            "SELECT id, household_id, member_id, username, password_hash, disabled_at, initial_password, created_at, version
              FROM user_account WHERE member_id = $1",
             member.as_uuid()
         )
@@ -101,7 +104,7 @@ impl UserAccountRepo {
     ) -> Result<Option<Versioned<UserAccount>>> {
         let row = sqlx::query_as!(
             Row,
-            "SELECT id, household_id, member_id, username, password_hash, disabled_at, created_at, version
+            "SELECT id, household_id, member_id, username, password_hash, disabled_at, initial_password, created_at, version
              FROM user_account
              WHERE lower(username) = lower($2) AND ($1::uuid IS NULL OR household_id = $1)
              ORDER BY created_at LIMIT 1",
@@ -116,7 +119,7 @@ impl UserAccountRepo {
     pub async fn list(conn: &mut PgConnection) -> Result<Vec<Versioned<UserAccount>>> {
         let rows = sqlx::query_as!(
             Row,
-            "SELECT id, household_id, member_id, username, password_hash, disabled_at, created_at, version
+            "SELECT id, household_id, member_id, username, password_hash, disabled_at, initial_password, created_at, version
              FROM user_account ORDER BY created_at, id"
         )
         .fetch_all(conn)
@@ -145,6 +148,22 @@ impl UserAccountRepo {
             Some(v) => Ok(v),
             None => Err(super::conflict_or_missing(conn, "user_account", id.as_uuid()).await),
         }
+    }
+
+    /// Sets or clears the "password chosen by another adult" flag.
+    pub async fn set_initial_password(
+        conn: &mut PgConnection,
+        id: UserAccountId,
+        initial: bool,
+    ) -> Result<()> {
+        sqlx::query!(
+            "UPDATE user_account SET initial_password = $2 WHERE id = $1",
+            id.as_uuid(),
+            initial
+        )
+        .execute(conn)
+        .await?;
+        Ok(())
     }
 
     /// Soft delete: disables the account. Idempotent.

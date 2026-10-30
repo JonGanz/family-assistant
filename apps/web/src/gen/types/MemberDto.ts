@@ -7,7 +7,11 @@ import type { Role } from "./Role";
 /**
  * Full member view for adults. Never includes the PIN hash.
  */
-export type MemberDto = { id: MemberId, display_name: string, role: Role, avatar: string | null, avatar_url: string | null, color?: Hue | null, birthdate: string | null, grade: string | null, interests: Array<string>, hobbies: Array<string>, responsibilities: Array<string>, has_pin: boolean, has_account: boolean, aliases: Array<string>, gender?: Gender | null, relevance_tags: Array<string>, 
+export type MemberDto = { id: MemberId, display_name: string, role: Role, avatar: string | null, avatar_url: string | null, color?: Hue | null, birthdate: string | null, grade: string | null, interests: Array<string>, hobbies: Array<string>, responsibilities: Array<string>, has_pin: boolean, has_account: boolean, 
+/**
+ * True while the login's password was set by another adult (an adult not yet claimed).
+ */
+initial_password: boolean, aliases: Array<string>, gender?: Gender | null, relevance_tags: Array<string>, 
 /**
  * Optimistic-concurrency version for `If-Match` (0 when not loaded).
  */

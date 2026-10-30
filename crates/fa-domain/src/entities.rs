@@ -244,6 +244,8 @@ pub struct UserAccount {
     pub username: String,
     pub password_hash: String,
     pub disabled_at: Option<DateTime<Utc>>,
+    /// True while another adult set the password and the member has not chosen their own.
+    pub initial_password: bool,
     pub created_at: DateTime<Utc>,
 }
 
@@ -363,6 +365,9 @@ pub struct MemberDto {
     pub responsibilities: Vec<String>,
     pub has_pin: bool,
     pub has_account: bool,
+    /// True while the login's password was set by another adult (an adult not yet claimed).
+    #[serde(default)]
+    pub initial_password: bool,
     #[serde(default)]
     pub aliases: Vec<String>,
     #[serde(default)]
@@ -405,6 +410,7 @@ impl MemberDto {
             responsibilities: m.responsibilities.clone(),
             has_pin: m.pin_hash.is_some(),
             has_account,
+            initial_password: false,
             aliases: m.aliases.clone(),
             gender: m.gender,
             relevance_tags: m.relevance_tags.clone(),

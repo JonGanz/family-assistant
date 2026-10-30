@@ -108,6 +108,7 @@ impl AuthService {
             .ok_or(AuthError::NotFound)?
             .version;
         UserAccountRepo::update_password(&mut tx, account.id, &new_hash, version).await?;
+        UserAccountRepo::set_initial_password(&mut tx, account.id, false).await?;
         for s in SessionRepo::list_for_member(&mut tx, member).await? {
             if Some(s.id.as_str()) != keep_session {
                 SessionRepo::delete(&mut tx, &s.id).await?;
@@ -195,6 +196,7 @@ impl AuthService {
             username,
             password_hash,
             disabled_at: None,
+            initial_password: false,
             created_at: now,
         };
         UserAccountRepo::insert(&mut tx, &account).await?;

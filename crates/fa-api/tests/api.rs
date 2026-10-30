@@ -118,6 +118,7 @@ async fn seed(pool: PgPool) -> Fx {
                     username: user.into(),
                     password_hash: hash_password(pw).unwrap(),
                     disabled_at: None,
+                    initial_password: false,
                     created_at: Utc::now(),
                 },
             )
@@ -446,15 +447,7 @@ async fn member_policy_and_versions(pool: PgPool) {
     )
     .await;
     assert_eq!(mine.status, StatusCode::OK);
-    let other = send(
-        &fx.app,
-        Method::PATCH,
-        &format!("/api/v1/members/{}", fx.adult2),
-        &[("cookie", &adult), ("if-match", "1")],
-        Some(json!({"grade": "x"})),
-    )
-    .await;
-    assert_eq!(other.status, StatusCode::FORBIDDEN);
+    // (Another adult is covered by `adult_sets_up_unclaimed_adult`.)
     let by_child = send(
         &fx.app,
         Method::PATCH,
@@ -886,4 +879,205 @@ async fn lan_listener_serves_devices_only(pool: PgPool) {
     )
     .await;
     assert_eq!(r.status, StatusCode::FORBIDDEN);
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn adult_sets_up_unclaimed_adult(pool: PgPool) {
+    let fx = seed(pool).await;
+    let a = login(&fx, "alex", ADULT_PW).await;
+    let created = send(
+        &fx.app,
+        Method::POST,
+        "/api/v1/members",
+        &[("cookie", &a)],
+        Some(json!({"display_name": "Bo", "role": "adult"})),
+    )
+    .await;
+    assert_eq!(created.status, StatusCode::CREATED);
+    let bo = created.json();
+    let bid = bo["id"].as_str().unwrap().to_owned();
+    let bv = bo["version"].as_i64().unwrap();
+    let account = format!("/api/v1/members/{bid}/account");
+    let pw_uri = format!("{account}/password");
+
+    // A seeded adult without an account is unclaimed too.
+    let seeded = send(
+        &fx.app,
+        Method::PATCH,
+        &format!("/api/v1/members/{}", fx.adult2),
+        &[("cookie", &a), ("if-match", "1")],
+        Some(json!({"color": "red"})),
+    )
+    .await;
+    assert_eq!(seeded.status, StatusCode::OK, "{:?}", seeded.json());
+    // The unclaimed adult can be edited; another adult's PIN stays refused.
+    let edit = send(
+        &fx.app,
+        Method::PATCH,
+        &format!("/api/v1/members/{bid}"),
+        &[("cookie", &a), ("if-match", &bv.to_string())],
+        Some(json!({"color": "red", "aliases": ["bobby"]})),
+    )
+    .await;
+    assert_eq!(edit.status, StatusCode::OK, "{:?}", edit.json());
+    let pin = send(
+        &fx.app,
+        Method::PUT,
+        &format!("/api/v1/members/{bid}/pin"),
+        &[("cookie", &a)],
+        Some(json!({"pin": "1234"})),
+    )
+    .await;
+    assert_eq!(pin.status, StatusCode::FORBIDDEN);
+
+    // Login with an initial password, then a reset keeps the flag.
+    let login_req = send(
+        &fx.app,
+        Method::POST,
+        &account,
+        &[("cookie", &a)],
+        Some(json!({"username": "bo", "password": "first password 123"})),
+    )
+    .await;
+    assert_eq!(login_req.status, StatusCode::CREATED);
+    let reset = send(
+        &fx.app,
+        Method::POST,
+        &pw_uri,
+        &[("cookie", &a)],
+        Some(json!({"password": "second password 123"})),
+    )
+    .await;
+    assert_eq!(reset.status, StatusCode::NO_CONTENT);
+    let edit2 = send(
+        &fx.app,
+        Method::PATCH,
+        &format!("/api/v1/members/{bid}"),
+        &[("cookie", &a), ("if-match", "2")],
+        Some(json!({"color": "blue"})),
+    )
+    .await;
+    assert_eq!(edit2.status, StatusCode::OK, "{:?}", edit2.json());
+
+    // Bo signs in: must_change_password, and only /me, own password change and logout work.
+    let r = send(
+        &fx.app,
+        Method::POST,
+        "/api/v1/auth/login",
+        &[],
+        Some(json!({"username": "bo", "password": "second password 123"})),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK);
+    assert_eq!(r.json()["must_change_password"], true);
+    let b = r
+        .headers
+        .get("set-cookie")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .split(';')
+        .next()
+        .unwrap()
+        .to_owned();
+    let me = send(&fx.app, Method::GET, "/api/v1/me", &[("cookie", &b)], None).await;
+    assert_eq!(me.status, StatusCode::OK);
+    assert_eq!(me.json()["must_change_password"], true);
+    let blocked = send(
+        &fx.app,
+        Method::GET,
+        "/api/v1/members",
+        &[("cookie", &b)],
+        None,
+    )
+    .await;
+    assert_eq!(blocked.status, StatusCode::FORBIDDEN);
+    assert_eq!(blocked.json()["code"], "password_change_required");
+    let blocked_reset = send(
+        &fx.app,
+        Method::POST,
+        &format!("/api/v1/members/{}/account/password", fx.child),
+        &[("cookie", &b)],
+        Some(json!({"password": "abcd"})),
+    )
+    .await;
+    assert_eq!(blocked_reset.status, StatusCode::FORBIDDEN);
+    let wrong = send(
+        &fx.app,
+        Method::POST,
+        &pw_uri,
+        &[("cookie", &b)],
+        Some(json!({"current_password": "second password 123", "new_password": "short"})),
+    )
+    .await;
+    assert_eq!(wrong.status, StatusCode::UNPROCESSABLE_ENTITY);
+    let changed = send(
+        &fx.app,
+        Method::POST,
+        &pw_uri,
+        &[("cookie", &b)],
+        Some(json!({"current_password": "second password 123", "new_password": "bos own password 123"})),
+    )
+    .await;
+    assert_eq!(changed.status, StatusCode::NO_CONTENT);
+    let me = send(&fx.app, Method::GET, "/api/v1/me", &[("cookie", &b)], None).await;
+    assert_eq!(me.json()["must_change_password"], false);
+    let members = send(
+        &fx.app,
+        Method::GET,
+        "/api/v1/members",
+        &[("cookie", &b)],
+        None,
+    )
+    .await;
+    assert_eq!(members.status, StatusCode::OK);
+
+    // Claimed: D-006 applies in full again.
+    let edit3 = send(
+        &fx.app,
+        Method::PATCH,
+        &format!("/api/v1/members/{bid}"),
+        &[("cookie", &a), ("if-match", "3")],
+        Some(json!({"color": "green"})),
+    )
+    .await;
+    assert_eq!(edit3.status, StatusCode::FORBIDDEN);
+    let reset3 = send(
+        &fx.app,
+        Method::POST,
+        &pw_uri,
+        &[("cookie", &a)],
+        Some(json!({"password": "third password 123"})),
+    )
+    .await;
+    assert_eq!(reset3.status, StatusCode::FORBIDDEN);
+    let account3 = send(
+        &fx.app,
+        Method::POST,
+        &account,
+        &[("cookie", &a)],
+        Some(json!({"username": "bo2", "password": "third password 123"})),
+    )
+    .await;
+    assert_eq!(account3.status, StatusCode::FORBIDDEN);
+
+    // The first adult was claimed from the start: Bo cannot touch them.
+    let on_first = send(
+        &fx.app,
+        Method::PATCH,
+        &format!("/api/v1/members/{}", fx.adult),
+        &[("cookie", &b), ("if-match", "1")],
+        Some(json!({"color": "red"})),
+    )
+    .await;
+    assert_eq!(on_first.status, StatusCode::FORBIDDEN);
+    let reset_first = send(
+        &fx.app,
+        Method::POST,
+        &format!("/api/v1/members/{}/account/password", fx.adult),
+        &[("cookie", &b)],
+        Some(json!({"password": "third password 123"})),
+    )
+    .await;
+    assert_eq!(reset_first.status, StatusCode::FORBIDDEN);
 }

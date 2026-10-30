@@ -308,7 +308,8 @@ async fn manageable_member(
         .map(|m| m.value)
         .filter(|m| m.archived_at.is_none())
         .ok_or(ApiError::NotFound)?;
-    require(actor, Action::ManageMember, &Resource::Member(id, m.role))?;
+    let resource = crate::routes::member_resource(&mut tx, actor, id, m.role).await?;
+    require(actor, Action::ManageMember, &resource)?;
     Ok((hid, tx))
 }
 

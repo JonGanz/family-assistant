@@ -37,8 +37,41 @@ impl FromRequestParts<AppState> for Auth {
         if lan && !matches!(actor, Actor::Device { .. } | Actor::ElevatedDevice { .. }) {
             return Err(ApiError::Unauthenticated);
         }
+        if let Actor::User {
+            member_id,
+            household_id,
+            ..
+        } = &actor
+            && crate::routes::must_change_password(state, *household_id, *member_id).await?
+        {
+            let path = parts
+                .extensions
+                .get::<axum::extract::OriginalUri>()
+                .map_or_else(|| parts.uri.path(), |u| u.0.path());
+            if !allowed_before_password_change(&parts.method, path, *member_id) {
+                return Err(ApiError::coded(
+                    axum::http::StatusCode::FORBIDDEN,
+                    "password_change_required",
+                    "choose your own password first",
+                ));
+            }
+        }
         Ok(Auth { actor, session_id })
     }
+}
+
+/// While the password was chosen by another adult, a session may only read `/me`, change its own
+/// password and sign out.
+fn allowed_before_password_change(
+    method: &axum::http::Method,
+    path: &str,
+    member: fa_domain::MemberId,
+) -> bool {
+    use axum::http::Method;
+    let path = path.trim_end_matches('/');
+    (method == Method::GET && path == "/api/v1/me")
+        || (method == Method::POST && path == "/api/v1/auth/logout")
+        || (method == Method::POST && path == format!("/api/v1/members/{member}/account/password"))
 }
 
 /// Runs the domain policy; denial becomes a 403.

@@ -10906,7 +10906,8 @@
         "required": [
           "member_id",
           "role",
-          "expires_at"
+          "expires_at",
+          "must_change_password"
         ],
         "properties": {
           "expires_at": {
@@ -10916,6 +10917,10 @@
           "member_id": {
             "type": "string",
             "format": "uuid"
+          },
+          "must_change_password": {
+            "type": "boolean",
+            "description": "True while the password was set by another adult; the client sends the user to the\nAccount page to choose their own."
           },
           "role": {
             "type": "string"
@@ -11475,7 +11480,8 @@
         "type": "object",
         "required": [
           "actor",
-          "household"
+          "household",
+          "must_change_password"
         ],
         "properties": {
           "actor": {
@@ -11483,6 +11489,10 @@
           },
           "household": {
             "$ref": "#/components/schemas/HouseholdDto"
+          },
+          "must_change_password": {
+            "type": "boolean",
+            "description": "True while the signed-in account still has the password another adult set."
           }
         }
       },
@@ -11603,6 +11613,10 @@
           },
           "id": {
             "$ref": "#/components/schemas/MemberId"
+          },
+          "initial_password": {
+            "type": "boolean",
+            "description": "True while the login's password was set by another adult (an adult not yet claimed)."
           },
           "interests": {
             "type": "array",

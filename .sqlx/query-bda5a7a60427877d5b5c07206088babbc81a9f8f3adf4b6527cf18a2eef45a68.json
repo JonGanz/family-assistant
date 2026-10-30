@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, household_id, member_id, username, password_hash, disabled_at, created_at, version\n             FROM user_account\n             WHERE lower(username) = lower($2) AND ($1::uuid IS NULL OR household_id = $1)\n             ORDER BY created_at LIMIT 1",
+  "query": "INSERT INTO user_account (id, household_id, member_id, username, password_hash, initial_password)\n             VALUES ($1, $2, $3, $4, $5, $6)\n             RETURNING id, household_id, member_id, username, password_hash, disabled_at, initial_password, created_at, version",
   "describe": {
     "columns": [
       {
@@ -35,11 +35,16 @@
       },
       {
         "ordinal": 6,
+        "name": "initial_password",
+        "type_info": "Bool"
+      },
+      {
+        "ordinal": 7,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 7,
+        "ordinal": 8,
         "name": "version",
         "type_info": "Int4"
       }
@@ -47,7 +52,11 @@
     "parameters": {
       "Left": [
         "Uuid",
-        "Text"
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Text",
+        "Bool"
       ]
     },
     "nullable": [
@@ -58,8 +67,9 @@
       false,
       true,
       false,
+      false,
       false
     ]
   },
-  "hash": "f062b6d5a404cc279d130a072b9a6b65881d447ff7263641044d25fb8d2bf356"
+  "hash": "bda5a7a60427877d5b5c07206088babbc81a9f8f3adf4b6527cf18a2eef45a68"
 }

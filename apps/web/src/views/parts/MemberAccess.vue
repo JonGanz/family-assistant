@@ -17,6 +17,10 @@ const pin = ref('')
 const message = ref('')
 const error = ref('')
 const isSelf = () => session.member?.id === props.member.id
+const isAdult = () => props.member.role === 'adult'
+/** An adult who has claimed their account is theirs alone (D-006); any adult may set up the rest. */
+const claimedByOther = () =>
+  isAdult() && !isSelf() && props.member.has_account && !props.member.initial_password
 
 async function run(work: () => Promise<void>, done: string) {
   message.value = ''
@@ -48,7 +52,11 @@ function saveLogin() {
       props.member.has_account
         ? api.resetPassword(id, password.value)
         : api.createAccount(id, username.value.trim(), password.value),
-    props.member.has_account ? 'Password changed.' : 'Login created.',
+    props.member.has_account
+      ? 'Password changed.'
+      : isAdult()
+        ? 'Login created. They must change this password at first sign-in.'
+        : 'Login created.',
   )
 }
 
@@ -63,39 +71,52 @@ function savePin() {
 
 <template>
   <fieldset class="access" :data-testid="`access-${member.display_name}`">
-    <legend>Login and PIN</legend>
-    <p class="muted">
-      {{ member.has_account ? 'Has a login.' : 'No login yet.' }}
-      {{ member.has_pin ? 'Has a PIN.' : 'No PIN.' }}
+    <legend>{{ isAdult() ? 'Login' : 'Login and PIN' }}</legend>
+    <p v-if="claimedByOther()" class="muted" data-testid="claimed-note">
+      This adult has their own login. Only they can change their password, PIN and settings.
     </p>
-    <template v-if="member.has_account && isSelf()">
-      <p class="muted">
-        Change your own password under <RouterLink to="/settings/account">Account</RouterLink>.
-      </p>
-    </template>
     <template v-else>
-      <label v-if="!member.has_account" class="field">
-        Username
-        <input v-model="username" name="login_username" autocomplete="off" />
-      </label>
-      <label class="field">
-        {{ member.has_account ? 'New password' : 'Password' }}
-        <input
-          v-model="password"
-          name="login_password"
-          type="password"
-          autocomplete="new-password"
-        />
-      </label>
-      <button type="button" class="btn-sm" @click="saveLogin">
-        {{ member.has_account ? 'Reset password' : 'Create login' }}
-      </button>
+      <p class="muted">
+        {{ member.has_account ? 'Has a login.' : 'No login yet.' }}
+        {{ member.has_pin ? 'Has a PIN.' : 'No PIN.' }}
+      </p>
+      <p v-if="isAdult() && !isSelf()" class="muted">
+        They set their own PIN after signing in.
+        <template v-if="member.has_account">
+          They must change this password at first sign-in.
+        </template>
+      </p>
+      <template v-if="member.has_account && isSelf()">
+        <p class="muted">
+          Change your own password under <RouterLink to="/settings/account">Account</RouterLink>.
+        </p>
+      </template>
+      <template v-else>
+        <label v-if="!member.has_account" class="field">
+          Username
+          <input v-model="username" name="login_username" autocomplete="off" />
+        </label>
+        <label class="field">
+          {{ member.has_account ? 'New password' : 'Password' }}
+          <input
+            v-model="password"
+            name="login_password"
+            type="password"
+            autocomplete="new-password"
+          />
+        </label>
+        <button type="button" class="btn-sm" @click="saveLogin">
+          {{ member.has_account ? 'Reset password' : 'Create login' }}
+        </button>
+      </template>
+      <template v-if="!isAdult() || isSelf()">
+        <label class="field">
+          {{ member.has_pin ? 'New PIN' : 'PIN' }} (4 to 6 digits)
+          <input v-model="pin" name="pin" inputmode="numeric" autocomplete="off" maxlength="6" />
+        </label>
+        <button type="button" class="btn-sm" @click="savePin">Save PIN</button>
+      </template>
     </template>
-    <label class="field">
-      {{ member.has_pin ? 'New PIN' : 'PIN' }} (4 to 6 digits)
-      <input v-model="pin" name="pin" inputmode="numeric" autocomplete="off" maxlength="6" />
-    </label>
-    <button type="button" class="btn-sm" @click="savePin">Save PIN</button>
     <p v-if="message" class="text-success" role="status">{{ message }}</p>
     <ErrorBanner v-if="error" :message="error" />
   </fieldset>
