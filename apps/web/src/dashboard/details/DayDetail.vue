@@ -44,7 +44,7 @@ const tks = computed(() =>
       >
         <div class="title">{{ e.visibility === 'busy' ? S.busy : e.title }}</div>
         <div class="time">
-          {{ e.all_day ? S.allDay : formatRange({ start_at: e.start_at, end_at: e.end_at }, tz) }}
+          {{ e.all_day ? S.allDay : formatRange(e, tz) }}
         </div>
       </li>
       <li v-for="t in tks" :key="t.id" class="chip" :class="{ done: t.status === 'done' }">

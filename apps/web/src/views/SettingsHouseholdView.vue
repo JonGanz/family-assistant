@@ -61,7 +61,7 @@ function fill() {
   form.lat = v.location ? String(v.location.lat) : ''
   form.lon = v.location ? String(v.location.lon) : ''
   form.units = v.units
-  form.weekStart = v.week_start
+  form.weekStart = v.week_start ?? 'monday'
   form.past = v.calendar_past_days
   form.future = v.calendar_future_days
   form.retention = v.weather_retention_days

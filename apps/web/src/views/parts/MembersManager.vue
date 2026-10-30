@@ -157,16 +157,16 @@ async function create() {
     if (creating.pin && creating.role === 'child') await api.setPin(made.id, creating.pin)
     await members.load()
     createdNote.value =
-      user && creating.role === 'adult'
-        ? 'They must change this password at first sign-in.'
-        : Object.assign(creating, {
-            display_name: '',
-            grade: '',
-            aliases: [],
-            username: '',
-            password: '',
-            pin: '',
-          })
+      user && creating.role === 'adult' ? 'They must change this password at first sign-in.' : ''
+    if (!createdNote.value)
+      Object.assign(creating, {
+        display_name: '',
+        grade: '',
+        aliases: [],
+        username: '',
+        password: '',
+        pin: '',
+      })
   } catch (e) {
     error.value = describeError(e, 'Create failed.')
     await members.load()

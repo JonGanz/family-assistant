@@ -292,7 +292,11 @@ describe('panels', () => {
       weather: { current: { weather_code: 1, temperature_2m: 9 }, hourly, daily },
     } as unknown as Partial<DashboardData>)
     const w = mount(DashboardCanvas, {
-      props: { data: d, settings: settings({ panels: [{ kind: 'weather' }] }), now: NOW },
+      props: {
+        data: d,
+        settings: settings({ panels: [{ kind: 'weather' }] } as Partial<DashboardSettings>),
+        now: NOW,
+      },
     })
     expect(w.find('[aria-label="Hourly forecast"]').exists()).toBe(false)
     await w.find('[data-testid="weather-panel"]').trigger('click')
