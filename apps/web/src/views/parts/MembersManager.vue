@@ -96,7 +96,7 @@ async function save(m: Member) {
       display_name: form.display_name,
       color: form.color,
       avatar: form.avatar || null,
-      grade: form.grade || null,
+      grade: m.role === 'child' ? form.grade || null : null,
       interests: csv(form.interests),
       hobbies: csv(form.hobbies),
       responsibilities: csv(form.responsibilities),
@@ -138,7 +138,7 @@ async function create() {
       display_name: creating.display_name.trim(),
       role: creating.role,
       color: creating.color,
-      grade: creating.grade.trim() || null,
+      grade: creating.role === 'child' ? creating.grade.trim() || null : null,
       aliases: creating.aliases,
     })
     const user = creating.username.trim()
@@ -214,7 +214,9 @@ async function create() {
           <label class="field"
             >Initials or emoji <input v-model="form.avatar" name="avatar" maxlength="4"
           /></label>
-          <label class="field">Grade <input v-model="form.grade" name="grade" /></label>
+          <label v-if="m.role === 'child'" class="field"
+            >Grade <input v-model="form.grade" name="grade" />
+          </label>
           <label class="field">
             Interests (comma separated)
             <input v-model="form.interests" name="interests" />
@@ -271,7 +273,7 @@ async function create() {
         </select>
       </label>
       <HuePicker v-model="creating.color" name="new_color" />
-      <label class="field"
+      <label v-if="creating.role === 'child'" class="field"
         >Grade (optional) <input v-model="creating.grade" name="new_grade"
       /></label>
       <ChipInput v-model="creating.aliases" label="Also known as (names used in mail)" />
