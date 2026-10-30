@@ -28,7 +28,11 @@ decisions: []
 ```
 
 ## Open
-_None. The next question number is Q-077._
+| ID | Title | Batch |
+|---|---|---|
+| [Q-077](Q-077-adding-another-adult.md) | How is a second adult added and set up? | 20 |
+
+_The next question number is Q-078._
 
 ## Resolved
 | ID | Title | Decisions |
