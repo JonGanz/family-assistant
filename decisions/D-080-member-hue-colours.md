@@ -18,7 +18,7 @@ A member's `color` was a free hex string. With themed palettes (D-079), a hue na
 - A member's `color` stores **one of eight hue names**: red, orange, yellow, green, cyan, blue, purple, pink. **No custom hex** (Q-074 answer: hue name only).
 - A new migration sets every existing member to `blue`. The user chose that over mapping each hex to the nearest hue.
 - The UI draws the colour from the current theme's hue (`var(--hue-<name>)`), so changing theme re-tints every member.
-- **Calendar and category colours are unchanged.** Calendars imported from Google or ICS keep their own hex colours.
+- **Category colours are unchanged.** ~~Calendars imported from Google or ICS keep their own hex colours.~~ Calendar colours were removed later (D-086).
 
 ## Consequences
 - The DTO keeps the field name `color`, but its type becomes the `Hue` enum, so the generated API types change.

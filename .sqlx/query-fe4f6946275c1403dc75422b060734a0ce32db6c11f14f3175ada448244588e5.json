@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, name, tz, location_lat, location_lon, location_label,\n                    meal_plan_horizon_weeks, dashboard_completion_override, units,\n                       calendar_past_days, calendar_future_days, weather_retention_days,\n                    private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, currency, gender_terms, disabled_signals, events_auto_write, events_extract_threshold,\n                       events_route_threshold, bill_lead_days, inbox_task_expiry_days, inbox_contact_expiry_days,\n                       mail_content_policy, mail_examples_per_category, mail_max_pending_days, dashboard_pending_approvals,\n                       setup_completed_at, version,\n                    created_at, updated_at\n             FROM household ORDER BY created_at, id",
+  "query": "SELECT id, name, tz, location_lat, location_lon, location_label,\n                    meal_plan_horizon_weeks, dashboard_completion_override, units, week_start,\n                       calendar_past_days, calendar_future_days, weather_retention_days,\n                    private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, currency, gender_terms, disabled_signals, events_auto_write, events_extract_threshold,\n                       events_route_threshold, bill_lead_days, inbox_task_expiry_days, inbox_contact_expiry_days,\n                       mail_content_policy, mail_examples_per_category, mail_max_pending_days, dashboard_pending_approvals,\n                       setup_completed_at, version,\n                    created_at, updated_at\n             FROM household ORDER BY created_at, id",
   "describe": {
     "columns": [
       {
@@ -50,126 +50,131 @@
       },
       {
         "ordinal": 9,
+        "name": "week_start",
+        "type_info": "Text"
+      },
+      {
+        "ordinal": 10,
         "name": "calendar_past_days",
         "type_info": "Int4"
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "calendar_future_days",
         "type_info": "Int4"
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "weather_retention_days",
         "type_info": "Int4"
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "private_events_as_busy",
         "type_info": "Bool"
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "now_list_size",
         "type_info": "Int4"
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "now_weights",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 15,
+        "ordinal": 16,
         "name": "quiet_from",
         "type_info": "Time"
       },
       {
-        "ordinal": 16,
+        "ordinal": 17,
         "name": "quiet_until",
         "type_info": "Time"
       },
       {
-        "ordinal": 17,
+        "ordinal": 18,
         "name": "currency",
         "type_info": "Text"
       },
       {
-        "ordinal": 18,
+        "ordinal": 19,
         "name": "gender_terms",
         "type_info": "Jsonb"
       },
       {
-        "ordinal": 19,
+        "ordinal": 20,
         "name": "disabled_signals",
         "type_info": "TextArray"
       },
       {
-        "ordinal": 20,
+        "ordinal": 21,
         "name": "events_auto_write",
         "type_info": "Bool"
       },
       {
-        "ordinal": 21,
+        "ordinal": 22,
         "name": "events_extract_threshold",
         "type_info": "Float4"
       },
       {
-        "ordinal": 22,
+        "ordinal": 23,
         "name": "events_route_threshold",
         "type_info": "Float4"
       },
       {
-        "ordinal": 23,
+        "ordinal": 24,
         "name": "bill_lead_days",
         "type_info": "Int4"
       },
       {
-        "ordinal": 24,
+        "ordinal": 25,
         "name": "inbox_task_expiry_days",
         "type_info": "Int4"
       },
       {
-        "ordinal": 25,
+        "ordinal": 26,
         "name": "inbox_contact_expiry_days",
         "type_info": "Int4"
       },
       {
-        "ordinal": 26,
+        "ordinal": 27,
         "name": "mail_content_policy",
         "type_info": "Text"
       },
       {
-        "ordinal": 27,
+        "ordinal": 28,
         "name": "mail_examples_per_category",
         "type_info": "Int4"
       },
       {
-        "ordinal": 28,
+        "ordinal": 29,
         "name": "mail_max_pending_days",
         "type_info": "Int4"
       },
       {
-        "ordinal": 29,
+        "ordinal": 30,
         "name": "dashboard_pending_approvals",
         "type_info": "Bool"
       },
       {
-        "ordinal": 30,
+        "ordinal": 31,
         "name": "setup_completed_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 31,
+        "ordinal": 32,
         "name": "version",
         "type_info": "Int4"
       },
       {
-        "ordinal": 32,
+        "ordinal": 33,
         "name": "created_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 33,
+        "ordinal": 34,
         "name": "updated_at",
         "type_info": "Timestamptz"
       }
@@ -208,11 +213,12 @@
       false,
       false,
       false,
+      false,
       true,
       false,
       false,
       false
     ]
   },
-  "hash": "196cf13667e231cecf39361203059cbe25385300ad4247847b2dbb987240a41b"
+  "hash": "fe4f6946275c1403dc75422b060734a0ce32db6c11f14f3175ada448244588e5"
 }

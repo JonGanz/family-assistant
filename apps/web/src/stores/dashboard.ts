@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api, type DashboardView } from '../api/client'
-import type { DashboardData } from '../dashboard/types'
+import type { DashboardData, TaskView } from '../dashboard/types'
 import { ApiError } from '../api/http'
 import { taskApi } from '../kiosk/taskApi'
 import { getDeviceToken } from '../kiosk/deviceToken'
@@ -59,6 +59,11 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const loadError = ref<string | null>(null)
   /** Epoch ms until which the device is elevated (PIN step-up), or null. */
   const elevatedUntil = ref<number | null>(null)
+  /** The week the Week view shows (its first day), and that week's events and tasks. */
+  const weekFrom = ref<string | null>(null)
+  const weekData = ref<{ from: string; events: DashboardData['events']; tasks: TaskView[] } | null>(
+    null,
+  )
   let handle: SseHandle | null = null
   let midnight: ReturnType<typeof setTimeout> | undefined
   let inflight: Promise<void> | null = null
@@ -169,6 +174,27 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return true
   }
 
+  /** Fetches the events and tasks of the week being viewed (the snapshot only starts today). */
+  async function loadWeek(): Promise<void> {
+    const from = weekFrom.value
+    if (!from) return
+    try {
+      const d = await api.dashboard(7, undefined, from)
+      if (weekFrom.value === from) {
+        weekData.value = { from, events: d.events, tasks: d.tasks ?? [] }
+      }
+    } catch {
+      /* keep the previous week; the next refresh retries */
+    }
+  }
+
+  /** The Week view asks for a week (its first day), or null when it is not showing. */
+  function showWeek(from: string | null): Promise<void> {
+    weekFrom.value = from
+    if (!from) weekData.value = null
+    return loadWeek()
+  }
+
   async function doRefresh(): Promise<void> {
     try {
       const days = daysToFetch(snapshot.value?.settings)
@@ -185,6 +211,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
       stale.value = false
       loadError.value = null
       writeCache(snapshot.value, savedAt.value)
+      void loadWeek()
     } catch (e) {
       applyCache()
       stale.value = true
@@ -223,7 +250,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
         const w = heldWindow()
         const from = p.from ? Date.parse(p.from) : NaN
         const to = p.to ? Date.parse(p.to) : NaN
-        if (w && !Number.isNaN(from) && !Number.isNaN(to) && !(from < w.to && w.from < to)) {
+        if (
+          weekFrom.value === null &&
+          w &&
+          !Number.isNaN(from) &&
+          !Number.isNaN(to) &&
+          !(from < w.to && w.from < to)
+        ) {
           return false
         }
         break
@@ -310,6 +343,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
     stale,
     loadError,
     showStaleBadge,
+    weekData,
+    showWeek,
     refresh,
     handleEvent,
     complete,

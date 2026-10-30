@@ -21,6 +21,7 @@ fn household(name: &str) -> Household {
         meal_plan_horizon_weeks: 2,
         dashboard_completion_override: false,
         units: Units::Metric,
+        week_start: Default::default(),
         calendar_past_days: 30,
         calendar_future_days: 400,
         weather_retention_days: 7,
@@ -2143,7 +2144,7 @@ async fn upsert_synced_keeps_extracted_rows(pool: PgPool) {
         updated_at: Utc::now(),
     };
     CalendarSourceRepo::insert(&mut tx, &cs).await.unwrap();
-    let (cal, _) = CalendarRepo::upsert_discovered(&mut tx, cs.id, "remote-1", "Family", None)
+    let (cal, _) = CalendarRepo::upsert_discovered(&mut tx, cs.id, "remote-1", "Family")
         .await
         .unwrap();
     let cal = cal.value.id;
@@ -2402,7 +2403,7 @@ async fn extracted_event_lifecycle(pool: PgPool) {
         updated_at: Utc::now(),
     };
     CalendarSourceRepo::insert(&mut tx, &cs).await.unwrap();
-    let (cal, _) = CalendarRepo::upsert_discovered(&mut tx, cs.id, "r", "Family", None)
+    let (cal, _) = CalendarRepo::upsert_discovered(&mut tx, cs.id, "r", "Family")
         .await
         .unwrap();
     EventRepo::set_written(

@@ -217,8 +217,10 @@ export const api = {
   weather: () => request<WeatherView>('/api/v1/weather', U),
   advisories: () => request<AdvisoryView[]>('/api/v1/advisories', U),
   /** Kiosk snapshot (device token). */
-  dashboard: (days: number, signal?: AbortSignal) =>
-    request<DashboardView>(`/api/v1/dashboard?days=${days}`, { signal }),
+  dashboard: (days: number, signal?: AbortSignal, from?: string) =>
+    request<DashboardView>(`/api/v1/dashboard?days=${days}${from ? `&from=${from}` : ''}`, {
+      signal,
+    }),
   device: (id: string) => request<DeviceView>(`/api/v1/devices/${id}`, U),
   patchDevice: (id: string, version: number, patch: DevicePatch) =>
     request<DeviceView>(`/api/v1/devices/${id}`, {

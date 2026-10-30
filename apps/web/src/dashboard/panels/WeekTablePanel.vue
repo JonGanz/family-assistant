@@ -1,29 +1,65 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { textOn } from '../../lib/hues'
-import { addDays, dayKey, formatRange, groupByDay } from '../../lib/time'
+import WeatherIcon from '../../components/WeatherIcon.vue'
+import { useUnits } from '../../composables/useUnits'
+import { stripeStyle } from '../../lib/eventColors'
+import { addDays, dayKey, groupByDay } from '../../lib/time'
 import { toEventLike, toMemberLike, visibleEvents, visibleMembers } from '../filter'
-import { S } from '../strings'
+import DayCell from '../DayCell.vue'
 import { tasksOf } from '../tasksModel'
-import type { PanelProps } from '../types'
+import type { DetailRequest, PanelProps } from '../types'
+import { dailyOf } from '../weatherModel'
 
 const DAYS = 7
-const EVERYONE = 'everyone'
 
 const props = defineProps<PanelProps>()
+const emit = defineEmits<{ detail: [d: DetailRequest] }>()
 const tz = computed(() => props.data.household.tz)
 const today = computed(() => dayKey(props.now, tz.value))
+/** The week's first day (the canvas picks it from the household's first day of the week). */
+const start = computed(() =>
+  typeof props.panel['start'] === 'string' ? (props.panel['start'] as string) : today.value,
+)
+const hidePast = computed(() => props.panel['hidePast'] === true)
 const likes = computed(() => props.data.members.map(toMemberLike))
 const people = computed(() => visibleMembers(props.data, props.settings))
-const columns = computed(() => [
-  ...people.value.map((m) => ({ key: m.id, name: m.display_name })),
-  { key: EVERYONE, name: S.everyone },
-])
+const columns = computed(() =>
+  people.value.map((m) => {
+    const color = toMemberLike(m).color
+    return {
+      key: m.id,
+      name: m.display_name,
+      color,
+      stripe: stripeStyle({ color, colors: [color] }),
+    }
+  }),
+)
+const { format } = useUnits(computed(() => props.data.household.units))
+const forecast = computed(
+  () => new Map(dailyOf(props.data.weather ?? ({} as never), DAYS).map((d) => [d.date, d])),
+)
+const temp = (v: number | null) => (v === null ? '–' : format(v, 'temp'))
+/** Over by now: timed events by their end, all-day events once their last day is behind us. */
+function ended(e: {
+  all_day: boolean
+  end_at: string
+  start_date?: string | null
+  end_date?: string | null
+}) {
+  if (e.all_day && e.start_date) {
+    const endExclusive =
+      e.end_date && e.end_date > e.start_date ? e.end_date : addDays(e.start_date, 1)
+    return endExclusive <= today.value
+  }
+  return Date.parse(e.end_at) <= props.now.getTime()
+}
 const byDay = computed(() =>
   groupByDay(
-    visibleEvents(props.data, props.settings).map((e) => toEventLike(e, likes.value)),
+    visibleEvents(props.data, props.settings)
+      .filter((e) => !hidePast.value || !ended(e))
+      .map((e) => toEventLike(e, likes.value)),
     tz.value,
-    today.value,
+    start.value,
     DAYS,
   ),
 )
@@ -32,18 +68,17 @@ const tasksByDay = computed(() => {
   for (const t of tasksOf(props.data)) {
     if (!t.due_at) continue
     const k = dayKey(t.due_at, tz.value)
+    // With past items hidden, a task goes only once it is completed (open ones stay until done).
+    if (hidePast.value && t.status === 'done' && k <= today.value) continue
     out.set(k, [...(out.get(k) ?? []), t])
   }
   return out
 })
-/** Whose column an item belongs in: each assignee/attendee, or "everyone" when it names nobody. */
-const owners = (ids: string[]) => {
-  const known = ids.filter((id) => people.value.some((m) => m.id === id))
-  return known.length ? known : ids.length ? [] : [EVERYONE]
-}
+/** The people with a column that an item belongs to. Household-wide items have no column. */
+const owners = (ids: string[]) => ids.filter((id) => people.value.some((m) => m.id === id))
 const rows = computed(() =>
   Array.from({ length: DAYS }, (_, i) => {
-    const key = addDays(today.value, i)
+    const key = addDays(start.value, i)
     const d = new Date(`${key}T12:00:00Z`)
     const events = byDay.value.get(key) ?? []
     const tasks = tasksByDay.value.get(key) ?? []
@@ -52,8 +87,12 @@ const rows = computed(() =>
       today: key === today.value,
       weekday: new Intl.DateTimeFormat(undefined, { weekday: 'short', timeZone: 'UTC' }).format(d),
       dom: d.getUTCDate(),
+      fc: forecast.value.get(key),
       cells: columns.value.map((c) => ({
         key: c.key,
+        name: c.name,
+        color: c.color,
+        stripe: c.stripe,
         events: events.filter((e) => owners(e.members).includes(c.key)),
         tasks: tasks.filter((t) => owners(t.assignees).includes(c.key)),
       })),
@@ -64,43 +103,37 @@ const rows = computed(() =>
 
 <template>
   <section class="weektable" aria-label="Week">
-    <table>
-      <thead>
-        <tr>
-          <th scope="col" class="day"></th>
-          <th v-for="c in columns" :key="c.key" scope="col">{{ c.name }}</th>
+    <table role="table" :style="{ '--cols': columns.length }">
+      <thead role="rowgroup">
+        <tr role="row">
+          <th scope="col" role="columnheader" class="day"></th>
+          <th v-for="c in columns" :key="c.key" scope="col" role="columnheader">{{ c.name }}</th>
         </tr>
       </thead>
-      <tbody>
-        <tr v-for="r in rows" :key="r.key" :class="{ today: r.today }" :data-day="r.key">
-          <th scope="row" class="day">
-            {{ r.weekday }} <span class="dom">{{ r.dom }}</span>
+      <tbody role="rowgroup">
+        <tr v-for="r in rows" :key="r.key" role="row" :class="{ today: r.today }" :data-day="r.key">
+          <th scope="row" role="rowheader" class="day">
+            <div class="dom">{{ r.dom }}</div>
+            <div class="wd">{{ r.weekday }}</div>
+            <div v-if="r.fc" class="fcicon">
+              <WeatherIcon :code="r.fc.code" size="2rem" />
+            </div>
+            <div v-if="r.fc" class="fctemps">
+              <span class="hi">{{ temp(r.fc.max) }}</span>
+              <span class="sep">|</span>
+              <span class="lo">{{ temp(r.fc.min) }}</span>
+            </div>
           </th>
-          <td v-for="c in r.cells" :key="c.key" :data-member="c.key">
-            <ul>
-              <li
-                v-for="t in c.tasks"
-                :key="t.id"
-                class="chip"
-                :class="{ done: t.status === 'done' }"
-                data-testid="task-chip"
-              >
-                ⚑ {{ t.title }}
-              </li>
-              <li
-                v-for="(e, i) in c.events"
-                :key="e.id ?? i"
-                :class="{ busy: e.visibility === 'busy' }"
-                :style="
-                  e.visibility === 'busy'
-                    ? undefined
-                    : { background: e.color, color: textOn(e.color) }
-                "
-              >
-                <span class="t">{{ formatRange(e, tz) }}</span>
-                {{ e.visibility === 'busy' ? S.busy : e.title }}
-              </li>
-            </ul>
+          <td v-for="c in r.cells" :key="c.key" role="cell" :data-member="c.key">
+            <DayCell
+              :events="c.events"
+              :tasks="c.tasks"
+              :tz="tz"
+              :stripe="c.stripe"
+              :color="c.color"
+              :label="`${c.name}, ${r.weekday} ${r.dom}`"
+              @detail="(d: DetailRequest) => emit('detail', d)"
+            />
           </td>
         </tr>
       </tbody>
@@ -109,11 +142,25 @@ const rows = computed(() =>
 </template>
 
 <style scoped>
+.weektable,
 table {
+  height: 100%;
+}
+table {
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
   font-size: var(--font-size-sm);
+}
+/* Equal rows that share the height exactly; a cell never grows, it folds extra items into "+N". */
+tbody {
+  flex: 1;
+  display: grid;
+  grid-auto-rows: minmax(0, 1fr);
+}
+tr {
+  display: grid;
+  grid-template-columns: 7.5em repeat(var(--cols), minmax(0, 1fr));
 }
 th,
 td {
@@ -127,45 +174,44 @@ thead th {
   font-size: var(--font-size-base);
   background: var(--color-surface);
 }
+td {
+  position: relative;
+  padding: 0;
+}
 .day {
-  width: 5em;
   font-size: var(--font-size-base);
+  font-weight: 400;
   background: var(--color-surface);
 }
-.dom,
-.t {
-  color: var(--color-muted);
+.dom {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+}
+.wd {
   font-weight: 400;
+}
+.fcicon {
+  margin-top: var(--space-1);
+  color: var(--color-text);
+}
+.fcicon :deep(.weather-icon) {
+  flex: none;
+}
+.fctemps {
+  display: flex;
+  gap: var(--space-1);
+  white-space: nowrap;
+  font-size: var(--font-size-sm);
+}
+.fctemps .hi {
+  font-weight: 700;
+}
+.lo,
+.sep {
+  color: var(--color-muted);
 }
 tr.today > * {
   border-top: 3px solid var(--color-accent);
   border-bottom: 3px solid var(--color-accent);
-}
-ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--space-1);
-}
-li {
-  padding: var(--space-1) var(--space-2);
-  overflow-wrap: anywhere;
-}
-li .t {
-  display: block;
-  color: inherit;
-  opacity: 0.85;
-}
-li.chip {
-  border: 2px dashed var(--color-accent);
-}
-li.chip.done {
-  text-decoration: line-through;
-  color: var(--color-muted);
-}
-li.busy {
-  background: var(--color-border);
-  color: var(--color-muted);
 }
 </style>

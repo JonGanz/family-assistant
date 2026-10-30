@@ -78,6 +78,7 @@ fn household_view(h: &Household, version: i32, google: bool) -> HouseholdViewExt
             tz: h.tz.clone(),
             location: h.location.clone(),
             units: h.units,
+            week_start: h.week_start,
             calendar_past_days: h.calendar_past_days,
             calendar_future_days: h.calendar_future_days,
             weather_retention_days: h.weather_retention_days,
@@ -1536,10 +1537,18 @@ pub async fn patch_device(
 pub struct DashboardQuery {
     /// Days of agenda from today (1 to 14); defaults to the device setting.
     days: Option<u8>,
+    /// First day of the agenda window, `YYYY-MM-DD` in the household time zone; defaults to today.
+    from: Option<String>,
 }
 
 /// `[start of today, start of today + days)` in the household time zone.
-fn day_window(tz: &str, days: u8, now: DateTime<Utc>) -> (DateTime<Utc>, DateTime<Utc>) {
+/// `from` replaces today as the first day.
+fn day_window(
+    tz: &str,
+    days: u8,
+    now: DateTime<Utc>,
+    from: Option<chrono::NaiveDate>,
+) -> (DateTime<Utc>, DateTime<Utc>) {
     let tz: chrono_tz::Tz = tz.parse().unwrap_or(chrono_tz::UTC);
     let midnight = |d: chrono::NaiveDate| {
         tz.from_local_datetime(&d.and_time(NaiveTime::MIN))
@@ -1550,7 +1559,7 @@ fn day_window(tz: &str, days: u8, now: DateTime<Utc>) -> (DateTime<Utc>, DateTim
                 |t| t.with_timezone(&Utc),
             )
     };
-    let today = now.with_timezone(&tz).date_naive();
+    let today = from.unwrap_or_else(|| now.with_timezone(&tz).date_naive());
     (
         midnight(today),
         midnight(today + ChronoDuration::days(i64::from(days))),
@@ -1609,7 +1618,15 @@ pub async fn get_dashboard(
             fa_domain::MAX_AGENDA_DAYS
         )));
     }
-    let (from, to) = day_window(&h.tz, days, Utc::now());
+    let start = q
+        .from
+        .as_deref()
+        .map(|s| {
+            chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d")
+                .map_err(|_| ApiError::BadRequest("from must be YYYY-MM-DD".into()))
+        })
+        .transpose()?;
+    let (from, to) = day_window(&h.tz, days, Utc::now(), start);
     let events = s
         .services
         .calendar
@@ -1639,6 +1656,7 @@ pub async fn get_dashboard(
             name: h.name,
             tz: h.tz,
             units: h.units,
+            week_start: h.week_start,
             location: h.location,
             now_list_size: h.now_list_size,
             completion_override: h.dashboard_completion_override,
@@ -1763,11 +1781,17 @@ mod tests {
     fn day_window_follows_the_household_zone() {
         let now = Utc.with_ymd_and_hms(2026, 3, 28, 23, 30, 0).unwrap();
         // Berlin is already on 29 March, the day the clocks go forward: that day has 23 hours.
-        let (from, to) = day_window("Europe/Berlin", 1, now);
+        let (from, to) = day_window("Europe/Berlin", 1, now, None);
         assert_eq!(from, Utc.with_ymd_and_hms(2026, 3, 28, 23, 0, 0).unwrap());
         assert_eq!(to - from, ChronoDuration::hours(23));
-        let (from, to) = day_window("not/a-zone", 2, now);
+        let (from, to) = day_window("not/a-zone", 2, now, None);
         assert_eq!(from, Utc.with_ymd_and_hms(2026, 3, 28, 0, 0, 0).unwrap());
         assert_eq!(to - from, ChronoDuration::days(2));
+        // An explicit start date spanning the spring-forward day in Berlin: 28 + 29 March.
+        let d = chrono::NaiveDate::from_ymd_opt(2026, 3, 28);
+        let (from, to) = day_window("Europe/Berlin", 2, now, d);
+        assert_eq!(from, Utc.with_ymd_and_hms(2026, 3, 27, 23, 0, 0).unwrap());
+        assert_eq!(to, Utc.with_ymd_and_hms(2026, 3, 29, 22, 0, 0).unwrap());
+        assert_eq!(to - from, ChronoDuration::hours(47));
     }
 }

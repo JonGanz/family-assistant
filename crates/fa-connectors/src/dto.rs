@@ -28,7 +28,6 @@ pub struct RemoteEvent {
 pub struct RemoteCalendar {
     pub remote_id: String,
     pub name: String,
-    pub color: Option<String>,
     pub ctag: Option<String>,
 }
 

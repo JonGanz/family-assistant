@@ -86,7 +86,7 @@ async fn add_calendar(
     members: &[MemberId],
 ) -> CalendarId {
     let mut tx = e.store.tx_for(e.h).await.unwrap();
-    let (c, _) = CalendarRepo::upsert_discovered(&mut tx, src.id, remote_id, remote_id, None)
+    let (c, _) = CalendarRepo::upsert_discovered(&mut tx, src.id, remote_id, remote_id)
         .await
         .unwrap();
     sqlx::query("UPDATE calendar SET enabled = true, is_default_target = $2 WHERE id = $1")
@@ -120,6 +120,7 @@ async fn env(pool: PgPool, server: &MockServer, scopes: &[&str], auto: bool) -> 
         meal_plan_horizon_weeks: 2,
         dashboard_completion_override: false,
         units: Units::Metric,
+        week_start: Default::default(),
         calendar_past_days: 30,
         calendar_future_days: 400,
         weather_retention_days: 7,

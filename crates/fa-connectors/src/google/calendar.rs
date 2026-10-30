@@ -35,8 +35,6 @@ struct CalendarListItem {
     summary: Option<String>,
     #[serde(rename = "summaryOverride")]
     summary_override: Option<String>,
-    #[serde(rename = "backgroundColor")]
-    background_color: Option<String>,
     #[serde(default)]
     deleted: bool,
 }
@@ -153,7 +151,6 @@ pub async fn list_calendars(http: &Http, base: &str, access: &str) -> Result<Vec
                     .or(i.summary)
                     .unwrap_or_else(|| i.id.clone()),
                 remote_id: i.id,
-                color: i.background_color,
                 ctag: None,
             }
         }));

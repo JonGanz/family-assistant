@@ -41,7 +41,7 @@ export function toEventLike(e: EventView, members: MemberLike[] = []): EventLike
     start_date: e.start_date,
     end_date: e.end_date,
     members: e.members,
-    color: e.color ?? colors[0],
+    color: colors[0],
     colors,
     visibility: e.visibility,
     source_url: e.external_url,

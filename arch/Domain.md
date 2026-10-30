@@ -92,7 +92,7 @@ The decision results for a message (category, time_sensitive, member links, is_b
 |---|---|
 | `OAuthAccount` | provider: `google`, owner Member, email, scopes[], secret, state (shared with Gmail in M3) |
 | `CalendarSource` | kind: `google\|caldav\|ics`, owner Member?, oauth_account? / url, username? / secret? (CalDAV password or the ICS URL), writable, poll_minutes, state |
-| `Calendar` | source, remote_id, name, color, enabled, members[] (M:N), sync_state, is_default_target |
+| `Calendar` | source, remote_id, name, enabled, members[] (M:N), sync_state, is_default_target |
 | `Event` | calendar?, remote_uid?, instance_key, title, start_at, end_at, all_day (+ start_date/end_date), location?, is_private, cancelled, members[] (M:N, M3), origin: `synced\|extracted\|manual`, status? (`null` when synced; `proposed\|approved\|written\|rejected`), confidence?, source_ref, dedupe_key |
 
 Synced events are stored **one row per occurrence** (recurrences are expanded in the sync window). Visibility (D-036): everything is shown, but adults' source-private events appear as Busy to the dashboard and children. Full table detail, sync, and visibility rules are in [Feeds.md](Feeds.md) §2–3.
@@ -140,7 +140,7 @@ Progress sources beyond manual entry, and the privacy of adults' goals, are sett
 | `WeatherRule` | name, condition (a small DSL such as `min(temp_c, next 12h) <= 0`), action: `alert\|task`, task_definition?, status: `active\|suggested\|disabled`, suggested_by: `default\|s2` (D-017) |
 | `Advisory` | rule?, text, severity, valid_from/until, source: `rule\|s2`, dedupe_key. Not dismissable; removed when `valid_until` passes or its rule stops matching (D-068) |
 
-The rule DSL, default rules, and evaluation are in [Feeds.md](Feeds.md) §4. M1 also adds `Household{units, calendar_past_days, calendar_future_days, weather_retention_days, private_events_as_busy}`, `MemberAvatar`, and `Device.settings` (dashboard layout, [Frontend.md](Frontend.md) §4).
+The rule DSL, default rules, and evaluation are in [Feeds.md](Feeds.md) §4. M1 also adds `Household{units, calendar_past_days, calendar_future_days, weather_retention_days, private_events_as_busy, week_start}`, `MemberAvatar`, and `Device.settings` (dashboard layout, [Frontend.md](Frontend.md) §4).
 
 ## Package: AI & Pipelines (M4. M3 has rules-only)
 | Class | Key attributes |

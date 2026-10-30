@@ -84,7 +84,7 @@ Shown when no household exists. It is **open to whoever opens the app first** (D
 - **Today:** a merged list of today's and tomorrow's events with member chips, the current weather plus the 7-day strip, and advisories at the top.
 - **Calendar:**
   - The agenda view is the default on phones, and the week view on desktop. Month view is available.
-  - Events are coloured by the first linked member's colour (or the calendar colour for household calendars), and multi-member events show stacked chips.
+  - Events are coloured by their linked members (several members: equal bands in the stripe, D-086), and multi-member events show stacked chips.
   - A busy-masked event shows as a hatched block labelled "Busy".
   - Each event has a 'from ↗' link to its source when the source gives a URL (Google `htmlLink`).
 - **Source add flows:**
@@ -136,7 +136,7 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
   - **Household file:** **Export** downloads TOML (no secrets). **Import** uploads TOML, shows a dry-run diff (created, changed, skipped, errors with positions), then applies on confirmation (D-018).
 
 ## 3d. Themes (D-079, D-080, D-081)
-**Catalogue.** `themes/` holds one data file per family: Catppuccin, Nord, Dracula, Gruvbox, Solarized, Tokyo Night, Rosé Pine, Kanagawa. A family lists the light and/or dark variants its project publishes (Catppuccin has Latte and three dark flavours). Every variant fills the same tokens:
+**Catalogue.** `themes/` holds one data file per family: Catppuccin, Nord, Dracula, Gruvbox, Solarized, Tokyo Night, Rosé Pine, Kanagawa, seoul256 (D-083; dark 233–239 and light 252–256 as variants). Nord also has a light Snow Storm variant (D-083). A family lists the light and/or dark variants its project publishes (Catppuccin has Latte and three dark flavours). Every variant fills the same tokens:
 - **neutrals:** `bg`, `surface`, `surface-2`, `border`, `muted`, `text`, `on-accent` (text on a hue-coloured fill);
 - **hues:** `red`, `orange`, `yellow`, `green`, `cyan`, `blue`, `purple`, `pink`. A palette without a native hue supplies its nearest colour.
 
@@ -151,12 +151,12 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 - **App devices:** `localStorage` key `fa.theme`, edited in **Settings → Personal → Appearance** by any signed-in member. It does not follow a person to another device. Until a choice is made the app uses its shipped default (a technical choice: Catppuccin, `auto`).
 - **Kiosk and dashboard devices:** `device.settings.theme`, set by an adult in Settings → Devices (the layout editor's live preview uses it). The kiosk uses the same catalogue and never picks a theme itself (D-019).
 
-**Member colours** (D-080). A member's `color` is a hue name. The client uses `var(--hue-<name>)` for chips, the agenda and task items. `eventColors` falls back from the event's own calendar colour (still hex, from outside) to the member's hue. The member picker shows the current theme's swatches.
+**Member colours** (D-080). A member's `color` is a hue name. The client uses `var(--hue-<name>)` for chips, the agenda and task items. `eventColors` returns one hue per linked member (an event for two members shows both), and a neutral for an event with none; calendars have no colour (D-086). In the Week view an event takes its column's member colour. The member picker shows the current theme's swatches.
 
 **Contrast** (build-time unit test over every variant): `text` and `muted` on `bg` and on both surfaces at least 4.5:1; each hue on `bg` at least 3:1 (stripes, chips, accents); `on-accent` on `blue`. A failing value is corrected in the theme data, never adjusted at run time.
 
 ## 4. Dashboard (kiosk shell)
-**Navigation (D-082):** a bar along the shorter edge (left in landscape, top in portrait) switches between **Home** (the configured panels below) and **Week** (a table: a row per day for 7 days, a column per person plus "Everyone"; each cell lists that person's events and the tasks due that day). The view is local state. The whole view scrolls, so no panel is cropped when another needs more room. The footer heartbeat is shown in household-local time.
+**Navigation (D-082, D-084):** a bar along the shorter edge (left in landscape, top in portrait) switches between **Home** (the configured panels below) and **Week** (a table: a row per day for the calendar week that starts on the household's `week_start` (Monday or Sunday) and holds today, a column per person; each cell lists that person's events, drawn like the calendar page's, and the tasks due that day; the day cell carries the forecast; it fills the view and never scrolls: a cell that cannot fit its items uses two columns when wide enough, then ends with a "+N" slot that opens a modal listing everything in that cell, D-087). A bottom row has previous and next arrows, a box showing "Current" or the date range of the shown week, and a "Hide past events" switch (ended events go; a task goes only once completed). The view fetches its own week with `GET /api/v1/dashboard?from=`). The view is local state. The Home view scrolls, so no panel is cropped when another needs more room; the Week view does not scroll (D-087). The connection status, stale badge, heartbeat (household-local time) and the adult unlock button sit at the end of the bar (D-085).
 
 The dashboard is **at-a-glance only** (D-068): date and time, weather with advisories, agenda, tasks, routines, and the household's members. **Nothing derived from email** appears on it: no inbox panel, no titles, senders or approvals, elevated or not. The one exception is a **pending-approvals count badge per adult** on the `members` strip (D-078), which the household setting `dashboard_pending_approvals` (default on) can turn off.
 
@@ -172,8 +172,8 @@ The layout is data held in `device.settings` and edited by adults in Settings �
 ```
 - **Panels:**
   - `clock` (time, date);
-  - `weather` (now, the next 12 h, and 5–7 days; before noon household time it also shows today's high, low and rain chance). It carries the **advisories** (coloured by severity, beside "feels like / wind") and a derived notice for a thunderstorm in the forecast (D-082). Advisories are **not dismissable** by anyone: an advisory disappears when its `valid_until` passes or when the server finds its rule no longer matches the forecast (D-068), arriving as SSE `advisory.updated`;
-  - `agenda` (today plus the next N days, grouped by day, with member chips and key-date tasks, D-046);
+  - `weather` (a compact panel: icon, now, feels like and wind, advisories on a second row, and before noon household time today's high, low and rain chance; tapping it opens a modal with today by the hour and the upcoming days, D-085). It carries the **advisories** (coloured by severity, beside "feels like / wind") and a derived notice for a thunderstorm in the forecast (D-082). Advisories are **not dismissable** by anyone: an advisory disappears when its `valid_until` passes or when the server finds its rule no longer matches the forecast (D-068), arriving as SSE `advisory.updated`;
+  - `agenda` (today plus the next N days, grouped by day, with key-date tasks, D-046; each event shows its time with the member chips under it and its title in an aligned column, and opens a modal with the location and details, D-085);
   - `week` (a 7-day column grid, with `until_done` and `always` task chips);
   - `members` (avatars and names of the household, D-070; the entry point for per-member task views and the PIN step-up; adults carry a count-only "to approve" badge when `dashboard_pending_approvals` is on, D-078);
   - `now` (the Now list, D-042, with optional `members` and `lists` filters), `member_tasks` (one column per member with today's open tasks), `routine` (D-041: shown automatically during a routine window with large step buttons and a progress bar; `pinned: true` keeps it visible).

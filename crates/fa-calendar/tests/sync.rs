@@ -64,6 +64,7 @@ async fn env(pool: PgPool, server: Option<&MockServer>) -> Env {
         meal_plan_horizon_weeks: 2,
         dashboard_completion_override: false,
         units: Units::Metric,
+        week_start: Default::default(),
         calendar_past_days: 30,
         calendar_future_days: 400,
         weather_retention_days: 7,
@@ -608,7 +609,7 @@ async fn events_apply_visibility_and_scope(pool: PgPool) {
     ];
     for ((src, members), evs) in specs.iter().zip(&evs) {
         CalendarSourceRepo::insert(&mut tx, src).await.unwrap();
-        let (c, _) = CalendarRepo::upsert_discovered(&mut tx, src.id, "r", &src.name, None)
+        let (c, _) = CalendarRepo::upsert_discovered(&mut tx, src.id, "r", &src.name)
             .await
             .unwrap();
         CalendarRepo::update(
@@ -732,7 +733,7 @@ async fn prune_removes_old_events(pool: PgPool) {
     };
     let mut tx = e.store.tx_for(e.h).await.unwrap();
     CalendarSourceRepo::insert(&mut tx, &src).await.unwrap();
-    let (c, _) = CalendarRepo::upsert_discovered(&mut tx, src.id, "r", "x", None)
+    let (c, _) = CalendarRepo::upsert_discovered(&mut tx, src.id, "r", "x")
         .await
         .unwrap();
     let mut old = occ("old", "Old", false);

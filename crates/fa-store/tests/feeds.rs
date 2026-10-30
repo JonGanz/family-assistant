@@ -16,6 +16,7 @@ fn household(name: &str) -> Household {
         meal_plan_horizon_weeks: 2,
         dashboard_completion_override: false,
         units: Units::Metric,
+        week_start: Default::default(),
         calendar_past_days: 30,
         calendar_future_days: 400,
         weather_retention_days: 7,
@@ -126,10 +127,9 @@ async fn seed_calendar(
     let s = source(h, owner, 15);
     let mut tx = store.tx_for(h).await.unwrap();
     CalendarSourceRepo::insert(&mut tx, &s).await.unwrap();
-    let (cal, created) =
-        CalendarRepo::upsert_discovered(&mut tx, s.id, "remote-1", "Family", Some("#336699"))
-            .await
-            .unwrap();
+    let (cal, created) = CalendarRepo::upsert_discovered(&mut tx, s.id, "remote-1", "Family")
+        .await
+        .unwrap();
     assert!(created);
     assert!(!cal.value.enabled, "discovered calendars start disabled");
     let v = CalendarRepo::update(
@@ -394,7 +394,7 @@ async fn event_upsert_idempotent_and_window_delete(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "./migrations")]
-async fn range_returns_color_members_and_owner_role(pool: PgPool) {
+async fn range_returns_members_and_owner_role(pool: PgPool) {
     let store = Store::from_pool(pool);
     let (h, adult) = seed(&store, "A").await;
     let kid = member(h, "Kid", Role::Child);
@@ -420,7 +420,6 @@ async fn range_returns_color_members_and_owner_role(pool: PgPool) {
 
     let rows = EventRepo::range(&mut tx, t(0), t(23), None).await.unwrap();
     let a = rows.iter().find(|r| r.event.title == "Secret").unwrap();
-    assert_eq!(a.color.as_deref(), Some("#336699"));
     assert!(a.event.is_private);
     assert_eq!(a.owner_role, Some(Role::Child));
     let mut roles: Vec<Role> = a.members.iter().map(|m| m.1).collect();
@@ -526,16 +525,16 @@ async fn calendars_discovery_archive_and_conflicts(pool: PgPool) {
     let s = source(h, None, 15);
     let mut tx = store.tx_for(h).await.unwrap();
     let src = CalendarSourceRepo::insert(&mut tx, &s).await.unwrap();
-    let (c1, _) = CalendarRepo::upsert_discovered(&mut tx, s.id, "a", "A", None)
+    let (c1, _) = CalendarRepo::upsert_discovered(&mut tx, s.id, "a", "A")
         .await
         .unwrap();
-    let (c1b, created) = CalendarRepo::upsert_discovered(&mut tx, s.id, "a", "A renamed", None)
+    let (c1b, created) = CalendarRepo::upsert_discovered(&mut tx, s.id, "a", "A renamed")
         .await
         .unwrap();
     assert!(!created);
     assert_eq!(c1b.value.id, c1.value.id);
     assert_eq!(c1b.value.name, "A renamed");
-    CalendarRepo::upsert_discovered(&mut tx, s.id, "b", "B", None)
+    CalendarRepo::upsert_discovered(&mut tx, s.id, "b", "B")
         .await
         .unwrap();
     let archived = CalendarRepo::archive_missing(&mut tx, s.id, &["a".to_string()])

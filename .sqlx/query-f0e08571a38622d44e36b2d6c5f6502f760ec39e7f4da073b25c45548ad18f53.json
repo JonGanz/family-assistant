@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, household_id, source_id, remote_id, name, color, enabled, is_default_target,\n                    sync_state, last_full_sync_at, version\n             FROM calendar WHERE id = $1",
+  "query": "SELECT id, household_id, source_id, remote_id, name, enabled, is_default_target,\n                    sync_state, last_full_sync_at, version\n             FROM calendar WHERE archived_at IS NULL AND ($1::uuid IS NULL OR source_id = $1)\n             ORDER BY created_at, id",
   "describe": {
     "columns": [
       {
@@ -30,31 +30,26 @@
       },
       {
         "ordinal": 5,
-        "name": "color",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 6,
         "name": "enabled",
         "type_info": "Bool"
       },
       {
-        "ordinal": 7,
+        "ordinal": 6,
         "name": "is_default_target",
         "type_info": "Bool"
       },
       {
-        "ordinal": 8,
+        "ordinal": 7,
         "name": "sync_state",
         "type_info": "Text"
       },
       {
-        "ordinal": 9,
+        "ordinal": 8,
         "name": "last_full_sync_at",
         "type_info": "Timestamptz"
       },
       {
-        "ordinal": 10,
+        "ordinal": 9,
         "name": "version",
         "type_info": "Int4"
       }
@@ -70,7 +65,6 @@
       false,
       false,
       false,
-      true,
       false,
       false,
       true,
@@ -78,5 +72,5 @@
       false
     ]
   },
-  "hash": "38b3f0dbf64a38a81d595c0839d13739555777ccf9ffb7ed5f122b81c2d50ea2"
+  "hash": "f0e08571a38622d44e36b2d6c5f6502f760ec39e7f4da073b25c45548ad18f53"
 }

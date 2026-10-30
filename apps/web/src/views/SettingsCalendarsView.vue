@@ -55,8 +55,6 @@ async function remove(s: SourceViewExt) {
 
 const toggleEnabled = (c: CalendarViewExt, v: boolean) =>
   run(() => sources.patchCalendar(c, { enabled: v }), 'Could not save.')
-const setColor = (c: CalendarViewExt, v: string) =>
-  run(() => sources.patchCalendar(c, { color: v }), 'Could not save.')
 function toggleMember(c: CalendarViewExt, id: string, on: boolean) {
   const next = on ? [...c.members, id] : c.members.filter((m) => m !== id)
   return run(() => sources.patchCalendar(c, { members: next }), 'Could not save.')
@@ -158,14 +156,6 @@ const synced = (s: SourceViewExt) =>
                 @change="toggleDefault(c, ($event.target as HTMLInputElement).checked)"
               />
               Default target
-            </label>
-            <label class="field-inline">
-              Colour
-              <input
-                type="color"
-                :value="c.color ?? '#2f6fed'"
-                @change="setColor(c, ($event.target as HTMLInputElement).value)"
-              />
             </label>
             <fieldset class="who">
               <legend>Whose calendar (none means the whole household)</legend>

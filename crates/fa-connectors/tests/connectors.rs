@@ -234,7 +234,7 @@ async fn google_calendar_list_paginates() {
         .and(query_param_is_missing("pageToken"))
         .and(header("authorization", "Bearer tok"))
         .respond_with(ResponseTemplate::new(200).set_body_json(json!({
-            "items": [{"id": "a@example.com", "summary": "Alex", "backgroundColor": "#123456"}],
+            "items": [{"id": "a@example.com", "summary": "Alex"}],
             "nextPageToken": "p2"
         })))
         .mount(&server)
@@ -251,7 +251,6 @@ async fn google_calendar_list_paginates() {
         .await
         .unwrap();
     assert_eq!(cals.len(), 2);
-    assert_eq!(cals[0].color.as_deref(), Some("#123456"));
     assert_eq!(cals[1].name, "Our family");
 }
 
@@ -416,10 +415,8 @@ async fn caldav_discover_fetch_ctag() {
     assert_eq!(cals.len(), 2);
     assert_eq!(cals[0].remote_id, "/alex/family/");
     assert_eq!(cals[0].name, "Family & Friends");
-    assert_eq!(cals[0].color.as_deref(), Some("#ff8800ff"));
     assert_eq!(cals[0].ctag.as_deref(), Some("\"ctag-42\""));
     assert_eq!(cals[1].name, "Chores");
-    assert_eq!(cals[1].color, None);
 
     let blobs = client.fetch(&cals[0], &window()).await.unwrap();
     assert_eq!(blobs.len(), 2);

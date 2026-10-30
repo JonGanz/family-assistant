@@ -158,6 +158,7 @@ async fn seed(pool: PgPool) -> Fx {
             meal_plan_horizon_weeks: 2,
             dashboard_completion_override: false,
             units: Units::Metric,
+            week_start: Default::default(),
             calendar_past_days: 30,
             calendar_future_days: 400,
             weather_retention_days: 7,
@@ -969,7 +970,7 @@ async fn writable_calendar(fx: &Fx) -> (CalendarSourceId, CalendarId) {
     };
     let mut tx = fx.store.tx_for(fx.hid).await.unwrap();
     CalendarSourceRepo::insert(&mut tx, &src).await.unwrap();
-    let (c, _) = CalendarRepo::upsert_discovered(&mut tx, src.id, "fam", "Family", None)
+    let (c, _) = CalendarRepo::upsert_discovered(&mut tx, src.id, "fam", "Family")
         .await
         .unwrap();
     sqlx::query("UPDATE calendar SET enabled = true WHERE id = $1")

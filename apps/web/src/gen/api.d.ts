@@ -1674,7 +1674,6 @@ export interface components {
         /** Format: uuid */
         CalendarId: string;
         CalendarPatch: {
-            color?: string | null;
             enabled?: boolean | null;
             members?: components["schemas"]["MemberId"][] | null;
             name?: string | null;
@@ -1686,7 +1685,6 @@ export interface components {
         /** Format: uuid */
         CalendarSourceId: string;
         CalendarView: {
-            color?: string | null;
             enabled: boolean;
             id: components["schemas"]["CalendarId"];
             members: components["schemas"]["MemberId"][];
@@ -1814,6 +1812,8 @@ export interface components {
             now_list_size: number;
             tz: string;
             units: components["schemas"]["Units"];
+            /** @description First day of the week (`monday` or `sunday`). */
+            week_start?: components["schemas"]["WeekStart"];
         };
         DashboardSettings: {
             /** Format: int32 */
@@ -2031,12 +2031,6 @@ export interface components {
         EventView: {
             all_day: boolean;
             calendar?: null | components["schemas"]["CalendarId"];
-            color?: string | null;
-            /**
-             * @description One calendar colour per merged copy of the event (see `merge_duplicates`); empty when any
-             *     copy has no colour, so the client falls back to the members' colours.
-             */
-            colors?: string[];
             description?: string | null;
             /** Format: date-time */
             end_at: string;
@@ -2115,6 +2109,7 @@ export interface components {
             units?: null | components["schemas"]["Units"];
             /** Format: int32 */
             weather_retention_days?: number | null;
+            week_start?: null | components["schemas"]["WeekStart"];
         };
         HouseholdView: {
             /**
@@ -2155,6 +2150,8 @@ export interface components {
             version: number;
             /** Format: int32 */
             weather_retention_days: number;
+            /** @description `monday` or `sunday`. */
+            week_start?: components["schemas"]["WeekStart"];
         };
         /** @description `HouseholdView` plus the dashboard approvals switch (D-068). */
         HouseholdViewExt: components["schemas"]["HouseholdView"] & {
@@ -2873,7 +2870,6 @@ export interface components {
         /** @enum {string} */
         Relevance: "relevant" | "general" | "other";
         RemoteCalendar: {
-            color?: string | null;
             name: string;
             remote_id: string;
         };
@@ -3496,6 +3492,11 @@ export interface components {
             /** Format: date-time */
             sunset_today?: string | null;
         };
+        /**
+         * @description First day of the week on calendars; default Monday.
+         * @enum {string}
+         */
+        WeekStart: "monday" | "sunday";
     };
     responses: never;
     parameters: never;
@@ -4316,6 +4317,8 @@ export interface operations {
             query?: {
                 /** @description Days of agenda from today (1 to 14); defaults to the device setting. */
                 days?: number;
+                /** @description First day of the agenda window, `YYYY-MM-DD` in the household time zone; defaults to today. */
+                from?: string;
             };
             header?: never;
             path?: never;

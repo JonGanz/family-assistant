@@ -35,3 +35,10 @@ export interface PanelProps {
   panel: PanelConfig
   now: Date
 }
+
+/** What a panel asks the canvas to show in a modal. */
+export type DetailRequest =
+  | { kind: 'weather' }
+  | { kind: 'event'; id: string }
+  /** Everything one Week-view cell holds (the "+N" slot): event and task ids, and its colour. */
+  | { kind: 'day'; title: string; color: string; events: string[]; tasks: string[] }

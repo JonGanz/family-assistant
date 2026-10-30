@@ -1222,6 +1222,15 @@
               "format": "int32",
               "minimum": 0
             }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "First day of the agenda window, `YYYY-MM-DD` in the household time zone; defaults to today.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -8468,12 +8477,6 @@
       "CalendarPatch": {
         "type": "object",
         "properties": {
-          "color": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "enabled": {
             "type": [
               "boolean",
@@ -8531,12 +8534,6 @@
           "version"
         ],
         "properties": {
-          "color": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "enabled": {
             "type": "boolean"
           },
@@ -9062,6 +9059,10 @@
           },
           "units": {
             "$ref": "#/components/schemas/Units"
+          },
+          "week_start": {
+            "$ref": "#/components/schemas/WeekStart",
+            "description": "First day of the week (`monday` or `sunday`)."
           }
         }
       },
@@ -9830,19 +9831,6 @@
               }
             ]
           },
-          "color": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
-          "colors": {
-            "type": "array",
-            "items": {
-              "type": "string"
-            },
-            "description": "One calendar colour per merged copy of the event (see `merge_duplicates`); empty when any\ncopy has no colour, so the client falls back to the members' colours."
-          },
           "description": {
             "type": [
               "string",
@@ -10157,6 +10145,16 @@
               "null"
             ],
             "format": "int32"
+          },
+          "week_start": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/WeekStart"
+              }
+            ]
           }
         }
       },
@@ -10261,6 +10259,10 @@
           "weather_retention_days": {
             "type": "integer",
             "format": "int32"
+          },
+          "week_start": {
+            "$ref": "#/components/schemas/WeekStart",
+            "description": "`monday` or `sunday`."
           }
         }
       },
@@ -13211,12 +13213,6 @@
           "name"
         ],
         "properties": {
-          "color": {
-            "type": [
-              "string",
-              "null"
-            ]
-          },
           "name": {
             "type": "string"
           },
@@ -15708,6 +15704,14 @@
             "format": "date-time"
           }
         }
+      },
+      "WeekStart": {
+        "type": "string",
+        "description": "First day of the week on calendars; default Monday.",
+        "enum": [
+          "monday",
+          "sunday"
+        ]
       }
     },
     "securitySchemes": {

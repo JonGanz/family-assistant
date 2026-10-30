@@ -22,6 +22,9 @@ pub struct HouseholdView {
     pub tz: String,
     pub location: Option<Location>,
     pub units: Units,
+    /// `monday` or `sunday`.
+    #[serde(default)]
+    pub week_start: WeekStart,
     pub calendar_past_days: i32,
     pub calendar_future_days: i32,
     pub weather_retention_days: i32,
@@ -70,6 +73,7 @@ pub struct HouseholdPatch {
     pub tz: Option<String>,
     pub location: Option<Location>,
     pub units: Option<Units>,
+    pub week_start: Option<WeekStart>,
     pub calendar_past_days: Option<i32>,
     pub calendar_future_days: Option<i32>,
     pub weather_retention_days: Option<i32>,
@@ -187,7 +191,6 @@ pub struct CalendarView {
     pub id: CalendarId,
     pub source: CalendarSourceId,
     pub name: String,
-    pub color: Option<String>,
     pub enabled: bool,
     pub members: Vec<MemberId>,
     pub version: i32,
@@ -196,7 +199,6 @@ pub struct CalendarView {
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct CalendarPatch {
     pub name: Option<String>,
-    pub color: Option<String>,
     pub enabled: Option<bool>,
     pub members: Option<Vec<MemberId>>,
 }
@@ -212,7 +214,6 @@ pub struct SourceCreated {
 pub struct RemoteCalendar {
     pub remote_id: String,
     pub name: String,
-    pub color: Option<String>,
 }
 
 /// POST /calendar-sources/test.
@@ -240,11 +241,6 @@ pub struct EventView {
     pub start_date: Option<NaiveDate>,
     pub end_date: Option<NaiveDate>,
     pub members: Vec<MemberId>,
-    pub color: Option<String>,
-    /// One calendar colour per merged copy of the event (see `merge_duplicates`); empty when any
-    /// copy has no colour, so the client falls back to the members' colours.
-    #[serde(default)]
-    pub colors: Vec<String>,
     /// True when several calendars' copies of the same event were folded into this one.
     #[serde(default)]
     pub merged: bool,
@@ -372,6 +368,9 @@ pub struct DashboardHousehold {
     pub name: String,
     pub tz: String,
     pub units: Units,
+    /// First day of the week (`monday` or `sunday`).
+    #[serde(default)]
+    pub week_start: WeekStart,
     pub location: Option<Location>,
     /// Size of the Now list (D-042).
     pub now_list_size: i32,

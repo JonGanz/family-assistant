@@ -367,21 +367,16 @@ async fn import_calendars(
     for c in calendars {
         let name = c.name.clone().unwrap_or_else(|| c.remote_id.clone());
         let (v, created) =
-            CalendarRepo::upsert_discovered(conn, source, &c.remote_id, &name, c.color.as_deref())
-                .await?;
+            CalendarRepo::upsert_discovered(conn, source, &c.remote_id, &name).await?;
         changed |= created;
         let enabled = has_creds && c.enabled;
         let cal = &v.value;
         let patch = CalendarPatch {
             name: (cal.name != name).then(|| name.clone()),
-            color: c
-                .color
-                .clone()
-                .filter(|col| cal.color.as_ref() != Some(col)),
             enabled: (cal.enabled != enabled).then_some(enabled),
             members: None,
         };
-        if patch.name.is_some() || patch.color.is_some() || patch.enabled.is_some() {
+        if patch.name.is_some() || patch.enabled.is_some() {
             CalendarRepo::update(conn, cal.id, &patch, v.version).await?;
             changed = true;
         }
@@ -445,7 +440,7 @@ pub(crate) async fn export_feeds(
                 remote_id: c.remote_id,
                 name: Some(c.name),
                 enabled: c.enabled,
-                color: c.color,
+                color: None,
                 members,
             });
         }

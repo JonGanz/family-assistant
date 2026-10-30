@@ -7,6 +7,7 @@ import solarized from './solarized'
 import tokyo_night from './tokyo-night'
 import rose_pine from './rose-pine'
 import kanagawa from './kanagawa'
+import seoul256 from './seoul256'
 
 export const FAMILIES: ThemeFamily[] = [
   catppuccin,
@@ -17,4 +18,5 @@ export const FAMILIES: ThemeFamily[] = [
   tokyo_night,
   rose_pine,
   kanagawa,
+  seoul256,
 ]

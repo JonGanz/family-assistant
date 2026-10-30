@@ -14,6 +14,7 @@ const form = reactive({
   lat: '',
   lon: '',
   units: 'metric' as 'metric' | 'imperial',
+  weekStart: 'monday' as 'monday' | 'sunday',
   past: 30,
   future: 400,
   retention: 7,
@@ -60,6 +61,7 @@ function fill() {
   form.lat = v.location ? String(v.location.lat) : ''
   form.lon = v.location ? String(v.location.lon) : ''
   form.units = v.units
+  form.weekStart = v.week_start
   form.past = v.calendar_past_days
   form.future = v.calendar_future_days
   form.retention = v.weather_retention_days
@@ -134,6 +136,7 @@ async function save() {
       name: form.name,
       tz: form.tz,
       units: form.units,
+      week_start: form.weekStart,
       calendar_past_days: form.past,
       calendar_future_days: form.future,
       weather_retention_days: form.retention,
@@ -203,6 +206,13 @@ async function reload() {
         <select v-model="form.units" name="units">
           <option value="metric">Metric (°C, km/h, mm)</option>
           <option value="imperial">Imperial (°F, mph, in)</option>
+        </select>
+      </label>
+      <label class="field">
+        First day of the week
+        <select v-model="form.weekStart" name="week_start">
+          <option value="monday">Monday</option>
+          <option value="sunday">Sunday</option>
         </select>
       </label>
       <fieldset>

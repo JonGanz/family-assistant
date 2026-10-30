@@ -127,11 +127,31 @@ const mmss = computed(
       :now="now"
       burn-in
       page
+      :week-data="store.weekData ?? undefined"
+      @week="(from: string | null) => store.showWeek(from)"
       @pick="pick"
       @complete="(id: string) => flow?.beginComplete(id)"
       @tick="(r: string, st: string, d: boolean) => store.tickStep(r, st, d)"
       @add="flow?.beginAdd()"
-    />
+    >
+      <template #nav-end>
+        <span
+          class="conn"
+          :class="store.connection"
+          data-testid="connection"
+          :data-status="store.connection"
+        >
+          ● {{ connLabel }}
+        </span>
+        <span v-if="store.showStaleBadge && updatedAt" class="stale" data-testid="stale">
+          {{ S.lastUpdated(updatedAt) }}
+        </span>
+        <span v-if="heartbeatAt" class="hb" data-testid="heartbeat">
+          Last heartbeat {{ heartbeatAt }}
+        </span>
+        <button class="try" @click="showElevation = !showElevation">{{ S.elevate }}</button>
+      </template>
+    </DashboardCanvas>
     <div v-else class="loading">
       <p>{{ S.loading }}</p>
       <p v-if="store.loadError" role="alert" data-testid="load-error">
@@ -158,24 +178,6 @@ const mmss = computed(
       </template>
       <button class="close" @click="showElevation = false">✕</button>
     </div>
-
-    <footer>
-      <span
-        class="conn"
-        :class="store.connection"
-        data-testid="connection"
-        :data-status="store.connection"
-      >
-        ● {{ connLabel }}
-      </span>
-      <span v-if="store.showStaleBadge && updatedAt" class="stale" data-testid="stale">
-        {{ S.lastUpdated(updatedAt) }}
-      </span>
-      <span v-if="heartbeatAt" class="hb" data-testid="heartbeat">
-        Last heartbeat {{ heartbeatAt }}
-      </span>
-      <button class="try" @click="showElevation = !showElevation">{{ S.elevate }}</button>
-    </footer>
   </section>
 </template>
 
@@ -216,23 +218,6 @@ const mmss = computed(
   min-width: var(--min-touch);
   min-height: var(--min-touch);
 }
-footer {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 4;
-  display: flex;
-  gap: 2rem;
-  align-items: center;
-  padding: 0.25rem 1.5rem;
-  font-size: var(--font-size-xs);
-  color: var(--color-muted);
-  pointer-events: none;
-}
-footer button {
-  pointer-events: auto;
-}
 .conn.open {
   color: var(--color-success);
 }
@@ -251,10 +236,14 @@ footer button {
   font-size: var(--font-size-sm);
   font-weight: 600;
 }
+
 .try {
-  margin-left: auto;
+  min-height: var(--min-touch);
+  padding: var(--space-1) var(--space-2);
+  border: 2px solid var(--color-border);
+  background: var(--color-bg);
+  color: inherit;
+  font: inherit;
   cursor: pointer;
-  font-size: var(--font-size-xs);
-  opacity: 0.5;
 }
 </style>

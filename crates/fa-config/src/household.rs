@@ -198,7 +198,8 @@ pub struct CalendarConfig {
     pub name: Option<String>,
     #[serde(default)]
     pub enabled: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    /// Calendars no longer have a colour; old files that still carry one load and drop it.
+    #[serde(default, skip_serializing)]
     pub color: Option<String>,
     /// Member keys. Empty means a household calendar.
     #[serde(default)]
@@ -797,6 +798,7 @@ fn new_household(
         meal_plan_horizon_weeks: 2,
         dashboard_completion_override: true,
         units,
+        week_start: Default::default(),
         calendar_past_days: DEFAULT_CALENDAR_PAST_DAYS,
         calendar_future_days: DEFAULT_CALENDAR_FUTURE_DAYS,
         weather_retention_days: DEFAULT_WEATHER_RETENTION_DAYS,

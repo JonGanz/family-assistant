@@ -27,6 +27,7 @@ struct Row {
     meal_plan_horizon_weeks: i32,
     dashboard_completion_override: bool,
     units: String,
+    week_start: String,
     calendar_past_days: i32,
     calendar_future_days: i32,
     weather_retention_days: i32,
@@ -71,6 +72,7 @@ impl TryFrom<Row> for Versioned<Household> {
                 meal_plan_horizon_weeks: r.meal_plan_horizon_weeks,
                 dashboard_completion_override: r.dashboard_completion_override,
                 units: parse_enum(&r.units)?,
+                week_start: parse_enum(&r.week_start)?,
                 calendar_past_days: r.calendar_past_days,
                 calendar_future_days: r.calendar_future_days,
                 weather_retention_days: r.weather_retention_days,
@@ -126,11 +128,11 @@ impl HouseholdRepo {
                                     inbox_task_expiry_days, inbox_contact_expiry_days,
                                     mail_content_policy, mail_examples_per_category,
                                     mail_max_pending_days, dashboard_pending_approvals,
-                                    setup_completed_at)
+                                    setup_completed_at, week_start)
              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17,
-                     $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31)
+                     $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, $31, $32)
              RETURNING id, name, tz, location_lat, location_lon, location_label,
-                       meal_plan_horizon_weeks, dashboard_completion_override, units,
+                       meal_plan_horizon_weeks, dashboard_completion_override, units, week_start,
                        calendar_past_days, calendar_future_days, weather_retention_days,
                     private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, currency, gender_terms, disabled_signals, events_auto_write, events_extract_threshold,
                        events_route_threshold, bill_lead_days, inbox_task_expiry_days, inbox_contact_expiry_days,
@@ -167,7 +169,8 @@ impl HouseholdRepo {
             h.retention_mail.examples_per_category,
             h.retention_mail.max_pending_days,
             h.dashboard_pending_approvals,
-            h.setup_completed_at
+            h.setup_completed_at,
+            enum_str(&h.week_start)
         )
         .fetch_one(conn)
         .await?;
@@ -181,7 +184,7 @@ impl HouseholdRepo {
         let row = sqlx::query_as!(
             Row,
             "SELECT id, name, tz, location_lat, location_lon, location_label,
-                    meal_plan_horizon_weeks, dashboard_completion_override, units,
+                    meal_plan_horizon_weeks, dashboard_completion_override, units, week_start,
                        calendar_past_days, calendar_future_days, weather_retention_days,
                     private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, currency, gender_terms, disabled_signals, events_auto_write, events_extract_threshold,
                        events_route_threshold, bill_lead_days, inbox_task_expiry_days, inbox_contact_expiry_days,
@@ -201,7 +204,7 @@ impl HouseholdRepo {
         let rows = sqlx::query_as!(
             Row,
             "SELECT id, name, tz, location_lat, location_lon, location_label,
-                    meal_plan_horizon_weeks, dashboard_completion_override, units,
+                    meal_plan_horizon_weeks, dashboard_completion_override, units, week_start,
                        calendar_past_days, calendar_future_days, weather_retention_days,
                     private_events_as_busy, now_list_size, now_weights, quiet_from, quiet_until, currency, gender_terms, disabled_signals, events_auto_write, events_extract_threshold,
                        events_route_threshold, bill_lead_days, inbox_task_expiry_days, inbox_contact_expiry_days,
@@ -236,7 +239,7 @@ impl HouseholdRepo {
                     events_route_threshold = $23, bill_lead_days = $24, inbox_task_expiry_days = $25,
                     inbox_contact_expiry_days = $26, mail_content_policy = $27,
                     mail_examples_per_category = $28, mail_max_pending_days = $29,
-                    dashboard_pending_approvals = $30, version = version + 1
+                    dashboard_pending_approvals = $30, week_start = $32, version = version + 1
              WHERE id = $1 AND version = $31
              RETURNING version",
             h.id.as_uuid(),
@@ -269,7 +272,8 @@ impl HouseholdRepo {
             h.retention_mail.examples_per_category,
             h.retention_mail.max_pending_days,
             h.dashboard_pending_approvals,
-            expected_version
+            expected_version,
+            enum_str(&h.week_start)
         )
         .fetch_optional(&mut *conn)
         .await?;
@@ -315,6 +319,7 @@ impl HouseholdRepo {
                     mail_examples_per_category = COALESCE($26, mail_examples_per_category),
                     mail_max_pending_days = COALESCE($27, mail_max_pending_days),
                     dashboard_pending_approvals = COALESCE($28, dashboard_pending_approvals),
+                    week_start = COALESCE($30, week_start),
                     version = version + 1
              WHERE id = $1 AND version = $29
              RETURNING version",
@@ -346,7 +351,8 @@ impl HouseholdRepo {
             p.retention_mail.as_ref().map(|r| r.examples_per_category),
             p.retention_mail.as_ref().map(|r| r.max_pending_days),
             p.dashboard_pending_approvals,
-            expected_version
+            expected_version,
+            p.week_start.as_ref().map(enum_str)
         )
         .fetch_optional(&mut *conn)
         .await?;

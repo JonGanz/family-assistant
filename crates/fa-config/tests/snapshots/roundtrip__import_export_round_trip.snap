@@ -135,7 +135,6 @@ enabled = false
 remote_id = "ics"
 name = "School"
 enabled = false
-color = "#4c8bf5"
 members = ["riley"]
 
 [[weather_rules]]

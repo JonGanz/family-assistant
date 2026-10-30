@@ -180,6 +180,7 @@ async fn env(pool: PgPool) -> Env {
         meal_plan_horizon_weeks: 2,
         dashboard_completion_override: false,
         units: Units::Metric,
+        week_start: Default::default(),
         calendar_past_days: 30,
         calendar_future_days: 400,
         weather_retention_days: 7,
@@ -1011,7 +1012,7 @@ test!(routines_school_days_skip_no_school, |e| {
         updated_at: Utc::now(),
     };
     CalendarSourceRepo::insert(&mut tx, &src).await.unwrap();
-    let (cal, _) = CalendarRepo::upsert_discovered(&mut tx, src.id, "remote", "School", None)
+    let (cal, _) = CalendarRepo::upsert_discovered(&mut tx, src.id, "remote", "School")
         .await
         .unwrap();
     let cal = cal.value.id;

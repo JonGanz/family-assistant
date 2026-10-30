@@ -15,7 +15,6 @@ struct Row {
     source_id: Uuid,
     remote_id: String,
     name: String,
-    color: Option<String>,
     enabled: bool,
     is_default_target: bool,
     sync_state: Option<String>,
@@ -33,7 +32,6 @@ impl From<Row> for Versioned<Calendar> {
                 source: r.source_id.into(),
                 remote_id: r.remote_id,
                 name: r.name,
-                color: r.color,
                 enabled: r.enabled,
                 is_default_target: r.is_default_target,
                 sync_state: r.sync_state,
@@ -45,31 +43,29 @@ impl From<Row> for Versioned<Calendar> {
 
 impl CalendarRepo {
     /// Inserts a newly discovered calendar as `enabled = false`, or refreshes the remote name of a known
-    /// one (and un-archives it). The user's own colour choice is kept. `created` tells which happened.
+    /// one (and un-archives it). `created` tells which happened.
     pub async fn upsert_discovered(
         conn: &mut PgConnection,
         source: CalendarSourceId,
         remote_id: &str,
         name: &str,
-        color: Option<&str>,
     ) -> Result<(Versioned<Calendar>, bool)> {
         let r = sqlx::query!(
             r#"WITH src AS (SELECT household_id FROM calendar_source WHERE id = $2)
-               INSERT INTO calendar (id, household_id, source_id, remote_id, name, color)
-               SELECT $1, household_id, $2, $3, $4, $5 FROM src
+               INSERT INTO calendar (id, household_id, source_id, remote_id, name)
+               SELECT $1, household_id, $2, $3, $4 FROM src
                ON CONFLICT (source_id, remote_id) DO UPDATE SET
-                   name = EXCLUDED.name, color = COALESCE(calendar.color, EXCLUDED.color),
+                   name = EXCLUDED.name,
                    archived_at = NULL,
                    version = CASE WHEN calendar.name IS DISTINCT FROM EXCLUDED.name
                                     OR calendar.archived_at IS NOT NULL
                                   THEN calendar.version + 1 ELSE calendar.version END
-               RETURNING id, household_id, source_id, remote_id, name, color, enabled, is_default_target,
+               RETURNING id, household_id, source_id, remote_id, name, enabled, is_default_target,
                          sync_state, last_full_sync_at, version, (xmax = 0) AS "created!""#,
             CalendarId::new().as_uuid(),
             source.as_uuid(),
             remote_id,
-            name,
-            color
+            name
         )
         .fetch_optional(conn)
         .await?
@@ -81,7 +77,6 @@ impl CalendarRepo {
             source_id: r.source_id,
             remote_id: r.remote_id,
             name: r.name,
-            color: r.color,
             enabled: r.enabled,
             is_default_target: r.is_default_target,
             sync_state: r.sync_state,
@@ -97,7 +92,7 @@ impl CalendarRepo {
     ) -> Result<Option<Versioned<Calendar>>> {
         let row = sqlx::query_as!(
             Row,
-            "SELECT id, household_id, source_id, remote_id, name, color, enabled, is_default_target,
+            "SELECT id, household_id, source_id, remote_id, name, enabled, is_default_target,
                     sync_state, last_full_sync_at, version
              FROM calendar WHERE id = $1",
             id.as_uuid()
@@ -114,7 +109,7 @@ impl CalendarRepo {
     ) -> Result<Vec<Versioned<Calendar>>> {
         let rows = sqlx::query_as!(
             Row,
-            "SELECT id, household_id, source_id, remote_id, name, color, enabled, is_default_target,
+            "SELECT id, household_id, source_id, remote_id, name, enabled, is_default_target,
                     sync_state, last_full_sync_at, version
              FROM calendar WHERE archived_at IS NULL AND ($1::uuid IS NULL OR source_id = $1)
              ORDER BY created_at, id",
@@ -125,7 +120,7 @@ impl CalendarRepo {
         Ok(rows.into_iter().map(Into::into).collect())
     }
 
-    /// Applies `name`, `color` and `enabled` (members go through [`Self::set_members`]).
+    /// Applies `name` and `enabled` (members go through [`Self::set_members`]).
     pub async fn update(
         conn: &mut PgConnection,
         id: CalendarId,
@@ -133,13 +128,12 @@ impl CalendarRepo {
         expected_version: i32,
     ) -> Result<i32> {
         let v = sqlx::query_scalar!(
-            "UPDATE calendar SET name = COALESCE($2, name), color = COALESCE($3, color),
-                    enabled = COALESCE($4, enabled), version = version + 1
-             WHERE id = $1 AND version = $5
+            "UPDATE calendar SET name = COALESCE($2, name),
+                    enabled = COALESCE($3, enabled), version = version + 1
+             WHERE id = $1 AND version = $4
              RETURNING version",
             id.as_uuid(),
             p.name,
-            p.color,
             p.enabled,
             expected_version
         )

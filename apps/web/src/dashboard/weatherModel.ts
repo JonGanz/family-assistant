@@ -22,6 +22,8 @@ export interface CurrentWx {
   wind: number | null
 }
 export interface HourPoint {
+  /** Local date of the hour, YYYY-MM-DD. */
+  date: string
   /** Local wall-clock hour, e.g. "14:00" (Open-Meteo returns household-local times). */
   label: string
   temp: number | null
@@ -52,6 +54,7 @@ export function hourlyOf(w: WeatherView, count = 12): HourPoint[] {
   const h = columns(w.hourly)
   const times = h['time'] ?? []
   return times.slice(0, count).map((_, i) => ({
+    date: str(times, i).slice(0, 10),
     label: str(times, i).slice(11, 16),
     temp: num(h['temperature_2m'], i),
     code: num(h['weather_code'], i) ?? 0,

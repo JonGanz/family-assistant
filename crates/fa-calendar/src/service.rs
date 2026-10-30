@@ -193,7 +193,6 @@ impl CalendarService {
             id: c.value.id,
             source: c.value.source,
             name: c.value.name.clone(),
-            color: c.value.color.clone(),
             enabled: c.value.enabled,
             members: CalendarRepo::members(tx, c.value.id).await?,
             version: c.version,
@@ -374,10 +373,7 @@ impl CalendarService {
             Ok((cals, sample)) => SourceTestResult {
                 ok: true,
                 calendars: cals.iter().map(remote_dto).collect(),
-                sample_events: sample
-                    .iter()
-                    .map(|o| sample_view(o, cals.first().and_then(|c| c.color.clone())))
-                    .collect(),
+                sample_events: sample.iter().map(sample_view).collect(),
                 error: None,
             },
             Err(e) => fail(e),
@@ -470,14 +466,8 @@ impl CalendarService {
         }
         let mut cal_views = Vec::new();
         for rc in &remote_cals {
-            let (c, created) = CalendarRepo::upsert_discovered(
-                &mut tx,
-                src.id,
-                &rc.remote_id,
-                &rc.name,
-                rc.color.as_deref(),
-            )
-            .await?;
+            let (c, created) =
+                CalendarRepo::upsert_discovered(&mut tx, src.id, &rc.remote_id, &rc.name).await?;
             let mut c = c;
             if created && kind == SourceKind::Ics {
                 let patch = CalendarPatch {
@@ -658,8 +648,6 @@ impl CalendarService {
                 start_date: e.start_date,
                 end_date: e.end_date,
                 members: ids,
-                color: r.color,
-                colors: vec![],
                 merged: false,
                 visibility,
                 external_url,
@@ -757,14 +745,9 @@ impl CalendarService {
         let calendars = {
             let mut tx = self.store.tx_for(hh).await?;
             for rc in &discovered {
-                let (c, created) = CalendarRepo::upsert_discovered(
-                    &mut tx,
-                    src.id,
-                    &rc.remote_id,
-                    &rc.name,
-                    rc.color.as_deref(),
-                )
-                .await?;
+                let (c, created) =
+                    CalendarRepo::upsert_discovered(&mut tx, src.id, &rc.remote_id, &rc.name)
+                        .await?;
                 if created && src.kind == SourceKind::Ics {
                     let p = CalendarPatch {
                         enabled: Some(true),
@@ -902,11 +885,10 @@ fn remote_dto(c: &RemoteCalendar) -> RemoteCalendarDto {
     RemoteCalendarDto {
         remote_id: c.remote_id.clone(),
         name: c.name.clone(),
-        color: c.color.clone(),
     }
 }
 
-fn sample_view(o: &NewOccurrence, color: Option<String>) -> EventView {
+fn sample_view(o: &NewOccurrence) -> EventView {
     EventView {
         id: EventId::new(),
         calendar: None,
@@ -919,8 +901,6 @@ fn sample_view(o: &NewOccurrence, color: Option<String>) -> EventView {
         start_date: o.start_date,
         end_date: o.end_date,
         members: vec![],
-        color,
-        colors: vec![],
         merged: false,
         visibility: fa_domain::Visibility::Full,
         external_url: None,

@@ -149,7 +149,6 @@ impl Remote {
             Creds::Ics { .. } => vec![RemoteCalendar {
                 remote_id: ICS_CALENDAR_ID.into(),
                 name: source_name.to_owned(),
-                color: None,
                 ctag: None,
             }],
         })

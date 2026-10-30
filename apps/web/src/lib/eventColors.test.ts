@@ -8,30 +8,16 @@ const members: MemberLike[] = [
 ]
 
 describe('eventColors', () => {
-  it('uses the single colour for an ordinary event', () => {
-    expect(eventColors({ color: '#abcdef', members: ['a'] }, members, '#000000')).toEqual([
-      '#abcdef',
-    ])
-  })
-
-  it('falls back to the first member, then the default', () => {
+  it('uses the colour of the member', () => {
     expect(eventColors({ members: ['b'] }, members, '#000000')).toEqual(['#222222'])
+  })
+
+  it('shows every member colour of an event for several members', () => {
+    expect(eventColors({ members: ['b', 'a'] }, members, '#000000')).toEqual(['#111111', '#222222'])
+  })
+
+  it('falls back to the default for an event with no member', () => {
     expect(eventColors({ members: [] }, members, '#000000')).toEqual(['#000000'])
-  })
-
-  it('shows every calendar colour of a merged event', () => {
-    const ev = {
-      color: '#aa0000',
-      colors: ['#aa0000', '#00bb00'],
-      merged: true,
-      members: ['a', 'b'],
-    }
-    expect(eventColors(ev, members, '#000000')).toEqual(['#aa0000', '#00bb00'])
-  })
-
-  it('uses the members colours for a merged event whose calendars have none', () => {
-    const ev = { colors: [], merged: true, members: ['a', 'b'] }
-    expect(eventColors(ev, members, '#000000')).toEqual(['#111111', '#222222'])
   })
 })
 
@@ -49,15 +35,15 @@ describe('stripeStyle', () => {
 })
 
 describe('eventColors with hue variables', () => {
-  const hues: MemberLike[] = [{ id: 'a', display_name: 'A', color: 'var(--hue-green)' }]
-  it('falls back from a calendar hex colour to the member hue', () => {
-    expect(eventColors({ color: '#abcdef', members: ['a'] }, hues, 'var(--hue-blue)')).toEqual([
-      '#abcdef',
+  const hues: MemberLike[] = [
+    { id: 'a', display_name: 'A', color: 'var(--hue-green)' },
+    { id: 'b', display_name: 'B', color: 'var(--hue-red)' },
+  ]
+  it('uses the member hues, and the fallback for an event with no member', () => {
+    expect(eventColors({ members: ['a', 'b'] }, hues, 'var(--hue-blue)')).toEqual([
+      'var(--hue-green)',
+      'var(--hue-red)',
     ])
-    expect(eventColors({ members: ['a'] }, hues, 'var(--hue-blue)')).toEqual(['var(--hue-green)'])
-  })
-  it('a merged event may mix hex and variables', () => {
-    const ev = { colors: ['#aa0000', 'var(--hue-green)'], merged: true, members: ['a'] }
-    expect(eventColors(ev, hues, 'var(--hue-blue)')).toEqual(['#aa0000', 'var(--hue-green)'])
+    expect(eventColors({ members: [] }, hues, 'var(--hue-blue)')).toEqual(['var(--hue-blue)'])
   })
 })

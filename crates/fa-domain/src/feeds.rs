@@ -52,7 +52,6 @@ pub struct Calendar {
     pub source: CalendarSourceId,
     pub remote_id: String,
     pub name: String,
-    pub color: Option<String>,
     pub enabled: bool,
     pub is_default_target: bool,
     pub sync_state: Option<String>,

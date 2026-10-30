@@ -166,6 +166,7 @@ async fn seed_with(pool: PgPool, google: bool, allow_http: bool) -> Fx {
             meal_plan_horizon_weeks: 2,
             dashboard_completion_override: false,
             units: Units::Metric,
+            week_start: Default::default(),
             calendar_past_days: 30,
             calendar_future_days: 400,
             weather_retention_days: 7,
@@ -553,6 +554,17 @@ async fn add_calendar(
     members: &[MemberId],
     events: &[(&str, bool)],
 ) {
+    add_calendar_at(fx, name, owner, members, events, Utc::now() + Dur::hours(2)).await;
+}
+
+async fn add_calendar_at(
+    fx: &Fx,
+    name: &str,
+    owner: Option<MemberId>,
+    members: &[MemberId],
+    events: &[(&str, bool)],
+    start: DateTime<Utc>,
+) {
     let mut tx = fx.store.tx_for(fx.hid).await.unwrap();
     let src = CalendarSource {
         id: CalendarSourceId::new(),
@@ -574,7 +586,7 @@ async fn add_calendar(
         updated_at: Utc::now(),
     };
     let src = CalendarSourceRepo::insert(&mut tx, &src).await.unwrap();
-    let (cal, _) = CalendarRepo::upsert_discovered(&mut tx, src.value.id, "cal", name, None)
+    let (cal, _) = CalendarRepo::upsert_discovered(&mut tx, src.value.id, "cal", name)
         .await
         .unwrap();
     CalendarRepo::update(
@@ -591,7 +603,6 @@ async fn add_calendar(
     CalendarRepo::set_members(&mut tx, cal.value.id, members)
         .await
         .unwrap();
-    let start = Utc::now() + Dur::hours(2);
     let occ: Vec<NewOccurrence> = events
         .iter()
         .enumerate()
@@ -1012,6 +1023,7 @@ async fn dashboard_shape_and_device_settings(pool: PgPool) {
     assert_eq!(j["household"]["name"], "Example");
     assert_eq!(j["household"]["tz"], "UTC");
     assert_eq!(j["household"]["units"], "metric");
+    assert_eq!(j["household"]["week_start"], "monday");
     assert!(j["weather"].is_null());
     assert_eq!(j["advisories"], json!([]));
     assert_eq!(j["members"].as_array().unwrap().len(), 3);
@@ -1319,7 +1331,7 @@ async fn calendar_sources_never_leak_secrets(pool: PgPool) {
         Method::PATCH,
         &format!("/api/v1/calendars/{cid}"),
         &[("cookie", &fx.adult_cookie), ("if-match", &v)],
-        Some(json!({"color": "#3366ff", "members": [fx.child]})),
+        Some(json!({"members": [fx.child]})),
     )
     .await;
     assert_eq!(r.status, StatusCode::OK, "{}", r.text());
@@ -1329,7 +1341,7 @@ async fn calendar_sources_never_leak_secrets(pool: PgPool) {
         Method::PATCH,
         &format!("/api/v1/calendars/{cid}"),
         &[("cookie", &fx.adult_cookie), ("if-match", &v)],
-        Some(json!({"color": "#000000"})),
+        Some(json!({"name": "Renamed"})),
     )
     .await;
     assert_eq!(r.status, StatusCode::CONFLICT);
@@ -1475,4 +1487,69 @@ async fn writes_publish_through_the_change_bus(pool: PgPool) {
     .await;
     assert_eq!(r.status, StatusCode::NO_CONTENT);
     read_until(&mut stream, &mut buf, "event: member.updated").await;
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn household_week_start_defaults_to_monday_and_round_trips(pool: PgPool) {
+    use Who::*;
+    let fx = seed(pool).await;
+    let h = as_(&fx, Adult, Method::GET, "/api/v1/household", None).await;
+    assert_eq!(h.json()["week_start"], "monday");
+    let ver = h.json()["version"].to_string();
+    let r = send(
+        &fx.app,
+        Method::PATCH,
+        "/api/v1/household",
+        &[("cookie", &fx.adult_cookie), ("if-match", &ver)],
+        Some(json!({"week_start": "sunday"})),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text());
+    assert_eq!(r.json()["week_start"], "sunday");
+    let ver = r.json()["version"].to_string();
+    let h = as_(&fx, Adult, Method::GET, "/api/v1/household", None).await;
+    assert_eq!(h.json()["week_start"], "sunday");
+    let d = as_(&fx, Device, Method::GET, "/api/v1/dashboard", None).await;
+    assert_eq!(d.json()["household"]["week_start"], "sunday");
+    let r = send(
+        &fx.app,
+        Method::PATCH,
+        "/api/v1/household",
+        &[("cookie", &fx.adult_cookie), ("if-match", &ver)],
+        Some(json!({"week_start": "friday"})),
+    )
+    .await;
+    assert!(
+        r.status == StatusCode::UNPROCESSABLE_ENTITY || r.status == StatusCode::BAD_REQUEST,
+        "{}",
+        r.status
+    );
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn dashboard_from_moves_the_event_window(pool: PgPool) {
+    use Who::*;
+    let fx = seed(pool).await;
+    seed_events(&fx).await;
+    // The household zone is UTC: noon, a week from today.
+    let day = Utc::now().date_naive() + Dur::days(7);
+    let noon = day.and_hms_opt(12, 0, 0).unwrap().and_utc();
+    add_calendar_at(&fx, "Away", None, &[], &[("Next week party", false)], noon).await;
+    let uri = format!("/api/v1/dashboard?days=1&from={day}");
+    let r = as_(&fx, Device, Method::GET, &uri, None).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text());
+    assert!(r.text().contains("Next week party"));
+    assert!(!r.text().contains("Adult standup"));
+    let r = as_(&fx, Device, Method::GET, "/api/v1/dashboard?days=3", None).await;
+    assert!(r.text().contains("Adult standup"));
+    assert!(!r.text().contains("Next week party"));
+    let r = as_(
+        &fx,
+        Device,
+        Method::GET,
+        "/api/v1/dashboard?from=tomorrow",
+        None,
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::BAD_REQUEST);
 }

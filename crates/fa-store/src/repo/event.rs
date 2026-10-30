@@ -33,8 +33,6 @@ pub struct NewOccurrence {
 #[derive(Debug, Clone)]
 pub struct EventRow {
     pub event: Event,
-    /// The calendar's colour.
-    pub color: Option<String>,
     /// Calendar members (plus the event's own members) with their roles. Empty means a household calendar.
     pub members: Vec<(fa_domain::MemberId, Role)>,
     /// The role of the owner of the calendar's source (`None` for a household source).
@@ -208,7 +206,6 @@ impl EventRepo {
                       e.description, e.location, e.start_at, e.end_at, e.all_day, e.start_date, e.end_date,
                       e.source_tz, e.is_private, e.cancelled, e.origin, e.status, e.confidence,
                       e.source_ref, e.dedupe_key, e.remote_etag, e.created_at, e.updated_at,
-                      c.color AS "color?",
                       om.role AS "owner_role?",
                       ARRAY(SELECT m.id FROM member m WHERE m.id IN
                               (SELECT member_id FROM calendar_member WHERE calendar_id = e.calendar_id
@@ -269,7 +266,6 @@ impl EventRepo {
                         created_at: r.created_at,
                         updated_at: r.updated_at,
                     },
-                    color: r.color,
                     members,
                     owner_role: r.owner_role.as_deref().map(parse_role).transpose()?,
                 })

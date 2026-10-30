@@ -25,6 +25,7 @@ const household = {
   name: 'Example Household',
   tz: 'UTC',
   units: 'metric',
+  week_start: 'monday',
   calendar_past_days: 30,
   calendar_future_days: 400,
   weather_retention_days: 7,
@@ -64,6 +65,24 @@ describe('household M2 fields', () => {
         quiet_from: '22:00',
         quiet_until: '07:00',
       }),
+    )
+  })
+})
+
+describe('first day of the week', () => {
+  it('shows the saved value and saves a change', async () => {
+    m.household.mockResolvedValue(household as never)
+    m.patchHousehold.mockResolvedValue(household as never)
+    const w = mount(SettingsHouseholdView)
+    await flushPromises()
+    const sel = w.find('select[name=week_start]')
+    expect((sel.element as HTMLSelectElement).value).toBe('monday')
+    await sel.setValue('sunday')
+    await w.find('form').trigger('submit')
+    await flushPromises()
+    expect(m.patchHousehold).toHaveBeenCalledWith(
+      3,
+      expect.objectContaining({ week_start: 'sunday' }),
     )
   })
 })

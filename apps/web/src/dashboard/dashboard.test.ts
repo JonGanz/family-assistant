@@ -126,14 +126,178 @@ describe('panels', () => {
     expect(w.find('button').exists()).toBe(false)
   })
 
-  it('week table has a row per day and a column per person, plus Everyone', () => {
+  it('week table has a row per day and a column per person', () => {
     const w = mount(PanelHost, {
       props: { data: data(), settings: settings(), panel: { kind: 'week_table' }, now: NOW },
     })
     expect(w.findAll('tbody tr')).toHaveLength(7)
     const heads = w.findAll('thead th').map((h) => h.text())
-    expect(heads).toContain('Everyone')
-    expect(heads.length).toBe(data().members.length + 2)
+    expect(heads).not.toContain('Everyone')
+    expect(heads.length).toBe(data().members.length + 1)
+  })
+
+  it('week table starts at the given day and can hide ended events and completed tasks', () => {
+    const ev = (id: string, h: number) => ({
+      id,
+      title: `E${id}`,
+      location: null,
+      start_at: `2026-10-26T${String(h).padStart(2, '0')}:00:00Z`,
+      end_at: `2026-10-26T${String(h + 1).padStart(2, '0')}:00:00Z`,
+      all_day: false,
+      start_date: null,
+      end_date: null,
+      members: [data().members[0]!.id],
+      visibility: 'full',
+    })
+    const task = (id: string, status: string) => ({
+      id,
+      title: `T${id}`,
+      due_at: '2026-10-26T12:00:00Z',
+      status,
+      assignees: [data().members[0]!.id],
+    })
+    const d = data({
+      events: [ev('past', 1), ev('later', 20)],
+      tasks: [task('t1', 'done'), task('t2', 'open')],
+    } as unknown as Partial<DashboardData>)
+    const mk = (hidePast: boolean) =>
+      mount(PanelHost, {
+        props: {
+          data: d,
+          settings: settings(),
+          panel: { kind: 'week_table', start: '2026-10-26', hidePast },
+          now: new Date('2026-10-26T10:00:00Z'),
+        },
+      })
+    const shown = mk(false)
+    expect(shown.find('tbody tr').attributes('data-day')).toBe('2026-10-26')
+    const hidden = mk(true)
+    expect(hidden.text()).not.toContain('Epast')
+    expect(hidden.text()).toContain('Elater')
+    expect(hidden.text()).not.toContain('Tt1')
+    expect(hidden.text()).toContain('Tt2')
+  })
+
+  it('home agenda hides the location until the event is opened in a modal', async () => {
+    const d = data()
+    d.events[0]!.location = 'Main St Clinic'
+    d.events[0]!.description = 'Bring the forms'
+    const w = mount(DashboardCanvas, {
+      props: { data: d, settings: settings(), now: NOW },
+    })
+    expect(w.text()).not.toContain('Main St Clinic')
+    expect(w.find('[data-testid="detail-modal"]').exists()).toBe(false)
+    await w.find('button.event').trigger('click')
+    const modal = w.find('[data-testid="detail-modal"]')
+    expect(modal.text()).toContain('Main St Clinic')
+    expect(modal.text()).toContain('Bring the forms')
+    await modal.find('button.close').trigger('click')
+    expect(w.find('[data-testid="detail-modal"]').exists()).toBe(false)
+  })
+
+  it('clicking an event in the week view opens its details', async () => {
+    const d = data()
+    d.events[0]!.location = 'Main St Clinic'
+    const w = mount(DashboardCanvas, { props: { data: d, settings: settings(), now: NOW } })
+    await w.find('[data-view="week"]').trigger('click')
+    const ev = w.findAll('li.event').find((e) => e.text().includes('Dentist'))!
+    await ev.trigger('click')
+    expect(w.find('[data-testid="detail-modal"]').text()).toContain('Main St Clinic')
+  })
+
+  it('week table shows an event in each member column with that member colour', () => {
+    const d = data()
+    d.members.push({ ...d.members[0]!, id: 'm2', display_name: 'Sam', color: 'red' })
+    d.events[0]!.members = ['m1', 'm2']
+    const w = mount(PanelHost, {
+      props: {
+        data: d,
+        settings: settings(),
+        panel: { kind: 'week_table', start: '2026-10-24' },
+        now: NOW,
+      },
+    })
+    const cells = w.findAll('td[data-member] li.event').filter((e) => e.text().includes('Dentist'))
+    expect(cells).toHaveLength(2)
+    const colours = cells.map((c) => c.attributes('style'))
+    expect(colours[0]).not.toEqual(colours[1])
+  })
+
+  it('home agenda stripes an event for two members with both colours', () => {
+    const d = data()
+    d.members.push({ ...d.members[0]!, id: 'm2', display_name: 'Sam', color: 'red' })
+    d.events[0]!.members = ['m1', 'm2']
+    const w = mount(PanelHost, {
+      props: { data: d, settings: settings(), panel: { kind: 'agenda' }, now: NOW },
+    })
+    const ev = w.findAll('button.event').find((e) => e.text().includes('Dentist'))!
+    expect(ev.attributes('style')).toContain('linear-gradient')
+  })
+
+  it('week table shows "+N" for what a cell cannot fit, and it opens everything for that cell', async () => {
+    const orig = globalThis.ResizeObserver
+    class RO {
+      constructor(private cb: () => void) {}
+      observe() {
+        this.cb()
+      }
+      disconnect() {}
+    }
+    globalThis.ResizeObserver = RO as never
+    // Every cell reports 300 x 120 px (one column, two rows of slots).
+    const w0 = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientWidth')
+    const h0 = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'clientHeight')
+    Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, value: 300 })
+    Object.defineProperty(HTMLElement.prototype, 'clientHeight', { configurable: true, value: 120 })
+    try {
+      const d = data()
+      const ev = (id: string, h: number) => ({
+        ...d.events[0]!,
+        id,
+        title: `E${id}`,
+        start_at: `2026-10-24T${String(h).padStart(2, '0')}:00:00Z`,
+        end_at: `2026-10-24T${String(h + 1).padStart(2, '0')}:00:00Z`,
+      })
+      d.events = [ev('a', 8), ev('b', 9), ev('c', 10), ev('d', 11)]
+      const w = mount(DashboardCanvas, {
+        props: { data: d, settings: settings(), now: NOW },
+      })
+      await w.find('[data-view="week"]').trigger('click')
+      const cell = w.find('tr[data-day="2026-10-24"] td[data-member="m1"]')
+      expect(cell.findAll('li.event')).toHaveLength(1)
+      const more = cell.find('li.more button')
+      expect(more.text()).toBe('+3')
+      await more.trigger('click')
+      expect(w.find('[data-testid="detail-modal"]').findAll('li.event')).toHaveLength(4)
+    } finally {
+      globalThis.ResizeObserver = orig
+      if (w0) Object.defineProperty(HTMLElement.prototype, 'clientWidth', w0)
+      if (h0) Object.defineProperty(HTMLElement.prototype, 'clientHeight', h0)
+    }
+  })
+
+  it('clicking the weather opens the detailed forecast with today by the hour', async () => {
+    const hourly = {
+      time: ['2026-10-24T09:00', '2026-10-24T10:00', '2026-10-25T09:00'],
+      temperature_2m: [8, 9, 7],
+      weather_code: [1, 1, 1],
+    }
+    const daily = {
+      time: ['2026-10-24', '2026-10-25'],
+      weather_code: [1, 3],
+      temperature_2m_max: [12, 11],
+      temperature_2m_min: [4, 5],
+    }
+    const d = data({
+      weather: { current: { weather_code: 1, temperature_2m: 9 }, hourly, daily },
+    } as unknown as Partial<DashboardData>)
+    const w = mount(DashboardCanvas, {
+      props: { data: d, settings: settings({ panels: [{ kind: 'weather' }] }), now: NOW },
+    })
+    expect(w.find('[aria-label="Hourly forecast"]').exists()).toBe(false)
+    await w.find('[data-testid="weather-panel"]').trigger('click')
+    expect(w.findAll('[aria-label="Hourly forecast"] li')).toHaveLength(2)
+    expect(w.findAll('[aria-label="Daily forecast"] li')).toHaveLength(2)
   })
 
   it('weather shows the day forecast before noon only', () => {

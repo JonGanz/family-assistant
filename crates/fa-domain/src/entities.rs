@@ -56,6 +56,20 @@ text_enum!(Role { Adult, Child });
 text_enum!(DeviceKind { Dashboard });
 text_enum!(SecretKind { OauthToken, Other });
 text_enum!(Units { Metric, Imperial });
+text_enum!(
+    /// First day of the week on calendars; default Monday.
+    WeekStart {
+        Monday,
+        Sunday
+    }
+);
+
+#[allow(clippy::derivable_impls)]
+impl Default for WeekStart {
+    fn default() -> Self {
+        Self::Monday
+    }
+}
 text_enum!(SourceKind {
     Google,
     Caldav,
@@ -172,6 +186,7 @@ pub struct Household {
     pub meal_plan_horizon_weeks: i32,
     pub dashboard_completion_override: bool,
     pub units: Units,
+    pub week_start: WeekStart,
     pub calendar_past_days: i32,
     pub calendar_future_days: i32,
     pub weather_retention_days: i32,

@@ -16,7 +16,7 @@ Direct user instruction (2026-10-29, no question): the dashboard should be more 
 
 ## Decision
 - The dashboard shows a **navigation bar** along its shorter edge: on the **left** in landscape, along the **top** in portrait (the device's `orientation` setting decides).
-- Views: **Home** (the configured panels: clock, weather, agenda, tasks, routines) and **Week** (a table with a row per day and a column per person, plus an "Everyone" column; each cell holds that person's calendar events and the tasks due that day; household-wide events and unassigned tasks go in "Everyone"). The view is local to the screen and not stored.
+- Views: **Home** (the configured panels: clock, weather, agenda, tasks, routines) and **Week** (a table with a row per day and a column per person; each cell holds that person's calendar events (colour bar, bold title, time beneath) and the tasks due that day; household-wide events and unassigned tasks have no column and are not shown. The day cell shows the day of the month (bold), the weekday, and that day's forecast icon, high and low. The table fills the view, and the footer (heartbeat, adult unlock) is hidden on this view). The view is local to the screen and not stored.
 - The dashboard always fetches a full week of events, so the Week view works with any layout.
 - **Advisories live in the weather panel** (beside "feels like / wind"), with a derived notice for an upcoming thunderstorm. There is no separate `advisories` panel kind.
 - Panels take the height they need and the **view scrolls** instead of cropping a panel.

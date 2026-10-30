@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, type Component } from 'vue'
-import type { PanelProps } from '../types'
+import type { DetailRequest, PanelProps } from '../types'
 import AgendaPanel from './AgendaPanel.vue'
 import ClockPanel from './ClockPanel.vue'
 import MemberTasksPanel from './MemberTasksPanel.vue'
@@ -17,6 +17,7 @@ defineEmits<{
   complete: [id: string]
   tick: [run: string, step: string, done: boolean]
   add: []
+  detail: [d: DetailRequest]
 }>()
 
 const REGISTRY: Record<string, Component> = {
@@ -44,5 +45,6 @@ const comp = computed(() => REGISTRY[props.panel.kind] ?? null)
     @complete="(id: string) => $emit('complete', id)"
     @tick="(r: string, st: string, d: boolean) => $emit('tick', r, st, d)"
     @add="$emit('add')"
+    @detail="(d: DetailRequest) => $emit('detail', d)"
   />
 </template>

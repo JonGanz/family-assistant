@@ -31,11 +31,11 @@ This refines the Calendar and Weather packages of [Domain.md](Domain.md). All ta
 
 | Table | Key columns | Notes |
 |---|---|---|
-| `household` (+cols) | `units: metric\|imperial` (default `metric`), `calendar_past_days` (30), `calendar_future_days` (400), `weather_retention_days` (7), `private_events_as_busy` (true, D-036) | Editable in the UI (Settings → Household) |
+| `household` (+cols) | `units: metric\|imperial` (default `metric`), `calendar_past_days` (30), `calendar_future_days` (400), `weather_retention_days` (7), `private_events_as_busy` (true, D-036), `week_start: monday\|sunday` (default `monday`, D-084) | Editable in the UI (Settings → Household) |
 | `oauth_account` | provider: `google`, owner_member, email, scopes[], secret (refresh token), state: `ok\|needs_reauth\|error`, last_error? | One per connected Google account. Gmail (M3) reuses it with extra scopes (incremental consent) |
 | `oauth_pending` | state (PK), session, member, pkce_verifier, return_to, expires_at (10 min) | Short-lived flow state, cleaned hourly by the `oauth.cleanup` job |
 | `calendar_source` | kind: `google\|caldav\|ics`, name, owner_member?, oauth_account? (google), url? (caldav base), username? (caldav), secret? (caldav password, **or the whole ICS URL**), writable=false, poll_minutes (default 15, ICS 60), state, last_synced_at?, last_error?, archived_at? | `owner_member = null` means a household source. ICS URLs often embed a secret token (Google's "secret address", school portals), so the URL is a `Secret` and the API shows it masked |
-| `calendar` | source, remote_id, name, color, enabled, is_default_target (M3), sync_state (Google `syncToken` / CalDAV `getctag` / ICS `ETag`), last_full_sync_at | Unique `(source, remote_id)`. An ICS source has exactly one calendar |
+| `calendar` | source, remote_id, name, enabled, is_default_target (M3), sync_state (Google `syncToken` / CalDAV `getctag` / ICS `ETag`), last_full_sync_at | Unique `(source, remote_id)`. An ICS source has exactly one calendar |
 | `calendar_member` | calendar ↔ member (M:N) | No members means a **household calendar** |
 | `event` | calendar?, remote_uid?, instance_key (`''` or the RECURRENCE-ID as UTC ISO), title, description?, location?, start_at, end_at, all_day, start_date?/end_date? (all-day), source_tz?, is_private, cancelled, origin: `synced\|extracted\|manual`, status? (`null` for synced; `proposed\|approved\|written\|rejected` from M3), confidence?, source_ref, dedupe_key, remote_etag?, version | **One row per occurrence** (see §3.3). Unique `(calendar, remote_uid, instance_key)`. Index on `(household_id, start_at)` |
 | `event_member` | event ↔ member | Used by extracted events (M3). Synced events take their members from the calendar |
@@ -93,7 +93,7 @@ An event's members are the members of its calendar. A calendar with no members i
 | Elevated device | Same as the dashboard device. Elevation is only for actions |
 
 ### 3.6 The same event on several calendars
-`GET /events` folds copies of one event from **different calendars** into one `EventView` (`fa_domain::calendar::merge_duplicates`, run on the unmasked views, before `mask`). Two copies match when the title and location (trimmed, whitespace collapsed, case ignored), the start and end, the all-day flag and the visibility are equal. The merged event keeps the first copy's id and details and has `members` as the union, `merged: true` and `colors` (one calendar colour per copy). If any copy has no calendar colour, `colors` is empty and the client uses the members' colours. Two events on one calendar and events without a calendar never merge. The client draws the left stripe in equal bands, one per colour, and the member chips show every member. Nothing is stored: the rows stay separate, so each calendar's sync and write-back is unaffected.
+`GET /events` folds copies of one event from **different calendars** into one `EventView` (`fa_domain::calendar::merge_duplicates`, run on the unmasked views, before `mask`). Two copies match when the title and location (trimmed, whitespace collapsed, case ignored), the start and end, the all-day flag and the visibility are equal. The merged event keeps the first copy's id and details and has `members` as the union and `merged: true`; its colours come from the members (D-086). Two events on one calendar and events without a calendar never merge. The client draws the left stripe in equal bands, one per member colour, and the member chips show every member. Nothing is stored: the rows stay separate, so each calendar's sync and write-back is unaffected.
 
 ## 4. Weather
 - `weather.fetch` runs on the cron `*/30 * * * *` (editable in the schedule settings). It skips when the household has no location. It calls Open-Meteo `/v1/forecast` with `current`, `hourly` (48 h), and `daily` (7 days) in metric units and the household tz, then stores a `weather_snapshot`.
@@ -136,7 +136,7 @@ The S2-suggested rules and LLM advisories of D-017 come in M4. Weather-driven ta
 ## 5. Configuration (D-018)
 - The household TOML gains `[household] units`, `calendar_past_days`, `calendar_future_days`, `weather_retention_days`, `private_events_as_busy`, plus `[[calendar_sources]]` and `[[weather_rules]]`.
 - Calendar sources are **exported without secrets**: Google sources export as a placeholder that needs reconnecting, CalDAV without the password, and ICS without the URL. On import, these sources come in **disabled** with the state `needs_reauth`, and the UI asks for the missing credential.
-- `calendar_sources[].calendars[]` carries `remote_id`, `enabled`, `members` (member keys), and `color`, so linking survives a round trip.
+- `calendar_sources[].calendars[]` carries `remote_id`, `enabled` and `members` (member keys), so linking survives a round trip.
 
 ## 6. Cross-process change events (ChangeBus)
 The api and the worker are separate processes (Platform.md §3), so the worker can't use the api's in-process SSE `Hub`. The bridge works like this:

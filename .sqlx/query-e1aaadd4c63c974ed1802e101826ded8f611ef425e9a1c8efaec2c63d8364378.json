@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT e.id, e.household_id, e.calendar_id, e.remote_uid, e.instance_key, e.title,\n                      e.description, e.location, e.start_at, e.end_at, e.all_day, e.start_date, e.end_date,\n                      e.source_tz, e.is_private, e.cancelled, e.origin, e.status, e.confidence,\n                      e.source_ref, e.dedupe_key, e.remote_etag, e.created_at, e.updated_at,\n                      c.color AS \"color?\",\n                      om.role AS \"owner_role?\",\n                      ARRAY(SELECT m.id FROM member m WHERE m.id IN\n                              (SELECT member_id FROM calendar_member WHERE calendar_id = e.calendar_id\n                               UNION SELECT member_id FROM event_member WHERE event_id = e.id)\n                            ORDER BY m.id) AS \"member_ids!\",\n                      ARRAY(SELECT m.role FROM member m WHERE m.id IN\n                              (SELECT member_id FROM calendar_member WHERE calendar_id = e.calendar_id\n                               UNION SELECT member_id FROM event_member WHERE event_id = e.id)\n                            ORDER BY m.id) AS \"member_roles!\"\n               FROM event e\n               LEFT JOIN calendar c ON c.id = e.calendar_id\n               LEFT JOIN calendar_source s ON s.id = c.source_id\n               LEFT JOIN member om ON om.id = s.owner_member\n               WHERE e.start_at < $2 AND (e.end_at > $1 OR e.start_at >= $1)\n                 AND NOT e.cancelled\n                 AND (e.status IS NULL OR e.status IN ('approved', 'written'))\n                 AND (e.calendar_id IS NULL OR (c.enabled AND c.archived_at IS NULL AND s.archived_at IS NULL))\n                 AND ($3::uuid[] IS NULL OR e.calendar_id = ANY($3))\n               ORDER BY e.start_at, e.end_at, e.id",
+  "query": "SELECT e.id, e.household_id, e.calendar_id, e.remote_uid, e.instance_key, e.title,\n                      e.description, e.location, e.start_at, e.end_at, e.all_day, e.start_date, e.end_date,\n                      e.source_tz, e.is_private, e.cancelled, e.origin, e.status, e.confidence,\n                      e.source_ref, e.dedupe_key, e.remote_etag, e.created_at, e.updated_at,\n                      om.role AS \"owner_role?\",\n                      ARRAY(SELECT m.id FROM member m WHERE m.id IN\n                              (SELECT member_id FROM calendar_member WHERE calendar_id = e.calendar_id\n                               UNION SELECT member_id FROM event_member WHERE event_id = e.id)\n                            ORDER BY m.id) AS \"member_ids!\",\n                      ARRAY(SELECT m.role FROM member m WHERE m.id IN\n                              (SELECT member_id FROM calendar_member WHERE calendar_id = e.calendar_id\n                               UNION SELECT member_id FROM event_member WHERE event_id = e.id)\n                            ORDER BY m.id) AS \"member_roles!\"\n               FROM event e\n               LEFT JOIN calendar c ON c.id = e.calendar_id\n               LEFT JOIN calendar_source s ON s.id = c.source_id\n               LEFT JOIN member om ON om.id = s.owner_member\n               WHERE e.start_at < $2 AND (e.end_at > $1 OR e.start_at >= $1)\n                 AND NOT e.cancelled\n                 AND (e.status IS NULL OR e.status IN ('approved', 'written'))\n                 AND (e.calendar_id IS NULL OR (c.enabled AND c.archived_at IS NULL AND s.archived_at IS NULL))\n                 AND ($3::uuid[] IS NULL OR e.calendar_id = ANY($3))\n               ORDER BY e.start_at, e.end_at, e.id",
   "describe": {
     "columns": [
       {
@@ -125,21 +125,16 @@
       },
       {
         "ordinal": 24,
-        "name": "color?",
-        "type_info": "Text"
-      },
-      {
-        "ordinal": 25,
         "name": "owner_role?",
         "type_info": "Text"
       },
       {
-        "ordinal": 26,
+        "ordinal": 25,
         "name": "member_ids!",
         "type_info": "UuidArray"
       },
       {
-        "ordinal": 27,
+        "ordinal": 26,
         "name": "member_roles!",
         "type_info": "TextArray"
       }
@@ -176,11 +171,10 @@
       true,
       false,
       false,
-      true,
       false,
       null,
       null
     ]
   },
-  "hash": "e5b8f84df19323ee4519939c782b8df5c66cca93d2fbcf7968c4ec938652d3ce"
+  "hash": "e1aaadd4c63c974ed1802e101826ded8f611ef425e9a1c8efaec2c63d8364378"
 }

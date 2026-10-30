@@ -210,7 +210,7 @@ When you are done, stop the processes (`kill %1 %2 %3` or Ctrl-C) and the contai
 
 ## Connecting calendars
 Open **Settings, Calendars**. A source can be one of four kinds; each source has one or more
-calendars, and each calendar can be switched on or off, coloured, and assigned to members.
+calendars, and each calendar can be switched on or off and assigned to members. Events take the colour of their members (several members show several colours).
 Events of a calendar with no members are shown for the whole household.
 
 | Kind | How | Notes |
@@ -234,7 +234,8 @@ Known limitation: a saved household location cannot be cleared from the UI.
 ## Weather and the household location
 Set the location, time zone and units in **Settings, Household** (or in the `[household]` table of
 the TOML: `tz`, `location = { label, lat, lon }`, `units = "metric" | "imperial"`). Without a
-location the app has no forecast. The same table also has `calendar_past_days`,
+location the app has no forecast. **Settings, Household** also sets the **first day of the week**
+(Monday or Sunday, default Monday), which the dashboard's Week view uses. The same table also has `calendar_past_days`,
 `calendar_future_days`, `weather_retention_days` and `private_events_as_busy`.
 
 The forecast is fetched from Open-Meteo every 30 minutes by the worker. **Weather rules**
@@ -594,12 +595,11 @@ agenda, week, members, now, member tasks, routine), with a live preview of the d
 the screen picks it up on its next refresh.
 
 The dashboard has a navigation bar on its shorter edge (left in landscape, top in portrait) with two
-views: **Home** (your layout) and **Week** (a table with a row per day and a column per person, plus
-"Everyone"). The view scrolls when its content is taller than the screen.
+views: **Home** (your layout) and **Week** (a table with a row per day and a column per person, for the week starting on the household's first day of the week, with arrows to move between weeks and a switch to hide events that have passed; set the first day in **Settings, Household**). The view scrolls when its content is taller than the screen.
 
 ## Themes
 **Using it.** Open **Settings, Appearance** (any signed-in member) to pick one of eight palettes:
-Catppuccin, Nord, Dracula, Gruvbox, Solarized, Tokyo Night, Rosé Pine and Kanagawa. The choice
+Catppuccin, Nord, Dracula, Gruvbox, Solarized, Tokyo Night, Rosé Pine, Kanagawa and seoul256 (Nord has a light variant too). The choice
 applies at once and is saved **per device** in the browser (`localStorage`, key `fa.theme`); it does
 not follow you to another device, and there is no household default (Catppuccin, automatic
 light/dark, is what a device uses until a choice is made). A family with both light and dark

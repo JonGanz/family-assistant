@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE calendar SET name = COALESCE($2, name),\n                    enabled = COALESCE($3, enabled), version = version + 1\n             WHERE id = $1 AND version = $4\n             RETURNING version",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "version",
+        "type_info": "Int4"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Text",
+        "Bool",
+        "Int4"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "e90e6507ddb832ce12cb956e6a557290663d6c351921f96481e3c0f4673de2f7"
+}

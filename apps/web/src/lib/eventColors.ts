@@ -1,23 +1,16 @@
 import type { EventLike, MemberLike } from './types'
 
 /**
- * The colours an event shows. A merged event (the same event from several calendars) shows one
- * colour per copy, falling back to its members' colours when a calendar has none; any other event
- * shows its single colour.
+ * The colours an event shows: one per member linked to it (in the household's member order), so an
+ * event for two members shows both. An event for nobody shows the fallback. Calendars have no colour.
  */
 export function eventColors(
-  ev: { color?: string | null; colors?: string[]; merged?: boolean; members: string[] },
+  ev: { members: string[] },
   members: MemberLike[],
   fallback: string,
 ): string[] {
-  if (ev.merged) {
-    const own = ev.colors ?? []
-    const fromMembers = members.filter((m) => ev.members.includes(m.id)).map((m) => m.color)
-    const palette = [...new Set(own.length ? own : fromMembers)]
-    if (palette.length) return palette
-  }
-  const first = members.find((m) => ev.members.includes(m.id))
-  return [ev.color ?? first?.color ?? fallback]
+  const own = [...new Set(members.filter((m) => ev.members.includes(m.id)).map((m) => m.color))]
+  return own.length ? own : [fallback]
 }
 
 /** The left stripe of an event: one solid colour, or equal bands for several. */
