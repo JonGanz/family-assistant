@@ -126,6 +126,36 @@ describe('panels', () => {
     expect(w.find('button').exists()).toBe(false)
   })
 
+  it('week table has a row per day and a column per person, plus Everyone', () => {
+    const w = mount(PanelHost, {
+      props: { data: data(), settings: settings(), panel: { kind: 'week_table' }, now: NOW },
+    })
+    expect(w.findAll('tbody tr')).toHaveLength(7)
+    const heads = w.findAll('thead th').map((h) => h.text())
+    expect(heads).toContain('Everyone')
+    expect(heads.length).toBe(data().members.length + 2)
+  })
+
+  it('weather shows the day forecast before noon only', () => {
+    const wx = {
+      current: { weather_code: 1, temperature_2m: 10 },
+      daily: {
+        time: ['2026-10-29'],
+        weather_code: [1],
+        temperature_2m_max: [18],
+        temperature_2m_min: [9],
+      },
+    }
+    const d = data({ weather: wx } as unknown as Partial<DashboardData>)
+    const at = (iso: string) =>
+      mount(PanelHost, {
+        props: { data: d, settings: settings(), panel: { kind: 'weather' }, now: new Date(iso) },
+      })
+    const has = (iso: string) => at(iso).find('[data-testid="today-forecast"]').exists()
+    expect(has('2026-10-29T09:00:00Z')).toBe(true)
+    expect(has('2026-10-29T13:00:00Z')).toBe(false)
+  })
+
   it('members strip shows a count badge only for adults with approvals waiting', () => {
     const mk = (pa: { member_id: string; count: number }[]) =>
       mount(PanelHost, {

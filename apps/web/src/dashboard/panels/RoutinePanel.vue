@@ -73,10 +73,11 @@ const runs = computed(() =>
   min-width: 0;
   padding: var(--space-3);
   background: var(--color-surface);
+  border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
 .col.complete {
-  outline: 3px solid var(--color-success);
+  box-shadow: inset 0 0 0 3px var(--color-success);
 }
 h2 {
   margin: 0;

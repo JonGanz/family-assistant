@@ -36,6 +36,19 @@ const updatedAt = computed(() =>
     : '',
 )
 
+/** The SSE heartbeat carries a UTC instant; show it as household-local time. */
+const heartbeatAt = computed(() => {
+  const ms = store.lastHeartbeat ? Date.parse(store.lastHeartbeat) : Number.NaN
+  return Number.isNaN(ms)
+    ? ''
+    : new Intl.DateTimeFormat(undefined, {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        timeZone: store.snapshot?.household.tz,
+      }).format(ms)
+})
+
 let stopKeepAlive: (() => void) | undefined
 let watchdog: Watchdog | undefined
 
@@ -158,8 +171,8 @@ const mmss = computed(
       <span v-if="store.showStaleBadge && updatedAt" class="stale" data-testid="stale">
         {{ S.lastUpdated(updatedAt) }}
       </span>
-      <span v-if="store.lastHeartbeat" class="hb" data-testid="heartbeat">
-        Last heartbeat {{ store.lastHeartbeat }}
+      <span v-if="heartbeatAt" class="hb" data-testid="heartbeat">
+        Last heartbeat {{ heartbeatAt }}
       </span>
       <button class="try" @click="showElevation = !showElevation">{{ S.elevate }}</button>
     </footer>

@@ -178,11 +178,8 @@ describe('dashboard store', () => {
     expect(s.handleEvent('source.updated', {})).toBe(false)
   })
 
-  it('fetches a full week when a week panel is present', () => {
-    expect(daysToFetch(snap({ agenda_days: 2 }).settings)).toBe(2)
-    expect(
-      daysToFetch(snap({ agenda_days: 2, panels: [{ kind: 'week' }] as never }).settings),
-    ).toBe(7)
+  it('always fetches a full week for the Week view', () => {
+    expect(daysToFetch(snap({ agenda_days: 2 }).settings)).toBe(7)
     expect(daysToFetch(snap({ agenda_days: 30 }).settings)).toBe(14)
   })
 

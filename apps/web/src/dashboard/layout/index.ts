@@ -1,14 +1,7 @@
 import type { ThemeChoice } from '../../themes'
 
 export type PanelKind =
-  | 'clock'
-  | 'weather'
-  | 'agenda'
-  | 'week'
-  | 'members'
-  | 'now'
-  | 'member_tasks'
-  | 'routine'
+  'clock' | 'weather' | 'agenda' | 'week' | 'members' | 'now' | 'member_tasks' | 'routine'
 export type Orientation = 'landscape' | 'portrait'
 
 export interface PanelConfig {
@@ -67,11 +60,7 @@ export const PRESETS: Record<string, DashboardSettings> = {
   'Calendar wall': {
     ...base,
     agenda_days: 7,
-    panels: [
-      { kind: 'clock' },
-      { kind: 'weather', hourly: false },
-      { kind: 'week' },
-    ],
+    panels: [{ kind: 'clock' }, { kind: 'weather', hourly: false }, { kind: 'week' }],
   },
   Minimal: { ...base, agenda_days: 2, panels: [{ kind: 'clock' }, { kind: 'agenda' }] },
 }

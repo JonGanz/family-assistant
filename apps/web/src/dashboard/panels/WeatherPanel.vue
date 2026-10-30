@@ -16,6 +16,16 @@ const cur = computed(() => (w.value ? currentOf(w.value) : null))
 const showHourly = computed(() => props.panel['hourly'] === true)
 const hours = computed(() => (w.value && showHourly.value ? hourlyOf(w.value, 12) : []))
 const days = computed(() => (w.value ? dailyOf(w.value, showHourly.value ? 5 : 7) : []))
+/** Before noon (household time) the day's forecast is shown beside the current temperature. */
+const morning = computed(() => {
+  const h = new Intl.DateTimeFormat('en-GB', {
+    timeZone: props.data.household.tz,
+    hourCycle: 'h23',
+    hour: '2-digit',
+  }).format(props.now)
+  return Number(h) < 12
+})
+const todayFc = computed(() => (morning.value && w.value ? dailyOf(w.value, 1)[0] : undefined))
 const t = (v: number | null) => (v === null ? '–' : format(v, 'temp'))
 const weekday = (d: string) =>
   new Intl.DateTimeFormat(undefined, { weekday: 'short', timeZone: 'UTC' }).format(
@@ -52,6 +62,16 @@ const hour = (label: string) => (label ? label.slice(0, 2) : '')
           <div v-if="cur.feels !== null">{{ S.feelsLike }} {{ t(cur.feels) }}</div>
           <div v-if="cur.wind !== null">
             {{ S.wind }} {{ formatQuantity(cur.wind, 'speed', units) }}
+          </div>
+        </div>
+        <div v-if="todayFc" class="today" data-testid="today-forecast">
+          <div class="head">{{ S.today }}</div>
+          <div class="range">
+            <span class="hi">{{ t(todayFc.max) }}</span>
+            <span class="lo">{{ t(todayFc.min) }}</span>
+          </div>
+          <div v-if="todayFc.pop !== null" class="rain">
+            {{ S.rainChance }} {{ Math.round(todayFc.pop) }}%
           </div>
         </div>
         <ul v-if="notices.length" class="notices" aria-label="Advisories">
@@ -108,6 +128,23 @@ const hour = (label: string) => (label ? label.slice(0, 2) : '')
 .extra {
   font-size: var(--font-size-base);
   color: var(--color-muted);
+}
+.today {
+  display: grid;
+  gap: var(--space-1);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--color-border);
+}
+.today .head,
+.today .rain {
+  font-size: var(--font-size-base);
+  color: var(--color-muted);
+}
+.today .range {
+  font-size: 1.6em;
+  font-weight: 600;
+  display: flex;
+  gap: var(--space-2);
 }
 .notices {
   margin-left: auto;

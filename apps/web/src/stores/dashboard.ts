@@ -38,11 +38,10 @@ export function writeCache(snapshot: DashboardData, savedAt: number): void {
   }
 }
 
-/** Days to fetch: the agenda window, or a full week when a week panel needs it (API caps 1..14). */
+/** Days to fetch: the agenda window, or a full week for the Week view (API caps 1..14). */
 export function daysToFetch(settings: DashboardData['settings'] | undefined): number {
   const agenda = settings?.agenda_days ?? 3
-  const needsWeek = settings?.panels.some((p) => p.kind === 'week') ?? false
-  return Math.min(14, Math.max(1, agenda, needsWeek ? 7 : 1))
+  return Math.min(14, Math.max(1, agenda, 7))
 }
 
 /** Retry delay while the first load keeps failing. */

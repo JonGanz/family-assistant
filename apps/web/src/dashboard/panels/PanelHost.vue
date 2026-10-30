@@ -9,6 +9,7 @@ import NowPanel from './NowPanel.vue'
 import RoutinePanel from './RoutinePanel.vue'
 import WeatherPanel from './WeatherPanel.vue'
 import WeekPanel from './WeekPanel.vue'
+import WeekTablePanel from './WeekTablePanel.vue'
 
 const props = defineProps<PanelProps>()
 defineEmits<{
@@ -23,6 +24,8 @@ const REGISTRY: Record<string, Component> = {
   weather: WeatherPanel,
   agenda: AgendaPanel,
   week: WeekPanel,
+  /** A navigation view, not a configurable panel: it is not in `KNOWN_PANELS`. */
+  week_table: WeekTablePanel,
   members: MembersPanel,
   now: NowPanel,
   member_tasks: MemberTasksPanel,

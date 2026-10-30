@@ -5,6 +5,7 @@ import { panelVisible } from './tasksModel'
 import { burnInOffset, normalizeTheme, resolveLayout } from './layout'
 import PanelHost from './panels/PanelHost.vue'
 import { prefersDark, resolveMode } from './theme'
+import { S } from './strings'
 import type { DashboardData, DashboardSettings } from './types'
 
 const props = withDefaults(
@@ -35,14 +36,24 @@ const areas = computed(() =>
     panels: cfg.value.panels.filter((p) => panelVisible(p, props.data, props.now)),
   }),
 )
-const rows = computed(() =>
-  Math.max(1, ...areas.value.map((a) => Number(a.row.split('/')[1]?.trim() ?? '2') - 1)),
-)
-/** Portrait rows share the height by weight, so a long list scrolls inside its panel. */
-const WEIGHT: Record<string, number> = { clock: 1, weather: 2, agenda: 4, now: 5 }
-const portraitRows = computed(() =>
-  areas.value.map((a) => `minmax(0, ${WEIGHT[a.panel.kind] ?? 4}fr)`).join(' '),
-)
+const landscape = computed(() => cfg.value.orientation === 'landscape')
+/** Landscape: a left and a right stack. Portrait: one. Each panel takes the height it needs. */
+const stacks = computed(() => {
+  if (!landscape.value) return [{ key: 'all', span: '1 / 13', areas: areas.value }]
+  const left = areas.value.filter((a) => a.column === '1 / 5')
+  const right = areas.value.filter((a) => a.column !== '1 / 5')
+  return [
+    { key: 'left', span: '1 / 5', areas: left },
+    { key: 'right', span: '5 / 13', areas: right },
+  ].filter((s) => s.areas.length > 0)
+})
+type View = 'home' | 'week'
+const VIEWS: { id: View; label: string }[] = [
+  { id: 'home', label: S.navHome },
+  { id: 'week', label: S.navWeek },
+]
+const view = ref<View>('home')
+const weekPanel = { kind: 'week_table' }
 const choice = computed(() => normalizeTheme(cfg.value.theme))
 /** `night` follows sunrise/sunset from the snapshot; without them the browser scheme decides. */
 const variant = computed(() => {
@@ -72,7 +83,6 @@ onBeforeUnmount(() => {
 const shift = computed(() =>
   props.burnIn && variant.value.mode === 'dark' ? burnInOffset(props.now) : { x: 0, y: 0 },
 )
-const landscape = computed(() => cfg.value.orientation === 'landscape')
 </script>
 
 <template>
@@ -83,34 +93,44 @@ const landscape = computed(() => cfg.value.orientation === 'landscape')
     :data-theme="variant.mode"
     :data-orientation="cfg.orientation"
   >
-    <div
-      class="grid"
-      :style="{
-        gridTemplateRows: landscape ? `repeat(${rows}, auto)` : portraitRows,
-        transform: `translate(${shift.x}px, ${shift.y}px)`,
-      }"
-    >
-      <div
-        v-for="(a, i) in areas"
-        :key="i"
-        class="cell"
-        :class="[`k-${a.panel.kind}`, { fill: !landscape || a.column === '5 / 13' }]"
-        :style="{ gridColumn: a.column, gridRow: a.row }"
+    <nav class="nav" :aria-label="S.navLabel">
+      <button
+        v-for="v in VIEWS"
+        :key="v.id"
+        type="button"
+        :class="{ on: view === v.id }"
+        :aria-current="view === v.id ? 'page' : undefined"
+        :data-view="v.id"
+        @click="view = v.id"
       >
-        <div class="inner">
-          <PanelHost
-            :data="data"
-            :settings="cfg"
-            :panel="a.panel"
-            :now="now"
-            @pick="(id: string) => $emit('pick', id)"
-            @complete="(id: string) => $emit('complete', id)"
-            @tick="(r: string, st: string, d: boolean) => $emit('tick', r, st, d)"
-            @add="$emit('add')"
-          />
+        {{ v.label }}
+      </button>
+    </nav>
+    <main class="main">
+      <div class="grid" :style="{ transform: `translate(${shift.x}px, ${shift.y}px)` }">
+        <template v-if="view === 'home'">
+          <div v-for="st in stacks" :key="st.key" class="stack" :style="{ gridColumn: st.span }">
+            <div v-for="(a, i) in st.areas" :key="i" class="cell" :class="`k-${a.panel.kind}`">
+              <PanelHost
+                :data="data"
+                :settings="cfg"
+                :panel="a.panel"
+                :now="now"
+                @pick="(id: string) => $emit('pick', id)"
+                @complete="(id: string) => $emit('complete', id)"
+                @tick="(r: string, st: string, d: boolean) => $emit('tick', r, st, d)"
+                @add="$emit('add')"
+              />
+            </div>
+          </div>
+        </template>
+        <div v-else class="stack" style="grid-column: 1 / 13">
+          <div class="cell k-week_table">
+            <PanelHost :data="data" :settings="cfg" :panel="weekPanel" :now="now" />
+          </div>
         </div>
       </div>
-    </div>
+    </main>
     <slot />
   </div>
 </template>
@@ -126,31 +146,70 @@ const landscape = computed(() => cfg.value.orientation === 'landscape')
   font-family: var(--font-sans);
   line-height: 1.3;
 }
+.canvas {
+  display: flex;
+}
+.canvas.portrait {
+  flex-direction: column;
+}
+.nav {
+  flex: none;
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  background: var(--color-surface);
+  border-color: var(--color-border);
+}
+.landscape .nav {
+  flex-direction: column;
+  width: 7rem;
+  border-right: 1px solid var(--color-border);
+}
+.portrait .nav {
+  border-bottom: 1px solid var(--color-border);
+}
+.nav button {
+  flex: 1;
+  min-height: var(--min-touch);
+  padding: var(--space-2) var(--space-3);
+  border: 2px solid var(--color-border);
+  background: var(--color-bg);
+  color: inherit;
+  font: inherit;
+  font-size: var(--font-size-lg);
+  cursor: pointer;
+}
+.landscape .nav button {
+  flex: none;
+  min-height: 5rem;
+}
+.nav button.on {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-on-accent);
+  font-weight: 600;
+}
+/* The whole view scrolls, so no panel is cropped when another needs more room. */
+.main {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 2.5rem;
+}
 .grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: var(--space-4);
-  height: 100%;
   padding: var(--space-4) var(--space-5);
-  align-content: stretch;
+  align-items: start;
 }
-.portrait .grid {
-  align-content: stretch;
+.stack {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
 }
 .cell {
   min-width: 0;
-  min-height: 0;
-}
-.cell.fill {
-  position: relative;
-}
-.cell.fill .inner {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-}
-.cell.fill .inner > :deep(*) {
-  max-height: 100%;
-  overflow: hidden;
 }
 </style>

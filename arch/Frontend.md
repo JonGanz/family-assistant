@@ -156,6 +156,8 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 **Contrast** (build-time unit test over every variant): `text` and `muted` on `bg` and on both surfaces at least 4.5:1; each hue on `bg` at least 3:1 (stripes, chips, accents); `on-accent` on `blue`. A failing value is corrected in the theme data, never adjusted at run time.
 
 ## 4. Dashboard (kiosk shell)
+**Navigation (D-082):** a bar along the shorter edge (left in landscape, top in portrait) switches between **Home** (the configured panels below) and **Week** (a table: a row per day for 7 days, a column per person plus "Everyone"; each cell lists that person's events and the tasks due that day). The view is local state. The whole view scrolls, so no panel is cropped when another needs more room. The footer heartbeat is shown in household-local time.
+
 The dashboard is **at-a-glance only** (D-068): date and time, weather with advisories, agenda, tasks, routines, and the household's members. **Nothing derived from email** appears on it: no inbox panel, no titles, senders or approvals, elevated or not. The one exception is a **pending-approvals count badge per adult** on the `members` strip (D-078), which the household setting `dashboard_pending_approvals` (default on) can turn off.
 
 ### 4.1 Layout model
@@ -166,12 +168,11 @@ The layout is data held in `device.settings` and edited by adults in Settings �
   "agenda_days": 3,
   "members": "all" | ["<member-id>", ...],
   "panels": [ {"kind": "clock"}, {"kind": "weather", "hourly": true},
-              {"kind": "advisories"}, {"kind": "agenda"}, {"kind": "week"}, {"kind": "members"} ] }
+              {"kind": "agenda"}, {"kind": "week"}, {"kind": "members"} ] }
 ```
 - **Panels:**
   - `clock` (time, date);
-  - `weather` (now, the next 12 h, and 5–7 days);
-  - `advisories` (coloured by severity). **Not dismissable** by anyone: an advisory disappears when its `valid_until` passes or when the server finds its rule no longer matches the forecast (D-068), arriving as SSE `advisory.updated`;
+  - `weather` (now, the next 12 h, and 5–7 days; before noon household time it also shows today's high, low and rain chance). It carries the **advisories** (coloured by severity, beside "feels like / wind") and a derived notice for a thunderstorm in the forecast (D-082). Advisories are **not dismissable** by anyone: an advisory disappears when its `valid_until` passes or when the server finds its rule no longer matches the forecast (D-068), arriving as SSE `advisory.updated`;
   - `agenda` (today plus the next N days, grouped by day, with member chips and key-date tasks, D-046);
   - `week` (a 7-day column grid, with `until_done` and `always` task chips);
   - `members` (avatars and names of the household, D-070; the entry point for per-member task views and the PIN step-up; adults carry a count-only "to approve" badge when `dashboard_pending_approvals` is on, D-078);
@@ -179,7 +180,7 @@ The layout is data held in `device.settings` and edited by adults in Settings �
 - Completing anything on the dashboard opens the member picker ("who did it?", preselecting the assignee) and needs no PIN while the override is on (D-013, D-019). PIN elevation remains for adult actions on tasks (D-019); it is not used for approvals.
 - **Removed in v4:** the `inbox` panel (D-068). A layout that still names it is ignored like any unknown kind, so older saved layouts keep working.
 - **Presets** ("Family hub", "Calendar wall", "Minimal") fill `panels`. Unknown panel kinds are ignored, so an older client survives a newer layout.
-- **Landscape 1920×1080:** a 12-column grid. The left column (4) holds clock, weather, and advisories, and the right (8) holds agenda or week. **Portrait** stacks them. Type is sized for 2–3 m (base 28 px on the kiosk scale, one kiosk font system).
+- **Landscape 1920×1080:** a 12-column grid. The left column (4) holds clock and weather, and the right (8) holds agenda or week. **Portrait** stacks them. Type is sized for 2–3 m (base 28 px on the kiosk scale, one kiosk font system).
 - The layout editor shows a live, scaled preview of the dashboard with the edited settings.
 
 ### 4.2 Data & resilience

@@ -593,6 +593,10 @@ orientation, theme, agenda length, and add, remove and reorder panels (clock, we
 agenda, week, members, now, member tasks, routine), with a live preview of the device. The layout is stored on the server, so
 the screen picks it up on its next refresh.
 
+The dashboard has a navigation bar on its shorter edge (left in landscape, top in portrait) with two
+views: **Home** (your layout) and **Week** (a table with a row per day and a column per person, plus
+"Everyone"). The view scrolls when its content is taller than the screen.
+
 ## Themes
 **Using it.** Open **Settings, Appearance** (any signed-in member) to pick one of eight palettes:
 Catppuccin, Nord, Dracula, Gruvbox, Solarized, Tokyo Night, Rosé Pine and Kanagawa. The choice

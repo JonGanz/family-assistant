@@ -90,3 +90,4 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-079](D-079-theme-catalogue.md) | The app ships a catalogue of popular terminal themes, as built-in data | accepted | Q-073, Q-076 | arch/Frontend.md |
 | [D-080](D-080-member-hue-colours.md) | Members choose a named hue; existing members migrate to blue | accepted | Q-074 | arch/Frontend.md, arch/Domain.md |
 | [D-081](D-081-theme-per-device.md) | The theme is chosen per device, with an app-shipped default and no household setting | accepted | Q-075 | arch/Frontend.md |
+| [D-082](D-082-dashboard-views.md) | The dashboard has a navigation bar with Home and Week views, and the weather panel carries advisories | accepted | (instruction) | arch/Frontend.md |
