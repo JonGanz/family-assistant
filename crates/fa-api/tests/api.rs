@@ -441,7 +441,7 @@ async fn member_policy_and_versions(pool: PgPool) {
         Method::PATCH,
         &me_uri,
         &[("cookie", &adult), ("if-match", &my_v.to_string())],
-        Some(json!({"avatar": null, "color": "#fff"})),
+        Some(json!({"avatar": null, "color": "red"})),
     )
     .await;
     assert_eq!(mine.status, StatusCode::OK);

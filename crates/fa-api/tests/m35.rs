@@ -201,7 +201,7 @@ fn household_body() -> Value {
 }
 
 fn owner_body() -> Value {
-    json!({"display_name": "Alex", "color": "#3366cc", "username": "alex",
+    json!({"display_name": "Alex", "color": "purple", "username": "alex",
            "password": PW, "pin": "1234"})
 }
 
@@ -1290,4 +1290,43 @@ async fn member_writes_are_adult_only(pool: PgPool) {
         let r = send(&a, m.clone(), &uri, &kid, body).await;
         assert_eq!(r.status, StatusCode::FORBIDDEN, "{m} {uri}: {}", r.text());
     }
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn member_colours_are_hues(pool: PgPool) {
+    let a = app(pool).await;
+    let cookie = setup(&a).await;
+    let post = |body: Value| send(&a, Method::POST, "/api/v1/members", &cookie, Some(body));
+
+    let r = post(json!({"display_name": "Sam", "role": "child", "color": "purple"})).await;
+    assert_eq!(r.status, StatusCode::CREATED, "{}", r.text());
+    assert_eq!(r.json()["color"], "purple");
+    let id = r.json()["id"].as_str().unwrap().to_owned();
+    let v = r.json()["version"].as_i64().unwrap();
+
+    let r = post(json!({"display_name": "Kit", "role": "child", "color": "#ff0000"})).await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{}", r.text());
+
+    let uri = format!("/api/v1/members/{id}");
+    let r = call(
+        &a.router,
+        Method::PATCH,
+        &uri,
+        &[("cookie", cookie.as_str()), ("if-match", &v.to_string())],
+        None,
+        Some(json!({"color": null})),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text());
+    assert!(r.json()["color"].is_null());
+
+    // The setup owner took a hue.
+    let r = send(&a, Method::GET, "/api/v1/members", &cookie, None).await;
+    assert!(
+        r.json()
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|m| m["color"] == "purple")
+    );
 }

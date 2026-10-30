@@ -8,6 +8,7 @@ import MemberChip from '../components/MemberChip.vue'
 import ProgressBar from '../components/tasks/ProgressBar.vue'
 import { useMembersStore } from '../stores/members'
 import { useRoutinesStore } from '../stores/routines'
+import { hueVar } from '../lib/hues'
 import { describeError } from './shared'
 
 const routines = useRoutinesStore()
@@ -25,7 +26,7 @@ const groups = computed(() => {
     let g = out.find((x) => x.id === r.member)
     if (!g) {
       const m = members.items.find((x) => x.id === r.member)
-      g = { id: r.member, name: m?.display_name ?? '?', color: m?.color ?? '#888888', runs: [] }
+      g = { id: r.member, name: m?.display_name ?? '?', color: hueVar(m?.color), runs: [] }
       out.push(g)
     }
     g.runs.push(r)

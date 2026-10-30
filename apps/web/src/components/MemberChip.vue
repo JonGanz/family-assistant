@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { textColorFor } from '../lib/contrast'
+import { textOn } from '../lib/hues'
 
 const props = defineProps<{ name: string; color: string }>()
-const fg = computed(() => textColorFor(props.color))
+const fg = computed(() => textOn(props.color))
 </script>
 
 <template>

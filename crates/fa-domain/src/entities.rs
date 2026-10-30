@@ -4,6 +4,7 @@ use ts_rs::TS;
 
 use crate::ids::*;
 use crate::tasks::NowWeights;
+use crate::theme::Hue;
 
 macro_rules! text_enum {
     ($(#[$m:meta])* $name:ident { $($var:ident),+ $(,)? }) => {
@@ -203,7 +204,7 @@ pub struct Member {
     pub display_name: String,
     pub role: Role,
     pub avatar: Option<String>,
-    pub color: Option<String>,
+    pub color: Option<Hue>,
     pub birthdate: Option<NaiveDate>,
     pub grade: Option<String>,
     pub interests: Vec<String>,
@@ -322,7 +323,9 @@ pub struct MemberPublicDto {
     pub avatar: Option<String>,
     /// `/api/v1/members/{id}/avatar?v=<sha256 prefix>`; set by the API layer.
     pub avatar_url: Option<String>,
-    pub color: Option<String>,
+    #[ts(as = "Option<Hue>", optional = nullable)]
+    #[schema(value_type = Option<Hue>)]
+    pub color: Option<Hue>,
 }
 
 /// Full member view for adults. Never includes the PIN hash.
@@ -334,7 +337,9 @@ pub struct MemberDto {
     pub role: Role,
     pub avatar: Option<String>,
     pub avatar_url: Option<String>,
-    pub color: Option<String>,
+    #[ts(as = "Option<Hue>", optional = nullable)]
+    #[schema(value_type = Option<Hue>)]
+    pub color: Option<Hue>,
     #[ts(type = "string | null")]
     pub birthdate: Option<NaiveDate>,
     pub grade: Option<String>,
@@ -364,7 +369,7 @@ impl From<&Member> for MemberPublicDto {
             role: m.role,
             avatar: m.avatar.clone(),
             avatar_url: None,
-            color: m.color.clone(),
+            color: m.color,
         }
     }
 }
@@ -377,7 +382,7 @@ impl MemberDto {
             role: m.role,
             avatar: m.avatar.clone(),
             avatar_url: None,
-            color: m.color.clone(),
+            color: m.color,
             birthdate: m.birthdate,
             grade: m.grade.clone(),
             interests: m.interests.clone(),

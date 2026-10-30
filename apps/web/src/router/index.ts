@@ -87,6 +87,12 @@ export const routes: RouteRecordRaw[] = [
         meta: user,
       },
       {
+        path: 'appearance',
+        name: 'settings-appearance',
+        component: () => import('../views/SettingsAppearanceView.vue'),
+        meta: user,
+      },
+      {
         path: 'notifications',
         name: 'settings-notifications',
         component: () => import('../views/SettingsNotificationsView.vue'),

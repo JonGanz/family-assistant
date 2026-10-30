@@ -22,6 +22,7 @@ export interface EventLike {
 export interface MemberLike {
   id: string
   display_name: string
+  /** A CSS colour: a `var(--hue-*)` from `hueVar`. */
   color: string
   avatar_url?: string | null
 }

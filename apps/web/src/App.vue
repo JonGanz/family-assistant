@@ -4,6 +4,7 @@ import { useRoute } from 'vue-router'
 import AppLayout from './layouts/AppLayout.vue'
 import KioskLayout from './layouts/KioskLayout.vue'
 import SetupLayout from './layouts/SetupLayout.vue'
+import { useDeviceTheme } from './themes'
 import { useHouseholdStore } from './stores/household'
 import { useLiveStore } from './stores/live'
 import { useSessionStore } from './stores/session'
@@ -11,6 +12,9 @@ import { useSessionStore } from './stores/session'
 const route = useRoute()
 const LAYOUTS = { kiosk: KioskLayout, setup: SetupLayout, app: AppLayout }
 const layout = computed(() => LAYOUTS[route.meta.layout ?? 'app'])
+
+// The kiosk shell's theme comes from device settings, so the bootstrap leaves /dashboard alone.
+useDeviceTheme(() => route.meta.layout !== 'kiosk')
 
 const session = useSessionStore()
 const household = useHouseholdStore()

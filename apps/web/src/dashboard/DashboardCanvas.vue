@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onBeforeUnmount, ref, watchEffect } from 'vue'
+import { applyTheme, loadDeviceChoice, resolveVariant } from '../themes'
 import { panelVisible } from './tasksModel'
-import { burnInOffset, resolveLayout } from './layout'
+import { burnInOffset, normalizeTheme, resolveLayout } from './layout'
 import PanelHost from './panels/PanelHost.vue'
-import { prefersDark, resolveTheme } from './theme'
+import { prefersDark, resolveMode } from './theme'
 import type { DashboardData, DashboardSettings } from './types'
 
 const props = withDefaults(
@@ -13,8 +14,10 @@ const props = withDefaults(
     settings?: DashboardSettings
     now: Date
     burnIn?: boolean
+    /** True on the real /dashboard route: the theme is also applied to the page root. */
+    page?: boolean
   }>(),
-  { settings: undefined, burnIn: false },
+  { settings: undefined, burnIn: false, page: false },
 )
 defineEmits<{
   pick: [id: string]
@@ -28,6 +31,7 @@ const cfg = computed(() => props.settings ?? props.data.settings)
 const areas = computed(() =>
   resolveLayout({
     ...cfg.value,
+    theme: normalizeTheme(cfg.value.theme),
     panels: cfg.value.panels.filter((p) => panelVisible(p, props.data, props.now)),
   }),
 )
@@ -39,26 +43,44 @@ const WEIGHT: Record<string, number> = { clock: 1, weather: 2, advisories: 1, ag
 const portraitRows = computed(() =>
   areas.value.map((a) => `minmax(0, ${WEIGHT[a.panel.kind] ?? 4}fr)`).join(' '),
 )
-const theme = computed(() =>
-  resolveTheme(
-    cfg.value.theme,
-    props.now,
-    props.data.weather?.sunrise_today,
-    props.data.weather?.sunset_today,
-    prefersDark(),
-  ),
+const choice = computed(() => normalizeTheme(cfg.value.theme))
+/** `night` follows sunrise/sunset from the snapshot; without them the browser scheme decides. */
+const variant = computed(() => {
+  const dark = prefersDark()
+  const night =
+    resolveMode(
+      'auto',
+      props.now,
+      props.data.weather?.sunrise_today,
+      props.data.weather?.sunset_today,
+      dark,
+    ) === 'dark'
+  return resolveVariant(choice.value, { prefersDark: dark, night })
+})
+const root = ref<HTMLElement | null>(null)
+watchEffect(
+  () => {
+    if (root.value) applyTheme(variant.value, root.value)
+    if (props.page) applyTheme(variant.value)
+  },
+  { flush: 'post' },
 )
+onBeforeUnmount(() => {
+  // Leaving /dashboard: hand the page back to this device's own choice.
+  if (props.page) applyTheme(resolveVariant(loadDeviceChoice(), { prefersDark: prefersDark() }))
+})
 const shift = computed(() =>
-  props.burnIn && theme.value === 'dark' ? burnInOffset(props.now) : { x: 0, y: 0 },
+  props.burnIn && variant.value.mode === 'dark' ? burnInOffset(props.now) : { x: 0, y: 0 },
 )
 const landscape = computed(() => cfg.value.orientation === 'landscape')
 </script>
 
 <template>
   <div
+    ref="root"
     class="kiosk canvas"
     :class="cfg.orientation"
-    :data-theme="theme"
+    :data-theme="variant.mode"
     :data-orientation="cfg.orientation"
   >
     <div
@@ -130,29 +152,5 @@ const landscape = computed(() => cfg.value.orientation === 'landscape')
 .cell.fill .inner > :deep(*) {
   max-height: 100%;
   overflow: hidden;
-}
-
-/* Local theme tokens so the editor preview can differ from the page theme. */
-.canvas[data-theme='dark'] {
-  color-scheme: dark;
-  --color-bg: #0f1218;
-  --color-surface: #181d26;
-  --color-text: #eef1f6;
-  --color-muted: #9aa4b5;
-  --color-border: #2a3140;
-  --color-accent: #6b9bff;
-  --color-danger: #ff8a80;
-  --color-warning: #ffb74d;
-}
-.canvas[data-theme='light'] {
-  color-scheme: light;
-  --color-bg: #ffffff;
-  --color-surface: #f4f6fa;
-  --color-text: #1b1f27;
-  --color-muted: #5b6472;
-  --color-border: #d8dde6;
-  --color-accent: #2f6fed;
-  --color-danger: #c62828;
-  --color-warning: #b26a00;
 }
 </style>

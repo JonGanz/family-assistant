@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import Avatar from '../../components/Avatar.vue'
 import TaskItem from '../../components/tasks/TaskItem.vue'
+import { hueVar } from '../../lib/hues'
 import { visibleMembers } from '../filter'
 import { S } from '../strings'
 import { memberColumns, toTaskItem } from '../tasksModel'
@@ -23,7 +24,7 @@ const cols = computed(() =>
         <Avatar
           v-if="c.member"
           :name="c.member.display_name"
-          :color="c.member.color ?? '#6b7280'"
+          :color="hueVar(c.member.color)"
           :src="c.member.avatar_url"
           size="1.6em"
         />

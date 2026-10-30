@@ -47,3 +47,17 @@ describe('stripeStyle', () => {
     expect(s.borderImage).toBe('linear-gradient(to bottom, #111111 0% 50%, #222222 50% 100%) 1')
   })
 })
+
+describe('eventColors with hue variables', () => {
+  const hues: MemberLike[] = [{ id: 'a', display_name: 'A', color: 'var(--hue-green)' }]
+  it('falls back from a calendar hex colour to the member hue', () => {
+    expect(eventColors({ color: '#abcdef', members: ['a'] }, hues, 'var(--hue-blue)')).toEqual([
+      '#abcdef',
+    ])
+    expect(eventColors({ members: ['a'] }, hues, 'var(--hue-blue)')).toEqual(['var(--hue-green)'])
+  })
+  it('a merged event may mix hex and variables', () => {
+    const ev = { colors: ['#aa0000', 'var(--hue-green)'], merged: true, members: ['a'] }
+    expect(eventColors(ev, hues, 'var(--hue-blue)')).toEqual(['#aa0000', 'var(--hue-green)'])
+  })
+})

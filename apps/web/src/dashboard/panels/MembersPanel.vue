@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import Avatar from '../../components/Avatar.vue'
+import { hueVar } from '../../lib/hues'
 import { avatarSrc } from '../avatars'
 import { approvalCounts, visibleMembers } from '../filter'
 import { S } from '../strings'
@@ -27,12 +28,7 @@ watch(
     <ul>
       <li v-for="m in members" :key="m.id">
         <button type="button" :data-member="m.id" @click="$emit('pick', m.id)">
-          <Avatar
-            :name="m.display_name"
-            :color="m.color ?? '#6b7280'"
-            :src="srcs[m.id]"
-            size="2.2em"
-          />
+          <Avatar :name="m.display_name" :color="hueVar(m.color)" :src="srcs[m.id]" size="2.2em" />
           <span>{{ m.display_name }}</span>
           <span
             v-if="counts[m.id]"
@@ -61,7 +57,7 @@ ul {
   padding: 0 var(--space-2);
   border-radius: 999px;
   background: var(--color-accent);
-  color: var(--color-bg, #fff);
+  color: var(--color-bg);
   font-size: var(--font-size-sm);
   text-align: center;
 }

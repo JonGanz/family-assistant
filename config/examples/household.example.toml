@@ -17,6 +17,7 @@ units = "metric"
 
 [[members]]
 key = "alex"
+color = "purple"
 display_name = "Alex"
 role = "adult"
 birthdate = "1985-04-12"
@@ -35,6 +36,7 @@ responsibilities = ["meal planning", "medical appointments"]
 
 [[members]]
 key = "riley"
+color = "green"
 display_name = "Riley"
 role = "child"
 birthdate = "2016-06-03"

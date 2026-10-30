@@ -1,17 +1,27 @@
+/* First-paint defaults: Catppuccin Latte (see themes/families); dark under prefers-color-scheme */
 :root {
-    --color-bg: #ffffff;
-    --color-surface: #f4f6fa;
-    --color-text: #1b1f27;
-    --color-muted: #5b6472;
-    --color-border: #d8dde6;
-    --color-accent: #2f6fed;
+    --color-bg: #eff1f5;
+    --color-surface: #e6e9ef;
+    --color-surface-2: #dce0e8;
+    --color-text: #4c4f69;
+    --color-muted: #5c5f77;
+    --color-border: #bcc0cc;
+    --hue-red: #d20f39;
+    --hue-orange: #c2410c;
+    --hue-yellow: #8f5a0a;
+    --hue-green: #2f7d1f;
+    --hue-cyan: #179299;
+    --hue-blue: #1e66f5;
+    --hue-purple: #8839ef;
+    --hue-pink: #b8449a;
+    --color-accent: #1e66f5;
     --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
 
     /* Kiosk scale: readable at 1920x1080 from across a room */
     --kiosk-font-base: 1.75rem;
     --kiosk-font-title: 4rem;
     --kiosk-font-small: 1.5rem;
-    color-scheme: light dark;
+    color-scheme: light;
 
     /* ---- Design tokens (M1) ---- */
     --space-1: 0.25rem;
@@ -29,52 +39,39 @@
     --font-size-lg: 1.25rem;
     --font-size-xl: 1.75rem;
     --font-size-2xl: 2.5rem;
-    --color-danger: #c62828;
-    --color-warning: #9a5b00;
-    --color-success: #2e7d32;
-    --color-focus: #1a4fc4;
+    --color-danger: #d20f39;
+    --color-warning: #8f5a0a;
+    --color-success: #2f7d1f;
+    --color-focus: #1e66f5;
     --color-on-accent: #ffffff;
     --min-touch: 44px;
 }
 
 @media (prefers-color-scheme: dark) {
-    :root:not([data-theme='light']) {
-        --color-bg: #0f1218;
-        --color-surface: #181d26;
-        --color-text: #eef1f6;
-        --color-muted: #9aa4b5;
-        --color-border: #2a3140;
-        --color-accent: #6b9bff;
-        --color-focus: #9dbbff;
-        --color-danger: #ff6b6b;
-        --color-warning: #ffb74d;
-        --color-success: #66bb6a;
+    :root {
+        /* Catppuccin Mocha; applyTheme overrides inline once the app boots */
+        color-scheme: dark;
+        --color-bg: #1e1e2e;
+        --color-surface: #181825;
+        --color-surface-2: #11111b;
+        --color-text: #cdd6f4;
+        --color-muted: #a6adc8;
+        --color-border: #45475a;
+        --color-on-accent: #11111b;
+        --hue-red: #f38ba8;
+        --hue-orange: #fab387;
+        --hue-yellow: #f9e2af;
+        --hue-green: #a6e3a1;
+        --hue-cyan: #94e2d5;
+        --hue-blue: #89b4fa;
+        --hue-purple: #cba6f7;
+        --hue-pink: #f5c2e7;
+        --color-accent: #89b4fa;
+        --color-focus: #89b4fa;
+        --color-danger: #f38ba8;
+        --color-warning: #f9e2af;
+        --color-success: #a6e3a1;
     }
-}
-
-:root[data-theme='light'] {
-    color-scheme: light;
-    --color-bg: #ffffff;
-    --color-surface: #f4f6fa;
-    --color-text: #1b1f27;
-    --color-muted: #5b6472;
-    --color-border: #d8dde6;
-    --color-accent: #2f6fed;
-    --color-focus: #1a4fc4;
-}
-
-:root[data-theme='dark'] {
-    color-scheme: dark;
-    --color-bg: #0f1218;
-    --color-surface: #181d26;
-    --color-text: #eef1f6;
-    --color-muted: #9aa4b5;
-    --color-border: #2a3140;
-    --color-accent: #6b9bff;
-    --color-focus: #9dbbff;
-    --color-danger: #ff6b6b;
-    --color-warning: #ffb74d;
-    --color-success: #66bb6a;
 }
 
 *,

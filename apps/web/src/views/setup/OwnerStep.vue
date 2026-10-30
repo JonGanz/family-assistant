@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { api } from '../../api/client'
 import { problemCode } from '../../api/http'
+import HuePicker from '../../components/HuePicker.vue'
 import ErrorBanner from '../../components/ErrorBanner.vue'
 import { useSessionStore } from '../../stores/session'
 import { useSetupStore } from '../../stores/setup'
@@ -28,7 +29,7 @@ async function next() {
   try {
     await api.setupOwner({
       display_name: f.display_name.trim(),
-      color: f.color || null,
+      color: f.color,
       username: f.username.trim(),
       password: f.password,
       pin: f.pin || null,
@@ -61,7 +62,7 @@ async function next() {
       <input v-model="f.display_name" name="display_name" autocomplete="name" required />
     </label>
     <p v-if="errors.display_name" class="text-danger" role="alert">{{ errors.display_name }}</p>
-    <label class="field">Colour <input v-model="f.color" name="color" type="color" /></label>
+    <HuePicker v-model="f.color" name="color" />
     <label class="field">
       Username
       <input v-model="f.username" name="username" autocomplete="username" required />

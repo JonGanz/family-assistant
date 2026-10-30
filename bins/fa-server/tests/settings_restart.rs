@@ -156,7 +156,7 @@ async fn setup(http: &reqwest::Client, base: &str) -> String {
         "/api/v1/setup/owner",
         "",
         Some(
-            json!({"display_name": "Alex", "color": "#3366cc", "username": "alex",
+            json!({"display_name": "Alex", "color": "blue", "username": "alex",
                     "password": PW, "pin": "1234"}),
         ),
     )

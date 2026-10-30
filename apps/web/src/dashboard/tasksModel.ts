@@ -1,13 +1,13 @@
+import { hueVar } from '../lib/hues'
 import { addDays, dayKey, startOfDay } from '../lib/time'
 import type { MemberRef, TaskItemModel } from '../lib/tasks'
 import type { PanelConfig } from './layout'
 import type { DashboardData, MemberPublic, RoutineRunView, TaskView } from './types'
 
-const FALLBACK = '#6b7280'
 export const DEFAULT_NOW_SIZE = 7
 
 export function toMemberRef(m: MemberPublic): MemberRef {
-  return { id: m.id, name: m.display_name, color: m.color ?? FALLBACK, avatarUrl: m.avatar_url }
+  return { id: m.id, name: m.display_name, color: hueVar(m.color), avatarUrl: m.avatar_url }
 }
 
 export function toTaskItem(t: TaskView, members: MemberPublic[]): TaskItemModel {

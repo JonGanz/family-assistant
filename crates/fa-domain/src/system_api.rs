@@ -11,6 +11,7 @@ use ts_rs::TS;
 use utoipa::ToSchema;
 
 use crate::entities::Units;
+use crate::theme::Hue;
 
 macro_rules! dto {
     ($(#[$m:meta])* $v:vis struct $name:ident { $($body:tt)* }) => {
@@ -64,9 +65,10 @@ dto!(
 dto!(
     pub struct NewSetupOwner {
         pub display_name: String,
-        /// `#rrggbb`.
-        #[ts(optional = nullable)]
-        pub color: Option<String>,
+        /// A hue name.
+        #[ts(as = "Option<Hue>", optional = nullable)]
+        #[schema(value_type = Option<Hue>)]
+        pub color: Option<Hue>,
         pub username: String,
         pub password: String,
         /// 4 to 6 digits.

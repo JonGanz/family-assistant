@@ -151,13 +151,6 @@ impl AuthService {
                 "username must be 1 to 64 characters".into(),
             ));
         }
-        if let Some(c) = &new.color
-            && !(c.len() == 7
-                && c.starts_with('#')
-                && c[1..].chars().all(|x| x.is_ascii_hexdigit()))
-        {
-            return Err(AuthError::Invalid("color must look like #rrggbb".into()));
-        }
         validate_password(Role::Adult, &new.password)?;
         if let Some(pin) = &new.pin {
             validate_pin(pin)?;
@@ -180,7 +173,7 @@ impl AuthService {
             display_name,
             role: Role::Adult,
             avatar: None,
-            color: new.color.clone(),
+            color: new.color,
             birthdate: None,
             grade: None,
             interests: vec![],

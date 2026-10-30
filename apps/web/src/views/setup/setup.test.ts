@@ -76,3 +76,13 @@ describe('resume', () => {
     expect(resumeStep(status(), 99)).toBe(7)
   })
 })
+
+describe('owner colour', () => {
+  it('defaults to blue and accepts only hue names', () => {
+    const o = { ...emptyOwner(), display_name: 'Pat', username: 'pat', password: 'x'.repeat(12) }
+    o.again = o.password
+    expect(o.color).toBe('blue')
+    expect(validateOwner(o).color).toBeUndefined()
+    expect(validateOwner({ ...o, color: '#2f6fed' as never }).color).toBeDefined()
+  })
+})

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { textColorFor } from '../../lib/contrast'
+import { textOn } from '../../lib/hues'
 import { dayKey, formatRange, groupByDay } from '../../lib/time'
 import { toEventLike, toMemberLike, visibleEvents } from '../filter'
 import { S } from '../strings'
@@ -49,9 +49,7 @@ const cols = computed(() => {
           :key="e.id ?? i"
           :class="{ busy: e.visibility === 'busy' }"
           :style="
-            e.visibility === 'busy'
-              ? undefined
-              : { background: e.color, color: textColorFor(e.color) }
+            e.visibility === 'busy' ? undefined : { background: e.color, color: textOn(e.color) }
           "
         >
           <span class="t">{{ formatRange(e, tz) }}</span>

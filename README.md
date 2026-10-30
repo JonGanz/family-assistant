@@ -7,7 +7,7 @@ on a wall dashboard and on everyone's phone.
 Everything runs locally. Deterministic rules do most of the work, and local AI models help only
 where rules can't decide.
 
-> **Status:** M3.5 (onboarding) is code-complete: one compose file, a first-run wizard and optional Tailscale and HTTPS. M3 (mail ingest) is code-complete. On top of the M0 platform (login, members, dashboard
+> **Status:** M3.6 (themes) is code-complete. M3.5 (onboarding) is code-complete: one compose file, a first-run wizard and optional Tailscale and HTTPS. M3 (mail ingest) is code-complete. On top of the M0 platform (login, members, dashboard
 > device pairing with PIN elevation, the job queue, backups, CI), M1 (calendars: Google, CalDAV,
 > ICS; the weather forecast with rule-based advisories; a real dashboard) and M2 (task lists,
 > recurring chores, routines, the "Now" list, weather tasks, ntfy push notifications) it reads
@@ -593,6 +593,27 @@ orientation, theme, agenda length, and add, remove and reorder panels (clock, we
 agenda, week, members, now, member tasks, routine), with a live preview of the device. The layout is stored on the server, so
 the screen picks it up on its next refresh.
 
+## Themes
+**Using it.** Open **Settings, Appearance** (any signed-in member) to pick one of eight palettes:
+Catppuccin, Nord, Dracula, Gruvbox, Solarized, Tokyo Night, Rosé Pine and Kanagawa. The choice
+applies at once and is saved **per device** in the browser (`localStorage`, key `fa.theme`); it does
+not follow you to another device, and there is no household default (Catppuccin, automatic
+light/dark, is what a device uses until a choice is made). A family with both light and dark
+variants follows the device's light/dark setting in `auto`, or the mode you pick; a family with one
+variant (Nord) always uses it. The kiosk's theme is set by an adult in **Settings, Devices, Edit
+layout** (family, variant and mode; `auto` is dark between sunset and sunrise). A member's colour
+is one of eight hue names (red, orange, yellow, green, cyan, blue, purple, pink), drawn in the
+active theme's shade.
+
+**Adding a family** (contributors). Add `apps/web/src/themes/families/<id>.ts` exporting a
+`ThemeFamily` (`id` matching `^[a-z0-9][a-z0-9-]{0,31}$`, `label`, `source` URL, `license`, and
+`variants`; each variant has `neutrals` and all eight `hues` as `#rrggbb`, from the project's
+published palette; mark anything derived in a comment), then list it in `FAMILIES` in
+`apps/web/src/themes/families/index.ts`. The contrast test checks every variant (text and muted at
+4.5:1 on bg and surfaces, each hue at 3:1 on bg, on-accent on blue at 4.5:1):
+`cd apps/web && corepack pnpm@9 test src/themes`. Record the source and licence in
+`research/R-002-theme-palettes.md`.
+
 ## Configuration reference
 Settings come from environment variables (`FA_*` and `DATABASE_URL`), and an optional `fa.toml`
 (path in `FA_CONFIG`; a key set there counts as an environment value). Local defaults are in
@@ -802,6 +823,7 @@ repository**. Examples use `example.com`.
 | M2 | Tasks and chores (rotation, pools), routines, the Now list, ntfy notifications | ✅ code-complete ([plan](plan/M2.md)) |
 | M3 | Email ingest (Gmail API or IMAP), rules pipeline, bills, school and teacher linking, event approvals | ✅ code-complete ([plan](plan/M3.md)) |
 | M3.5 | Onboarding (one compose file, optional Tailscale sidecar, optional HTTPS, first-run wizard) and a real-hardware shakedown (D-065, D-066) | ✅ code-complete; the shakedown on the real server (H-12 to H-14, then H-02 to H-11) is pending ([plan](plan/M3.5.md), [human steps](plan/human-steps.md)) |
+| M3.6 | Themes: eight palette families, a per-device choice, a named hue per member, the kiosk on the same catalogue (D-079 to D-081) | code-complete; integration (CI, e2e, compose smoke) is pending ([plan](plan/M3.6.md)) |
 | M4 | AI, minimal slice: one System One model and one local LLM behind the pipeline (D-067) | |
 | M4.1 | AI platform: backend registry, hardware probe, GPU node wake and gaming detection, eval harness | |
 | M5 | Recipes, meal plan, grocery list | |

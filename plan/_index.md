@@ -1,6 +1,6 @@
 ---
 title: Plans Index
-updated: 2026-10-26
+updated: 2026-10-29
 ---
 
 # Plans
@@ -16,6 +16,7 @@ There is one plan per milestone (`M<n>.md`). Its sub-agent task briefs are in `M
 | M2 Tasks | [M2.md](M2.md) | code-complete, awaiting human steps H-08, H-09 | [M2/](M2/): T-01 to T-14 (+ `_rules.md`), plus human steps H-08, H-09 |
 | M3 Ingest | [M3.md](M3.md) | code-complete, awaiting human steps H-10, H-11 | [M3/](M3/): T-01 to T-15 (+ `_rules.md`), plus human steps H-10, H-11 |
 | M3.5 Onboarding and shakedown | [M3.5.md](M3.5.md) | code-complete, awaiting human steps H-12 to H-14, then the shakedown (H-02 to H-11 redone on the new install, U-16, a week of inbox numbers) | [M3.5/](M3.5/): T-01 to T-10 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)), plus human steps H-12 to H-14 and the shakedown |
+| M3.6 Themes | [M3.6.md](M3.6.md) | code-complete; e2e, clippy and tests green, compose-smoke pending (D-079 to D-081) | [M3.6/](M3.6/): T-01 to T-08 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)); T-09 integration is the main session |
 
 ## Reviews
 Time-boxed review sessions (CLAUDE.md workflow 7). Each file has findings tables with IDs, sizes and status.

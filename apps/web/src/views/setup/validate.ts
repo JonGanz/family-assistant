@@ -1,4 +1,5 @@
-import { ADULT_PASSWORD_MIN, isHexColor, isPin } from '../parts/memberForm'
+import { isHue, type Hue } from '../../lib/hues'
+import { ADULT_PASSWORD_MIN, isPin } from '../parts/memberForm'
 
 export interface HouseholdForm {
   name: string
@@ -12,7 +13,7 @@ export interface HouseholdForm {
 
 export interface OwnerForm {
   display_name: string
-  color: string
+  color: Hue
   username: string
   password: string
   again: string
@@ -37,7 +38,7 @@ export const emptyHousehold = (): HouseholdForm => ({
 
 export const emptyOwner = (): OwnerForm => ({
   display_name: '',
-  color: '#2f6fed',
+  color: 'blue',
   username: '',
   password: '',
   again: '',
@@ -73,6 +74,6 @@ export function validateOwner(f: OwnerForm): Record<string, string> {
     e.password = `Use at least ${ADULT_PASSWORD_MIN} characters.`
   else if (f.password !== f.again) e.again = 'The passwords do not match.'
   if (f.pin && !isPin(f.pin)) e.pin = 'A PIN is 4 to 6 digits.'
-  if (f.color && !isHexColor(f.color)) e.color = 'Pick a colour.'
+  if (!isHue(f.color)) e.color = 'Pick a colour.'
   return e
 }

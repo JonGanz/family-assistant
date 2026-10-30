@@ -20,6 +20,7 @@ pub mod routines;
 pub mod system_api;
 pub mod tasks;
 pub mod tasks_api;
+pub mod theme;
 pub mod timefmt;
 pub mod validation;
 
@@ -35,4 +36,5 @@ pub use oauth::*;
 pub use pipeline::*;
 pub use system_api::*;
 pub use tasks_api::*;
+pub use theme::*;
 pub use validation::*;

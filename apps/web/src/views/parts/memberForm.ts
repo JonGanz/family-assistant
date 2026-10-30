@@ -9,8 +9,6 @@ export const passwordMin = (role: string): number =>
 
 export const isPin = (s: string): boolean => /^\d{4,6}$/.test(s)
 
-export const isHexColor = (s: string): boolean => /^#[0-9a-fA-F]{6}$/.test(s)
-
 export interface NewMemberFields {
   display_name: string
   role: string

@@ -365,3 +365,14 @@ async fn create_household_makes_defaults_and_validates(pool: PgPool) {
     bad.tz = "Mars/Base".into();
     assert!(create_household(&store, &bad).await.is_err());
 }
+
+#[test]
+fn legacy_hex_member_colour_maps_to_blue() {
+    let legacy = EXAMPLE.replace("color = \"purple\"", "color = \"#4c8bf5\"");
+    let cfg = HouseholdConfig::from_toml(&legacy).unwrap();
+    assert_eq!(cfg.members[0].color, Some(fa_domain::theme::Hue::Blue));
+    let out = cfg.to_toml().unwrap();
+    assert!(out.contains("color = \"blue\""), "{out}");
+    let bad = EXAMPLE.replace("color = \"purple\"", "color = \"mauve\"");
+    assert!(HouseholdConfig::from_toml(&bad).is_err());
+}

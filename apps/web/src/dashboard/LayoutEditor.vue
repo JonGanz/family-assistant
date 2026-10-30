@@ -4,14 +4,22 @@ import {
   addPanel,
   applyPreset,
   clampDays,
+  FAMILY_OPTIONS,
   isValid,
   movePanel,
   panelHasId,
   removePanel,
   setPanelOption,
+  themeControls,
+  themeOf,
   toggleMember,
   togglePanelId,
+  withFamily,
+  withMode,
+  withVariant,
 } from './editor'
+import { prefersDark } from './theme'
+import type { ThemeChoice } from '../themes'
 import { KNOWN_PANELS, PRESETS } from './layout'
 import { S } from './strings'
 import type { DashboardSettings, MemberPublic, TaskListView } from './types'
@@ -28,6 +36,9 @@ const s = computed(() => props.modelValue)
 const memberIds = computed(() => props.members.map((m) => m.id))
 const listIds = computed(() => (props.lists ?? []).map((l) => l.id))
 const toAdd = ref('')
+const theme = computed(() => themeOf(s.value))
+const controls = computed(() => themeControls(theme.value, { prefersDark: prefersDark() }))
+const setTheme = (t: ThemeChoice) => set({ ...s.value, theme: t })
 const valid = computed(() => isValid(s.value))
 const known = (k: string) => KNOWN_PANELS.includes(k)
 
@@ -76,15 +87,37 @@ function preset(e: Event) {
         </select>
       </label>
       <label
-        >{{ S.theme }}
+        >{{ S.themeFamily }}
+        <select
+          data-testid="theme-family"
+          :value="theme.family"
+          @change="setTheme(withFamily(theme, ($event.target as HTMLSelectElement).value))"
+        >
+          <option v-for="f in FAMILY_OPTIONS" :key="f.id" :value="f.id">{{ f.label }}</option>
+          <option v-if="!FAMILY_OPTIONS.some((f) => f.id === theme.family)" :value="theme.family">
+            {{ theme.family }}
+          </option>
+        </select>
+      </label>
+      <label v-if="controls.showVariant"
+        >{{ S.themeVariant }}
+        <select
+          data-testid="theme-variant"
+          :value="controls.current.id"
+          @change="setTheme(withVariant(theme, ($event.target as HTMLSelectElement).value))"
+        >
+          <option v-for="v in controls.variants" :key="v.id" :value="v.id">{{ v.label }}</option>
+        </select>
+      </label>
+      <label v-if="controls.showMode"
+        >{{ S.themeMode }}
         <select
           data-testid="theme"
-          :value="s.theme"
+          :value="theme.mode"
           @change="
-            set({
-              ...s,
-              theme: ($event.target as HTMLSelectElement).value as DashboardSettings['theme'],
-            })
+            setTheme(
+              withMode(theme, ($event.target as HTMLSelectElement).value as ThemeChoice['mode']),
+            )
           "
         >
           <option value="auto">{{ S.themeAuto }}</option>

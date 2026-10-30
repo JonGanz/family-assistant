@@ -45,6 +45,16 @@ export const S = {
   themeAuto: 'Auto (dark after sunset)',
   themeLight: 'Light',
   themeDark: 'Dark',
+  themeFamily: 'Theme',
+  themeVariant: 'Variant',
+  themeMode: 'Mode',
+  // appearance page
+  appearanceTitle: 'Appearance',
+  appearanceDeviceOnly:
+    'This choice is for this device only. Wall screens have their own theme in their layout.',
+  onlyDark: 'This theme only has a dark variant.',
+  onlyLight: 'This theme only has a light variant.',
+  themeInUse: 'In use',
   agendaDays: 'Agenda days',
   memberFilter: 'Members shown',
   allMembers: 'Everyone',

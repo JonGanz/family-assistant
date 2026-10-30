@@ -76,7 +76,7 @@ const runs = computed(() =>
   border-radius: var(--radius-md);
 }
 .col.complete {
-  outline: 3px solid var(--color-success, #2e9e5b);
+  outline: 3px solid var(--color-success);
 }
 h2 {
   margin: 0;
@@ -90,7 +90,7 @@ h2 {
 .celebrate {
   margin: 0;
   font-size: var(--kiosk-font-base);
-  color: var(--color-success, #2e9e5b);
+  color: var(--color-success);
   font-weight: 600;
 }
 ul {
@@ -117,7 +117,7 @@ ul {
   cursor: pointer;
 }
 .step.on {
-  border-color: var(--color-success, #2e9e5b);
+  border-color: var(--color-success);
   color: var(--color-muted);
 }
 .step.on .text {
@@ -137,8 +137,8 @@ ul {
   font-weight: 700;
 }
 .on .box {
-  background: var(--color-success, #2e9e5b);
-  border-color: var(--color-success, #2e9e5b);
+  background: var(--color-success);
+  border-color: var(--color-success);
   color: var(--color-on-accent);
 }
 @media (prefers-reduced-motion: no-preference) {

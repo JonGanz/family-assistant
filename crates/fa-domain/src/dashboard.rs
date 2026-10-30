@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::ids::MemberId;
+use crate::theme::{ThemeChoice, is_theme_id};
 
 pub const MAX_PANELS: usize = 12;
 pub const MAX_AGENDA_DAYS: u8 = 14;
@@ -13,14 +14,6 @@ pub const MAX_AGENDA_DAYS: u8 = 14;
 pub enum Orientation {
     Landscape,
     Portrait,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum DashboardTheme {
-    Auto,
-    Light,
-    Dark,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
@@ -61,12 +54,14 @@ pub enum SettingsError {
     AgendaDays,
     #[error("at most {MAX_PANELS} panels")]
     TooManyPanels,
+    #[error("theme family and variant must match ^[a-z0-9][a-z0-9-]{{0,31}}$")]
+    ThemeId,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct DashboardSettings {
     pub orientation: Orientation,
-    pub theme: DashboardTheme,
+    pub theme: ThemeChoice,
     pub agenda_days: u8,
     pub members: MemberSelection,
     pub panels: Vec<Panel>,
@@ -81,6 +76,15 @@ impl DashboardSettings {
         if self.panels.len() > MAX_PANELS {
             return Err(SettingsError::TooManyPanels);
         }
+        if !is_theme_id(&self.theme.family)
+            || self
+                .theme
+                .variant
+                .as_deref()
+                .is_some_and(|v| !is_theme_id(v))
+        {
+            return Err(SettingsError::ThemeId);
+        }
         Ok(())
     }
 }
@@ -91,7 +95,7 @@ impl Default for DashboardSettings {
         use serde_json::json;
         Self {
             orientation: Orientation::Landscape,
-            theme: DashboardTheme::Auto,
+            theme: ThemeChoice::default(),
             agenda_days: 3,
             members: MemberSelection::All(AllMarker::All),
             panels: vec![
@@ -138,9 +142,21 @@ mod tests {
     }
 
     #[test]
+    fn theme_id_validated() {
+        let mut s = DashboardSettings::default();
+        s.theme.family = "Nord".into();
+        assert_eq!(s.validate(), Err(SettingsError::ThemeId));
+        s.theme.family = "nord".into();
+        s.theme.variant = Some("a b".into());
+        assert_eq!(s.validate(), Err(SettingsError::ThemeId));
+        s.theme.variant = Some("polar".into());
+        assert!(s.validate().is_ok());
+    }
+
+    #[test]
     fn unknown_panels_round_trip() {
         let j = serde_json::json!({
-            "orientation": "portrait", "theme": "dark", "agenda_days": 5,
+            "orientation": "portrait", "theme": {"family": "catppuccin", "mode": "dark"}, "agenda_days": 5,
             "members": "all",
             "panels": [{"kind": "clock"}, {"kind": "hologram", "depth": 3, "opts": {"a": [1, 2]}}]
         });

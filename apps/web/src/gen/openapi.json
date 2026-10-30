@@ -8909,9 +8909,13 @@
             "format": "date"
           },
           "color": {
-            "type": [
-              "string",
-              "null"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Hue"
+              }
             ]
           },
           "display_name": {
@@ -9028,17 +9032,9 @@
             }
           },
           "theme": {
-            "$ref": "#/components/schemas/DashboardTheme"
+            "$ref": "#/components/schemas/ThemeChoice"
           }
         }
-      },
-      "DashboardTheme": {
-        "type": "string",
-        "enum": [
-          "auto",
-          "light",
-          "dark"
-        ]
       },
       "DashboardView": {
         "type": "object",
@@ -10226,6 +10222,20 @@
           }
         ],
         "description": "`HouseholdView` plus the dashboard approvals switch (D-068)."
+      },
+      "Hue": {
+        "type": "string",
+        "description": "One of eight named hues; each theme supplies its own shade (wire: lowercase name).",
+        "enum": [
+          "red",
+          "orange",
+          "yellow",
+          "green",
+          "cyan",
+          "blue",
+          "purple",
+          "pink"
+        ]
       },
       "ImapSettings": {
         "type": "object",
@@ -11488,9 +11498,13 @@
             "format": "date"
           },
           "color": {
-            "type": [
-              "string",
-              "null"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Hue"
+              }
             ]
           },
           "display_name": {
@@ -11582,9 +11596,13 @@
             "description": "`/api/v1/members/{id}/avatar?v=<sha256 prefix>`; set by the API layer."
           },
           "color": {
-            "type": [
-              "string",
-              "null"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Hue"
+              }
             ]
           },
           "display_name": {
@@ -11964,11 +11982,15 @@
         ],
         "properties": {
           "color": {
-            "type": [
-              "string",
-              "null"
-            ],
-            "description": "`#rrggbb`."
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Hue",
+                "description": "A hue name."
+              }
+            ]
           },
           "display_name": {
             "type": "string"
@@ -12909,9 +12931,13 @@
             "format": "date"
           },
           "color": {
-            "type": [
-              "string",
-              "null"
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Hue"
+              }
             ]
           },
           "display_name": {
@@ -15257,6 +15283,37 @@
             "format": "date-time"
           }
         }
+      },
+      "ThemeChoice": {
+        "type": "object",
+        "description": "A device's theme. Reads the legacy string form; always writes the object.",
+        "required": [
+          "family",
+          "mode"
+        ],
+        "properties": {
+          "family": {
+            "type": "string",
+            "description": "Slug, `^[a-z0-9][a-z0-9-]{0,31}$`."
+          },
+          "mode": {
+            "$ref": "#/components/schemas/ThemeMode"
+          },
+          "variant": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ThemeMode": {
+        "type": "string",
+        "enum": [
+          "auto",
+          "light",
+          "dark"
+        ]
       },
       "Units": {
         "type": "string",

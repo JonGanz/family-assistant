@@ -137,7 +137,7 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 
 ## 3d. Themes (D-079, D-080, D-081)
 **Catalogue.** `themes/` holds one data file per family: Catppuccin, Nord, Dracula, Gruvbox, Solarized, Tokyo Night, Rosé Pine, Kanagawa. A family lists the light and/or dark variants its project publishes (Catppuccin has Latte and three dark flavours). Every variant fills the same tokens:
-- **neutrals:** `bg`, `surface`, `surface-2`, `border`, `muted`, `text`;
+- **neutrals:** `bg`, `surface`, `surface-2`, `border`, `muted`, `text`, `on-accent` (text on a hue-coloured fill);
 - **hues:** `red`, `orange`, `yellow`, `green`, `cyan`, `blue`, `purple`, `pink`. A palette without a native hue supplies its nearest colour.
 
 `applyTheme` writes the tokens as CSS custom properties on `<html>` (`--color-bg`, `--color-surface`, `--color-text`, `--hue-red`…). The existing names in `base.css` stay as aliases, so components keep working: `--color-accent` is the `blue` hue, and `--color-danger`, `--color-warning` and `--color-success` are `red`, `yellow` and `green`. Source and licence of each palette are recorded next to its file.

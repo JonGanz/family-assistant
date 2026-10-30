@@ -1041,7 +1041,10 @@ async fn dashboard_shape_and_device_settings(pool: PgPool) {
     // Adults edit the device settings; the dashboard follows.
     let uri = format!("/api/v1/devices/{}", fx.device);
     let dev = as_(&fx, Adult, Method::GET, &uri, None).await;
-    assert_eq!(dev.json()["settings"]["theme"], "auto");
+    assert_eq!(
+        dev.json()["settings"]["theme"],
+        json!({"family": "catppuccin", "mode": "auto"})
+    );
     let v = dev.json()["version"].to_string();
     let settings = json!({"orientation": "portrait", "theme": "dark", "agenda_days": 5,
         "members": [fx.child], "panels": [{"kind": "clock"}, {"kind": "hologram", "depth": 3}]});
@@ -1076,6 +1079,11 @@ async fn dashboard_shape_and_device_settings(pool: PgPool) {
     assert_eq!(r.json()["name"], "Fridge");
     let r = as_(&fx, Device, Method::GET, "/api/v1/dashboard", None).await;
     assert_eq!(r.json()["settings"]["agenda_days"], 5);
+    // The legacy string "dark" is stored and returned as the object form.
+    assert_eq!(
+        r.json()["settings"]["theme"],
+        json!({"family": "catppuccin", "mode": "dark"})
+    );
     assert_eq!(r.json()["settings"]["members"], json!([fx.child]));
     assert_eq!(r.json()["settings"]["panels"][1]["depth"], 3);
 }

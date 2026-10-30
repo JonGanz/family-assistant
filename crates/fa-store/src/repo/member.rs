@@ -1,5 +1,5 @@
 use chrono::{DateTime, NaiveDate, Utc};
-use fa_domain::{HouseholdId, Member, MemberId};
+use fa_domain::{HouseholdId, Hue, Member, MemberId};
 use sqlx::PgConnection;
 use uuid::Uuid;
 
@@ -37,6 +37,11 @@ struct Row {
     updated_at: DateTime<Utc>,
 }
 
+fn parse_hue(s: &str) -> Result<Hue> {
+    s.parse()
+        .map_err(|_| StoreError::Corrupt(format!("hue {s}")))
+}
+
 impl TryFrom<Row> for Versioned<Member> {
     type Error = StoreError;
     fn try_from(r: Row) -> Result<Self> {
@@ -48,7 +53,7 @@ impl TryFrom<Row> for Versioned<Member> {
                 display_name: r.display_name,
                 role: parse_role(&r.role)?,
                 avatar: r.avatar,
-                color: r.color,
+                color: r.color.as_deref().map(parse_hue).transpose()?,
                 birthdate: r.birthdate,
                 grade: r.grade,
                 interests: r.interests,
@@ -89,7 +94,7 @@ impl MemberRepo {
             m.display_name,
             role_str(m.role),
             m.avatar,
-            m.color,
+            m.color.map(Hue::as_str),
             m.birthdate,
             m.grade,
             &m.interests,
@@ -178,7 +183,7 @@ impl MemberRepo {
             m.display_name,
             role_str(m.role),
             m.avatar,
-            m.color,
+            m.color.map(Hue::as_str),
             m.birthdate,
             m.grade,
             &m.interests,

@@ -4,7 +4,7 @@ export type ThemeSetting = 'auto' | 'light' | 'dark'
  * `auto` is dark between sunset and sunrise (from the weather snapshot). Without sun times it
  * falls back to the browser's colour scheme.
  */
-export function resolveTheme(
+export function resolveMode(
   theme: ThemeSetting,
   now: Date,
   sunrise?: string | null,

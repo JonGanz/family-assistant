@@ -348,7 +348,7 @@ pub struct CreateMemberReq {
     #[schema(value_type = String)]
     pub role: Role,
     pub avatar: Option<String>,
-    pub color: Option<String>,
+    pub color: Option<fa_domain::theme::Hue>,
     #[schema(value_type = Option<String>, format = Date)]
     pub birthdate: Option<NaiveDate>,
     pub grade: Option<String>,
@@ -472,8 +472,8 @@ pub struct PatchMemberReq {
     #[schema(value_type = Option<String>)]
     pub avatar: Option<Option<String>>,
     #[serde(default, deserialize_with = "double_option")]
-    #[schema(value_type = Option<String>)]
-    pub color: Option<Option<String>>,
+    #[schema(value_type = Option<fa_domain::theme::Hue>)]
+    pub color: Option<Option<fa_domain::theme::Hue>>,
     #[serde(default, deserialize_with = "double_option")]
     #[schema(value_type = Option<String>, format = Date)]
     pub birthdate: Option<Option<NaiveDate>>,

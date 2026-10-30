@@ -2,7 +2,7 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import DashboardCanvas from './DashboardCanvas.vue'
 import { addPanel, applyPreset, isValid, movePanel, removePanel, toggleMember } from './editor'
-import { resolveTheme } from './theme'
+import { resolveMode } from './theme'
 import LayoutEditor from './LayoutEditor.vue'
 import PanelHost from './panels/PanelHost.vue'
 import { dailyOf, hourlyOf } from './weatherModel'
@@ -11,7 +11,7 @@ import type { DashboardData, DashboardSettings } from './types'
 const settings = (over: Partial<DashboardSettings> = {}): DashboardSettings =>
   ({
     orientation: 'landscape',
-    theme: 'light',
+    theme: { family: 'catppuccin', mode: 'light' },
     agenda_days: 2,
     members: 'all',
     panels: [{ kind: 'agenda' }],
@@ -166,10 +166,10 @@ describe('theme', () => {
   const up = '2026-10-24T06:00:00Z'
   const down = '2026-10-24T18:00:00Z'
   it('auto is dark between sunset and sunrise', () => {
-    expect(resolveTheme('auto', new Date('2026-10-24T12:00:00Z'), up, down)).toBe('light')
-    expect(resolveTheme('auto', new Date('2026-10-24T19:00:00Z'), up, down)).toBe('dark')
-    expect(resolveTheme('auto', new Date('2026-10-24T04:00:00Z'), up, down)).toBe('dark')
-    expect(resolveTheme('dark', new Date('2026-10-24T12:00:00Z'), up, down)).toBe('dark')
+    expect(resolveMode('auto', new Date('2026-10-24T12:00:00Z'), up, down)).toBe('light')
+    expect(resolveMode('auto', new Date('2026-10-24T19:00:00Z'), up, down)).toBe('dark')
+    expect(resolveMode('auto', new Date('2026-10-24T04:00:00Z'), up, down)).toBe('dark')
+    expect(resolveMode('dark', new Date('2026-10-24T12:00:00Z'), up, down)).toBe('dark')
   })
 })
 

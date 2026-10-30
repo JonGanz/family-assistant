@@ -1,3 +1,5 @@
+import type { ThemeChoice } from '../../themes'
+
 export type PanelKind =
   | 'clock'
   | 'weather'
@@ -17,7 +19,7 @@ export interface PanelConfig {
 
 export interface DashboardSettings {
   orientation: Orientation
-  theme: 'auto' | 'light' | 'dark'
+  theme: ThemeChoice
   agenda_days: number
   members: 'all' | string[]
   panels: PanelConfig[]
@@ -41,7 +43,11 @@ export const KNOWN_PANELS: readonly string[] = [
   'routine',
 ]
 
-const base = { orientation: 'landscape', theme: 'auto', members: 'all' } as const
+const base = {
+  orientation: 'landscape',
+  theme: { family: 'catppuccin', mode: 'auto' },
+  members: 'all',
+} as const
 
 export const PRESETS: Record<string, DashboardSettings> = {
   'Family hub': {
@@ -72,6 +78,37 @@ export const PRESETS: Record<string, DashboardSettings> = {
     ],
   },
   Minimal: { ...base, agenda_days: 2, panels: [{ kind: 'clock' }, { kind: 'agenda' }] },
+}
+
+/**
+ * Reads a saved theme: the legacy string (`"dark"`) becomes the Catppuccin choice, an object is
+ * kept as it is (unknown families too; the renderer falls back), anything else is the default.
+ */
+export function normalizeTheme(raw: unknown): ThemeChoice {
+  if (raw === 'auto' || raw === 'light' || raw === 'dark') {
+    return { family: 'catppuccin', mode: raw }
+  }
+  if (raw && typeof raw === 'object') {
+    const r = raw as Partial<ThemeChoice>
+    if (typeof r.family === 'string') {
+      const mode = r.mode === 'light' || r.mode === 'dark' ? r.mode : 'auto'
+      return {
+        family: r.family,
+        mode,
+        ...(typeof r.variant === 'string' ? { variant: r.variant } : {}),
+      }
+    }
+  }
+  return { family: 'catppuccin', mode: 'auto' }
+}
+
+/** Parses a saved layout: the theme is always a `ThemeChoice` afterwards. */
+export function parseSettings<T extends { theme?: unknown }>(
+  raw: T,
+): Omit<T, 'theme'> & {
+  theme: ThemeChoice
+} {
+  return { ...raw, theme: normalizeTheme(raw.theme) }
 }
 
 export const DEFAULT_PRESET = 'Family hub'

@@ -1,14 +1,15 @@
 import type { EventView, Member } from '../api/client'
+import { hueVar } from '../lib/hues'
 import { eventColors } from '../lib/eventColors'
 import type { EventLike, MemberLike } from '../lib/types'
 
-const FALLBACK_COLOR = '#2f6fed'
+const FALLBACK_COLOR = hueVar(null)
 
 export function memberLikes(members: Member[]): MemberLike[] {
   return members.map((m) => ({
     id: m.id,
     display_name: m.display_name,
-    color: m.color ?? '#888888',
+    color: hueVar(m.color),
     avatar_url: m.avatar_url ?? null,
   }))
 }

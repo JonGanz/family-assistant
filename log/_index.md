@@ -11,4 +11,4 @@ updated: 2026-10-26
 - [2026-10-26](2026-10-26.md): M3 Wave 7, M3 code-complete; D-065 simple onboarding (user instruction), batch 18 (Q-067 to Q-072), M3.5 Onboarding plan; batches 17 and 18 processed → D-066 to D-077, six arch docs re-derived, M3.5 plan and IMPROVEMENTS.md aligned; D-078 private approvals; M3.5 briefs (T-01 to T-10, 6 waves), P-09, P-10
 - [2026-10-27](2026-10-27.md): M3.5 T-10 integration; weather today window, CLI settings and read-retry fixes; ci-local, e2e and compose-smoke green; M3.5 code-complete (H-12 to H-14 and the shakedown remain)
 - [2026-10-28](2026-10-28.md): first-start shakedown fixes: master key page copy, empty-202 JSON error on calendar sync, UNTIL-before-DTSTART recurrence warning
-- [2026-10-29](2026-10-29.md): Docker build layer caching; theming questions Q-073 to Q-076
+- [2026-10-29](2026-10-29.md): Docker build layer caching; theming Q-073 to Q-076, D-079 to D-081 and the M3.6 build

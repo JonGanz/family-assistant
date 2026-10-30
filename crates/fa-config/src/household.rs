@@ -3,6 +3,7 @@ use std::collections::HashSet;
 use chrono::{NaiveDate, Utc};
 use fa_domain::Role;
 use fa_domain::system_api::NewSetupHousehold;
+use fa_domain::theme::Hue;
 use fa_domain::timefmt::{format_hhmm, parse_hhmm};
 use fa_domain::{
     AuditEntry, AuditEntryId, Gender, Household, HouseholdId, Location, Member, MemberId,
@@ -134,8 +135,12 @@ pub struct MemberConfig {
     pub role: Role,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub avatar: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub color: Option<String>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "hue_or_legacy_hex"
+    )]
+    pub color: Option<Hue>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub birthdate: Option<NaiveDate>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -424,12 +429,23 @@ impl HouseholdConfig {
     }
 }
 
+/// A hue name, or a legacy `#rrggbb` string (maps to blue).
+fn hue_or_legacy_hex<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Option<Hue>, D::Error> {
+    let Some(s) = Option::<String>::deserialize(d)? else {
+        return Ok(None);
+    };
+    if s.starts_with('#') {
+        return Ok(Some(Hue::DEFAULT));
+    }
+    s.parse().map(Some).map_err(serde::de::Error::custom)
+}
+
 fn apply(m: &mut Member, c: &MemberConfig) -> bool {
     let before = (
         m.display_name.clone(),
         m.role,
         m.avatar.clone(),
-        m.color.clone(),
+        m.color,
         m.birthdate,
         m.grade.clone(),
         m.interests.clone(),
@@ -442,7 +458,7 @@ fn apply(m: &mut Member, c: &MemberConfig) -> bool {
     m.display_name = c.display_name.clone();
     m.role = c.role;
     m.avatar = c.avatar.clone();
-    m.color = c.color.clone();
+    m.color = c.color;
     m.birthdate = c.birthdate;
     m.grade = c.grade.clone();
     m.interests = c.interests.clone();
@@ -456,7 +472,7 @@ fn apply(m: &mut Member, c: &MemberConfig) -> bool {
             m.display_name.clone(),
             m.role,
             m.avatar.clone(),
-            m.color.clone(),
+            m.color,
             m.birthdate,
             m.grade.clone(),
             m.interests.clone(),
@@ -685,7 +701,7 @@ pub async fn import(
                     display_name: c.display_name.clone(),
                     role: c.role,
                     avatar: c.avatar.clone(),
-                    color: c.color.clone(),
+                    color: c.color,
                     birthdate: c.birthdate,
                     grade: c.grade.clone(),
                     interests: c.interests.clone(),

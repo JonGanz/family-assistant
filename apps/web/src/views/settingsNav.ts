@@ -17,6 +17,11 @@ export const SETTINGS_GROUPS: SettingsGroup[] = [
     pages: [
       { to: '/settings/account', label: 'Account', blurb: 'Change your password.' },
       {
+        to: '/settings/appearance',
+        label: 'Appearance',
+        blurb: 'Colour theme for this device.',
+      },
+      {
         to: '/settings/notifications',
         label: 'Notifications',
         blurb: 'What you are told about, and how.',

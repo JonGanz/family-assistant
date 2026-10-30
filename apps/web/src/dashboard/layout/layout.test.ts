@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { burnInOffset, defaultSettings, PRESETS, resolveLayout } from './index'
+import {
+  burnInOffset,
+  defaultSettings,
+  normalizeTheme,
+  parseSettings,
+  PRESETS,
+  resolveLayout,
+} from './index'
 
 describe('layout engine', () => {
   it('has the presets, default is Family hub', () => {
@@ -53,5 +60,30 @@ describe('layout engine', () => {
     expect(burnInOffset(new Date(t.getTime() + 5 * 60_000))).toEqual(a)
     expect(burnInOffset(new Date(t.getTime() + 10 * 60_000))).not.toEqual(a)
     expect(Math.abs(a.x)).toBeLessThanOrEqual(3)
+  })
+})
+
+describe('saved theme', () => {
+  it('reads the legacy string as the Catppuccin choice', () => {
+    expect(parseSettings({ ...defaultSettings(), theme: 'dark' as never }).theme).toEqual({
+      family: 'catppuccin',
+      mode: 'dark',
+    })
+  })
+  it('keeps an object, unknown families included', () => {
+    expect(normalizeTheme({ family: 'catppuccin', mode: 'light', variant: 'latte' })).toEqual({
+      family: 'catppuccin',
+      mode: 'light',
+      variant: 'latte',
+    })
+    expect(normalizeTheme({ family: 'nope', mode: 'dark' })).toEqual({
+      family: 'nope',
+      mode: 'dark',
+    })
+    expect(normalizeTheme(undefined)).toEqual({ family: 'catppuccin', mode: 'auto' })
+  })
+  it('presets keep an object theme', () => {
+    for (const p of Object.values(PRESETS))
+      expect(p.theme).toEqual({ family: 'catppuccin', mode: 'auto' })
   })
 })

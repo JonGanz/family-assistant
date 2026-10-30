@@ -1,14 +1,15 @@
 import type { Member, TaskListView, TaskView } from '../api/client'
 import type { MemberRef, TaskItemModel } from '../lib/tasks'
+import { hueVar } from '../lib/hues'
 import { dayKey } from '../lib/time'
 
-const FALLBACK = '#888888'
+const FALLBACK = hueVar(null)
 
 export function memberRef(m: Member): MemberRef {
   return {
     id: m.id,
     name: m.display_name,
-    color: m.color ?? FALLBACK,
+    color: hueVar(m.color),
     avatarUrl: m.avatar_url ?? null,
   }
 }

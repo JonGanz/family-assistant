@@ -1,9 +1,8 @@
 import type { DashboardData, DashboardSettings, EventView } from './types'
+import { hueVar } from '../lib/hues'
 import { eventColors } from '../lib/eventColors'
 import type { EventLike, MemberLike } from '../lib/types'
 import type { MemberPublic } from './types'
-
-const FALLBACK = '#6b7280'
 
 /**
  * The server returns every member and event; the client applies `settings.members`.
@@ -31,7 +30,7 @@ export function approvalCounts(data: DashboardData): Record<string, number> {
 }
 
 export function toEventLike(e: EventView, members: MemberLike[] = []): EventLike {
-  const colors = eventColors(e, members, FALLBACK)
+  const colors = eventColors(e, members, hueVar(null))
   return {
     id: e.id,
     title: e.title,
@@ -53,7 +52,7 @@ export function toMemberLike(m: MemberPublic): MemberLike {
   return {
     id: m.id,
     display_name: m.display_name,
-    color: m.color ?? FALLBACK,
+    color: hueVar(m.color),
     avatar_url: m.avatar_url,
   }
 }

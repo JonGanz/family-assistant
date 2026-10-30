@@ -172,7 +172,7 @@ test("the owner is validated, then created with a session; the cookie is not Sec
   const res = await owner.post("/api/v1/setup/owner", {
     data: {
       display_name: "Pat",
-      color: "#3366cc",
+      color: "blue",
       username: "pat@example.com",
       password: PASSWORD,
       pin: "246810",
@@ -199,7 +199,7 @@ test("the wizard's later steps run as the new adult; complete is adult-only and 
   expect((await anon.get("/api/v1/setup")).ok()).toBeTruthy();
 
   const child = await owner.post("/api/v1/members", {
-    data: { display_name: "Robin", role: "child", color: "#cc6633" },
+    data: { display_name: "Robin", role: "child", color: "orange" },
   });
   expect(child.ok(), await child.text()).toBeTruthy();
   const childId = ((await child.json()) as J).id;

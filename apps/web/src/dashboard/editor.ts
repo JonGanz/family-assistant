@@ -1,4 +1,5 @@
-import { KNOWN_PANELS, PRESETS, type PanelConfig } from './layout'
+import { FAMILIES, familyOf, resolveVariant, type ThemeChoice, type ThemeVariant } from '../themes'
+import { KNOWN_PANELS, normalizeTheme, PRESETS, type PanelConfig } from './layout'
 import type { DashboardSettings } from './types'
 
 type Panels = DashboardSettings['panels']
@@ -59,7 +60,7 @@ export function isValid(s: DashboardSettings): boolean {
     s.agenda_days <= MAX_DAYS &&
     s.panels.length <= MAX_PANELS &&
     (s.orientation === 'landscape' || s.orientation === 'portrait') &&
-    ['auto', 'light', 'dark'].includes(s.theme)
+    typeof normalizeTheme(s.theme).family === 'string'
   )
 }
 
@@ -100,3 +101,55 @@ export function panelHasId(
   const cur = p[key]
   return !Array.isArray(cur) || cur.length === 0 || cur.includes(id)
 }
+
+/** The theme of a settings object, whether it still holds the legacy string or a choice. */
+export const themeOf = (s: { theme: unknown }): ThemeChoice => normalizeTheme(s.theme)
+
+export interface ThemeControls {
+  /** False for a family with one mode: the mode control is hidden. */
+  showMode: boolean
+  /** The only mode of a single-mode family, for the "only has a dark/light variant" note. */
+  onlyMode: 'light' | 'dark' | null
+  /** The variants of the effective mode; the variant select shows only when there are several. */
+  variants: ThemeVariant[]
+  showVariant: boolean
+  /** The variant currently in effect. */
+  current: ThemeVariant
+}
+
+/** Shared by the Appearance page and the layout editor so both follow the same rules. */
+export function themeControls(
+  choice: ThemeChoice,
+  ctx: { prefersDark: boolean; night?: boolean } = { prefersDark: false },
+): ThemeControls {
+  const family = familyOf(choice.family)
+  const modes = new Set(family.variants.map((v) => v.mode))
+  const current = resolveVariant(choice, ctx)
+  const variants = family.variants.filter((v) => v.mode === current.mode)
+  return {
+    showMode: modes.size > 1,
+    onlyMode: modes.size === 1 ? family.variants[0]!.mode : null,
+    variants,
+    showVariant: variants.length > 1,
+    current,
+  }
+}
+
+/** A new family starts at its default variant, keeping the chosen mode. */
+export function withFamily(choice: ThemeChoice, family: string): ThemeChoice {
+  return { family, mode: choice.mode }
+}
+
+/** A new mode drops a variant that does not belong to it. */
+export function withMode(choice: ThemeChoice, mode: ThemeChoice['mode']): ThemeChoice {
+  const fam = familyOf(choice.family)
+  const keep =
+    choice.variant && fam.variants.some((v) => v.id === choice.variant && v.mode === mode)
+  return { family: choice.family, mode, ...(keep ? { variant: choice.variant } : {}) }
+}
+
+export function withVariant(choice: ThemeChoice, variant: string): ThemeChoice {
+  return { ...choice, variant }
+}
+
+export const FAMILY_OPTIONS = FAMILIES.map((f) => ({ id: f.id, label: f.label }))

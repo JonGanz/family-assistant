@@ -97,7 +97,7 @@ function data(over: Record<string, unknown> = {}): DashboardData {
 const settings = (panels: unknown[]): DashboardSettings =>
   ({
     orientation: 'landscape',
-    theme: 'light',
+    theme: { family: 'catppuccin', mode: 'light' },
     agenda_days: 2,
     members: 'all',
     panels,

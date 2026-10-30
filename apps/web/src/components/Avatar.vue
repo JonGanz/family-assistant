@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { textColorFor } from '../lib/contrast'
+import { textOn } from '../lib/hues'
 
 const props = defineProps<{ name: string; color: string; src?: string | null; size?: string }>()
 const initials = computed(() =>
@@ -11,7 +11,7 @@ const initials = computed(() =>
     .map((w) => [...w][0]!.toUpperCase())
     .join(''),
 )
-const fg = computed(() => textColorFor(props.color))
+const fg = computed(() => textOn(props.color))
 </script>
 
 <template>

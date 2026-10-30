@@ -1766,7 +1766,7 @@ export interface components {
             avatar?: string | null;
             /** Format: date */
             birthdate?: string | null;
-            color?: string | null;
+            color?: null | components["schemas"]["Hue"];
             display_name: string;
             /** @description Optional; used only for mail relevance (D-055). */
             gender?: string | null;
@@ -1797,10 +1797,8 @@ export interface components {
             members: components["schemas"]["MemberSelection"];
             orientation: components["schemas"]["Orientation"];
             panels: components["schemas"]["Panel"][];
-            theme: components["schemas"]["DashboardTheme"];
+            theme: components["schemas"]["ThemeChoice"];
         };
-        /** @enum {string} */
-        DashboardTheme: "auto" | "light" | "dark";
         DashboardView: {
             advisories: components["schemas"]["AdvisoryView"][];
             events: components["schemas"]["EventView"][];
@@ -2010,8 +2008,10 @@ export interface components {
             all_day: boolean;
             calendar?: null | components["schemas"]["CalendarId"];
             color?: string | null;
-            /** @description One calendar colour per merged copy of the event (see `merge_duplicates`); empty when any
-             *     copy has no colour, so the client falls back to the members' colours. */
+            /**
+             * @description One calendar colour per merged copy of the event (see `merge_duplicates`); empty when any
+             *     copy has no colour, so the client falls back to the members' colours.
+             */
             colors?: string[];
             description?: string | null;
             /** Format: date-time */
@@ -2137,6 +2137,11 @@ export interface components {
             /** @description Dashboards show how many approvals wait for each adult. */
             dashboard_pending_approvals: boolean;
         };
+        /**
+         * @description One of eight named hues; each theme supplies its own shade (wire: lowercase name).
+         * @enum {string}
+         */
+        Hue: "red" | "orange" | "yellow" | "green" | "cyan" | "blue" | "purple" | "pink";
         /** @description IMAP connection settings. Debug output omits the password. */
         ImapSettings: {
             archive_folder?: string | null;
@@ -2457,7 +2462,7 @@ export interface components {
             avatar_url?: string | null;
             /** Format: date */
             birthdate?: string | null;
-            color?: string | null;
+            color?: null | components["schemas"]["Hue"];
             display_name: string;
             gender?: null | components["schemas"]["Gender"];
             grade?: string | null;
@@ -2482,7 +2487,7 @@ export interface components {
             avatar?: string | null;
             /** @description `/api/v1/members/{id}/avatar?v=<sha256 prefix>`; set by the API layer. */
             avatar_url?: string | null;
-            color?: string | null;
+            color?: null | components["schemas"]["Hue"];
             display_name: string;
             id: components["schemas"]["MemberId"];
             role: components["schemas"]["Role"];
@@ -2580,8 +2585,7 @@ export interface components {
             units: components["schemas"]["Units"];
         };
         NewSetupOwner: {
-            /** @description `#rrggbb`. */
-            color?: string | null;
+            color?: null | components["schemas"]["Hue"];
             display_name: string;
             password: string;
             /** @description 4 to 6 digits. */
@@ -2783,7 +2787,7 @@ export interface components {
             avatar?: string | null;
             /** Format: date */
             birthdate?: string | null;
-            color?: string | null;
+            color?: null | components["schemas"]["Hue"];
             display_name?: string | null;
             /** @description `null` clears it. */
             gender?: string | null;
@@ -3375,6 +3379,15 @@ export interface components {
             /** Format: date-time */
             visible_from?: string | null;
         };
+        /** @description A device's theme. Reads the legacy string form; always writes the object. */
+        ThemeChoice: {
+            /** @description Slug, `^[a-z0-9][a-z0-9-]{0,31}$`. */
+            family: string;
+            mode: components["schemas"]["ThemeMode"];
+            variant?: string | null;
+        };
+        /** @enum {string} */
+        ThemeMode: "auto" | "light" | "dark";
         /** @enum {string} */
         Units: "metric" | "imperial";
         UserAccountDto: {

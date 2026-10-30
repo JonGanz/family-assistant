@@ -5,9 +5,11 @@ import { validateNewMember } from './memberForm'
 import { api, type Member, type PatchMemberReq } from '../../api/client'
 import type { Gender } from '../../api/mailSettings'
 import ChipInput from './settings-mail/ChipInput.vue'
+import HuePicker from '../../components/HuePicker.vue'
 import Avatar from '../../components/Avatar.vue'
 import ErrorBanner from '../../components/ErrorBanner.vue'
 import StateBlock from '../../components/StateBlock.vue'
+import { hueVar, type Hue } from '../../lib/hues'
 import { describeError } from '../shared'
 import { useMembersStore } from '../../stores/members'
 
@@ -16,7 +18,7 @@ const members = useMembersStore()
 const editing = ref<string | null>(null)
 const form = reactive({
   display_name: '',
-  color: '#2f6fed',
+  color: 'blue' as Hue,
   avatar: '',
   grade: '',
   interests: '',
@@ -31,7 +33,7 @@ const pending = ref<File | null>(null)
 const creating = reactive({
   display_name: '',
   role: 'child',
-  color: '#2f6fed',
+  color: 'blue' as Hue,
   grade: '',
   aliases: [] as string[],
   username: '',
@@ -54,7 +56,7 @@ function startEdit(m: Member) {
   members.conflictId = null
   error.value = ''
   form.display_name = m.display_name
-  form.color = m.color ?? '#2f6fed'
+  form.color = m.color ?? 'blue'
   clearPending()
   form.avatar = m.avatar ?? ''
   form.grade = m.grade ?? ''
@@ -92,7 +94,7 @@ async function save(m: Member) {
   try {
     const ok = await members.update(m, {
       display_name: form.display_name,
-      color: form.color || null,
+      color: form.color,
       avatar: form.avatar || null,
       grade: form.grade || null,
       interests: csv(form.interests),
@@ -135,7 +137,7 @@ async function create() {
     const made = await members.create({
       display_name: creating.display_name.trim(),
       role: creating.role,
-      color: creating.color || null,
+      color: creating.color,
       grade: creating.grade.trim() || null,
       aliases: creating.aliases,
     })
@@ -171,7 +173,7 @@ async function create() {
         <template v-if="editing !== m.id">
           <Avatar
             :name="m.display_name"
-            :color="m.color ?? '#888888'"
+            :color="hueVar(m.color)"
             :src="m.avatar_url"
             size="2.5rem"
           />
@@ -183,13 +185,11 @@ async function create() {
           <label class="field"
             >Name <input v-model="form.display_name" name="display_name" required
           /></label>
-          <label class="field"
-            >Colour <input v-model="form.color" name="color" type="color"
-          /></label>
+          <HuePicker v-model="form.color" name="color" />
           <div class="avatar-edit">
             <Avatar
               :name="form.display_name || m.display_name"
-              :color="form.color"
+              :color="hueVar(form.color)"
               :src="preview ?? m.avatar_url"
               size="4rem"
             />
@@ -270,9 +270,7 @@ async function create() {
           <option value="adult">adult</option>
         </select>
       </label>
-      <label class="field"
-        >Colour <input v-model="creating.color" name="new_color" type="color"
-      /></label>
+      <HuePicker v-model="creating.color" name="new_color" />
       <label class="field"
         >Grade (optional) <input v-model="creating.grade" name="new_grade"
       /></label>
