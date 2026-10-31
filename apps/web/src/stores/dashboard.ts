@@ -53,6 +53,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const deviceId = ref<string | null>(null)
   const connection = ref<SseStatus>('connecting')
   const lastHeartbeat = ref<string | null>(null)
+  /** Local time (ms) of the last sign the open stream is alive: its opening or a heartbeat. */
+  const lastSignalAt = ref<number | null>(null)
   /** True while showing cached data because the API could not be reached. */
   const stale = ref(false)
   /** Why the last fetch failed (shown while there is nothing to render), or null. */
@@ -283,6 +285,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
   function onMessage(m: SseMessage, onHeartbeat?: () => void): void {
     if (m.event === 'heartbeat') {
       lastHeartbeat.value = m.data
+      lastSignalAt.value = Date.now()
       onHeartbeat?.()
       return
     }
@@ -317,6 +320,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
       },
       onStatus: (s) => {
         connection.value = s
+        if (s === 'open') lastSignalAt.value = Date.now()
       },
       onMessage: (m) => onMessage(m, onHeartbeat),
     })
@@ -339,6 +343,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     members,
     connection,
     lastHeartbeat,
+    lastSignalAt,
     elevatedUntil,
     stale,
     loadError,

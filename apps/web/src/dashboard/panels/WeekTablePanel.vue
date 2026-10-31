@@ -186,7 +186,8 @@ td {
   background: var(--color-surface);
 }
 .dom {
-  font-size: var(--font-size-lg);
+  font-size: 1.9rem;
+  line-height: 1.1;
   font-weight: 700;
 }
 .wd {

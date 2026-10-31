@@ -17,14 +17,24 @@ const hasToken = ref(!!getDeviceToken())
 const now = useClock()
 const flow = ref<InstanceType<typeof TaskFlow> | null>(null)
 
+/** The server sends a heartbeat every 15 s: an open stream silent for three of them is stalled. */
+const STALLED_AFTER_MS = 45_000
+const link = computed(() =>
+  store.connection === 'open' &&
+  store.lastSignalAt !== null &&
+  now.value.getTime() - store.lastSignalAt > STALLED_AFTER_MS
+    ? 'stalled'
+    : store.connection,
+)
 const connLabel = computed(
   () =>
     ({
       open: 'Connected',
+      stalled: 'No data',
       connecting: 'Connecting',
       reconnecting: 'Reconnecting',
       closed: 'Offline',
-    })[store.connection],
+    })[link.value],
 )
 const updatedAt = computed(() =>
   store.savedAt
@@ -35,19 +45,6 @@ const updatedAt = computed(() =>
       }).format(store.savedAt)
     : '',
 )
-
-/** The SSE heartbeat carries a UTC instant; show it as household-local time. */
-const heartbeatAt = computed(() => {
-  const ms = store.lastHeartbeat ? Date.parse(store.lastHeartbeat) : Number.NaN
-  return Number.isNaN(ms)
-    ? ''
-    : new Intl.DateTimeFormat(undefined, {
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-        timeZone: store.snapshot?.household.tz,
-      }).format(ms)
-})
 
 let stopKeepAlive: (() => void) | undefined
 let watchdog: Watchdog | undefined
@@ -135,19 +132,11 @@ const mmss = computed(
       @add="flow?.beginAdd()"
     >
       <template #nav-end>
-        <span
-          class="conn"
-          :class="store.connection"
-          data-testid="connection"
-          :data-status="store.connection"
-        >
+        <span class="conn" :class="link" data-testid="connection" :data-status="link">
           ● {{ connLabel }}
         </span>
         <span v-if="store.showStaleBadge && updatedAt" class="stale" data-testid="stale">
           {{ S.lastUpdated(updatedAt) }}
-        </span>
-        <span v-if="heartbeatAt" class="hb" data-testid="heartbeat">
-          Last heartbeat {{ heartbeatAt }}
         </span>
         <button class="try" @click="showElevation = !showElevation">{{ S.elevate }}</button>
       </template>
@@ -221,6 +210,7 @@ const mmss = computed(
 .conn.open {
   color: var(--color-success);
 }
+.conn.stalled,
 .conn.reconnecting,
 .conn.connecting {
   color: var(--color-warning);

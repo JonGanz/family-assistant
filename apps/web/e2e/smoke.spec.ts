@@ -8,7 +8,10 @@ test.use({ extraHTTPHeaders: { 'X-Forwarded-For': '10.99.0.5' } })
 const username = process.env.E2E_USERNAME ?? 'alex@example.com'
 const password = process.env.E2E_PASSWORD ?? ''
 
-test('login, members, pair a device, dashboard shows the heartbeat', async ({ page, browser }) => {
+test('login, members, pair a device, dashboard shows it is connected', async ({
+  page,
+  browser,
+}) => {
   await page.goto('/login')
   await page.getByLabel('Username').fill(username)
   await page.getByLabel('Password').fill(password)
@@ -37,6 +40,5 @@ test('login, members, pair a device, dashboard shows the heartbeat', async ({ pa
   await screen.goto(pairUrl!)
   await expect(screen.getByTestId('household')).not.toBeEmpty()
   await expect(screen.getByTestId('connection')).toHaveAttribute('data-status', 'open')
-  await expect(screen.getByTestId('heartbeat')).toBeVisible()
   await kiosk.close()
 })
