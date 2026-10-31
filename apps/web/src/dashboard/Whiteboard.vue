@@ -4,59 +4,112 @@ import Modal from './Modal.vue'
 import HuePicker from '../components/HuePicker.vue'
 import { hueVar, type Hue } from '../lib/hues'
 import { S } from './strings'
-import { loadStrokes, saveStrokes, strokePath, type Ink, type Stroke } from './whiteboardModel'
+import {
+  distanceTo,
+  loadStrokes,
+  pathOf,
+  saveStrokes,
+  type Ink,
+  type Shape,
+  type Stroke,
+} from './whiteboardModel'
 
 defineProps<{ portrait: boolean }>()
 
 const strokes = ref<Stroke[]>(loadStrokes())
-const tool = ref<'pen' | 'eraser'>('pen')
+const tool = ref<'pen' | 'shape' | 'eraser'>('pen')
 const ink = ref<Ink>('ink')
 const width = ref(5)
+const shape = ref<Shape>('rect')
 const WIDTHS = [
   { w: 2, label: S.wbThin },
   { w: 5, label: S.wbMedium },
   { w: 10, label: S.wbThick },
 ]
+const SHAPES: { id: Shape; label: string; d: string }[] = [
+  { id: 'rect', label: S.wbRect, d: 'M4 6h16v12H4z' },
+  { id: 'circle', label: S.wbCircle, d: 'M4 12a8 8 0 1 0 16 0a8 8 0 1 0 -16 0' },
+  { id: 'triangle', label: S.wbTriangle, d: 'M12 4l9 16H3z' },
+  { id: 'hexagon', label: S.wbHexagon, d: 'M7 4h10l5 8-5 8H7l-5-8z' },
+]
+const shapeIcon = computed(() => SHAPES.find((x) => x.id === shape.value)!.d)
 const confirming = ref(false)
 const board = ref<SVGSVGElement | null>(null)
 const live = ref<Stroke | null>(null)
 let erasing = false
 
+/** The open option popup, placed beside its tool button (fixed, so the scrolling toolbar cannot clip it). */
+const menu = ref<'pen' | 'shape' | null>(null)
+const menuStyle = ref<Record<string, string>>({})
+function openMenu(which: 'pen' | 'shape', e: MouseEvent, portrait: boolean) {
+  const again = tool.value === which && menu.value === which
+  tool.value = which
+  if (again) {
+    menu.value = null
+    return
+  }
+  const r = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  menuStyle.value = portrait
+    ? { left: `${r.left}px`, bottom: `${window.innerHeight - r.top + 8}px` }
+    : { top: `${r.top}px`, right: `${window.innerWidth - r.left + 8}px` }
+  menu.value = which
+}
+function pickWidth(w: number) {
+  width.value = w
+  menu.value = null
+}
+function pickShape(sh: Shape) {
+  shape.value = sh
+  menu.value = null
+}
+function pickTool(t: 'eraser') {
+  tool.value = t
+  menu.value = null
+}
+
 /** An `ink` stroke is black on a light theme and white on a dark one; hues follow the theme. */
 const stroke = (c: Ink) => (c === 'ink' ? 'var(--wb-ink)' : hueVar(c))
 const picked = computed(() => (ink.value === 'ink' ? ('' as Hue) : ink.value))
-function pickHue(h: Hue) {
-  ink.value = h
-  tool.value = 'pen'
+/** Choosing a colour with the eraser in hand goes back to the pen; a shape tool stays. */
+function pickInk(c: Ink) {
+  ink.value = c
+  if (tool.value === 'eraser') tool.value = 'pen'
 }
 
 function at(e: PointerEvent): [number, number] {
   const r = board.value!.getBoundingClientRect()
   return [Math.round(e.clientX - r.left), Math.round(e.clientY - r.top)]
 }
-function eraseAt([x, y]: [number, number]) {
-  const keep = strokes.value.filter(
-    (s) => !s.p.some(([px, py]) => Math.hypot(px - x, py - y) < 14 + s.w / 2),
-  )
+function eraseAt(pt: [number, number]) {
+  const keep = strokes.value.filter((s) => distanceTo(s, pt) >= 14 + s.w / 2)
   if (keep.length !== strokes.value.length) strokes.value = keep
 }
 function down(e: PointerEvent) {
   board.value?.setPointerCapture(e.pointerId)
+  menu.value = null
   const pt = at(e)
   if (tool.value === 'eraser') {
     erasing = true
     eraseAt(pt)
+  } else if (tool.value === 'shape') {
+    live.value = { c: ink.value, w: width.value, s: shape.value, p: [pt, pt] }
   } else {
     live.value = { c: ink.value, w: width.value, p: [pt] }
   }
 }
 function move(e: PointerEvent) {
   if (erasing) eraseAt(at(e))
+  else if (live.value?.s) live.value.p[1] = at(e)
   else if (live.value) live.value.p.push(at(e))
 }
+/** A shape needs some size: a tap without a drag draws nothing. */
+const MIN_SHAPE_PX = 6
 function up() {
-  if (live.value) strokes.value = [...strokes.value, live.value]
-  if (live.value || erasing) saveStrokes(strokes.value)
+  const s = live.value
+  if (s && (!s.s || Math.hypot(s.p[1]![0] - s.p[0]![0], s.p[1]![1] - s.p[0]![1]) >= MIN_SHAPE_PX)) {
+    strokes.value = [...strokes.value, s]
+  }
+  if (s || erasing) saveStrokes(strokes.value)
   live.value = null
   erasing = false
 }
@@ -83,7 +136,7 @@ onBeforeUnmount(up)
       <path
         v-for="(s, i) in strokes.concat(live ? [live] : [])"
         :key="i"
-        :d="strokePath(s.p)"
+        :d="pathOf(s)"
         :stroke="stroke(s.c)"
         :stroke-width="s.w"
         fill="none"
@@ -98,8 +151,9 @@ onBeforeUnmount(up)
           class="tool"
           :class="{ on: tool === 'pen' }"
           :aria-label="S.wbPen"
+          :aria-expanded="menu === 'pen'"
           :title="S.wbPen"
-          @click="tool = 'pen'"
+          @click="openMenu('pen', $event, portrait)"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M3 21l3.5-1 12-12-2.5-2.5-12 12L3 21zM15 5l2.5 2.5" />
@@ -108,28 +162,25 @@ onBeforeUnmount(up)
         <button
           type="button"
           class="tool"
+          :class="{ on: tool === 'shape' }"
+          :aria-label="S.wbShape"
+          :aria-expanded="menu === 'shape'"
+          :title="S.wbShape"
+          @click="openMenu('shape', $event, portrait)"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path :d="shapeIcon" /></svg>
+        </button>
+        <button
+          type="button"
+          class="tool"
           :class="{ on: tool === 'eraser' }"
           :aria-label="S.wbEraser"
           :title="S.wbEraser"
-          @click="tool = 'eraser'"
+          @click="pickTool('eraser')"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 16l9-9 6 6-6 6H8l-4-3zM9 11l6 6M12 19h8" />
           </svg>
-        </button>
-      </div>
-      <div class="row">
-        <button
-          v-for="o in WIDTHS"
-          :key="o.w"
-          type="button"
-          class="tool"
-          :class="{ on: width === o.w }"
-          :aria-label="o.label"
-          :title="o.label"
-          @click="((width = o.w), (tool = 'pen'))"
-        >
-          <span class="nib" :style="{ height: `${o.w}px` }" />
         </button>
       </div>
       <div class="row">
@@ -139,7 +190,7 @@ onBeforeUnmount(up)
           :class="{ on: ink === 'ink' }"
           :aria-label="S.wbInk"
           :title="S.wbInk"
-          @click="((ink = 'ink'), (tool = 'pen'))"
+          @click="pickInk('ink')"
         />
         <HuePicker
           class="hues"
@@ -147,7 +198,7 @@ onBeforeUnmount(up)
           name="whiteboard-hue"
           hide-legend
           :legend="S.wbColour"
-          @update:model-value="pickHue"
+          @update:model-value="pickInk"
         />
       </div>
       <div class="row del">
@@ -164,6 +215,46 @@ onBeforeUnmount(up)
         </button>
       </div>
     </div>
+    <template v-if="menu">
+      <div class="scrim" @pointerdown="menu = null" />
+      <div
+        class="flyout"
+        role="group"
+        :aria-label="menu === 'pen' ? S.wbPenSize : S.wbShape"
+        :style="menuStyle"
+      >
+        <template v-if="menu === 'pen'">
+          <button
+            v-for="o in WIDTHS"
+            :key="o.w"
+            type="button"
+            class="tool"
+            :class="{ on: width === o.w }"
+            :aria-label="o.label"
+            :aria-pressed="width === o.w"
+            :title="o.label"
+            @click="pickWidth(o.w)"
+          >
+            <span class="nib" :style="{ height: `${o.w}px` }" />
+          </button>
+        </template>
+        <template v-else>
+          <button
+            v-for="o in SHAPES"
+            :key="o.id"
+            type="button"
+            class="tool"
+            :class="{ on: shape === o.id }"
+            :aria-label="o.label"
+            :aria-pressed="shape === o.id"
+            :title="o.label"
+            @click="pickShape(o.id)"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path :d="o.d" /></svg>
+          </button>
+        </template>
+      </div>
+    </template>
     <Modal v-if="confirming" :title="S.wbClearAsk" @close="confirming = false">
       <div class="confirm">
         <button type="button" class="tool wide" @click="wipe">{{ S.wbYes }}</button>
@@ -280,6 +371,21 @@ onBeforeUnmount(up)
   box-shadow:
     0 0 0 2px var(--color-bg) inset,
     0 0 10px 3px var(--wb-ink);
+}
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 9;
+}
+.flyout {
+  position: fixed;
+  z-index: 10;
+  display: flex;
+  gap: var(--space-2);
+  padding: var(--space-2);
+  border: 2px solid var(--color-border);
+  background: var(--color-surface);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 35%);
 }
 .confirm {
   display: flex;
