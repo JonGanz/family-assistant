@@ -42,15 +42,13 @@ copied as-is, from the repository root.
 | Rust | per `rust-toolchain.toml` | `rustup` installs it automatically |
 | Node.js | 24 | pnpm comes through **corepack** (`corepack pnpm@9 ...`); nothing needs a global install |
 | Docker + Compose v2 | recent | dev Postgres, e2e tests, deployment |
-| [`just`](https://github.com/casey/just) | optional | shortcuts only. Every recipe is a thin wrapper, so each step also shows the plain command |
 
-**One-shot path:** `just demo-reset` (or `scripts/demo-reset.sh`) rebuilds the example household, fixtures and a paired device and serves it. It deletes the dev database volume, so it asks you to type `wipe` first.
+**One-shot path:** `scripts/demo-reset.sh` rebuilds the example household, fixtures and a paired device and serves it. It deletes the dev database volume, so it asks you to type `wipe` first.
 
 ### 1. Start the database and create a dev master key
 ```bash
 docker compose -f deploy/compose.dev.yaml up -d --wait postgres ntfy
 scripts/dev-key.sh
-# with just: just dev-db dev-key
 ```
 The dev database listens on `127.0.0.1:55432` (user, password and database are all `fa`). The dev
 ntfy server (push notifications, step 9) listens on `127.0.0.1:18090`. The dev
@@ -98,7 +96,6 @@ minutes, to use the stub. Export it in the shell that runs `serve`.)
 One process (API and worker together):
 ```bash
 cargo run -p fa-server -- serve all
-# with just: just serve   (also builds the web app)
 ```
 or as the **two separate processes** that the compose deployment runs (`serve api` needs the
 master key and runs the live-update bridge; `serve worker` runs the job queue, so calendar syncs
@@ -107,7 +104,6 @@ and weather evaluation only happen while it is running):
 cargo build -p fa-server
 target/debug/fa-server serve api &
 target/debug/fa-server serve worker &
-# with just: just serve-split
 ```
 Open <http://localhost:8080> and log in as `alex@example.com`.
 
@@ -171,7 +167,6 @@ server from the dev compose file. It listens only on this machine: IMAP on `127.
 on `127.0.0.1:13025`, and any login works.
 ```bash
 docker compose -f deploy/compose.dev.yaml up -d greenmail
-# with just: just dev-mail
 ```
 The app refuses IMAP without TLS unless you allow it: uncomment `FA_ALLOW_PLAIN_IMAP=true` in
 [`.env.dev`](.env.dev) and restart `serve`. (Real mailboxes use TLS; this switch is for this local
@@ -526,14 +521,14 @@ value. Saving a changed setting restarts the app by itself in about a second, on
 | `gen-openapi` | Write the OpenAPI document |
 
 ## Day-to-day development
-| Task | With `just` | Plain command |
-|---|---|---|
-| API and worker with auto-reload, plus the Vite dev server with hot reload | `just dev` | `cargo watch -x 'run -p fa-server -- serve all'` and `cd apps/web && corepack pnpm@9 dev` (needs `cargo install cargo-watch`) |
-| Regenerate TS types, OpenAPI and the web client after API changes | `just gen` | see the `gen` recipe in [`justfile`](justfile) |
-| Tests (Rust and web) | `just test` | `cargo test --workspace` and `cd apps/web && corepack pnpm@9 test` (the Rust tests need `DATABASE_URL`) |
-| Lint | `just lint` | `cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings` |
-| Server CLI help | n/a | `cargo run -p fa-server -- --help` |
-| IMAP integration tests (a real GreenMail) | n/a | see below |
+| Task | Command |
+|---|---|
+| API and worker with auto-reload, plus the Vite dev server with hot reload | `cargo watch -x 'run -p fa-server -- serve all'` and `cd apps/web && corepack pnpm@9 dev` (needs `cargo install cargo-watch`) |
+| Regenerate TS types, OpenAPI and the web client after API changes | `cargo test -q -p fa-domain && cargo run -q -p fa-server -- gen-openapi --out apps/web/src/gen/openapi.json && cd apps/web && corepack pnpm@9 run gen` |
+| Tests (Rust and web) | `cargo test --workspace` and `cd apps/web && corepack pnpm@9 test` (the Rust tests need `DATABASE_URL`) |
+| Lint | `cargo fmt --check && cargo clippy --workspace --all-targets -- -D warnings` |
+| Server CLI help | `cargo run -p fa-server -- --help` |
+| IMAP integration tests (a real GreenMail) | see below |
 
 Vite (`corepack pnpm@9 dev`) serves the UI on its own port and proxies `/api` to `127.0.0.1:8080`.
 
@@ -564,8 +559,8 @@ Never edit a migration once it has been deployed anywhere. Add a new one instead
 ## Checks: run CI locally
 Run these before pushing:
 ```bash
-just ci          # = scripts/ci-local.sh
-just e2e         # = scripts/e2e.sh
+scripts/ci-local.sh
+scripts/e2e.sh
 ```
 | Script | What it does |
 |---|---|

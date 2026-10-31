@@ -11,8 +11,5 @@ indent_size = 4
 [*.{yaml,yml,toml,json,ts,vue,js,md}]
 indent_size = 2
 
-[justfile]
-indent_size = 4
-
 [*.md]
 trim_trailing_whitespace = false

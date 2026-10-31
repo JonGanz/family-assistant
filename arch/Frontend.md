@@ -17,7 +17,7 @@ This doc describes the Vue 3 PWA in `apps/web`: one app with three shells. The *
 ```
 apps/web/src/
 ├─ api/            http.ts (fetch wrapper, X-FA-Request, bearer opt-in), client.ts (typed calls over gen/)
-├─ gen/            api.d.ts generated from openapi.json (`just gen`). The only source of API types
+├─ gen/            api.d.ts generated from openapi.json (the gen commands in the README). The only source of API types
 ├─ stores/         Pinia: setup, session, members, household, calendar, weather, sources, devices, dashboard, tasks, mail, inbox, system
 ├─ composables/    useLiveStream (SSE → store invalidation), useUnits, useRange, useClock, useSecureContext
 ├─ components/     shared UI: PageHeader, StateBlock, MemberChip, Avatar, PinPad, EventCard, WeatherIcon, DateRangeNav, ErrorBanner, Tabs

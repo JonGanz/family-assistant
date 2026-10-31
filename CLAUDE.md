@@ -73,7 +73,7 @@ The user commits. Their commit messages use `->` for the user's input and `<-` f
 ## README (user-facing, keep current)
 `README.md` is the entry point for people using or contributing to the project. **Update it in the same change** whenever any of these change:
 - setup steps or prerequisites;
-- commands (CLI, scripts, `justfile` recipes);
+- commands (CLI, scripts);
 - environment variables or ports;
 - the repository layout;
 - the deployment story;

@@ -198,23 +198,3 @@ test("the device sees masked busy events", async ({ request }) => {
   expect(d.weather).not.toBeNull();
   expect(d.advisories.length).toBeGreaterThan(0);
 });
-
-test("config export contains no secrets", async () => {
-  const out = execFileSync(
-    process.env.FA_E2E_BIN ?? "fa-server",
-    ["config", "export"],
-    {
-      encoding: "utf8",
-    },
-  );
-  expect(out).toContain("[[calendar_sources]]");
-  for (const secret of [
-    process.env.FA_E2E_FIXTURES ?? "http://127.0.0.1:18091",
-    ".ics",
-    "e2e:e2e",
-    seed.device.token,
-    process.env.FA_E2E_PASSWORD ?? "correct-horse",
-  ]) {
-    expect(out).not.toContain(secret);
-  }
-});

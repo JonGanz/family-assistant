@@ -42,7 +42,6 @@ The platform that M0 builds and every later milestone depends on. **v4 is the M3
 │  ├─ .env.example       optional overrides only; nothing is required (README.md: install guide)
 │  ├─ systemd/fa-gpu-agent.service
 │  └─ runbooks/           install.md, restore.md, rotate-key.md
-└─ justfile            optional dev shortcuts (thin wrappers; CI and the Docker build never depend on `just`)
 ```
 **Dependency rule:** `fa-domain` depends on nothing internal. Feature crates depend on `fa-domain`, `fa-store`, and `fa-jobs`, never on each other's internals; they talk through traits defined in `fa-domain`. Only `fa-api` and the bins wire everything together.
 
@@ -149,8 +148,7 @@ We ship **`deploy/compose.yaml`**, which has every service (D-033, D-065). The d
 - `deploy/runbooks/restore.md`: stop `app` → `pg_restore` into a fresh DB → put the master key back into `fa-secrets` → start → `/readyz`. **It is rehearsed once during M0**, and again on the M3.5 install.
 
 ## 10. Dev workflow
-- `just dev` brings up Postgres in compose, then runs `cargo watch` for `serve all` and `pnpm dev` (with Vite proxying to the api).
-- `just test` runs nextest and vitest. `just e2e` runs Playwright against compose. `just gen` regenerates the TS types and OpenAPI client.
+- There is no task runner (`just` was removed). Development uses plain commands (README, Day-to-day development): `cargo watch` for `serve all` and `pnpm dev` (Vite proxies to the api), `cargo test` and vitest, `scripts/e2e.sh` for Playwright, and the gen commands for the TS types and OpenAPI client.
 - Seed data for development and e2e comes from `e2e/seed-household.mjs`, which creates a fictional family through the setup API. No real data goes in fixtures (D-004).
 - **CI (GitHub Actions, D-032):**
   - `ci.yml`: fmt, clippy `-D warnings`, nextest with a Postgres service, cargo deny (advisories and licences), gitleaks, the example-data check, sqlx offline check, and web lint, typecheck, vitest, and build.
