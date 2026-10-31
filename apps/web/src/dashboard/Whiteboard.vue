@@ -39,11 +39,11 @@ const live = ref<Stroke | null>(null)
 let erasing = false
 
 /** The open option popup, placed beside its tool button (fixed, so the scrolling toolbar cannot clip it). */
-const menu = ref<'pen' | 'shape' | null>(null)
+const menu = ref<'size' | 'shape' | null>(null)
 const menuStyle = ref<Record<string, string>>({})
-function openMenu(which: 'pen' | 'shape', e: MouseEvent, portrait: boolean) {
-  const again = tool.value === which && menu.value === which
-  tool.value = which
+function openMenu(which: 'size' | 'shape', e: MouseEvent, portrait: boolean) {
+  const again = menu.value === which
+  if (which === 'shape') tool.value = 'shape'
   if (again) {
     menu.value = null
     return
@@ -62,7 +62,7 @@ function pickShape(sh: Shape) {
   shape.value = sh
   menu.value = null
 }
-function pickTool(t: 'eraser') {
+function pickTool(t: 'pen' | 'eraser') {
   tool.value = t
   menu.value = null
 }
@@ -151,9 +151,8 @@ onBeforeUnmount(up)
           class="tool"
           :class="{ on: tool === 'pen' }"
           :aria-label="S.wbPen"
-          :aria-expanded="menu === 'pen'"
           :title="S.wbPen"
-          @click="openMenu('pen', $event, portrait)"
+          @click="pickTool('pen')"
         >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M3 21l3.5-1 12-12-2.5-2.5-12 12L3 21zM15 5l2.5 2.5" />
@@ -181,6 +180,16 @@ onBeforeUnmount(up)
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M4 16l9-9 6 6-6 6H8l-4-3zM9 11l6 6M12 19h8" />
           </svg>
+        </button>
+        <button
+          type="button"
+          class="tool"
+          :aria-label="S.wbPenSize"
+          :aria-expanded="menu === 'size'"
+          :title="S.wbPenSize"
+          @click="openMenu('size', $event, portrait)"
+        >
+          <span class="nib" :style="{ height: `${width}px` }" />
         </button>
       </div>
       <div class="row">
@@ -220,10 +229,10 @@ onBeforeUnmount(up)
       <div
         class="flyout"
         role="group"
-        :aria-label="menu === 'pen' ? S.wbPenSize : S.wbShape"
+        :aria-label="menu === 'size' ? S.wbPenSize : S.wbShape"
         :style="menuStyle"
       >
-        <template v-if="menu === 'pen'">
+        <template v-if="menu === 'size'">
           <button
             v-for="o in WIDTHS"
             :key="o.w"

@@ -22,7 +22,7 @@ export const S = {
   wbTools: 'Whiteboard tools',
   wbPen: 'Pen',
   wbEraser: 'Eraser',
-  wbPenSize: 'Pen size',
+  wbPenSize: 'Line thickness',
   wbShape: 'Shapes',
   wbRect: 'Rectangle',
   wbCircle: 'Circle',
