@@ -230,7 +230,7 @@ const shift = computed(() =>
             v-for="st in stacks"
             :key="st.key"
             class="stack"
-            :class="{ scroll: st.scroll }"
+            :class="[`s-${st.key}`, { scroll: st.scroll }]"
             :style="{
               gridColumn: st.span,
               gridTemplateColumns: `repeat(${st.cols}, minmax(0, 1fr))`,
@@ -470,6 +470,10 @@ const shift = computed(() =>
 }
 .portrait .main.split .grid {
   column-gap: var(--space-6);
+}
+.portrait .stack.s-top {
+  /* More air between the clock and weather row and what follows. */
+  margin-bottom: var(--space-5);
 }
 .stack {
   display: grid;

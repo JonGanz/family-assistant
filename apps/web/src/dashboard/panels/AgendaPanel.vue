@@ -75,7 +75,8 @@ const groups = computed(() => {
 <style scoped>
 .agenda {
   display: grid;
-  gap: var(--space-5);
+  /* 50% more than the usual section gap, to set one day clearly apart from the next. */
+  gap: calc(var(--space-5) * 1.5);
   align-content: start;
 }
 h2 {
