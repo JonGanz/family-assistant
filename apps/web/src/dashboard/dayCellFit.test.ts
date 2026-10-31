@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fitCell, portraitSlotRem } from './dayCellFit'
+import { adaptiveSlotRem, fitCell, LANDSCAPE, PORTRAIT } from './dayCellFit'
 
 // Slot 3.2rem, passed explicitly so the tests do not move with the real slot size. 16px rem: a slot is 51.2px and a gap 4px, so 4 rows need about 4 * 55.2 - 4 = 216.8px.
 describe('fitCell', () => {
@@ -30,16 +30,21 @@ describe('fitCell', () => {
   })
 })
 
-describe('portraitSlotRem', () => {
+describe('adaptiveSlotRem', () => {
   it('keeps the tall slot when there is room', () => {
-    expect(portraitSlotRem(400, 16)).toBe(4.2)
-    expect(portraitSlotRem(0, 16)).toBe(4.2)
+    expect(adaptiveSlotRem(400, 16, PORTRAIT)).toBe(4.2)
+    expect(adaptiveSlotRem(0, 16, LANDSCAPE)).toBe(3.4)
   })
-  it('shrinks so three rows fit, but never below the text height', () => {
-    const h = 200 // 12.5rem
-    const slot = portraitSlotRem(h, 16)
-    expect(slot).toBeLessThan(4.2)
-    expect(fitCell(3, 100, h, 16, slot).shown).toBe(3)
-    expect(portraitSlotRem(100, 16)).toBe(3.7)
+  it('shrinks so the wanted rows fit, but never below the text height', () => {
+    for (const [r, rows, h] of [
+      [PORTRAIT, 3, 170],
+      [LANDSCAPE, 2, 105],
+    ] as const) {
+      const slot = adaptiveSlotRem(h, 16, r)
+      expect(slot).toBeLessThan(r.max)
+      expect(fitCell(rows, 100, h, 16, slot).shown).toBe(rows)
+    }
+    expect(adaptiveSlotRem(60, 16, PORTRAIT)).toBe(3.35)
+    expect(adaptiveSlotRem(60, 16, LANDSCAPE)).toBe(3.1)
   })
 })

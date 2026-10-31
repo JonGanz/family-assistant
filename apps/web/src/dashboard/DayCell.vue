@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { formatRange } from '../lib/time'
 import type { EventLike } from '../lib/types'
-import { fitCell, portraitSlotRem, SLOT_REM } from './dayCellFit'
+import { adaptiveSlotRem, fitCell, LANDSCAPE, PORTRAIT } from './dayCellFit'
 import { S } from './strings'
 import type { DetailRequest, TaskView } from './types'
 
@@ -33,7 +33,7 @@ const remPx = ref(16)
 /** Portrait screens get taller slots (and larger type) for reading from a distance. */
 const portrait = ref(false)
 const slotRem = computed(() =>
-  portrait.value ? portraitSlotRem(size.value.h, remPx.value) : SLOT_REM,
+  adaptiveSlotRem(size.value.h, remPx.value, portrait.value ? PORTRAIT : LANDSCAPE),
 )
 let ro: ResizeObserver | undefined
 onMounted(() => {
@@ -112,10 +112,10 @@ ul {
 }
 li {
   min-width: 0;
-  padding: 0.15rem var(--space-2);
+  padding: 0.1rem var(--space-2);
   overflow: hidden;
   font-size: var(--font-size-sm);
-  line-height: 1.25;
+  line-height: 1.15;
 }
 .title,
 .time {
