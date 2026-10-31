@@ -3,7 +3,15 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'v
 import { dayKey } from '../lib/time'
 import { applyTheme, loadDeviceChoice, resolveVariant } from '../themes'
 import { panelVisible } from './tasksModel'
-import { burnInOffset, normalizeTheme, resolveLayout } from './layout'
+import {
+  burnInOffset,
+  normalizeTheme,
+  PORTRAIT_NOW,
+  PORTRAIT_STRIP,
+  PORTRAIT_TOP,
+  resolveLayout,
+  type GridArea,
+} from './layout'
 import PanelHost from './panels/PanelHost.vue'
 import { prefersDark, resolveMode } from './theme'
 import { S } from './strings'
@@ -68,24 +76,49 @@ const areas = computed(() =>
 )
 /**
  * Landscape: a left and a right stack, each scrolling on its own. Portrait: the clock and weather
- * side by side (50/50) at the top, then the other panels in one column that scrolls with the page.
- * Each panel takes the height it needs.
+ * side by side (50/50), a members strip, then "right now" (now, routines, member tasks) and "coming
+ * up" (agenda, week) as two columns that each scroll on their own; a lone column takes the full
+ * width. Each panel takes the height it needs.
  */
-const stacks = computed(() => {
+interface Stack {
+  key: string
+  span: string
+  cols: number
+  areas: GridArea[]
+  /** Fills the remaining height and scrolls on its own. */
+  scroll: boolean
+}
+const stacks = computed<Stack[]>(() => {
   if (portrait.value) {
-    const top = areas.value.filter((a) => a.panel.kind === 'clock' || a.panel.kind === 'weather')
-    const rest = areas.value.filter((a) => !top.includes(a))
+    const kind = (a: GridArea) => a.panel.kind
+    const top = areas.value.filter((a) => PORTRAIT_TOP.includes(kind(a)))
+    const strip = areas.value.filter((a) => PORTRAIT_STRIP.includes(kind(a)))
+    const now = areas.value.filter((a) => PORTRAIT_NOW.includes(kind(a)))
+    const soon = areas.value.filter((a) => ![...top, ...strip, ...now].includes(a))
+    const both = now.length > 0 && soon.length > 0
     return [
-      { key: 'top', span: '1 / 13', cols: Math.min(2, top.length), areas: top },
-      { key: 'rest', span: '1 / 13', cols: 1, areas: rest },
+      { key: 'top', span: '1 / 13', cols: Math.min(2, top.length), areas: top, scroll: false },
+      { key: 'strip', span: '1 / 13', cols: 1, areas: strip, scroll: false },
+      { key: 'now', span: both ? '1 / 7' : '1 / 13', cols: 1, areas: now, scroll: true },
+      { key: 'soon', span: both ? '7 / 13' : '1 / 13', cols: 1, areas: soon, scroll: true },
     ].filter((s) => s.areas.length > 0)
   }
   const left = areas.value.filter((a) => a.column === '1 / 5')
   const right = areas.value.filter((a) => a.column !== '1 / 5')
   return [
-    { key: 'left', span: '1 / 5', cols: 1, areas: left },
-    { key: 'right', span: '5 / 13', cols: 1, areas: right },
+    { key: 'left', span: '1 / 5', cols: 1, areas: left, scroll: true },
+    { key: 'right', span: '5 / 13', cols: 1, areas: right, scroll: true },
   ].filter((s) => s.areas.length > 0)
+})
+/**
+ * One track per band in portrait (the scrolling columns share one row and fill what is left);
+ * landscape has a single row.
+ */
+const homeRows = computed(() => {
+  if (!portrait.value) return 'minmax(0, 1fr)'
+  const bands = stacks.value.filter((s) => !s.scroll).length
+  const cols = stacks.value.some((s) => s.scroll) ? ' minmax(0, 1fr)' : ''
+  return `${'auto '.repeat(bands).trim()}${cols}`
 })
 type View = 'home' | 'week'
 const VIEWS: { id: View; label: string }[] = [
@@ -175,13 +208,20 @@ const shift = computed(() =>
       </button>
       <div class="navend"><slot name="nav-end" /></div>
     </nav>
-    <main class="main" :class="{ full: view === 'week', split: view === 'home' && !portrait }">
-      <div class="grid" :style="{ transform: `translate(${shift.x}px, ${shift.y}px)` }">
+    <main class="main" :class="{ full: view === 'week', split: view === 'home' }">
+      <div
+        class="grid"
+        :style="{
+          transform: `translate(${shift.x}px, ${shift.y}px)`,
+          gridTemplateRows: view === 'home' ? homeRows : undefined,
+        }"
+      >
         <template v-if="view === 'home'">
           <div
             v-for="st in stacks"
             :key="st.key"
             class="stack"
+            :class="{ scroll: st.scroll }"
             :style="{
               gridColumn: st.span,
               gridTemplateColumns: `repeat(${st.cols}, minmax(0, 1fr))`,
@@ -339,7 +379,7 @@ const shift = computed(() =>
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
 }
-/* Landscape Home: the two columns fill the height and each scrolls on its own. */
+/* Home: the columns fill the height and each scrolls on its own (portrait: below the top bands). */
 .main.split {
   overflow: hidden;
   padding-bottom: 0;
@@ -354,8 +394,10 @@ const shift = computed(() =>
 }
 .main.split .stack {
   min-height: 0;
-  overflow-y: auto;
   align-content: start;
+}
+.main.split .stack.scroll {
+  overflow-y: auto;
   padding-bottom: 2.5rem;
 }
 .weekview {

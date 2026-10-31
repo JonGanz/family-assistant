@@ -106,6 +106,15 @@ export function defaultSettings(): DashboardSettings {
 const LEFT = new Set(['clock', 'weather', 'members', 'now'])
 
 /**
+ * Portrait Home: a top band (clock and weather, 50/50), a thin members strip, then two columns that
+ * scroll on their own: "right now" on the left, everything else ("coming up": the agenda, the week)
+ * on the right.
+ */
+export const PORTRAIT_TOP: readonly string[] = ['clock', 'weather']
+export const PORTRAIT_STRIP: readonly string[] = ['members']
+export const PORTRAIT_NOW: readonly string[] = ['now', 'routine', 'member_tasks']
+
+/**
  * Landscape: 12-column grid, left 4 columns hold clock/weather/members/now,
  * right 8 hold agenda/week/member_tasks/routine. Portrait: full-width rows in panel order.
  * Unknown panel kinds are dropped here but remain in `settings.panels`.

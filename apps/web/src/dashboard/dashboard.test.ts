@@ -416,3 +416,56 @@ describe('layout editor', () => {
     expect(w.emitted('save')).toHaveLength(1)
   })
 })
+
+describe('Home layout by screen shape', () => {
+  const sizeOf = (w: number, h: number) => {
+    Object.defineProperty(window, 'innerWidth', { value: w, configurable: true })
+    Object.defineProperty(window, 'innerHeight', { value: h, configurable: true })
+  }
+  const panels = ['clock', 'weather', 'members', 'now', 'member_tasks', 'agenda', 'week'].map(
+    (kind) => ({ kind }),
+  )
+  const stacksOf = (w: ReturnType<typeof mount>) =>
+    w.findAll('.stack').map((s) => ({
+      scroll: s.classes('scroll'),
+      kinds: s.findAll('.cell').map((c) => c.classes().find((k) => k.startsWith('k-'))),
+    }))
+  const open = () =>
+    mount(DashboardCanvas, {
+      props: { data: data(), settings: settings({ panels: panels as never }), now: NOW },
+    })
+
+  it('portrait: clock and weather, a members strip, then "now" and "coming up" columns', () => {
+    sizeOf(1080, 1920)
+    const w = open()
+    expect(w.find('.canvas').classes()).toContain('portrait')
+    expect(stacksOf(w)).toEqual([
+      { scroll: false, kinds: ['k-clock', 'k-weather'] },
+      { scroll: false, kinds: ['k-members'] },
+      { scroll: true, kinds: ['k-now', 'k-member_tasks'] },
+      { scroll: true, kinds: ['k-agenda', 'k-week'] },
+    ])
+    const grid = w.find('.grid').attributes('style') ?? ''
+    expect(grid).toContain('grid-template-rows: auto auto minmax(0, 1fr)')
+  })
+
+  it('portrait: a lone column takes the full width', () => {
+    sizeOf(1080, 1920)
+    const w = mount(DashboardCanvas, {
+      props: {
+        data: data(),
+        settings: settings({ panels: [{ kind: 'clock' }, { kind: 'agenda' }] as never }),
+        now: NOW,
+      },
+    })
+    const cols = w.findAll('.stack').map((s) => s.attributes('style') ?? '')
+    expect(cols[1]).toContain('grid-column: 1 / 13')
+  })
+
+  it('landscape: two scrolling columns', () => {
+    sizeOf(1920, 1080)
+    const w = open()
+    expect(w.find('.canvas').classes()).toContain('landscape')
+    expect(stacksOf(w).map((s) => s.scroll)).toEqual([true, true])
+  })
+})
