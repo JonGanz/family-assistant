@@ -5,6 +5,7 @@ import { ApiError } from '../api/http'
 import PinPad from '../components/PinPad.vue'
 import { useClock } from '../composables/useClock'
 import DashboardCanvas from '../dashboard/DashboardCanvas.vue'
+import Screensaver from '../dashboard/Screensaver.vue'
 import TaskFlow from '../dashboard/TaskFlow.vue'
 import { S } from '../dashboard/strings'
 import { getDeviceToken } from '../kiosk/deviceToken'
@@ -148,6 +149,7 @@ const mmss = computed(
       </p>
     </div>
     <TaskFlow ref="flow" />
+    <Screensaver :minutes="store.snapshot?.settings.screensaver_minutes ?? 15" />
 
     <div v-if="showElevation" class="elevation" role="dialog" aria-label="Elevation">
       <div v-if="expiresAt && remaining > 0" data-testid="elevated">{{ S.elevated(mmss) }}</div>

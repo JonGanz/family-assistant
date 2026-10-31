@@ -159,6 +159,8 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 ## 4. Dashboard (kiosk shell)
 **Navigation (D-082, D-084, D-090):** a bar along the shorter edge of the screen as detected (left in landscape, top in portrait; same button size in both) switches between **Home** (the configured panels below) and **Week** (a table: a row per day for the calendar week that starts on the household's `week_start` (Monday or Sunday) and holds today, a column per person; each cell lists that person's events, drawn like the calendar page's, and the tasks due that day; the day cell carries the forecast; it fills the view and never scrolls: a cell that cannot fit its items in one column splits them into two half-width columns when each half stays readable, then ends with a "+N" slot that opens a modal listing everything in that cell, D-087). A bottom row has previous and next arrows, a box showing "Current" or the date range of the shown week, and a "Hide past events" switch (ended events go; a task goes only once completed). The view fetches its own week with `GET /api/v1/dashboard?from=`). The view is local state. The Home view scrolls, so no panel is cropped when another needs more room; the Week view does not scroll (D-087). The connection status (Connected only while heartbeats arrive: "No data" after 45 s of silence, D-091), the stale badge and the adult unlock button sit at the end of the bar (D-085).
 
+**Screensaver (D-092):** after `screensaver_minutes` (default 15) without a touch, key or pointer event, a black full-screen overlay shows the app icon bouncing off the screen edges like a DVD logo. A tap dismisses it. Data keeps updating underneath.
+
 The dashboard is **at-a-glance only** (D-068): date and time, weather with advisories, agenda, tasks, routines, and the household's members. **Nothing derived from email** appears on it: no inbox panel, no titles, senders or approvals, elevated or not. The one exception is a **pending-approvals count badge per adult** on the `members` strip (D-078), which the household setting `dashboard_pending_approvals` (default on) can turn off.
 
 ### 4.1 Layout model
@@ -167,6 +169,7 @@ The layout is data held in `device.settings` and edited by adults in Settings โ
 ```json
 { "theme": { "family": "<id>", "variant": "<id>?", "mode": "auto" | "light" | "dark" },  // ยง3d; auto = dark between sunset and sunrise (from weather)
   "agenda_days": 3,
+  "screensaver_minutes": 15,   // 0 = off, max 240; absent = 15 (D-092)
   "members": "all" | ["<member-id>", ...],
   "panels": [ {"kind": "clock"}, {"kind": "weather", "hourly": true},
               {"kind": "agenda"}, {"kind": "week"}, {"kind": "members"} ] }

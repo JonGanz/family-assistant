@@ -4,6 +4,9 @@ import {
   addPanel,
   applyPreset,
   clampDays,
+  clampScreensaver,
+  DEFAULT_SCREENSAVER_MINUTES,
+  MAX_SCREENSAVER_MINUTES,
   FAMILY_OPTIONS,
   isValid,
   movePanel,
@@ -118,6 +121,24 @@ function preset(e: Event) {
           :value="s.agenda_days"
           @change="
             set({ ...s, agenda_days: clampDays(Number(($event.target as HTMLInputElement).value)) })
+          "
+        />
+      </label>
+      <label
+        >{{ S.screensaverMinutes }}
+        <input
+          data-testid="screensaver-minutes"
+          type="number"
+          min="0"
+          :max="MAX_SCREENSAVER_MINUTES"
+          :value="s.screensaver_minutes ?? DEFAULT_SCREENSAVER_MINUTES"
+          @change="
+            set({
+              ...s,
+              screensaver_minutes: clampScreensaver(
+                Number(($event.target as HTMLInputElement).value),
+              ),
+            })
           "
         />
       </label>

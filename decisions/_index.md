@@ -100,3 +100,4 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-089](D-089-remove-household-toml.md) | Remove the household TOML import and export | accepted | [, ] | arch/Overall.md, arch/Platform.md, arch/Frontend.md, arch/Feeds.md, arch/Ingest.md, arch/Tasks.md |
 | [D-090](D-090-screen-orientation-detected.md) | The dashboard's orientation is detected from the screen, not configured | accepted | (instruction) | arch/Frontend.md |
 | [D-091](D-091-heartbeat-in-connection-status.md) | The dashboard shows no heartbeat time; the connection status absorbs it | accepted | (instruction) | arch/Frontend.md |
+| [D-092](D-092-dashboard-screensaver.md) | The dashboard has a bouncing-icon screensaver after 15 idle minutes | accepted | (instruction) | arch/Frontend.md |

@@ -8,6 +8,12 @@ use crate::theme::{ThemeChoice, is_theme_id};
 
 pub const MAX_PANELS: usize = 12;
 pub const MAX_AGENDA_DAYS: u8 = 14;
+pub const DEFAULT_SCREENSAVER_MINUTES: u16 = 15;
+pub const MAX_SCREENSAVER_MINUTES: u16 = 240;
+
+fn default_screensaver_minutes() -> u16 {
+    DEFAULT_SCREENSAVER_MINUTES
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum AllMarker {
@@ -45,6 +51,8 @@ impl Panel {
 pub enum SettingsError {
     #[error("agenda_days must be 1..={MAX_AGENDA_DAYS}")]
     AgendaDays,
+    #[error("screensaver_minutes must be 0..={MAX_SCREENSAVER_MINUTES}")]
+    ScreensaverMinutes,
     #[error("at most {MAX_PANELS} panels")]
     TooManyPanels,
     #[error("theme family and variant must match ^[a-z0-9][a-z0-9-]{{0,31}}$")]
@@ -55,6 +63,9 @@ pub enum SettingsError {
 pub struct DashboardSettings {
     pub theme: ThemeChoice,
     pub agenda_days: u8,
+    /// Minutes without a touch before the screensaver starts; 0 turns it off.
+    #[serde(default = "default_screensaver_minutes")]
+    pub screensaver_minutes: u16,
     pub members: MemberSelection,
     pub panels: Vec<Panel>,
 }
@@ -65,6 +76,9 @@ impl DashboardSettings {
     pub fn validate(&self) -> Result<(), SettingsError> {
         if !(1..=MAX_AGENDA_DAYS).contains(&self.agenda_days) {
             return Err(SettingsError::AgendaDays);
+        }
+        if self.screensaver_minutes > MAX_SCREENSAVER_MINUTES {
+            return Err(SettingsError::ScreensaverMinutes);
         }
         if self.panels.len() > MAX_PANELS {
             return Err(SettingsError::TooManyPanels);
@@ -89,6 +103,7 @@ impl Default for DashboardSettings {
         Self {
             theme: ThemeChoice::default(),
             agenda_days: 3,
+            screensaver_minutes: DEFAULT_SCREENSAVER_MINUTES,
             members: MemberSelection::All(AllMarker::All),
             panels: vec![
                 Panel::new("clock", json!({})),
@@ -126,6 +141,17 @@ mod tests {
     }
 
     #[test]
+    fn screensaver_defaults_and_is_bounded() {
+        let j = r#"{"theme":"auto","agenda_days":3,"members":"all","panels":[]}"#;
+        let mut s: DashboardSettings = serde_json::from_str(j).unwrap();
+        assert_eq!(s.screensaver_minutes, 15);
+        s.screensaver_minutes = 0;
+        assert!(s.validate().is_ok());
+        s.screensaver_minutes = 241;
+        assert_eq!(s.validate(), Err(SettingsError::ScreensaverMinutes));
+    }
+
+    #[test]
     fn unknown_theme_rejected_and_old_orientation_ignored() {
         let j = r#"{"theme":"auto","agenda_days":3,"members":"all","panels":[]}"#;
         assert!(serde_json::from_str::<DashboardSettings>(j).is_ok());
@@ -150,7 +176,7 @@ mod tests {
     #[test]
     fn unknown_panels_round_trip() {
         let j = serde_json::json!({
-            "theme": {"family": "catppuccin", "mode": "dark"}, "agenda_days": 5,
+            "theme": {"family": "catppuccin", "mode": "dark"}, "agenda_days": 5, "screensaver_minutes": 15,
             "members": "all",
             "panels": [{"kind": "clock"}, {"kind": "hologram", "depth": 3, "opts": {"a": [1, 2]}}]
         });

@@ -7,6 +7,8 @@ type Panels = DashboardSettings['panels']
 export const MAX_PANELS = 12
 export const MIN_DAYS = 1
 export const MAX_DAYS = 14
+export const MAX_SCREENSAVER_MINUTES = 240
+export const DEFAULT_SCREENSAVER_MINUTES = 15
 
 export const clone = (s: DashboardSettings): DashboardSettings => structuredClone(s)
 
@@ -48,6 +50,11 @@ export function applyPreset(s: DashboardSettings, name: string): DashboardSettin
   return { ...s, agenda_days: p.agenda_days, panels: structuredClone(p.panels) as never }
 }
 
+export function clampScreensaver(n: number): number {
+  if (!Number.isFinite(n)) return DEFAULT_SCREENSAVER_MINUTES
+  return Math.min(MAX_SCREENSAVER_MINUTES, Math.max(0, Math.round(n)))
+}
+
 export function clampDays(n: number): number {
   if (!Number.isFinite(n)) return MIN_DAYS
   return Math.min(MAX_DAYS, Math.max(MIN_DAYS, Math.round(n)))
@@ -58,6 +65,8 @@ export function isValid(s: DashboardSettings): boolean {
   return (
     s.agenda_days >= MIN_DAYS &&
     s.agenda_days <= MAX_DAYS &&
+    (s.screensaver_minutes ?? DEFAULT_SCREENSAVER_MINUTES) >= 0 &&
+    (s.screensaver_minutes ?? DEFAULT_SCREENSAVER_MINUTES) <= MAX_SCREENSAVER_MINUTES &&
     s.panels.length <= MAX_PANELS &&
     typeof normalizeTheme(s.theme).family === 'string'
   )

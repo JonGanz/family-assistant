@@ -77,6 +77,8 @@ export const S = {
   onlyLight: 'This theme only has a light variant.',
   themeInUse: 'In use',
   agendaDays: 'Agenda days',
+  screensaverMinutes: 'Screensaver after (minutes, 0 = off)',
+  screensaverWake: 'Tap to wake the dashboard',
   memberFilter: 'Members shown',
   allMembers: 'Everyone',
   preset: 'Preset',

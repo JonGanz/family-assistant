@@ -129,7 +129,7 @@ Open **Settings, Devices**, name a device and press **Pair a device**. Open the 
 (or scan the QR code) in a browser; it opens `/dashboard?device=...` with the clock, weather,
 advisories and the agenda. Without the browser: `cargo run -p fa-server -- device pair --name kitchen`
 prints the URL. The page saves the token and removes it from the address bar. *Try elevation*
-there exercises the adult-PIN flow. The layout (panels and theme; the screen's orientation is detected) is edited per device,
+there exercises the adult-PIN flow. The layout (panels and theme; the screen's orientation is detected, and the screensaver delay) is edited per device,
 see [The dashboard layout](#the-dashboard-layout).
 
 ### 8. Tasks and routines

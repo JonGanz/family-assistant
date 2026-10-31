@@ -13,6 +13,8 @@ export interface PanelConfig {
 export interface DashboardSettings {
   theme: ThemeChoice
   agenda_days: number
+  /** Minutes without a touch before the screensaver starts; 0 is off. Absent means the default. */
+  screensaver_minutes?: number
   members: 'all' | string[]
   panels: PanelConfig[]
 }

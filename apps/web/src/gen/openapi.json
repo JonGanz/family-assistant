@@ -8962,6 +8962,12 @@
               "$ref": "#/components/schemas/Panel"
             }
           },
+          "screensaver_minutes": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Minutes without a touch before the screensaver starts; 0 turns it off.",
+            "minimum": 0
+          },
           "theme": {
             "$ref": "#/components/schemas/ThemeChoice"
           }

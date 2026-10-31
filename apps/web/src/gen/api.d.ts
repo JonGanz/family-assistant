@@ -1788,6 +1788,11 @@ export interface components {
             agenda_days: number;
             members: components["schemas"]["MemberSelection"];
             panels: components["schemas"]["Panel"][];
+            /**
+             * Format: int32
+             * @description Minutes without a touch before the screensaver starts; 0 turns it off.
+             */
+            screensaver_minutes?: number;
             theme: components["schemas"]["ThemeChoice"];
         };
         DashboardView: {
