@@ -13,7 +13,7 @@ const label = (h: string) => h.charAt(0).toUpperCase() + h.slice(1)
 </script>
 
 <template>
-  <fieldset class="hue-picker" :class="{ round: props.round }">
+  <fieldset class="hue-picker">
     <legend :class="{ 'sr-only': props.hideLegend }">{{ legend ?? 'Colour' }}</legend>
     <label v-for="h in HUES" :key="h" class="swatch" :title="label(h)">
       <input
@@ -50,17 +50,16 @@ const label = (h: string) => h.charAt(0).toUpperCase() + h.slice(1)
   cursor: pointer;
 }
 .dot {
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0;
+  width: var(--swatch-size, 2rem);
+  height: var(--swatch-size, 2rem);
+  border-radius: 50%;
   border: 2px solid var(--color-border);
 }
-.round .dot {
-  border-radius: 50%;
-}
 .swatch input:checked + .dot {
-  border-color: var(--color-text);
-  box-shadow: 0 0 0 2px var(--color-bg) inset;
+  border-color: var(--swatch-glow, var(--color-text));
+  box-shadow:
+    0 0 0 2px var(--color-bg) inset,
+    0 0 10px 3px var(--swatch-glow, transparent);
 }
 .swatch input:focus-visible + .dot {
   outline: 2px solid var(--color-focus);

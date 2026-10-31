@@ -145,7 +145,6 @@ onBeforeUnmount(up)
           class="hues"
           :model-value="picked"
           name="whiteboard-hue"
-          round
           hide-legend
           :legend="S.wbColour"
           @update:model-value="pickHue"
@@ -174,9 +173,18 @@ onBeforeUnmount(up)
   </div>
 </template>
 
+<style>
+/* Unscoped: the mode is set on an ancestor (the canvas). */
+[data-theme='dark'] .wb.wb {
+  --wb-ink: #fff;
+}
+</style>
+
 <style scoped>
 .wb {
   --wb-ink: #000;
+  --swatch-size: 3rem;
+  --swatch-glow: var(--wb-ink);
   display: flex;
   flex: 1;
   min-width: 0;
@@ -184,9 +192,6 @@ onBeforeUnmount(up)
   gap: var(--space-2);
   padding: var(--space-2);
   box-sizing: border-box;
-}
-:global([data-theme='dark']) .wb {
-  --wb-ink: #fff;
 }
 .wb.portrait {
   flex-direction: column;
@@ -259,8 +264,8 @@ onBeforeUnmount(up)
   border-radius: 99px;
 }
 .ink {
-  width: 2rem;
-  height: 2rem;
+  width: 3rem;
+  height: 3rem;
   padding: 0;
   border: 2px solid var(--color-border);
   border-radius: 50%;
@@ -268,8 +273,10 @@ onBeforeUnmount(up)
   cursor: pointer;
 }
 .ink.on {
-  border-color: var(--color-text);
-  box-shadow: 0 0 0 2px var(--color-bg) inset;
+  border-color: var(--wb-ink);
+  box-shadow:
+    0 0 0 2px var(--color-bg) inset,
+    0 0 10px 3px var(--wb-ink);
 }
 .confirm {
   display: flex;
