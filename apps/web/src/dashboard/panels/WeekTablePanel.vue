@@ -117,13 +117,15 @@ const rows = computed(() =>
               <span class="dom">{{ r.dom }}</span>
               <span class="wd">{{ r.weekday }}</span>
             </div>
-            <div v-if="r.fc" class="fcicon">
-              <WeatherIcon :code="r.fc.code" size="2rem" />
-            </div>
-            <div v-if="r.fc" class="fctemps">
-              <span class="hi">{{ temp(r.fc.max) }}</span>
-              <span class="sep">|</span>
-              <span class="lo">{{ temp(r.fc.min) }}</span>
+            <div v-if="r.fc" class="forecast">
+              <div class="fcicon">
+                <WeatherIcon :code="r.fc.code" size="2rem" />
+              </div>
+              <div class="fctemps">
+                <span class="hi">{{ temp(r.fc.max) }}</span>
+                <span class="sep">|</span>
+                <span class="lo">{{ temp(r.fc.min) }}</span>
+              </div>
             </div>
           </th>
           <td v-for="c in r.cells" :key="c.key" role="cell" :data-member="c.key">
@@ -192,11 +194,27 @@ td {
 }
 .day {
   overflow: hidden;
+  /* Date at the top, the forecast at the bottom. */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 .date {
   display: flex;
-  align-items: baseline;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-2);
+}
+/* Portrait: the weekday goes under the date number, both centred (the canvas carries the class). */
+.portrait .date {
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+}
+.forecast {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .dom {
   font-size: 1.9rem;

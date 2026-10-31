@@ -66,14 +66,25 @@ const areas = computed(() =>
     portrait.value ? 'portrait' : 'landscape',
   ),
 )
-/** Landscape: a left and a right stack. Portrait: one. Each panel takes the height it needs. */
+/**
+ * Landscape: a left and a right stack, each scrolling on its own. Portrait: the clock and weather
+ * side by side (50/50) at the top, then the other panels in one column that scrolls with the page.
+ * Each panel takes the height it needs.
+ */
 const stacks = computed(() => {
-  if (portrait.value) return [{ key: 'all', span: '1 / 13', areas: areas.value }]
+  if (portrait.value) {
+    const top = areas.value.filter((a) => a.panel.kind === 'clock' || a.panel.kind === 'weather')
+    const rest = areas.value.filter((a) => !top.includes(a))
+    return [
+      { key: 'top', span: '1 / 13', cols: Math.min(2, top.length), areas: top },
+      { key: 'rest', span: '1 / 13', cols: 1, areas: rest },
+    ].filter((s) => s.areas.length > 0)
+  }
   const left = areas.value.filter((a) => a.column === '1 / 5')
   const right = areas.value.filter((a) => a.column !== '1 / 5')
   return [
-    { key: 'left', span: '1 / 5', areas: left },
-    { key: 'right', span: '5 / 13', areas: right },
+    { key: 'left', span: '1 / 5', cols: 1, areas: left },
+    { key: 'right', span: '5 / 13', cols: 1, areas: right },
   ].filter((s) => s.areas.length > 0)
 })
 type View = 'home' | 'week'
@@ -164,10 +175,18 @@ const shift = computed(() =>
       </button>
       <div class="navend"><slot name="nav-end" /></div>
     </nav>
-    <main class="main" :class="{ full: view === 'week' }">
+    <main class="main" :class="{ full: view === 'week', split: view === 'home' && !portrait }">
       <div class="grid" :style="{ transform: `translate(${shift.x}px, ${shift.y}px)` }">
         <template v-if="view === 'home'">
-          <div v-for="st in stacks" :key="st.key" class="stack" :style="{ gridColumn: st.span }">
+          <div
+            v-for="st in stacks"
+            :key="st.key"
+            class="stack"
+            :style="{
+              gridColumn: st.span,
+              gridTemplateColumns: `repeat(${st.cols}, minmax(0, 1fr))`,
+            }"
+          >
             <div v-for="(a, i) in st.areas" :key="i" class="cell" :class="`k-${a.panel.kind}`">
               <PanelHost
                 :data="data"
@@ -319,6 +338,25 @@ const shift = computed(() =>
   box-sizing: border-box;
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
+}
+/* Landscape Home: the two columns fill the height and each scrolls on its own. */
+.main.split {
+  overflow: hidden;
+  padding-bottom: 0;
+  display: flex;
+}
+.main.split .grid {
+  flex: 1;
+  align-items: stretch;
+  box-sizing: border-box;
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+}
+.main.split .stack {
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
+  padding-bottom: 2.5rem;
 }
 .weekview {
   grid-template-rows: minmax(0, 1fr) auto;
