@@ -14,3 +14,4 @@ updated: 2026-10-26
 - [2026-10-29](2026-10-29.md): Docker build layer caching; theming Q-073 to Q-076, D-079 to D-081 and the M3.6 build; about page; square corners; advisories in the weather panel; D-082 dashboard nav bar with Home and Week views
 - [2026-10-30](2026-10-30.md): household TOML import and export removed (D-089, supersedes D-018); dashboard menu on the shorter screen edge, orientation detected not configured (D-090); heartbeat folded into the connection status (D-091); dashboard screensaver (D-092); busier dev sample calendars; e2e and demo seeding through the setup API; dashboard modals time out after 60 s
 - [2026-10-31](2026-10-31.md): dashboard whiteboard view (pen, eraser, hue colours, local storage)
+- [2026-11-01](2026-11-01.md): week view portrait: larger event titles and forecast temperatures

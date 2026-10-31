@@ -243,6 +243,10 @@ td {
   white-space: nowrap;
   font-size: var(--font-size-sm);
 }
+.portrait .fctemps {
+  /* Same size as the event times in the cells. */
+  font-size: 1.1rem;
+}
 .fctemps .hi {
   font-weight: 700;
 }

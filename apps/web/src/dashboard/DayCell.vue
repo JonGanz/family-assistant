@@ -133,7 +133,7 @@ li.event .title {
   font-size: 1.1rem;
 }
 .portrait li.event .title {
-  font-size: 1.4rem;
+  font-size: 1.6rem;
 }
 .portrait li.event .time {
   font-size: 1.1rem;
