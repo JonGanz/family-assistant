@@ -48,7 +48,7 @@ copied as-is, from the repository root.
 | Script | Does |
 |---|---|
 | `scripts/dev-up.sh` | Dev key, containers, web dependencies, migrations. Safe to re-run. |
-| `scripts/dev-seed.sh` | Example household, child login, weather, paired device. Skips if already seeded. |
+| `scripts/dev-seed.sh` | Example household, child login, weather, busy sample calendars (Family, Alex, Sam, Riley, Jordan; recurring, all-day, multi-day, overnight and past events, a crowded day, all dated relative to today), paired device. Skips if already seeded. |
 | `scripts/dev-run.sh` | API + worker (restarts on Rust changes if `cargo-watch` is installed), fixtures, Vite HMR. |
 | `scripts/dev-reset.sh` | Wipes the dev database volume (asks you to type `wipe`), then `dev-up` and `dev-seed`. `demo-reset.sh` is an alias. |
 
