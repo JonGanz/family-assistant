@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fitCell } from './dayCellFit'
+import { fitCell, portraitSlotRem } from './dayCellFit'
 
 // Slot 3.2rem, passed explicitly so the tests do not move with the real slot size. 16px rem: a slot is 51.2px and a gap 4px, so 4 rows need about 4 * 55.2 - 4 = 216.8px.
 describe('fitCell', () => {
@@ -27,5 +27,19 @@ describe('fitCell', () => {
   })
   it('draws everything until the size is known', () => {
     expect(fitCell(9, 0, 0, 16, 3.2)).toEqual({ shown: 9, more: 0, cols: 1 })
+  })
+})
+
+describe('portraitSlotRem', () => {
+  it('keeps the tall slot when there is room', () => {
+    expect(portraitSlotRem(400, 16)).toBe(4.2)
+    expect(portraitSlotRem(0, 16)).toBe(4.2)
+  })
+  it('shrinks so three rows fit, but never below the text height', () => {
+    const h = 200 // 12.5rem
+    const slot = portraitSlotRem(h, 16)
+    expect(slot).toBeLessThan(4.2)
+    expect(fitCell(3, 100, h, 16, slot).shown).toBe(3)
+    expect(portraitSlotRem(100, 16)).toBe(3.7)
   })
 })

@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { formatRange } from '../lib/time'
 import type { EventLike } from '../lib/types'
-import { fitCell, SLOT_REM } from './dayCellFit'
+import { fitCell, portraitSlotRem, SLOT_REM } from './dayCellFit'
 import { S } from './strings'
 import type { DetailRequest, TaskView } from './types'
 
@@ -18,8 +18,6 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ detail: [d: DetailRequest] }>()
 
-const PORTRAIT_SLOT_REM = 4.2
-
 type Item = { kind: 'event'; e: EventLike } | { kind: 'task'; t: TaskView }
 /** Events by start time (all-day first), then tasks, so "+N" hides the least time-bound items. */
 const items = computed<Item[]>(() => [
@@ -34,7 +32,9 @@ const size = ref({ w: 0, h: 0 })
 const remPx = ref(16)
 /** Portrait screens get taller slots (and larger type) for reading from a distance. */
 const portrait = ref(false)
-const slotRem = computed(() => (portrait.value ? PORTRAIT_SLOT_REM : SLOT_REM))
+const slotRem = computed(() =>
+  portrait.value ? portraitSlotRem(size.value.h, remPx.value) : SLOT_REM,
+)
 let ro: ResizeObserver | undefined
 onMounted(() => {
   const el = box.value

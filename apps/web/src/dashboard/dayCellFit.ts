@@ -34,3 +34,19 @@ export function fitCell(
   if (total <= slots) return { shown: total, more: 0, cols }
   return { shown: slots - 1, more: total - slots + 1, cols }
 }
+
+/** Portrait slots: as tall as 4.2rem, shrinking to the text's own height (3.7rem) to fit `rows`. */
+export const PORTRAIT_SLOT_MAX_REM = 4.2
+export const PORTRAIT_SLOT_MIN_REM = 3.7
+export const PORTRAIT_MIN_ROWS = 3
+
+/** The slot height (rem) for a portrait cell `h` px tall: tall if there is room, else just enough for 3 rows. */
+export function portraitSlotRem(h: number, remPx: number): number {
+  if (h <= 0) return PORTRAIT_SLOT_MAX_REM
+  const rem = (h / remPx - (PORTRAIT_MIN_ROWS - 1) * GAP_REM) / PORTRAIT_MIN_ROWS
+  // Rounded down so float error never costs the third row.
+  return Math.min(
+    PORTRAIT_SLOT_MAX_REM,
+    Math.max(PORTRAIT_SLOT_MIN_REM, Math.floor(rem * 100) / 100),
+  )
+}
