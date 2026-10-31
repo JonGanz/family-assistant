@@ -130,9 +130,6 @@ li {
   color: var(--color-muted);
 }
 li.event .title {
-  font-size: 1.1rem;
-}
-.portrait li.event .title {
   font-size: 1.6rem;
 }
 .portrait li.event .time {
