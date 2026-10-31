@@ -22,10 +22,9 @@ COPY .cargo .cargo
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/usr/local/cargo/git,sharing=locked \
     cargo chef cook --release --recipe-path recipe.json -p fa-server
-# Only workspace crates recompile below, and only when Rust sources / sqlx data / config change.
+# Only workspace crates recompile below, and only when Rust sources / sqlx data change.
 COPY Cargo.toml Cargo.lock ./
 COPY .sqlx .sqlx
-COPY config config
 COPY crates crates
 COPY bins bins
 # `.git` is not in the image, so the commit comes in as a build arg (shown in Settings, System, About).
