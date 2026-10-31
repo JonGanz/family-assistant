@@ -18,10 +18,16 @@ export interface Fit {
  * all fit, the last slot (the bottom row's final half) is the "+N" button. A size of 0 (not
  * measured yet) draws everything.
  */
-export function fitCell(total: number, w: number, h: number, remPx: number): Fit {
+export function fitCell(
+  total: number,
+  w: number,
+  h: number,
+  remPx: number,
+  slotRem: number = SLOT_REM,
+): Fit {
   if (w <= 0 || h <= 0) return { shown: total, more: 0, cols: 1 }
   const gap = GAP_REM * remPx
-  const rows = Math.max(1, Math.floor((h + gap) / (SLOT_REM * remPx + gap)))
+  const rows = Math.max(1, Math.floor((h + gap) / (slotRem * remPx + gap)))
   const canSplit = w >= (2 * MIN_COLUMN_REM + GAP_REM) * remPx
   const cols = total > rows && canSplit ? 2 : 1
   const slots = rows * cols

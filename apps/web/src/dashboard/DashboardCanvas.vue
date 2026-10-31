@@ -446,13 +446,16 @@ const shift = computed(() =>
 .grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: var(--space-4);
-  padding: var(--space-4) var(--space-5);
+  gap: var(--space-5);
+  padding: var(--space-5) var(--space-6);
   align-items: start;
+}
+.portrait .main.split .grid {
+  column-gap: var(--space-6);
 }
 .stack {
   display: grid;
-  gap: var(--space-4);
+  gap: var(--space-5);
   min-width: 0;
 }
 .cell {

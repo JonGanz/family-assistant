@@ -207,7 +207,7 @@ td {
 }
 /* Portrait: the weekday goes under the date number, both centred (the canvas carries the class). */
 .portrait .date {
-  flex-direction: column;
+  flex-direction: column-reverse;
   justify-content: center;
   gap: 0;
 }
@@ -223,6 +223,12 @@ td {
 }
 .wd {
   font-weight: 400;
+}
+.portrait .dom {
+  font-size: 2.8rem;
+}
+.portrait thead th {
+  font-size: 1.5rem;
 }
 .fcicon {
   margin-top: var(--space-1);

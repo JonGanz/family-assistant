@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { formatRange } from '../lib/time'
 import type { EventLike } from '../lib/types'
-import { fitCell } from './dayCellFit'
+import { fitCell, SLOT_REM } from './dayCellFit'
 import { S } from './strings'
 import type { DetailRequest, TaskView } from './types'
 
@@ -18,6 +18,8 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ detail: [d: DetailRequest] }>()
 
+const PORTRAIT_SLOT_REM = 4.2
+
 type Item = { kind: 'event'; e: EventLike } | { kind: 'task'; t: TaskView }
 /** Events by start time (all-day first), then tasks, so "+N" hides the least time-bound items. */
 const items = computed<Item[]>(() => [
@@ -30,10 +32,14 @@ const items = computed<Item[]>(() => [
 const box = ref<HTMLElement | null>(null)
 const size = ref({ w: 0, h: 0 })
 const remPx = ref(16)
+/** Portrait screens get taller slots (and larger type) for reading from a distance. */
+const portrait = ref(false)
+const slotRem = computed(() => (portrait.value ? PORTRAIT_SLOT_REM : SLOT_REM))
 let ro: ResizeObserver | undefined
 onMounted(() => {
   const el = box.value
   if (!el) return
+  portrait.value = !!el.closest('.portrait')
   remPx.value = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
   const read = () => (size.value = { w: el.clientWidth, h: el.clientHeight })
   read()
@@ -44,7 +50,9 @@ onMounted(() => {
 })
 onBeforeUnmount(() => ro?.disconnect())
 
-const fit = computed(() => fitCell(items.value.length, size.value.w, size.value.h, remPx.value))
+const fit = computed(() =>
+  fitCell(items.value.length, size.value.w, size.value.h, remPx.value, slotRem.value),
+)
 const shown = computed(() => items.value.slice(0, fit.value.shown))
 const open = (e: EventLike) => e.id && emit('detail', { kind: 'event', id: e.id })
 const all = () =>
@@ -59,7 +67,7 @@ const all = () =>
 
 <template>
   <div ref="box" class="fit">
-    <ul :style="{ '--n': fit.cols }">
+    <ul :style="{ '--n': fit.cols, '--slot': `${slotRem}rem` }">
       <template v-for="(it, i) in shown" :key="i">
         <li
           v-if="it.kind === 'event'"
@@ -99,7 +107,7 @@ ul {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(var(--n), minmax(0, 1fr));
-  grid-auto-rows: 3.2rem;
+  grid-auto-rows: var(--slot, 3.2rem);
   gap: 0.25rem;
 }
 li {
@@ -122,6 +130,12 @@ li {
   color: var(--color-muted);
 }
 li.event .title {
+  font-size: 1.1rem;
+}
+.portrait li.event .title {
+  font-size: 1.4rem;
+}
+.portrait li.event .time {
   font-size: 1.1rem;
 }
 li.event {

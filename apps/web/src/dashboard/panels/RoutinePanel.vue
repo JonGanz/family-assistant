@@ -131,11 +131,18 @@ ul {
   flex: none;
   display: grid;
   place-items: center;
-  width: 3rem;
-  height: 3rem;
+  position: relative;
+  width: 2rem;
+  height: 2rem;
   border: 2px solid var(--color-border);
   border-radius: var(--radius-sm);
   font-weight: 700;
+}
+/* Invisible, wider touch target around the smaller visible box. */
+.box::before {
+  content: '';
+  position: absolute;
+  inset: -1.25rem;
 }
 .on .box {
   background: var(--color-success);

@@ -75,7 +75,7 @@ const groups = computed(() => {
 <style scoped>
 .agenda {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--space-5);
   align-content: start;
 }
 h2 {
@@ -85,7 +85,7 @@ h2 {
 }
 .day {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--space-3);
 }
 .keydate {
   display: flex;
@@ -141,6 +141,20 @@ h2 {
 .title {
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+/* Portrait: time and people on the first row (people right-aligned), the title on the second. */
+.portrait .event {
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-1);
+}
+.portrait .when {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+.portrait .chips {
+  justify-content: flex-end;
 }
 .none {
   margin: 0;
