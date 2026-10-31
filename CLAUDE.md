@@ -57,6 +57,7 @@ updated: 2026-10-23
 - **Before closing a milestone, run `scripts/e2e.sh` yourself.** In M1, every sub-agent passed its unit tests, but a Calendar view that never rendered events showed up only in e2e.
 - **Run CI-equivalent checks against a fresh Postgres** (a throwaway container with `SQLX_OFFLINE=true`), never only the long-lived dev DB. Its state (existing roles, migrated tables) hides failures.
 - **Once a migration has been deployed anywhere, never edit it.** Add a new migration instead. (Before release, an edit is OK if every DB's `_sqlx_migrations` checksum is updated.)
+- **Before handing back any code change, run the CI's own commands, not a lookalike.** Web: `corepack pnpm@9 run lint`, `typecheck`, `test`, `build` in `apps/web` (a bare `vue-tsc --noEmit` checks nothing: the root tsconfig only holds references). Rust, docs and hygiene: `scripts/ci-local.sh --no-web`. After editing the `Dockerfile`, check that every `COPY` source exists. Report what was not run.
 - **Never quote aggregate numbers (test counts and the like) without computing them from the output.**
 - Sub-agent build rules (fmt, disk, containers, wire formats, ts-rs) live in [`plan/_rules-common.md`](plan/_rules-common.md); every brief links it. **Disk (one rule):** agents stop below 6 GB free; between waves the main session deletes `target/debug/incremental`, runs `docker builder prune -f` (never prune volumes), and runs `cargo clean` when `target/debug/deps` passes 15 GB.
 - When agents (forks included) work in parallel in one directory, any glob or bulk edit must name its own files explicitly. A `T-0*.md` loop once rewrote another fork's briefs.
@@ -68,7 +69,7 @@ updated: 2026-10-23
 Only answers to questions (and ideas the user puts inside answers) become `D-NNN` records, with one exception: a direct user instruction that changes scope or security (D-064 is the model) is recorded as a decision with `source_questions: []` and a note that it came from an instruction. Technical choices made inside an arch doc, such as library picks, live in that doc. If the user challenges one, it becomes a question.
 
 ## Git
-The user commits. Their commit messages use `->` for the user's input and `<-` for Claude's output. Don't commit unless asked. Use `git mv` for moves so history is kept.
+The user commits. Their commit messages use `->` for the user's input and `<-` for Claude's output. The user has given standing permission to commit your own changes after every completed change (once the CI-equivalent checks pass). The message is a single line `<- summary` and nothing else: no body, no `Co-Authored-By` trailer. Use `git mv` for moves so history is kept.
 
 ## README (user-facing, keep current)
 `README.md` is the entry point for people using or contributing to the project. **Update it in the same change** whenever any of these change:

@@ -11,7 +11,6 @@ const ICON = 96
 const SPEED = 110 // px per second, on both axes
 
 const active = ref(false)
-const stage = ref<HTMLElement | null>(null)
 const pos = ref({ x: 0, y: 0 })
 let timer: ReturnType<typeof setTimeout> | undefined
 let frame = 0
@@ -94,7 +93,6 @@ watch(
 <template>
   <div
     v-if="active"
-    ref="stage"
     class="screensaver"
     role="button"
     tabindex="0"
