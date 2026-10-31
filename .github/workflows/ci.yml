@@ -1,8 +1,9 @@
 name: CI
 
+# Disabled on push and pull requests: only the versioned release builds run automatically.
+# Run it by hand from the Actions tab, or locally with scripts/ci-local.sh.
 on:
-  push:
-  pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
