@@ -1,14 +1,20 @@
 <script setup lang="ts">
 import { HUES, hueVar, type Hue } from '../lib/hues'
 
-const props = defineProps<{ modelValue: Hue; name: string; legend?: string }>()
+const props = defineProps<{
+  modelValue: Hue
+  name: string
+  legend?: string
+  round?: boolean
+  hideLegend?: boolean
+}>()
 const emit = defineEmits<{ 'update:modelValue': [hue: Hue] }>()
 const label = (h: string) => h.charAt(0).toUpperCase() + h.slice(1)
 </script>
 
 <template>
-  <fieldset class="hue-picker">
-    <legend>{{ legend ?? 'Colour' }}</legend>
+  <fieldset class="hue-picker" :class="{ round: props.round }">
+    <legend :class="{ 'sr-only': props.hideLegend }">{{ legend ?? 'Colour' }}</legend>
     <label v-for="h in HUES" :key="h" class="swatch" :title="label(h)">
       <input
         type="radio"
@@ -48,6 +54,9 @@ const label = (h: string) => h.charAt(0).toUpperCase() + h.slice(1)
   height: 2rem;
   border-radius: 0;
   border: 2px solid var(--color-border);
+}
+.round .dot {
+  border-radius: 50%;
 }
 .swatch input:checked + .dot {
   border-color: var(--color-text);

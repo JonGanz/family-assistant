@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue'
+import Modal from './Modal.vue'
 import HuePicker from '../components/HuePicker.vue'
 import { hueVar, type Hue } from '../lib/hues'
 import { S } from './strings'
@@ -144,18 +145,14 @@ onBeforeUnmount(up)
           class="hues"
           :model-value="picked"
           name="whiteboard-hue"
+          round
+          hide-legend
           :legend="S.wbColour"
           @update:model-value="pickHue"
         />
       </div>
       <div class="row del">
-        <template v-if="confirming">
-          <span>{{ S.wbClearAsk }}</span>
-          <button type="button" class="tool wide" @click="wipe">{{ S.wbYes }}</button>
-          <button type="button" class="tool wide" @click="confirming = false">{{ S.wbNo }}</button>
-        </template>
         <button
-          v-else
           type="button"
           class="tool"
           :aria-label="S.wbClear"
@@ -168,6 +165,12 @@ onBeforeUnmount(up)
         </button>
       </div>
     </div>
+    <Modal v-if="confirming" :title="S.wbClearAsk" @close="confirming = false">
+      <div class="confirm">
+        <button type="button" class="tool wide" @click="wipe">{{ S.wbYes }}</button>
+        <button type="button" class="tool wide" @click="confirming = false">{{ S.wbNo }}</button>
+      </div>
+    </Modal>
   </div>
 </template>
 
@@ -260,11 +263,20 @@ onBeforeUnmount(up)
   height: 2rem;
   padding: 0;
   border: 2px solid var(--color-border);
+  border-radius: 50%;
   background: var(--wb-ink);
   cursor: pointer;
 }
 .ink.on {
   border-color: var(--color-text);
   box-shadow: 0 0 0 2px var(--color-bg) inset;
+}
+.confirm {
+  display: flex;
+  gap: var(--space-3);
+}
+.wide {
+  flex: 1;
+  padding-inline: var(--space-4);
 }
 </style>
