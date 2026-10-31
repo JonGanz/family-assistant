@@ -250,6 +250,16 @@ td {
 .sep {
   color: var(--color-muted);
 }
+/* Today's header is inverted (light on dark, dark on light) so it stands out. */
+tr.today > .day {
+  background: var(--color-text);
+  color: var(--color-bg);
+}
+tr.today > .day .fcicon,
+tr.today > .day .lo,
+tr.today > .day .sep {
+  color: inherit;
+}
 tr.today > * {
   border-top: 3px solid var(--color-accent);
   border-bottom: 3px solid var(--color-accent);
