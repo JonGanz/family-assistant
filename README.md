@@ -43,7 +43,16 @@ copied as-is, from the repository root.
 | Node.js | 24 | pnpm comes through **corepack** (`corepack pnpm@9 ...`); nothing needs a global install |
 | Docker + Compose v2 | recent | dev Postgres, e2e tests, deployment |
 
-**One-shot path:** `scripts/demo-reset.sh` rebuilds the example household, fixtures and a paired device and serves it. It deletes the dev database volume, so it asks you to type `wipe` first.
+**One-shot path:** `scripts/dev.sh` takes a fresh clone to a running app: it starts Postgres and ntfy in containers, migrates the schema, seeds the example household (first run only) and starts the API and the Vite dev server with hot module replacement. Open <http://localhost:5173>. The steps are also available on their own:
+
+| Script | Does |
+|---|---|
+| `scripts/dev-up.sh` | Dev key, containers, web dependencies, migrations. Safe to re-run. |
+| `scripts/dev-seed.sh` | Example household, child login, weather, paired device. Skips if already seeded. |
+| `scripts/dev-run.sh` | API + worker (restarts on Rust changes if `cargo-watch` is installed), fixtures, Vite HMR. |
+| `scripts/dev-reset.sh` | Wipes the dev database volume (asks you to type `wipe`), then `dev-up` and `dev-seed`. `demo-reset.sh` is an alias. |
+
+Schema migrations are the SQL files in `crates/fa-store/migrations/`; `fa-server migrate` applies them (and `serve api`/`serve all` does at startup).
 
 ### 1. Start the database and create a dev master key
 ```bash
@@ -65,7 +74,7 @@ already set in your environment win), so no shell setup is needed, whichever she
 ### 3. Create the example household and accounts
 `e2e/seed-household.mjs` creates a fictional family (with a location, so weather works right away) through
 the first-run setup API and completes the setup, so the browser shows the login page and not the wizard.
-It needs the app running, so `scripts/demo-reset.sh` starts the app in the background, seeds it and gives
+It needs the app running, so `scripts/dev-seed.sh` starts the app in the background, seeds it and gives
 Riley (a child) a login. To do the same by hand, with the app already running (`cargo run -p fa-server -- serve all`):
 ```bash
 FA_E2E_BASE_URL=http://127.0.0.1:8080 FA_E2E_USER=alex@example.com FA_E2E_PASSWORD='a-long-example-passphrase' \

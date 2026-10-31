@@ -1,6 +1,6 @@
 // Seeds the fictional example household through the setup API (no secrets, no real data) and
 // completes the first-run setup. Used by scripts/e2e.sh and scripts/demo-reset.sh.
-// Env: FA_E2E_BASE_URL, FA_E2E_USER, FA_E2E_PASSWORD, optional FA_E2E_PIN (owner PIN).
+// Env: FA_E2E_BASE_URL, optional FA_E2E_PUBLIC_URL (the origin users browse, e.g. the Vite dev server), FA_E2E_USER, FA_E2E_PASSWORD, optional FA_E2E_PIN (owner PIN).
 const base = process.env.FA_E2E_BASE_URL;
 let cookie = "";
 
@@ -27,7 +27,7 @@ await call("POST", "/api/v1/setup/household", {
     units: "metric",
     currency: "USD",
     location: { label: "Springfield (fictional)", lat: 40.0, lon: -75.0 },
-    base_url: base,
+    base_url: process.env.FA_E2E_PUBLIC_URL || base,
 });
 await call("POST", "/api/v1/setup/owner", {
     display_name: "Alex",
