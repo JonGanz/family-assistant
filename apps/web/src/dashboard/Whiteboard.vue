@@ -11,7 +11,7 @@ defineProps<{ portrait: boolean }>()
 const strokes = ref<Stroke[]>(loadStrokes())
 const tool = ref<'pen' | 'eraser'>('pen')
 const ink = ref<Ink>('ink')
-const width = ref(4)
+const width = ref(5)
 const WIDTHS = [
   { w: 2, label: S.wbThin },
   { w: 5, label: S.wbMedium },
@@ -212,7 +212,10 @@ onBeforeUnmount(up)
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
-  width: 7.5rem;
+  width: 9.5rem;
+  /* Room for the selected swatch's glow, which the scroll container would clip. */
+  padding: 0.9rem;
+  box-sizing: border-box;
   overflow-y: auto;
 }
 .portrait .tools {
