@@ -1,12 +1,29 @@
 <script setup lang="ts">
+import { onBeforeUnmount, onMounted } from 'vue'
 import { S } from './strings'
 
 defineProps<{ title: string }>()
 const emit = defineEmits<{ close: [] }>()
+
+/** A popup nobody touches for this long closes itself, so the dashboard returns to its view. */
+const IDLE_CLOSE_MS = 60_000
+let timer: ReturnType<typeof setTimeout> | undefined
+function arm() {
+  clearTimeout(timer)
+  timer = setTimeout(() => emit('close'), IDLE_CLOSE_MS)
+}
+onMounted(arm)
+onBeforeUnmount(() => clearTimeout(timer))
 </script>
 
 <template>
-  <div class="backdrop" data-testid="detail-modal" @click.self="emit('close')">
+  <div
+    class="backdrop"
+    data-testid="detail-modal"
+    @click.self="emit('close')"
+    @pointerdown.passive="arm"
+    @scroll.capture.passive="arm"
+  >
     <section class="modal" role="dialog" aria-modal="true" :aria-label="title">
       <header>
         <h2>{{ title }}</h2>
@@ -30,7 +47,9 @@ const emit = defineEmits<{ close: [] }>()
 .modal {
   display: flex;
   flex-direction: column;
-  width: min(60rem, 100%);
+  width: fit-content;
+  min-width: min(20rem, 100%);
+  max-width: min(60rem, 100%);
   max-height: 100%;
   background: var(--color-bg);
   color: var(--color-text);

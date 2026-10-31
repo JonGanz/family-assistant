@@ -121,6 +121,9 @@ li {
 .time {
   color: var(--color-muted);
 }
+li.event .title {
+  font-size: 1.1rem;
+}
 li.event {
   cursor: pointer;
   border-left: 6px solid var(--color-accent);

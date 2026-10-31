@@ -113,8 +113,10 @@ const rows = computed(() =>
       <tbody role="rowgroup">
         <tr v-for="r in rows" :key="r.key" role="row" :class="{ today: r.today }" :data-day="r.key">
           <th scope="row" role="rowheader" class="day">
-            <div class="dom">{{ r.dom }}</div>
-            <div class="wd">{{ r.weekday }}</div>
+            <div class="date">
+              <span class="dom">{{ r.dom }}</span>
+              <span class="wd">{{ r.weekday }}</span>
+            </div>
             <div v-if="r.fc" class="fcicon">
               <WeatherIcon :code="r.fc.code" size="2rem" />
             </div>
@@ -157,6 +159,9 @@ table {
 /* Equal rows that share the height exactly; a cell never grows, it folds extra items into "+N". */
 tbody {
   flex: 1;
+  /* A flex item's automatic minimum is its content height: without this the rows' content (the
+     day header) sets a floor, the table outgrows its box and the last day is clipped. */
+  min-height: 0;
   display: grid;
   grid-auto-rows: minmax(0, 1fr);
 }
@@ -184,6 +189,14 @@ td {
   font-size: var(--font-size-base);
   font-weight: 400;
   background: var(--color-surface);
+}
+.day {
+  overflow: hidden;
+}
+.date {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
 }
 .dom {
   font-size: 1.9rem;

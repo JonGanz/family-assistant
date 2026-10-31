@@ -45,10 +45,10 @@ const weekday = (d: string) =>
     <ul class="days" aria-label="Daily forecast">
       <li v-for="d in days" :key="d.date">
         <span class="d">{{ weekday(d.date) }}</span>
-        <WeatherIcon :code="d.code" size="2.4rem" />
-        <span class="muted label">{{ weatherInfo(d.code, false).label }}</span>
         <span class="hi">{{ t(d.max) }}</span>
         <span class="muted">{{ t(d.min) }}</span>
+        <WeatherIcon :code="d.code" size="2.4rem" />
+        <span class="muted label">{{ weatherInfo(d.code, false).label }}</span>
         <span class="muted">{{ d.pop === null ? '' : `${Math.round(d.pop)}%` }}</span>
       </li>
     </ul>
@@ -72,7 +72,9 @@ ul {
   margin: 0 0 var(--space-4);
   padding: 0;
 }
+/* The hourly strip scrolls inside the modal; it must not set the modal's width. */
 .hours {
+  contain: inline-size;
   display: flex;
   gap: var(--space-2);
   overflow-x: auto;
@@ -87,9 +89,12 @@ ul {
   padding: var(--space-2);
   background: var(--color-surface);
 }
+.days {
+  width: fit-content;
+}
 .days li {
   display: grid;
-  grid-template-columns: 8em 3rem 1fr 4em 4em 4em;
+  grid-template-columns: 8em 4em 4em 3rem 15em 4em;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-1) 0;
@@ -97,5 +102,8 @@ ul {
 }
 .label {
   min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>
