@@ -59,7 +59,7 @@ export const S = {
   approvalsWaiting: (n: number) => `${n} waiting for approval`,
   // layout editor
   layout: 'Layout',
-  orientation: 'Orientation',
+  previewAs: 'Preview as',
   landscape: 'Landscape',
   portrait: 'Portrait',
   theme: 'Theme',

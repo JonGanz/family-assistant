@@ -10,13 +10,6 @@ pub const MAX_PANELS: usize = 12;
 pub const MAX_AGENDA_DAYS: u8 = 14;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum Orientation {
-    Landscape,
-    Portrait,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum AllMarker {
     #[serde(rename = "all")]
     All,
@@ -60,7 +53,6 @@ pub enum SettingsError {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
 pub struct DashboardSettings {
-    pub orientation: Orientation,
     pub theme: ThemeChoice,
     pub agenda_days: u8,
     pub members: MemberSelection,
@@ -68,7 +60,8 @@ pub struct DashboardSettings {
 }
 
 impl DashboardSettings {
-    /// Orientation and theme are enums, so unknown values already fail at deserialisation.
+    /// The theme is an enum, so unknown values already fail at deserialisation. The screen's
+    /// orientation is detected by the client; an old stored `orientation` key is ignored.
     pub fn validate(&self) -> Result<(), SettingsError> {
         if !(1..=MAX_AGENDA_DAYS).contains(&self.agenda_days) {
             return Err(SettingsError::AgendaDays);
@@ -94,7 +87,6 @@ impl Default for DashboardSettings {
     fn default() -> Self {
         use serde_json::json;
         Self {
-            orientation: Orientation::Landscape,
             theme: ThemeChoice::default(),
             agenda_days: 3,
             members: MemberSelection::All(AllMarker::All),
@@ -134,10 +126,12 @@ mod tests {
     }
 
     #[test]
-    fn unknown_orientation_and_theme_rejected() {
-        let j = r#"{"orientation":"sideways","theme":"auto","agenda_days":3,"members":"all","panels":[]}"#;
-        assert!(serde_json::from_str::<DashboardSettings>(j).is_err());
-        let j = r#"{"orientation":"portrait","theme":"neon","agenda_days":3,"members":"all","panels":[]}"#;
+    fn unknown_theme_rejected_and_old_orientation_ignored() {
+        let j = r#"{"theme":"auto","agenda_days":3,"members":"all","panels":[]}"#;
+        assert!(serde_json::from_str::<DashboardSettings>(j).is_ok());
+        let j = r#"{"orientation":"portrait","theme":"auto","agenda_days":3,"members":"all","panels":[]}"#;
+        assert!(serde_json::from_str::<DashboardSettings>(j).is_ok());
+        let j = r#"{"theme":"neon","agenda_days":3,"members":"all","panels":[]}"#;
         assert!(serde_json::from_str::<DashboardSettings>(j).is_err());
     }
 
@@ -156,7 +150,7 @@ mod tests {
     #[test]
     fn unknown_panels_round_trip() {
         let j = serde_json::json!({
-            "orientation": "portrait", "theme": {"family": "catppuccin", "mode": "dark"}, "agenda_days": 5,
+            "theme": {"family": "catppuccin", "mode": "dark"}, "agenda_days": 5,
             "members": "all",
             "panels": [{"kind": "clock"}, {"kind": "hologram", "depth": 3, "opts": {"a": [1, 2]}}]
         });

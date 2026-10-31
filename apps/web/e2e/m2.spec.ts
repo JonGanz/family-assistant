@@ -60,7 +60,6 @@ async function openKiosk(
     headers: { 'X-FA-Request': '1', 'If-Match': `"${dev.version}"` },
     data: {
       settings: {
-        orientation: viewport.width > viewport.height ? 'landscape' : 'portrait',
         theme: 'auto',
         agenda_days: 3,
         members: 'all',

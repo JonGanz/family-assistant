@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch, watchEffect } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
 import { dayKey } from '../lib/time'
 import { applyTheme, loadDeviceChoice, resolveVariant } from '../themes'
 import { panelVisible } from './tasksModel'
@@ -37,18 +37,38 @@ const emit = defineEmits<{
 }>()
 
 const cfg = computed(() => props.settings ?? props.data.settings)
+const root = ref<HTMLElement | null>(null)
+/**
+ * The screen's shape is detected, not configured: portrait when taller than wide. It decides the
+ * panel layout and puts the menu on the shorter edge (top in portrait, left in landscape).
+ */
+const portrait = ref(typeof window !== 'undefined' && window.innerHeight > window.innerWidth)
+let sizeObserver: ResizeObserver | undefined
+onMounted(() => {
+  const el = root.value
+  if (!el || typeof ResizeObserver === 'undefined') return
+  const measure = () => {
+    if (el.clientWidth > 0 && el.clientHeight > 0) portrait.value = el.clientHeight > el.clientWidth
+  }
+  measure()
+  sizeObserver = new ResizeObserver(measure)
+  sizeObserver.observe(el)
+})
+onBeforeUnmount(() => sizeObserver?.disconnect())
 /** Panels with nothing to show (an idle routine) are dropped so the others use the space. */
 const areas = computed(() =>
-  resolveLayout({
-    ...cfg.value,
-    theme: normalizeTheme(cfg.value.theme),
-    panels: cfg.value.panels.filter((p) => panelVisible(p, props.data, props.now)),
-  }),
+  resolveLayout(
+    {
+      ...cfg.value,
+      theme: normalizeTheme(cfg.value.theme),
+      panels: cfg.value.panels.filter((p) => panelVisible(p, props.data, props.now)),
+    },
+    portrait.value ? 'portrait' : 'landscape',
+  ),
 )
-const landscape = computed(() => cfg.value.orientation === 'landscape')
 /** Landscape: a left and a right stack. Portrait: one. Each panel takes the height it needs. */
 const stacks = computed(() => {
-  if (!landscape.value) return [{ key: 'all', span: '1 / 13', areas: areas.value }]
+  if (portrait.value) return [{ key: 'all', span: '1 / 13', areas: areas.value }]
   const left = areas.value.filter((a) => a.column === '1 / 5')
   const right = areas.value.filter((a) => a.column !== '1 / 5')
   return [
@@ -106,7 +126,6 @@ const variant = computed(() => {
     ) === 'dark'
   return resolveVariant(choice.value, { prefersDark: dark, night })
 })
-const root = ref<HTMLElement | null>(null)
 watchEffect(
   () => {
     if (root.value) applyTheme(variant.value, root.value)
@@ -127,9 +146,9 @@ const shift = computed(() =>
   <div
     ref="root"
     class="kiosk canvas"
-    :class="cfg.orientation"
+    :class="portrait ? 'portrait' : 'landscape'"
     :data-theme="variant.mode"
-    :data-orientation="cfg.orientation"
+    :data-orientation="portrait ? 'portrait' : 'landscape'"
   >
     <nav class="nav" :aria-label="S.navLabel">
       <button
@@ -239,7 +258,7 @@ const shift = computed(() =>
 }
 .landscape .nav {
   flex-direction: column;
-  width: 7rem;
+  width: calc(6rem + 2 * var(--space-2));
   border-right: 1px solid var(--color-border);
 }
 .portrait .nav {
@@ -259,9 +278,6 @@ const shift = computed(() =>
   align-items: center;
 }
 .nav button {
-  flex: 1;
-  min-height: var(--min-touch);
-  padding: var(--space-2) var(--space-3);
   border: 2px solid var(--color-border);
   background: var(--color-bg);
   color: inherit;
@@ -269,9 +285,11 @@ const shift = computed(() =>
   font-size: var(--font-size-lg);
   cursor: pointer;
 }
-.landscape .nav button {
+.nav button {
   flex: none;
+  width: 6rem;
   min-height: 5rem;
+  padding-inline: var(--space-2);
 }
 .nav button.on {
   background: var(--color-accent);

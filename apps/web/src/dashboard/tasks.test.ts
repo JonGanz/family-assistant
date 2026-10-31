@@ -84,7 +84,6 @@ function data(over: Record<string, unknown> = {}): DashboardData {
     tasks: [],
     routines: [],
     settings: {
-      orientation: 'landscape',
       theme: 'light',
       agenda_days: 2,
       members: 'all',
@@ -96,7 +95,6 @@ function data(over: Record<string, unknown> = {}): DashboardData {
 
 const settings = (panels: unknown[]): DashboardSettings =>
   ({
-    orientation: 'landscape',
     theme: { family: 'catppuccin', mode: 'light' },
     agenda_days: 2,
     members: 'all',

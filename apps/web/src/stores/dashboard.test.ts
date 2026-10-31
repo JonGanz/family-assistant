@@ -39,7 +39,6 @@ function snap(over: Partial<DashboardData['settings']> = {}): DashboardData {
     routines: [],
     weather: null,
     settings: {
-      orientation: 'landscape',
       theme: 'auto',
       agenda_days: 3,
       members: 'all',

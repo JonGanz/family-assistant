@@ -41,7 +41,7 @@ export function setPanelOption(
   }
 }
 
-/** A preset replaces the panels and agenda window; orientation, theme and filter stay. */
+/** A preset replaces the panels and agenda window; theme and filter stay. */
 export function applyPreset(s: DashboardSettings, name: string): DashboardSettings {
   const p = PRESETS[name]
   if (!p) return s
@@ -59,7 +59,6 @@ export function isValid(s: DashboardSettings): boolean {
     s.agenda_days >= MIN_DAYS &&
     s.agenda_days <= MAX_DAYS &&
     s.panels.length <= MAX_PANELS &&
-    (s.orientation === 'landscape' || s.orientation === 'portrait') &&
     typeof normalizeTheme(s.theme).family === 'string'
   )
 }

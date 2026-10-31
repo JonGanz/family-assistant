@@ -2,6 +2,7 @@ import type { ThemeChoice } from '../../themes'
 
 export type PanelKind =
   'clock' | 'weather' | 'agenda' | 'week' | 'members' | 'now' | 'member_tasks' | 'routine'
+/** The shape of the screen the dashboard is on; detected, not configured. */
 export type Orientation = 'landscape' | 'portrait'
 
 export interface PanelConfig {
@@ -10,7 +11,6 @@ export interface PanelConfig {
 }
 
 export interface DashboardSettings {
-  orientation: Orientation
   theme: ThemeChoice
   agenda_days: number
   members: 'all' | string[]
@@ -35,7 +35,6 @@ export const KNOWN_PANELS: readonly string[] = [
 ]
 
 const base = {
-  orientation: 'landscape',
   theme: { family: 'catppuccin', mode: 'auto' },
   members: 'all',
 } as const
@@ -109,8 +108,10 @@ const LEFT = new Set(['clock', 'weather', 'members', 'now'])
  * right 8 hold agenda/week/member_tasks/routine. Portrait: full-width rows in panel order.
  * Unknown panel kinds are dropped here but remain in `settings.panels`.
  */
-export function resolveLayout(settings: DashboardSettings, orientation?: Orientation): GridArea[] {
-  const o = orientation ?? settings.orientation
+export function resolveLayout(
+  settings: DashboardSettings,
+  o: Orientation = 'landscape',
+): GridArea[] {
   const known = settings.panels.filter((p) => KNOWN_PANELS.includes(p.kind))
   if (o === 'portrait') {
     return known.map((panel, i) => ({ panel, column: '1 / 13', row: `${i + 1} / ${i + 2}` }))

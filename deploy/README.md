@@ -266,7 +266,7 @@ The dashboard is a full-screen page for a kitchen tablet or a screen on the wall
 the weather, the agenda, today's tasks, the family members and, if the household allows it, how many
 items wait for each adult's approval (**Settings, Household**). It never shows mail. In **Settings, Devices**
 press **Pair a device** and open the pairing link (or scan the QR code) on the screen. The screen
-remembers itself, and **Edit layout** picks its panels, orientation and theme. Approving or ticking off
+remembers itself, and **Edit layout** picks its panels and theme. Approving or ticking off
 something on the screen asks for an adult's PIN (step 3 of the wizard, or **Settings, Members**).
 
 A screen that can open the app's normal address (a tablet on your Wi-Fi, or a device on the tailnet, or

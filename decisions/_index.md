@@ -98,3 +98,4 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-087](D-087-week-view-no-scroll.md) | The Week view never scrolls; a cell that is too full folds items into "+N" | accepted | (instruction) | arch/Frontend.md |
 | [D-088](D-088-second-adult-setup.md) | An adult can set up another adult until that adult claims their account | accepted | Q-077 | arch/Domain.md, arch/Frontend.md |
 | [D-089](D-089-remove-household-toml.md) | Remove the household TOML import and export | accepted | [, ] | arch/Overall.md, arch/Platform.md, arch/Frontend.md, arch/Feeds.md, arch/Ingest.md, arch/Tasks.md |
+| [D-090](D-090-screen-orientation-detected.md) | The dashboard's orientation is detected from the screen, not configured | accepted | (instruction) | arch/Frontend.md |

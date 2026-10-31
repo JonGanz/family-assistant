@@ -9,7 +9,8 @@ import type { DashboardSettings } from './types'
 const props = defineProps<{ data: PreviewData; settings: DashboardSettings }>()
 const now = useClock(30_000)
 
-const portrait = computed(() => props.settings.orientation === 'portrait')
+/** Only the preview's own screen shape; a real screen's is detected. */
+const portrait = ref(false)
 const W = computed(() => (portrait.value ? 1080 : 1920))
 const H = computed(() => (portrait.value ? 1920 : 1080))
 
@@ -32,6 +33,17 @@ const full = computed(() => ({ ...props.data, settings: props.settings }))
 </script>
 
 <template>
+  <label class="shape"
+    >{{ S.previewAs }}
+    <select
+      data-testid="preview-shape"
+      :value="portrait ? 'portrait' : 'landscape'"
+      @change="portrait = ($event.target as HTMLSelectElement).value === 'portrait'"
+    >
+      <option value="landscape">{{ S.landscape }}</option>
+      <option value="portrait">{{ S.portrait }}</option>
+    </select>
+  </label>
   <div
     ref="box"
     class="preview"

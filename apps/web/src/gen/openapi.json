@@ -8942,7 +8942,6 @@
       "DashboardSettings": {
         "type": "object",
         "required": [
-          "orientation",
           "theme",
           "agenda_days",
           "members",
@@ -8956,9 +8955,6 @@
           },
           "members": {
             "$ref": "#/components/schemas/MemberSelection"
-          },
-          "orientation": {
-            "$ref": "#/components/schemas/Orientation"
           },
           "panels": {
             "type": "array",
@@ -12466,13 +12462,6 @@
             "format": "int32"
           }
         }
-      },
-      "Orientation": {
-        "type": "string",
-        "enum": [
-          "landscape",
-          "portrait"
-        ]
       },
       "OwnPasswordChange": {
         "type": "object",

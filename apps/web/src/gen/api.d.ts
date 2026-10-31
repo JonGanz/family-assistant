@@ -1787,7 +1787,6 @@ export interface components {
             /** Format: int32 */
             agenda_days: number;
             members: components["schemas"]["MemberSelection"];
-            orientation: components["schemas"]["Orientation"];
             panels: components["schemas"]["Panel"][];
             theme: components["schemas"]["ThemeChoice"];
         };
@@ -2706,8 +2705,6 @@ export interface components {
             /** Format: int32 */
             version: number;
         };
-        /** @enum {string} */
-        Orientation: "landscape" | "portrait";
         OwnPasswordChange: {
             current_password: string;
             new_password: string;

@@ -70,23 +70,6 @@ function preset(e: Event) {
         </select>
       </label>
       <label
-        >{{ S.orientation }}
-        <select
-          data-testid="orientation"
-          :value="s.orientation"
-          @change="
-            set({
-              ...s,
-              orientation: ($event.target as HTMLSelectElement)
-                .value as DashboardSettings['orientation'],
-            })
-          "
-        >
-          <option value="landscape">{{ S.landscape }}</option>
-          <option value="portrait">{{ S.portrait }}</option>
-        </select>
-      </label>
-      <label
         >{{ S.themeFamily }}
         <select
           data-testid="theme-family"

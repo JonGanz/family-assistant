@@ -10,7 +10,6 @@ import type { DashboardData, DashboardSettings } from './types'
 
 const settings = (over: Partial<DashboardSettings> = {}): DashboardSettings =>
   ({
-    orientation: 'landscape',
     theme: { family: 'catppuccin', mode: 'light' },
     agenda_days: 2,
     members: 'all',
@@ -391,7 +390,6 @@ describe('layout editor', () => {
     expect(s.panels).toHaveLength(1)
     s = applyPreset(s, 'Calendar wall')
     expect(s.agenda_days).toBe(7)
-    expect(s.orientation).toBe('landscape')
     expect(isValid(s)).toBe(true)
     expect(isValid({ ...s, agenda_days: 15 })).toBe(false)
     expect(toggleMember(settings(), 'a', ['a', 'b']).members).toEqual(['b'])
@@ -405,17 +403,15 @@ describe('layout editor', () => {
         members: data().members,
       },
     })
-    await w.find('[data-testid="orientation"]').setValue('portrait')
     await w.find('[data-testid="theme"]').setValue('dark')
     await w.find('[data-testid="agenda-days"]').setValue('99')
     await w.find('[data-testid="add-kind"]').setValue('week')
     await w.find('[data-testid="add-panel"]').trigger('click')
     await w.find('[data-testid="preset"]').setValue('Minimal')
     const emits = w.emitted('update:modelValue') as DashboardSettings[][]
-    expect(emits.length).toBeGreaterThanOrEqual(5)
+    expect(emits.length).toBeGreaterThanOrEqual(4)
     for (const [s] of emits) expect(isValid(s!)).toBe(true)
-    expect(emits[0]![0]!.orientation).toBe('portrait')
-    expect(emits[2]![0]!.agenda_days).toBe(14)
+    expect(emits[1]![0]!.agenda_days).toBe(14)
     await w.find('form').trigger('submit')
     expect(w.emitted('save')).toHaveLength(1)
   })

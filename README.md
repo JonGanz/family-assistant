@@ -129,7 +129,7 @@ Open **Settings, Devices**, name a device and press **Pair a device**. Open the 
 (or scan the QR code) in a browser; it opens `/dashboard?device=...` with the clock, weather,
 advisories and the agenda. Without the browser: `cargo run -p fa-server -- device pair --name kitchen`
 prints the URL. The page saves the token and removes it from the address bar. *Try elevation*
-there exercises the adult-PIN flow. The layout (panels, theme, orientation) is edited per device,
+there exercises the adult-PIN flow. The layout (panels and theme; the screen's orientation is detected) is edited per device,
 see [The dashboard layout](#the-dashboard-layout).
 
 ### 8. Tasks and routines
@@ -429,7 +429,7 @@ messages of that sample (200 by default).
 
 ## The dashboard layout
 Each paired device has its own layout: **Settings, Devices, Edit layout** lets you pick a preset,
-orientation, theme, agenda length, and add, remove and reorder panels (clock, weather (which also shows advisories and upcoming thunderstorms),
+theme, agenda length, and add, remove and reorder panels (clock, weather (which also shows advisories and upcoming thunderstorms),
 agenda, week, members, now, member tasks, routine), with a live preview of the device. The layout is stored on the server, so
 the screen picks it up on its next refresh.
 

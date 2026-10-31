@@ -80,7 +80,6 @@ describe('kiosk canvas theme', () => {
       task_lists: [],
       weather: null,
       settings: {
-        orientation: 'landscape',
         theme,
         agenda_days: 2,
         members: 'all',

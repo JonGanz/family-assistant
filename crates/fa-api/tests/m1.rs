@@ -1059,9 +1059,10 @@ async fn dashboard_shape_and_device_settings(pool: PgPool) {
         json!({"family": "catppuccin", "mode": "auto"})
     );
     let v = dev.json()["version"].to_string();
-    let settings = json!({"orientation": "portrait", "theme": "dark", "agenda_days": 5,
+    let settings = json!({"theme": "dark", "agenda_days": 5,
         "members": [fx.child], "panels": [{"kind": "clock"}, {"kind": "hologram", "depth": 3}]});
-    let bad = json!({"settings": {"orientation": "portrait", "theme": "dark", "agenda_days": 20, "members": "all", "panels": []}});
+    let bad =
+        json!({"settings": {"theme": "dark", "agenda_days": 20, "members": "all", "panels": []}});
     let r = send(
         &fx.app,
         Method::PATCH,

@@ -220,7 +220,6 @@ test("Dashboard: no inbox, no dismiss; the members strip shows each adult's pend
     headers: { 'X-FA-Request': '1', 'If-Match': `"${dev.version}"` },
     data: {
       settings: {
-        orientation: 'landscape',
         theme: 'auto',
         agenda_days: 3,
         members: 'all',
