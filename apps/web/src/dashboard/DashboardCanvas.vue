@@ -12,6 +12,7 @@ import {
   resolveLayout,
   type GridArea,
 } from './layout'
+import Whiteboard from './Whiteboard.vue'
 import PanelHost from './panels/PanelHost.vue'
 import { prefersDark, resolveMode } from './theme'
 import { S } from './strings'
@@ -120,10 +121,11 @@ const homeRows = computed(() => {
   const cols = stacks.value.some((s) => s.scroll) ? ' minmax(0, 1fr)' : ''
   return `${'auto '.repeat(bands).trim()}${cols}`
 })
-type View = 'home' | 'week'
-const VIEWS: { id: View; label: string }[] = [
+type View = 'home' | 'week' | 'whiteboard'
+const VIEWS: { id: View; label: string; icon?: boolean }[] = [
   { id: 'home', label: S.navHome },
   { id: 'week', label: S.navWeek },
+  { id: 'whiteboard', label: S.navWhiteboard, icon: true },
 ]
 const view = ref<View>('home')
 function setView(v: View) {
@@ -202,14 +204,21 @@ const shift = computed(() =>
         :class="{ on: view === v.id }"
         :aria-current="view === v.id ? 'page' : undefined"
         :data-view="v.id"
+        :aria-label="v.icon ? v.label : undefined"
+        :title="v.icon ? v.label : undefined"
         @click="setView(v.id)"
       >
-        {{ v.label }}
+        <svg v-if="v.icon" class="navicon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M3 21l3.5-1 12-12-2.5-2.5-12 12L3 21zM15 5l2.5 2.5" />
+        </svg>
+        <template v-else>{{ v.label }}</template>
       </button>
       <div class="navend"><slot name="nav-end" /></div>
     </nav>
-    <main class="main" :class="{ full: view === 'week', split: view === 'home' }">
+    <main class="main" :class="{ full: view !== 'home', split: view === 'home' }">
+      <Whiteboard v-if="view === 'whiteboard'" :portrait="portrait" />
       <div
+        v-else
         class="grid"
         :style="{
           transform: `translate(${shift.x}px, ${shift.y}px)`,
@@ -349,6 +358,15 @@ const shift = computed(() =>
   width: 6rem;
   min-height: 5rem;
   padding-inline: var(--space-2);
+}
+.navicon {
+  width: 2.2rem;
+  height: 2.2rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 .nav button.on {
   background: var(--color-accent);
