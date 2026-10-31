@@ -1,5 +1,5 @@
 /** Slot geometry of a Week-view cell, in rem (so it follows the kiosk's font scale). */
-export const SLOT_REM = 3.6
+export const SLOT_REM = 3.4
 export const GAP_REM = 0.25
 export const MIN_COLUMN_REM = 9
 
