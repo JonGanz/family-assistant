@@ -163,3 +163,115 @@ fn until_before_start_keeps_only_the_first_event_without_warning() {
     assert_eq!(of(&e, "cut-off@example.com").len(), 1);
     assert!(e.warnings.is_empty());
 }
+
+// ---- hostile feeds (C2-13, C2-14, C2-17) ----
+
+fn parse_expand(body: &str, from: DateTime<Utc>, to: DateTime<Utc>) -> Expansion {
+    let comps = ics::parse(body).unwrap();
+    expand(
+        &comps,
+        &ExpandOptions {
+            household_tz: Tz::America__New_York,
+            from,
+            to,
+        },
+    )
+}
+
+fn calendar(events: &str) -> String {
+    format!("BEGIN:VCALENDAR\r\nVERSION:2.0\r\n{events}END:VCALENDAR\r\n")
+}
+
+#[test]
+fn parse_duration_rejects_overflow_and_long_spans() {
+    use fa_calendar::expand::parse_duration;
+    assert_eq!(parse_duration("P99999999999W"), None);
+    assert_eq!(parse_duration("P9223372036854775807D"), None);
+    assert_eq!(parse_duration("PT9223372036854775807H"), None);
+    assert_eq!(parse_duration("P367D"), None);
+    assert_eq!(parse_duration("P366D").map(|d| d.num_days()), Some(366));
+    assert_eq!(parse_duration("-PT15M").map(|d| d.num_minutes()), Some(-15));
+    assert_eq!(
+        parse_duration("P1DT1H30M").map(|d| d.num_minutes()),
+        Some(24 * 60 + 90)
+    );
+}
+
+#[test]
+fn hostile_feed_never_panics_and_stays_under_the_caps() {
+    let big = "X".repeat(5 * 1024 * 1024);
+    let body = calendar(&format!(
+        "BEGIN:VEVENT\r\nUID:dur@example.com\r\nDTSTART:20260105T100000Z\r\n\
+DURATION:P99999999999W\r\nSUMMARY:Overflow\r\nEND:VEVENT\r\n\
+BEGIN:VEVENT\r\nUID:big@example.com\r\nDTSTART:20260105T100000Z\r\n\
+RRULE:FREQ=DAILY\r\nSUMMARY:Big\r\nDESCRIPTION:{big}\r\nEND:VEVENT\r\n\
+BEGIN:VEVENT\r\nUID:sec@example.com\r\nDTSTART:20260105T100000Z\r\n\
+RRULE:FREQ=SECONDLY\r\nSUMMARY:Flood\r\nEND:VEVENT\r\n\
+BEGIN:VEVENT\r\nUID:wk@example.com\r\nDTSTART:20260105T100000Z\r\n\
+DURATION:P1D\r\nRRULE:FREQ=HOURLY\r\nSUMMARY:Hourly\r\nEND:VEVENT\r\n"
+    ));
+    let e = parse_expand(&body, utc(2026, 1, 1, 0, 0), utc(2027, 1, 1, 0, 0));
+    // The overflowing duration is ignored: the event still shows, with no length.
+    let d = of(&e, "dur@example.com");
+    assert_eq!(d.len(), 1);
+    assert_eq!(d[0].end_at, d[0].start_at);
+    assert!(e.occurrences.len() <= fa_calendar::expand::MAX_PER_SYNC);
+    for uid in ["big@example.com", "sec@example.com", "wk@example.com"] {
+        assert!(of(&e, uid).len() <= 5000, "{uid}");
+    }
+    let desc = of(&e, "big@example.com")[0]
+        .description
+        .as_deref()
+        .unwrap()
+        .len();
+    assert!(desc <= fa_connectors::ics::MAX_DESCRIPTION_BYTES);
+}
+
+#[test]
+fn per_sync_cap_warns() {
+    let mut events = String::new();
+    for i in 0..6 {
+        events.push_str(&format!(
+            "BEGIN:VEVENT\r\nUID:h{i}@example.com\r\nDTSTART:20260105T100000Z\r\n\
+RRULE:FREQ=MINUTELY\r\nSUMMARY:Flood\r\nEND:VEVENT\r\n"
+        ));
+    }
+    let e = parse_expand(
+        &calendar(&events),
+        utc(2026, 1, 1, 0, 0),
+        utc(2027, 1, 1, 0, 0),
+    );
+    assert_eq!(e.occurrences.len(), fa_calendar::expand::MAX_PER_SYNC);
+    assert!(
+        e.warnings.iter().any(|w| w.contains("occurrences")),
+        "{:?}",
+        e.warnings
+    );
+}
+
+#[test]
+fn ics_text_fields_are_truncated_on_char_boundaries() {
+    let long = "é".repeat(5000);
+    let body = calendar(&format!(
+        "BEGIN:VEVENT\r\nUID:t@example.com\r\nDTSTART:20260105T100000Z\r\n\
+SUMMARY:{long}\r\nLOCATION:{long}\r\nDESCRIPTION:{long}\r\nEND:VEVENT\r\n"
+    ));
+    let c = ics::parse(&body).unwrap();
+    assert_eq!(c[0].summary.as_deref().unwrap().chars().count(), 300);
+    assert_eq!(c[0].location.as_deref().unwrap().chars().count(), 300);
+    let d = c[0].description.as_deref().unwrap();
+    assert!(d.len() <= 8 * 1024 && d.len() > 8 * 1024 - 2);
+}
+
+#[test]
+fn long_series_keeps_the_occurrences_inside_the_window() {
+    // Started years before the window; the window is wider than the per-component cap.
+    let body = calendar(
+        "BEGIN:VEVENT\r\nUID:daily@example.com\r\nDTSTART:20100101T120000Z\r\n\
+RRULE:FREQ=DAILY\r\nSUMMARY:Daily\r\nEND:VEVENT\r\n",
+    );
+    let e = parse_expand(&body, utc(2020, 1, 1, 0, 0), utc(2040, 1, 1, 0, 0));
+    let v = of(&e, "daily@example.com");
+    assert_eq!(v.len(), 5000, "the cap is spent inside the window");
+    assert_eq!(v[0].start_at, utc(2020, 1, 1, 12, 0));
+}

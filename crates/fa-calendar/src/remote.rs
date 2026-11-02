@@ -180,18 +180,7 @@ impl Remote {
                     .caldav(url, user, pass)?
                     .fetch(remote, &span.window)
                     .await?;
-                let mut warnings = Vec::new();
-                let mut comps: Vec<ParsedComponent> = Vec::new();
-                for b in blobs {
-                    match ics::parse(&b) {
-                        Ok(c) => comps.extend(c),
-                        Err(_) => warnings.push("one calendar object could not be parsed".into()),
-                    }
-                }
-                let mut f = expand_full(&comps, span);
-                f.warnings.extend(warnings);
-                f.new_state = ctag;
-                Ok(f)
+                Ok(caldav_fetched(&blobs, ctag, span))
             }
             Creds::Ics { url } => {
                 let st: IcsState = if prior.fresh(now) {
@@ -319,6 +308,25 @@ impl Remote {
     }
 }
 
+/// Expands the objects of a CalDAV report. When an object can't be parsed the result is not the
+/// complete picture of the window, so it must not delete unseen rows, and the collection tag is not
+/// remembered (the next run fetches again instead of skipping on an unchanged tag).
+pub(crate) fn caldav_fetched(blobs: &[String], ctag: Option<String>, span: &Span) -> Fetched {
+    let mut warnings = Vec::new();
+    let mut comps: Vec<ParsedComponent> = Vec::new();
+    for b in blobs {
+        match ics::parse(b) {
+            Ok(c) => comps.extend(c),
+            Err(_) => warnings.push("one calendar object could not be parsed".into()),
+        }
+    }
+    let mut f = expand_full(&comps, span);
+    f.full = warnings.is_empty();
+    f.warnings.extend(warnings);
+    f.new_state = if f.full { ctag } else { None };
+    f
+}
+
 fn expand_full(comps: &[ParsedComponent], span: &Span) -> Fetched {
     let e = expand(comps, &span.opts());
     Fetched {
@@ -363,5 +371,48 @@ pub fn google_occurrence(ev: RemoteEvent, tz: Tz) -> NewOccurrence {
         cancelled: false,
         remote_etag: ev.etag,
         external_url: ev.external_url,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use chrono::TimeZone;
+
+    use super::*;
+
+    const GOOD: &str = "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nBEGIN:VEVENT\r\nUID:a@example.com\r\n\
+DTSTART:20260105T100000Z\r\nDTEND:20260105T110000Z\r\nSUMMARY:Practice\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n";
+
+    fn span() -> Span {
+        Span {
+            window: Window {
+                from: Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap(),
+                to: Utc.with_ymd_and_hms(2026, 2, 1, 0, 0, 0).unwrap(),
+            },
+            tz: chrono_tz::America::New_York,
+        }
+    }
+
+    #[test]
+    fn caldav_complete_report_is_full_and_keeps_the_tag() {
+        let f = caldav_fetched(&[GOOD.to_owned()], Some("tag-1".into()), &span());
+        assert!(f.full);
+        assert_eq!(f.occurrences.len(), 1);
+        assert_eq!(f.new_state.as_deref(), Some("tag-1"));
+        assert!(f.warnings.is_empty());
+    }
+
+    #[test]
+    fn caldav_unparseable_object_is_not_a_full_picture() {
+        let bad = "BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:b@example.com\r\n".to_owned();
+        assert!(ics::parse(&bad).is_err(), "fixture must fail to parse");
+        let f = caldav_fetched(&[GOOD.to_owned(), bad], Some("tag-1".into()), &span());
+        assert!(!f.full, "unseen rows must not be deleted");
+        assert_eq!(f.occurrences.len(), 1);
+        assert_eq!(
+            f.new_state, None,
+            "the tag is not remembered, so the next run refetches"
+        );
+        assert_eq!(f.warnings.len(), 1);
     }
 }

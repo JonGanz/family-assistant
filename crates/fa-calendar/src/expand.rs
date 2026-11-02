@@ -18,6 +18,13 @@ use crate::tz_windows::windows_to_iana;
 /// Hard cap per component, so a hostile `FREQ=SECONDLY` rule can't flood the database.
 const MAX_PER_COMPONENT: usize = 5000;
 
+/// Hard cap per expansion (one sync of one calendar), so many hostile components can't flood the
+/// database either. Hitting it adds a warning.
+pub const MAX_PER_SYNC: usize = 20_000;
+
+/// The longest `DURATION` (or event length) taken at face value; anything longer is ignored.
+const MAX_DURATION_DAYS: i64 = 366;
+
 #[derive(Debug, Clone)]
 pub struct ExpandOptions {
     pub household_tz: Tz,
@@ -141,6 +148,7 @@ pub fn parse_duration(s: &str) -> Option<Duration> {
         None => (false, s.strip_prefix('+').unwrap_or(s)),
     };
     let s = s.strip_prefix('P')?;
+    let limit = Duration::try_days(MAX_DURATION_DAYS)?;
     let mut total = Duration::zero();
     let mut num = String::new();
     let mut in_time = false;
@@ -151,14 +159,18 @@ pub fn parse_duration(s: &str) -> Option<Duration> {
             _ => {
                 let n: i64 = num.parse().ok()?;
                 num.clear();
-                total += match (c, in_time) {
-                    ('W', false) => Duration::weeks(n),
-                    ('D', false) => Duration::days(n),
-                    ('H', true) => Duration::hours(n),
-                    ('M', true) => Duration::minutes(n),
-                    ('S', true) => Duration::seconds(n),
+                let part = match (c, in_time) {
+                    ('W', false) => Duration::try_weeks(n)?,
+                    ('D', false) => Duration::try_days(n)?,
+                    ('H', true) => Duration::try_hours(n)?,
+                    ('M', true) => Duration::try_minutes(n)?,
+                    ('S', true) => Duration::try_seconds(n)?,
                     _ => return None,
                 };
+                total = total.checked_add(&part)?;
+                if total > limit {
+                    return None;
+                }
             }
         }
     }
@@ -393,7 +405,8 @@ pub fn expand(components: &[ParsedComponent], opts: &ExpandOptions) -> Expansion
         }
     }
 
-    for c in components.iter().filter(|c| c.recurrence_id.is_none()) {
+    let mut capped = false;
+    'components: for c in components.iter().filter(|c| c.recurrence_id.is_none()) {
         let Some(uid) = c.uid.as_deref() else {
             continue;
         };
@@ -418,7 +431,11 @@ pub fn expand(components: &[ParsedComponent], opts: &ExpandOptions) -> Expansion
                     opts.to.with_timezone(&t.tz).naive_local()
                 };
                 let back = t.dur + Duration::days(t.span_days + 2);
-                (f - back, e + Duration::days(2))
+                (
+                    f.checked_sub_signed(back).unwrap_or(NaiveDateTime::MIN),
+                    e.checked_add_signed(Duration::days(2))
+                        .unwrap_or(NaiveDateTime::MAX),
+                )
             };
             if let Some(rule) = &c.rrule {
                 let rule = fix_rule(rule, t.tz, &mut ctx);
@@ -447,11 +464,16 @@ pub fn expand(components: &[ParsedComponent], opts: &ExpandOptions) -> Expansion
                     None => {}
                 }
             }
-            starts.retain(|s| !ex_naive.contains(s) && !ex_days.contains(&s.date()));
+            // Only the part of the series that can show in the window counts against the cap, so a
+            // long-running daily event keeps the occurrences that matter (C2-17).
+            starts.retain(|s| {
+                *s >= lo && *s <= hi && !ex_naive.contains(s) && !ex_days.contains(&s.date())
+            });
         }
         let skip = overridden.get(uid);
         let b = Built { c, uid };
-        for s in starts.into_iter().take(MAX_PER_COMPONENT) {
+        let mut kept = 0usize;
+        for s in starts {
             let key = if !recurring {
                 String::new()
             } else if t.all_day {
@@ -464,9 +486,22 @@ pub fn expand(components: &[ParsedComponent], opts: &ExpandOptions) -> Expansion
             }
             let o = b.occurrence(&t, s, key.clone(), opts);
             if overlaps(&o, opts) {
+                if kept >= MAX_PER_COMPONENT {
+                    break;
+                }
+                kept += 1;
+                if out.len() >= MAX_PER_SYNC && !out.contains_key(&(uid.to_owned(), key.clone())) {
+                    capped = true;
+                    break 'components;
+                }
                 out.insert((uid.to_owned(), key), o);
             }
         }
+    }
+    if capped {
+        ctx.warnings.insert(format!(
+            "more than {MAX_PER_SYNC} occurrences in the window; the rest were left out"
+        ));
     }
 
     Expansion {

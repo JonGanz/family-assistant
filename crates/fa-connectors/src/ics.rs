@@ -87,11 +87,36 @@ fn times(c: &Component<'_>, name: &str) -> Vec<IcsTime> {
         .collect()
 }
 
+/// Longest stored `SUMMARY` and `LOCATION` (characters).
+pub const MAX_SUMMARY_CHARS: usize = 300;
+/// Longest stored `DESCRIPTION` (bytes), so one hostile event can't be multiplied into gigabytes of rows.
+pub const MAX_DESCRIPTION_BYTES: usize = 8 * 1024;
+
 fn text(c: &Component<'_>, name: &str) -> Option<String> {
     c.properties
         .iter()
         .find(|p| p.name.as_ref().eq_ignore_ascii_case(name))
         .map(|p| p.val.clone().unescape_text().as_ref().to_owned())
+}
+
+fn short_text(c: &Component<'_>, name: &str) -> Option<String> {
+    text(c, name).map(|s| match s.char_indices().nth(MAX_SUMMARY_CHARS) {
+        Some((i, _)) => s[..i].to_owned(),
+        None => s,
+    })
+}
+
+fn long_text(c: &Component<'_>, name: &str) -> Option<String> {
+    text(c, name).map(|mut s| {
+        if s.len() > MAX_DESCRIPTION_BYTES {
+            let mut i = MAX_DESCRIPTION_BYTES;
+            while !s.is_char_boundary(i) {
+                i -= 1;
+            }
+            s.truncate(i);
+        }
+        s
+    })
 }
 
 fn raw(c: &Component<'_>, name: &str) -> Option<String> {
@@ -129,9 +154,9 @@ pub fn parse(body: &str) -> Result<Vec<ParsedComponent>> {
                 rrule: raw(c, "RRULE"),
                 exdate: times(c, "EXDATE"),
                 rdate: times(c, "RDATE"),
-                summary: text(c, "SUMMARY"),
-                location: text(c, "LOCATION"),
-                description: text(c, "DESCRIPTION"),
+                summary: short_text(c, "SUMMARY"),
+                location: short_text(c, "LOCATION"),
+                description: long_text(c, "DESCRIPTION"),
                 class: raw(c, "CLASS"),
                 status: raw(c, "STATUS"),
                 url: raw(c, "URL"),
