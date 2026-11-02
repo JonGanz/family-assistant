@@ -7,7 +7,34 @@ use aes_gcm::aead::{Aead, KeyInit, Payload};
 use aes_gcm::{Aes256Gcm, Key, Nonce};
 use rand::RngCore;
 
+use fa_domain::{HouseholdId, SecretKind};
+use uuid::Uuid;
+
+use crate::repo::secret_kind_str;
 use crate::{Result, StoreError};
+
+/// `aad_version` of rows sealed with the owner-bound AAD.
+pub const AAD_BOUND: i16 = 1;
+
+/// AAD of a `secret` row: ties the ciphertext to its household, owner and kind.
+pub fn secret_aad(
+    household_id: HouseholdId,
+    owner_type: &str,
+    owner_id: Uuid,
+    kind: SecretKind,
+) -> Vec<u8> {
+    format!(
+        "secret:v1|{}|{owner_type}|{owner_id}|{}",
+        household_id.as_uuid(),
+        secret_kind_str(kind)
+    )
+    .into_bytes()
+}
+
+/// AAD of an `instance_setting` secret: ties the ciphertext to its key.
+pub fn instance_setting_aad(key: &str) -> Vec<u8> {
+    format!("instance_setting:v1|{key}").into_bytes()
+}
 
 const NONCE_LEN: usize = 12;
 
@@ -89,13 +116,20 @@ impl MasterKey {
         Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&self.key))
     }
 
-    pub fn seal(&self, plaintext: &[u8]) -> Result<SealedSecret> {
+    /// Seals `plaintext`, binding the ciphertext to `aad` (the owner of the secret).
+    pub fn seal(&self, plaintext: &[u8], aad: &[u8]) -> Result<SealedSecret> {
         let mut dek = [0u8; 32];
         rand::rng().fill_bytes(&mut dek);
         let mut nonce = [0u8; NONCE_LEN];
         rand::rng().fill_bytes(&mut nonce);
         let ciphertext = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&dek))
-            .encrypt(Nonce::from_slice(&nonce), plaintext)
+            .encrypt(
+                Nonce::from_slice(&nonce),
+                Payload {
+                    msg: plaintext,
+                    aad,
+                },
+            )
             .map_err(|_| StoreError::Crypto("encrypt failed"))?;
         let wrapped_dek = self.wrap(&dek)?;
         Ok(SealedSecret {
@@ -106,7 +140,7 @@ impl MasterKey {
         })
     }
 
-    pub fn open(&self, sealed: &SealedSecret) -> Result<Vec<u8>> {
+    pub fn open(&self, sealed: &SealedSecret, aad: &[u8]) -> Result<Vec<u8>> {
         if sealed.key_version != self.version {
             return Err(StoreError::Crypto("key version mismatch"));
         }
@@ -117,7 +151,10 @@ impl MasterKey {
         Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&dek))
             .decrypt(
                 Nonce::from_slice(&sealed.nonce),
-                sealed.ciphertext.as_slice(),
+                Payload {
+                    msg: sealed.ciphertext.as_slice(),
+                    aad,
+                },
             )
             .map_err(|_| StoreError::Crypto("decrypt failed"))
     }
@@ -182,8 +219,8 @@ mod tests {
     #[test]
     fn round_trip() {
         let k = key();
-        let s = k.seal(b"hunter2").unwrap();
-        assert_eq!(k.open(&s).unwrap(), b"hunter2");
+        let s = k.seal(b"hunter2", b"a").unwrap();
+        assert_eq!(k.open(&s, b"a").unwrap(), b"hunter2");
         assert!(!format!("{s:?}").contains("hunter2"));
         assert!(!format!("{k:?}").contains('7'));
     }
@@ -191,16 +228,17 @@ mod tests {
     #[test]
     fn tamper_detected() {
         let k = key();
-        let s = k.seal(b"hunter2").unwrap();
+        let s = k.seal(b"hunter2", b"a").unwrap();
         let mut a = s.clone();
         a.ciphertext[0] ^= 1;
-        assert!(k.open(&a).is_err());
+        assert!(k.open(&a, b"a").is_err());
         let mut b = s.clone();
         let last = b.wrapped_dek.len() - 1;
         b.wrapped_dek[last] ^= 1;
-        assert!(k.open(&b).is_err());
+        assert!(k.open(&b, b"a").is_err());
+        assert!(k.open(&s, b"b").is_err());
         let other = MasterKey::from_bytes(&[8u8; 32], 1).unwrap();
-        assert!(other.open(&s).is_err());
+        assert!(other.open(&s, b"a").is_err());
     }
 
     #[test]
@@ -210,8 +248,11 @@ mod tests {
         std::fs::write(&raw, [9u8; 32]).unwrap();
         let hexf = dir.path().join("hex");
         std::fs::write(&hexf, format!("{}\n", "09".repeat(32))).unwrap();
-        let s = MasterKey::from_file(&raw).unwrap().seal(b"x").unwrap();
-        assert_eq!(MasterKey::from_file(&hexf).unwrap().open(&s).unwrap(), b"x");
+        let s = MasterKey::from_file(&raw).unwrap().seal(b"x", b"").unwrap();
+        assert_eq!(
+            MasterKey::from_file(&hexf).unwrap().open(&s, b"").unwrap(),
+            b"x"
+        );
         std::fs::write(&raw, b"short").unwrap();
         assert!(MasterKey::from_file(&raw).is_err());
     }
@@ -220,10 +261,10 @@ mod tests {
     fn rotation_rewrap() {
         let old = key();
         let new = MasterKey::from_bytes(&[1u8; 32], 2).unwrap();
-        let s = old.seal(b"v").unwrap();
+        let s = old.seal(b"v", b"a").unwrap();
         let r = old.rewrap(&s, &new).unwrap();
         assert_eq!(r.key_version, 2);
-        assert_eq!(new.open(&r).unwrap(), b"v");
-        assert!(old.open(&r).is_err());
+        assert_eq!(new.open(&r, b"a").unwrap(), b"v");
+        assert!(old.open(&r, b"a").is_err());
     }
 }

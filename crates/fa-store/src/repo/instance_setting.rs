@@ -4,7 +4,7 @@
 use serde_json::Value;
 use sqlx::{FromRow, PgConnection};
 
-use crate::secret::{MasterKey, SealedSecret};
+use crate::secret::{AAD_BOUND, MasterKey, SealedSecret, instance_setting_aad};
 use crate::{Result, StoreError};
 
 pub struct InstanceSettingRepo;
@@ -30,6 +30,16 @@ struct SecretRow {
     nonce: Option<Vec<u8>>,
     wrapped_dek: Option<Vec<u8>>,
     key_version: Option<i32>,
+    aad_version: i16,
+}
+
+#[derive(FromRow)]
+struct RebindRow {
+    key: String,
+    ciphertext: Vec<u8>,
+    nonce: Vec<u8>,
+    wrapped_dek: Vec<u8>,
+    key_version: i32,
 }
 
 impl InstanceSettingRepo {
@@ -57,7 +67,7 @@ impl InstanceSettingRepo {
                 sqlx::query(
                     "INSERT INTO instance_setting (key, value) VALUES ($1, $2)
                      ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, ciphertext = NULL,
-                         nonce = NULL, wrapped_dek = NULL, key_version = NULL",
+                         nonce = NULL, wrapped_dek = NULL, key_version = NULL, aad_version = 0",
                 )
                 .bind(key)
                 .bind(v)
@@ -84,19 +94,20 @@ impl InstanceSettingRepo {
     ) -> Result<()> {
         match plaintext {
             Some(p) => {
-                let sealed = master.seal(p.as_bytes())?;
+                let sealed = master.seal(p.as_bytes(), &instance_setting_aad(key))?;
                 sqlx::query(
-                    "INSERT INTO instance_setting (key, value, ciphertext, nonce, wrapped_dek, key_version)
-                     VALUES ($1, NULL, $2, $3, $4, $5)
+                    "INSERT INTO instance_setting (key, value, ciphertext, nonce, wrapped_dek, key_version, aad_version)
+                     VALUES ($1, NULL, $2, $3, $4, $5, $6)
                      ON CONFLICT (key) DO UPDATE SET value = NULL, ciphertext = EXCLUDED.ciphertext,
                          nonce = EXCLUDED.nonce, wrapped_dek = EXCLUDED.wrapped_dek,
-                         key_version = EXCLUDED.key_version",
+                         key_version = EXCLUDED.key_version, aad_version = EXCLUDED.aad_version",
                 )
                 .bind(key)
                 .bind(sealed.ciphertext)
                 .bind(sealed.nonce)
                 .bind(sealed.wrapped_dek)
                 .bind(sealed.key_version)
+                .bind(AAD_BOUND)
                 .execute(&mut *conn)
                 .await?;
             }
@@ -117,7 +128,7 @@ impl InstanceSettingRepo {
         master: &MasterKey,
     ) -> Result<Option<String>> {
         let row: Option<SecretRow> = sqlx::query_as(
-            "SELECT ciphertext, nonce, wrapped_dek, key_version FROM instance_setting WHERE key = $1",
+            "SELECT ciphertext, nonce, wrapped_dek, key_version, aad_version FROM instance_setting WHERE key = $1",
         )
         .bind(key)
         .fetch_optional(&mut *conn)
@@ -127,19 +138,69 @@ impl InstanceSettingRepo {
             nonce: Some(nonce),
             wrapped_dek: Some(wrapped_dek),
             key_version: Some(key_version),
+            aad_version,
         }) = row
         else {
             return Ok(None);
         };
-        let plain = master.open(&SealedSecret {
-            ciphertext,
-            nonce,
-            wrapped_dek,
-            key_version,
-        })?;
+        let aad = if aad_version >= AAD_BOUND {
+            instance_setting_aad(key)
+        } else {
+            Vec::new()
+        };
+        let plain = master.open(
+            &SealedSecret {
+                ciphertext,
+                nonce,
+                wrapped_dek,
+                key_version,
+            },
+            &aad,
+        )?;
         String::from_utf8(plain)
             .map(Some)
             .map_err(|_| StoreError::Corrupt("instance setting is not UTF-8".into()))
+    }
+
+    /// One-time pass: re-seals every `aad_version = 0` secret under its key-bound AAD.
+    /// Rows sealed under another key version are skipped. Returns the number re-bound.
+    /// Does not notify: the values do not change.
+    pub async fn rebind_all(conn: &mut PgConnection, master: &MasterKey) -> Result<u64> {
+        let rows: Vec<RebindRow> = sqlx::query_as(
+            "SELECT key, ciphertext, nonce, wrapped_dek, key_version FROM instance_setting
+             WHERE aad_version = 0 AND ciphertext IS NOT NULL AND nonce IS NOT NULL
+               AND wrapped_dek IS NOT NULL AND key_version = $1 FOR UPDATE",
+        )
+        .bind(master.version())
+        .fetch_all(&mut *conn)
+        .await?;
+        let mut n = 0;
+        for r in rows {
+            let plain = master.open(
+                &SealedSecret {
+                    ciphertext: r.ciphertext,
+                    nonce: r.nonce,
+                    wrapped_dek: r.wrapped_dek,
+                    key_version: r.key_version,
+                },
+                &[],
+            )?;
+            let sealed = master.seal(&plain, &instance_setting_aad(&r.key))?;
+            sqlx::query(
+                "UPDATE instance_setting SET ciphertext = $2, nonce = $3, wrapped_dek = $4,
+                     key_version = $5, aad_version = $6 WHERE key = $1",
+            )
+            .bind(&r.key)
+            .bind(sealed.ciphertext)
+            .bind(sealed.nonce)
+            .bind(sealed.wrapped_dek)
+            .bind(sealed.key_version)
+            .bind(AAD_BOUND)
+            .execute(&mut *conn)
+            .await?;
+            n += 1;
+        }
+        Ok(n)
     }
 
     /// `pg_notify('fa_settings', '')`: delivered when the transaction commits.

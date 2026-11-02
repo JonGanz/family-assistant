@@ -12,7 +12,7 @@ mod store;
 pub use change::{CHANNEL, ChangeBus, ChangeMessage};
 pub use error::{Result, StoreError};
 pub use repo::*;
-pub use secret::{MasterKey, SealedSecret};
+pub use secret::{MasterKey, SealedSecret, instance_setting_aad, secret_aad};
 pub use store::{Store, Tx};
 
 /// An entity together with its optimistic-concurrency version.

@@ -10,7 +10,7 @@ use fa_config::{LogFormat, ProcessConfig, RUNTIME_KEYS, RuntimeSnapshot};
 use fa_jobs::{
     BackupVerify, JobContext, JobHandler, Scheduler, SessionCleanup, Worker, WorkerConfig,
 };
-use fa_store::{InstanceSettingRepo, MasterKey, Store};
+use fa_store::{InstanceSettingRepo, MasterKey, SecretRepo, Store};
 use serde_json::Value;
 use sqlx::postgres::{PgListener, PgPoolOptions};
 use tokio::task::JoinSet;
@@ -324,6 +324,26 @@ async fn next_settings_change(listener: &mut PgListener) {
     while let Ok(Ok(_)) = tokio::time::timeout(DEBOUNCE, listener.recv()).await {}
 }
 
+/// One-time C-10 pass: bind secrets sealed without AAD to their owner. Not fatal: rows that
+/// are not re-bound yet keep opening through the version-0 fallback.
+async fn rebind_secrets(store: &Store, key: &MasterKey) {
+    let res = async {
+        let mut tx = store.tx_system().await?;
+        let secrets = SecretRepo::rebind_all(&mut tx, key).await?;
+        let settings = InstanceSettingRepo::rebind_all(&mut tx, key).await?;
+        tx.commit().await?;
+        Ok::<_, fa_store::StoreError>((secrets, settings))
+    }
+    .await;
+    match res {
+        Ok((secrets, settings)) if secrets + settings > 0 => {
+            tracing::info!(secrets, settings, "secrets re-bound to their owners");
+        }
+        Ok(_) => {}
+        Err(e) => tracing::warn!(error = %e, "re-binding secrets failed; will retry at next start"),
+    }
+}
+
 pub async fn run(env_cfg: ProcessConfig, store: Store, mode: ServeMode) -> Result<()> {
     // Fail fast on a missing or malformed master key.
     let key = wiring::load_key(&env_cfg)?;
@@ -334,6 +354,7 @@ pub async fn run(env_cfg: ProcessConfig, store: Store, mode: ServeMode) -> Resul
     let run_api = matches!(mode, ServeMode::Api | ServeMode::All);
     if run_api {
         store.migrate().await.context("running migrations")?;
+        rebind_secrets(&store, &key).await;
     } else {
         wait_for_migrations(&store, &cancel).await?;
     }
