@@ -7,9 +7,9 @@ use chrono::{DateTime, Utc};
 use fa_domain::{
     BillId, BillPatch, BillPatchStatus, BillStatus, ContactApproval, ContactRole,
     ContactSuggestionId, ContactSuggestionView, DecisionPointKey, EventId, EventProposalView,
-    HouseholdId, InboxCounts, InboxItem, InboxKind, InboxView, MailSource, MailSourceId, MemberId,
-    MessageId, OrgContactView, Subject, SubjectType, SuggestionStatus, TaskOrigin, TaskStatus,
-    TaskStepView, TaskView,
+    HouseholdId, InboxCounts, InboxItem, InboxKind, InboxPage, InboxView, MailSource, MailSourceId,
+    MemberId, MessageId, OrgContactView, Subject, SubjectType, SuggestionStatus, TaskOrigin,
+    TaskStatus, TaskStepView, TaskView, keyset_page, page_limit,
 };
 use fa_pipeline::Pipeline;
 use fa_store::{
@@ -17,6 +17,7 @@ use fa_store::{
     OrgContactRepo, OrgRepo, Store, TaskFilter, TaskRepo, TaskRow,
 };
 use sqlx::PgConnection;
+use uuid::Uuid;
 
 use crate::context::Viewer;
 use crate::process::views::{bill_view, external_url};
@@ -139,6 +140,15 @@ fn task_message(r: &TaskRow) -> Option<MessageId> {
         .map(MessageId::from)
 }
 
+fn item_uuid(i: &InboxItem) -> Uuid {
+    match i {
+        InboxItem::Event { event } => event.id.as_uuid(),
+        InboxItem::Bill { bill } => bill.id.as_uuid(),
+        InboxItem::Task { task } => task.id.as_uuid(),
+        InboxItem::Contact { contact } => contact.id.as_uuid(),
+    }
+}
+
 impl InboxService {
     pub fn new(store: Store) -> Self {
         Self { store }
@@ -156,6 +166,42 @@ impl InboxService {
         viewer: Viewer,
         kind: Option<InboxKind>,
     ) -> Result<InboxView> {
+        let (stamped, counts) = self.collect(household, viewer, kind).await?;
+        Ok(InboxView {
+            items: stamped.into_iter().map(|(_, i)| i).collect(),
+            counts,
+        })
+    }
+
+    /// One page of [`Self::list_kind`], newest first (the item's `created_at`, then its id).
+    /// `before` is the previous page's `next_before`; `limit` is clamped (default 50, max 200).
+    pub async fn list_page(
+        &self,
+        household: HouseholdId,
+        viewer: Viewer,
+        kind: Option<InboxKind>,
+        before: Option<DateTime<Utc>>,
+        limit: Option<u32>,
+    ) -> Result<InboxPage> {
+        let (stamped, counts) = self.collect(household, viewer, kind).await?;
+        let rows = stamped
+            .into_iter()
+            .map(|(at, i)| (at, item_uuid(&i), i))
+            .collect();
+        let (items, next_before) = keyset_page(rows, before, page_limit(limit));
+        Ok(InboxPage {
+            items,
+            counts,
+            next_before,
+        })
+    }
+
+    async fn collect(
+        &self,
+        household: HouseholdId,
+        viewer: Viewer,
+        kind: Option<InboxKind>,
+    ) -> Result<(Vec<(DateTime<Utc>, InboxItem)>, InboxCounts)> {
         let mut tx = self.store.tx_for(household).await?;
         let mut scope = Scope::load(&mut tx, viewer).await?;
         let mut stamped: Vec<(DateTime<Utc>, InboxItem)> = Vec::new();
@@ -262,10 +308,7 @@ impl InboxService {
         );
         stamped.retain(|(_, i)| kind.is_none_or(|w| w == kind_of(i)));
         stamped.sort_by_key(|a| std::cmp::Reverse(a.0));
-        Ok(InboxView {
-            items: stamped.into_iter().map(|(_, i)| i).collect(),
-            counts,
-        })
+        Ok((stamped, counts))
     }
 
     /// Pending counts the viewer may see (D-078).

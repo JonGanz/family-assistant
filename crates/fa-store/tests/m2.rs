@@ -1499,3 +1499,140 @@ async fn all_day_titles_cover_multi_day_events(pool: PgPool) {
     let re = CalendarSourceRepo::needing_reauth(&mut tx).await.unwrap();
     assert_eq!(re, vec![(src.id, Some(s.adult), None)]);
 }
+
+/// C2-26: undo deletes untouched later occurrences (version 1, no claim) and archives edited or
+/// claimed ones instead.
+#[sqlx::test(migrations = "./migrations")]
+async fn delete_created_after_archives_touched_rows(pool: PgPool) {
+    let store = Store::from_pool(pool);
+    let s = seed(&store, "A").await;
+    let mut tx = store.tx_for(s.h).await.unwrap();
+    let l = TaskListRepo::insert(&mut tx, &list(s.h, "Chores"))
+        .await
+        .unwrap();
+    let def = TaskDefinitionRepo::insert(&mut tx, &definition(s.h, l.value.id, "Bins"), &[s.child])
+        .await
+        .unwrap();
+    let did = def.value.id;
+    let mut ids = Vec::new();
+    for d in 1..=3 {
+        let r = TaskRepo::insert(
+            &mut tx,
+            &new_task(s.h, l.value.id, Some(did), Some(at(d, 9, 0))),
+            &[],
+            &[],
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        ids.push(r.value.id);
+    }
+    // [0] untouched, [1] claimed, [2] edited (version 2).
+    TaskRepo::set_claim(&mut tx, ids[1], Some(s.child), Some(at(26, 10, 0)))
+        .await
+        .unwrap();
+    sqlx::query("UPDATE task SET version = 2 WHERE id = $1")
+        .bind(ids[2].as_uuid())
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    // Reset the claim's version bump so only the claim marks [1].
+    sqlx::query("UPDATE task SET version = 1 WHERE id = $1")
+        .bind(ids[1].as_uuid())
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    let n = TaskRepo::delete_created_after(&mut tx, did, Utc::now() - Duration::minutes(10))
+        .await
+        .unwrap();
+    assert_eq!(n, 3);
+    assert!(TaskRepo::get(&mut tx, ids[0]).await.unwrap().is_none());
+    for i in [1, 2] {
+        let t = TaskRepo::get(&mut tx, ids[i]).await.unwrap().unwrap();
+        assert!(t.value.archived_at.is_some(), "task {i} is archived");
+    }
+}
+
+/// C2-22: a claim for a member is refused while another holds it unexpired; it is allowed for the
+/// holder, after expiry and when free; a release is unconditional.
+#[sqlx::test(migrations = "./migrations")]
+async fn set_claim_is_conditional(pool: PgPool) {
+    let store = Store::from_pool(pool);
+    let s = seed(&store, "A").await;
+    let mut tx = store.tx_for(s.h).await.unwrap();
+    let l = TaskListRepo::insert(&mut tx, &list(s.h, "Chores"))
+        .await
+        .unwrap();
+    let t = TaskRepo::insert(&mut tx, &new_task(s.h, l.value.id, None, None), &[], &[])
+        .await
+        .unwrap()
+        .unwrap()
+        .value
+        .id;
+    let now = at(26, 9, 0);
+    let until = at(26, 10, 0);
+    TaskRepo::set_claim_at(&mut tx, t, Some(s.child), Some(until), now)
+        .await
+        .unwrap();
+    assert!(matches!(
+        TaskRepo::set_claim_at(&mut tx, t, Some(s.adult), Some(until), now).await,
+        Err(StoreError::Conflict)
+    ));
+    // The holder may extend; anyone may take it once it expired.
+    TaskRepo::set_claim_at(&mut tx, t, Some(s.child), Some(until), now)
+        .await
+        .unwrap();
+    TaskRepo::set_claim_at(
+        &mut tx,
+        t,
+        Some(s.adult),
+        Some(at(26, 12, 0)),
+        at(26, 10, 0),
+    )
+    .await
+    .unwrap();
+    TaskRepo::set_claim_at(&mut tx, t, None, None, now)
+        .await
+        .unwrap();
+    assert!(matches!(
+        TaskRepo::set_claim_at(&mut tx, TaskId::new(), None, None, now).await,
+        Err(StoreError::NotFound)
+    ));
+}
+
+/// C2-22: `lock` takes the row lock; a second transaction's `lock` waits for the first.
+#[sqlx::test(migrations = "./migrations")]
+async fn task_lock_serialises_transactions(pool: PgPool) {
+    let store = Store::from_pool(pool);
+    let s = seed(&store, "A").await;
+    let mut tx = store.tx_for(s.h).await.unwrap();
+    let l = TaskListRepo::insert(&mut tx, &list(s.h, "Chores"))
+        .await
+        .unwrap();
+    let t = TaskRepo::insert(&mut tx, &new_task(s.h, l.value.id, None, None), &[], &[])
+        .await
+        .unwrap()
+        .unwrap()
+        .value
+        .id;
+    tx.commit().await.unwrap();
+
+    let mut a = store.tx_for(s.h).await.unwrap();
+    TaskRepo::lock(&mut a, t).await.unwrap();
+    let store2 = store.clone();
+    let h = s.h;
+    let waiter = tokio::spawn(async move {
+        let mut b = store2.tx_for(h).await.unwrap();
+        TaskRepo::lock(&mut b, t).await.unwrap();
+        b.commit().await.unwrap();
+    });
+    tokio::time::sleep(std::time::Duration::from_millis(300)).await;
+    assert!(!waiter.is_finished(), "the second lock waits");
+    a.commit().await.unwrap();
+    waiter.await.unwrap();
+    let mut c = store.tx_for(s.h).await.unwrap();
+    assert!(matches!(
+        TaskRepo::lock(&mut c, TaskId::new()).await,
+        Err(StoreError::NotFound)
+    ));
+}

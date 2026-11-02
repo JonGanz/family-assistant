@@ -785,6 +785,46 @@ async fn claim_and_step_ticks(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../fa-store/migrations")]
+async fn task_list_is_an_envelope_with_keyset_paging(pool: PgPool) {
+    use Who::*;
+    let fx = seed(pool).await;
+    let list = mk_list(&fx, "Chores", "assignee", "own", false).await;
+    for title in ["One", "Two", "Three"] {
+        mk_task(&fx, &list, title, &[], json!({})).await;
+    }
+    let first = as_(&fx, Adult, Method::GET, "/api/v1/tasks?limit=2", None)
+        .await
+        .json();
+    let titles = |v: &Value| -> Vec<String> {
+        v["items"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|t| t["title"].as_str().unwrap().to_owned())
+            .collect()
+    };
+    // newest created first
+    assert_eq!(titles(&first), vec!["Three", "Two"]);
+    let cursor = first["next_before"].as_str().unwrap().replace('+', "%2B");
+    let second = as_(
+        &fx,
+        Adult,
+        Method::GET,
+        &format!("/api/v1/tasks?limit=2&before={cursor}"),
+        None,
+    )
+    .await
+    .json();
+    assert_eq!(titles(&second), vec!["One"]);
+    assert!(second["next_before"].is_null());
+    let all = as_(&fx, Adult, Method::GET, "/api/v1/tasks?limit=1000", None)
+        .await
+        .json();
+    assert_eq!(titles(&all).len(), 3);
+    assert!(all["next_before"].is_null());
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
 async fn children_only_see_their_own_tasks_and_routines(pool: PgPool) {
     use Who::*;
     let fx = seed(pool).await;
@@ -795,8 +835,7 @@ async fn children_only_see_their_own_tasks_and_routines(pool: PgPool) {
     let c = mk_task(&fx, &list, "Anyone", &[], json!({})).await;
     let d = mk_task(&fx, &list, "Other child", &[child2], json!({})).await;
     let titles = |r: &Resp| {
-        let mut t: Vec<String> = r
-            .json()
+        let mut t: Vec<String> = r.json()["items"]
             .as_array()
             .unwrap()
             .iter()
@@ -1024,7 +1063,8 @@ async fn now_view_and_calendar_range(pool: PgPool) {
 
     let r = as_(&fx, Adult, Method::GET, "/api/v1/tasks?view=now", None).await;
     assert_eq!(r.status, 200);
-    assert_eq!(r.json().as_array().unwrap().len(), 5);
+    assert_eq!(r.json()["items"].as_array().unwrap().len(), 5);
+    assert!(r.json()["next_before"].is_null());
     // the household sets the length of the Now list
     for bad in [
         json!({"now_list_size": 0}),
@@ -1066,14 +1106,14 @@ async fn now_view_and_calendar_range(pool: PgPool) {
     assert_eq!(r.json()["now_list_size"], 2);
     for who in [Adult, Device] {
         let r = as_(&fx, who, Method::GET, "/api/v1/tasks?view=now", None).await;
-        assert_eq!(r.json().as_array().unwrap().len(), 2, "{who:?}");
+        assert_eq!(r.json()["items"].as_array().unwrap().len(), 2, "{who:?}");
     }
 
     // calendar range: hidden tasks stay out
     let q = range_query(now, now + Dur::days(3));
     let r = as_(&fx, Adult, Method::GET, &format!("/api/v1/tasks?{q}"), None).await;
     assert_eq!(r.status, 200, "{}", r.text());
-    let body = r.json();
+    let body = r.json()["items"].take();
     let mut titles: Vec<&str> = body
         .as_array()
         .unwrap()
@@ -1088,7 +1128,7 @@ async fn now_view_and_calendar_range(pool: PgPool) {
         assert_eq!(done.status, 200);
     }
     let r = as_(&fx, Adult, Method::GET, &format!("/api/v1/tasks?{q}"), None).await;
-    let body = r.json();
+    let body = r.json()["items"].take();
     let titles: Vec<&str> = body
         .as_array()
         .unwrap()
@@ -1516,4 +1556,213 @@ async fn household_patch_toggles_dashboard_override(pool: PgPool) {
     let t2 = mk_task(&fx, &list, "Sweep", &[fx.child], json!({})).await;
     let denied = status_of(&fx, Device, Method::POST, &complete(&t2), Some(body)).await;
     assert_eq!(denied, 403);
+}
+
+// ---- review follow-ups (M3.7 T-12) ----
+
+async fn patch_as(fx: &Fx, who: Who, task: &Value, body: Value) -> Resp {
+    let h = auth_of(fx, who);
+    let mut hdrs: Vec<(&str, &str)> = h.iter().map(|(a, b)| (a.as_str(), b.as_str())).collect();
+    let v = task["version"].to_string();
+    hdrs.push(("if-match", &v));
+    send(
+        &fx.app,
+        Method::PATCH,
+        &format!("/api/v1/tasks/{}", id(task)),
+        &hdrs,
+        Some(body),
+    )
+    .await
+}
+
+/// C2-20: only a signed-in adult sees suggested tasks; a device (elevated or not) and a child
+/// never do, in the list, with `status=suggested` and by id.
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn suggested_tasks_are_for_signed_in_adults_only(pool: PgPool) {
+    use Who::*;
+    let fx = seed(pool).await;
+    let list = mk_list(&fx, "Chores", "assignee", "own", true).await;
+    let lid: TaskListId = list.parse().unwrap();
+    let tid = TaskId::new();
+    {
+        let mut tx = fx.store.tx_for(fx.hid).await.unwrap();
+        TaskRepo::insert(
+            &mut tx,
+            &NewTaskRow {
+                id: tid,
+                household_id: fx.hid,
+                list_id: lid,
+                definition_id: None,
+                weather_rule_id: None,
+                title: "Form from mail".into(),
+                notes: None,
+                due_at: None,
+                visible_from: None,
+                status: TaskStatus::Suggested,
+                origin: TaskOrigin::Manual,
+                source_ref: None,
+                priority_flag: PriorityFlag::Normal,
+                calendar_display: CalendarDisplay::Hidden,
+                created_by: None,
+            },
+            &[],
+            &[],
+        )
+        .await
+        .unwrap()
+        .unwrap();
+        tx.commit().await.unwrap();
+    }
+    for (who, sees) in [
+        (Adult, true),
+        (Child, false),
+        (Device, false),
+        (Elevated, false),
+    ] {
+        for q in ["?status=suggested", "?status=any"] {
+            let r = as_(&fx, who, Method::GET, &format!("/api/v1/tasks{q}"), None).await;
+            assert_eq!(r.status, 200, "{who:?} {q}: {}", r.text());
+            let n = r.json()["items"].as_array().unwrap().len();
+            assert_eq!(n, usize::from(sees), "{who:?} {q}");
+        }
+        let r = as_(&fx, who, Method::GET, &format!("/api/v1/tasks/{tid}"), None).await;
+        assert_eq!(r.status, if sees { 200 } else { 404 }, "{who:?} by id");
+    }
+}
+
+/// C2-23: a child may set `assignees` to empty or to themself, never to someone else.
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn child_cannot_reassign_tasks(pool: PgPool) {
+    use Who::*;
+    let fx = seed(pool).await;
+    let list = mk_list(&fx, "Chores", "assignee", "own", true).await;
+    let r = as_(
+        &fx,
+        Child,
+        Method::POST,
+        "/api/v1/tasks",
+        Some(json!({"list": list, "title": "Mine", "assignees": []})),
+    )
+    .await;
+    assert_eq!(r.status, 201, "{}", r.text());
+    let mut t = r.json();
+    for (who, assignees, want) in [
+        (Child, json!([fx.adult]), 403),
+        (Child, json!([fx.child, fx.adult]), 403),
+        (Child, json!([fx.child]), 200),
+        (Child, json!([]), 200),
+        (Adult, json!([fx.adult]), 200),
+    ] {
+        let r = patch_as(&fx, who, &t, json!({"assignees": assignees})).await;
+        assert_eq!(r.status.as_u16(), want, "{who:?} {assignees}: {}", r.text());
+        if want == 200 {
+            t = r.json();
+        }
+    }
+}
+
+/// C2-24: assignees must be active members of the household (422 `assignees`, never a 500).
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn assignees_are_validated(pool: PgPool) {
+    use Who::*;
+    let fx = seed(pool).await;
+    let list = mk_list(&fx, "Chores", "assignee", "own", true).await;
+    let gone = add_child(&fx).await;
+    {
+        let mut tx = fx.store.tx_for(fx.hid).await.unwrap();
+        MemberRepo::archive(&mut tx, gone).await.unwrap();
+        tx.commit().await.unwrap();
+    }
+    let stranger = MemberId::new();
+    for bad in [stranger, gone] {
+        let r = as_(
+            &fx,
+            Adult,
+            Method::POST,
+            "/api/v1/tasks",
+            Some(json!({"list": list, "title": "T", "assignees": [fx.adult, bad]})),
+        )
+        .await;
+        assert_eq!(r.status, 422, "create {bad}: {}", r.text());
+        assert_eq!(r.json()["field"], "assignees");
+    }
+    let t = mk_task(&fx, &list, "T", &[fx.child], json!({})).await;
+    for bad in [stranger, gone] {
+        let r = patch_as(&fx, Adult, &t, json!({"assignees": [fx.child, bad]})).await;
+        assert_eq!(r.status, 422, "patch {bad}: {}", r.text());
+        assert_eq!(r.json()["field"], "assignees");
+    }
+    let r = patch_as(&fx, Adult, &t, json!({"assignees": [fx.adult, fx.child]})).await;
+    assert_eq!(r.status, 200, "{}", r.text());
+}
+
+/// C2-25: title 200, notes 10 000, 50 steps of 200 characters; the limits themselves pass.
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn task_input_is_bounded(pool: PgPool) {
+    use Who::*;
+    let fx = seed(pool).await;
+    let list = mk_list(&fx, "Chores", "assignee", "own", true).await;
+    let post = |extra: Value| {
+        let mut b = json!({"list": list, "title": "T", "assignees": []});
+        for (k, v) in extra.as_object().cloned().unwrap_or_default() {
+            b[k] = v;
+        }
+        b
+    };
+    let steps = |n: usize, len: usize| vec!["s".repeat(len); n];
+    for (extra, field) in [
+        (json!({"title": "t".repeat(201)}), "title"),
+        (json!({"notes": "n".repeat(10_001)}), "notes"),
+        (json!({"steps": steps(51, 1)}), "steps"),
+        (json!({"steps": steps(1, 201)}), "steps"),
+    ] {
+        let r = as_(&fx, Adult, Method::POST, "/api/v1/tasks", Some(post(extra))).await;
+        assert_eq!(r.status, 422, "{field}: {}", r.text());
+        assert_eq!(r.json()["field"], field);
+    }
+    let ok = post(json!({
+        "title": "t".repeat(200), "notes": "n".repeat(10_000), "steps": steps(50, 200)
+    }));
+    let r = as_(&fx, Adult, Method::POST, "/api/v1/tasks", Some(ok)).await;
+    assert_eq!(r.status, 201, "{}", r.text());
+    let t = r.json();
+    for (body, field) in [
+        (json!({"title": "t".repeat(201)}), "title"),
+        (json!({"notes": "n".repeat(10_001)}), "notes"),
+        (json!({"steps": steps(51, 1)}), "steps"),
+        (json!({"steps": steps(1, 201)}), "steps"),
+    ] {
+        let r = patch_as(&fx, Adult, &t, body).await;
+        assert_eq!(r.status, 422, "patch {field}: {}", r.text());
+        assert_eq!(r.json()["field"], field);
+    }
+    // definitions and routines
+    let r = as_(
+        &fx,
+        Adult,
+        Method::POST,
+        "/api/v1/task-definitions",
+        Some(json!({
+            "list": list, "title": "Bins", "steps_template": steps(51, 1),
+            "schedule": {"kind": "rrule", "rrule": "FREQ=WEEKLY;BYDAY=SA"},
+            "start_date": "2026-01-03", "strategy": "fixed", "candidates": [fx.adult]
+        })),
+    )
+    .await;
+    assert_eq!(r.status, 422, "{}", r.text());
+    assert_eq!(r.json()["field"], "steps_template");
+    let steps_json: Vec<Value> = (0..51).map(|_| json!({"text": "x"})).collect();
+    let r = as_(
+        &fx,
+        Adult,
+        Method::POST,
+        "/api/v1/routines",
+        Some(json!({
+            "name": "Morning", "members": [fx.child], "steps": steps_json,
+            "starts_at": "00:00", "done_by": "23:59", "day_filter": "daily"
+        })),
+    )
+    .await;
+    assert_eq!(r.status, 422, "{}", r.text());
+    assert_eq!(r.json()["field"], "steps");
 }

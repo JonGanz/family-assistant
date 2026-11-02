@@ -520,43 +520,88 @@ impl TaskRepo {
         Self::set_status(conn, id, TaskStatus::Open, None, None, None).await
     }
 
-    /// Deletes the open tasks of a definition created after `after` that have no ticked step
-    /// (the occurrences made since a completion that is being undone).
+    /// Takes the row lock of a task (`SELECT ... FOR UPDATE`) so a concurrent state change waits
+    /// for the transaction; read the task afterwards. `NotFound` for an unknown or archived task.
+    pub async fn lock(conn: &mut PgConnection, id: TaskId) -> Result<()> {
+        sqlx::query_scalar::<_, Uuid>(
+            "SELECT id FROM task WHERE id = $1 AND archived_at IS NULL FOR UPDATE",
+        )
+        .bind(id.as_uuid())
+        .fetch_optional(conn)
+        .await?
+        .map(|_| ())
+        .ok_or(StoreError::NotFound)
+    }
+
+    /// Removes the open occurrences of a definition created after `after` (the ones made since a
+    /// completion that is being undone). Untouched ones (version 1, no claim, no ticked step) are
+    /// deleted; ones someone edited or claimed are archived; ones with a ticked step stay.
+    /// Returns the number deleted plus archived.
     pub async fn delete_created_after(
         conn: &mut PgConnection,
         def: TaskDefinitionId,
         after: DateTime<Utc>,
     ) -> Result<u64> {
-        Ok(sqlx::query!(
+        let deleted = sqlx::query(
             "DELETE FROM task t
              WHERE t.definition_id = $1 AND t.status = 'open' AND t.created_at > $2
+               AND t.version = 1 AND t.claimed_by IS NULL
                AND NOT EXISTS (SELECT 1 FROM task_step s WHERE s.task_id = t.id AND s.done_at IS NOT NULL)",
-            def.as_uuid(),
-            after
         )
+        .bind(def.as_uuid())
+        .bind(after)
+        .execute(&mut *conn)
+        .await?
+        .rows_affected();
+        let archived = sqlx::query(
+            "UPDATE task t SET archived_at = now(), version = version + 1
+             WHERE t.definition_id = $1 AND t.status = 'open' AND t.created_at > $2
+               AND t.archived_at IS NULL
+               AND NOT EXISTS (SELECT 1 FROM task_step s WHERE s.task_id = t.id AND s.done_at IS NOT NULL)",
+        )
+        .bind(def.as_uuid())
+        .bind(after)
         .execute(conn)
         .await?
-        .rows_affected())
+        .rows_affected();
+        Ok(deleted + archived)
     }
 
-    /// Sets (or with `None`, releases) the claim. Bumps the version.
+    /// Sets (or with `None`, releases) the claim. Bumps the version. A claim for a member only
+    /// succeeds while the task is unclaimed, the claim has expired at `now`, or the member
+    /// already holds it; `Conflict` otherwise.
     pub async fn set_claim(
         conn: &mut PgConnection,
         id: TaskId,
         member: Option<MemberId>,
         until: Option<DateTime<Utc>>,
     ) -> Result<()> {
-        let n = sqlx::query!(
-            "UPDATE task SET claimed_by = $2, claimed_until = $3, version = version + 1 WHERE id = $1",
-            id.as_uuid(),
-            member.map(|m| m.as_uuid()),
-            until
+        Self::set_claim_at(conn, id, member, until, Utc::now()).await
+    }
+
+    /// [`Self::set_claim`] with the clock the caller uses for "expired".
+    pub async fn set_claim_at(
+        conn: &mut PgConnection,
+        id: TaskId,
+        member: Option<MemberId>,
+        until: Option<DateTime<Utc>>,
+        now: DateTime<Utc>,
+    ) -> Result<()> {
+        let n = sqlx::query(
+            "UPDATE task SET claimed_by = $2, claimed_until = $3, version = version + 1
+             WHERE id = $1
+               AND ($2::uuid IS NULL OR claimed_by IS NULL OR claimed_by = $2
+                    OR claimed_until IS NULL OR claimed_until <= $4)",
         )
-        .execute(conn)
+        .bind(id.as_uuid())
+        .bind(member.map(|m| m.as_uuid()))
+        .bind(until)
+        .bind(now)
+        .execute(&mut *conn)
         .await?
         .rows_affected();
         if n == 0 {
-            Err(StoreError::NotFound)
+            Err(conflict_or_missing(conn, "task", id.as_uuid()).await)
         } else {
             Ok(())
         }

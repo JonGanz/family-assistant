@@ -101,7 +101,11 @@ impl Env {
                     status: Some(status),
                     ..Default::default()
                 },
-                Viewer::default(),
+                Viewer {
+                    member: Some(self.adult),
+                    role: Some(Role::Adult),
+                    device: false,
+                },
             )
             .await
             .unwrap()
@@ -1514,3 +1518,180 @@ test!(digest_skips_approval_line_when_mode_off, |e| {
     e.svc.digest(e.h, t(2026, 3, 1, 8, 0)).await.unwrap();
     assert_eq!(e.count("digest").await, 0);
 });
+
+// ---- review follow-ups (M3.7 T-12) ----
+
+/// C2-22: two simultaneous completions: one wins, the other sees the new status, and the
+/// definition advances once.
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn concurrent_completions_advance_the_definition_once(pool: PgPool) {
+    let e = env(pool).await;
+    let id = e
+        .def(|i| {
+            i.lead_days = 10;
+            i.strategy = Strategy::Rotation;
+            i.candidates = vec![e.kid1, e.kid2];
+        })
+        .await;
+    e.materialize(t(2026, 3, 1, 9, 0)).await;
+    let task = e.tasks(StatusFilter::Open).await.remove(0);
+    let before = e.definition(id).await;
+    let (svc1, svc2) = (e.svc.clone(), e.svc.clone());
+    let (h, tid, kid1, kid2) = (e.h, task.id, e.kid1, e.kid2);
+    let a = tokio::spawn(async move { svc1.complete(h, tid, Some(kid1), None).await });
+    let b = tokio::spawn(async move { svc2.complete(h, tid, Some(kid2), None).await });
+    let (a, b) = (a.await.unwrap(), b.await.unwrap());
+    assert_eq!(
+        usize::from(a.is_ok()) + usize::from(b.is_ok()),
+        1,
+        "{a:?} {b:?}"
+    );
+    let lost = if a.is_ok() { b } else { a };
+    assert!(
+        matches!(lost, Err(TaskError::WrongStatus { .. })),
+        "{lost:?}"
+    );
+    let after = e.definition(id).await;
+    assert_eq!(after.rotation_cursor, (before.rotation_cursor + 1) % 2);
+}
+
+/// C2-22: two simultaneous claims: exactly one wins.
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn concurrent_claims_have_one_winner(pool: PgPool) {
+    let e = env(pool).await;
+    e.def(|i| {
+        i.strategy = Strategy::Pool;
+        i.candidates = vec![e.kid1, e.kid2];
+    })
+    .await;
+    e.materialize(t(2026, 3, 1, 9, 0)).await;
+    let task = e.tasks(StatusFilter::Open).await.remove(0);
+    let (svc1, svc2) = (e.svc.clone(), e.svc.clone());
+    let (h, tid, kid1, kid2) = (e.h, task.id, e.kid1, e.kid2);
+    let a = tokio::spawn(async move { svc1.claim(h, tid, kid1).await });
+    let b = tokio::spawn(async move { svc2.claim(h, tid, kid2).await });
+    let (a, b) = (a.await.unwrap(), b.await.unwrap());
+    assert_eq!(
+        usize::from(a.is_ok()) + usize::from(b.is_ok()),
+        1,
+        "{a:?} {b:?}"
+    );
+    let lost = if a.is_ok() { b } else { a };
+    assert!(matches!(lost, Err(TaskError::ClaimedByOther)), "{lost:?}");
+}
+
+/// C2-22: `complete` racing `reopen` ends consistent: whichever order, no stale undo is left on
+/// an open task.
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn complete_racing_reopen_leaves_no_stale_undo(pool: PgPool) {
+    let e = env(pool).await;
+    e.def(|i| i.lead_days = 10).await;
+    e.materialize(t(2026, 3, 1, 9, 0)).await;
+    let task = e.tasks(StatusFilter::Open).await.remove(0);
+    let (svc1, svc2) = (e.svc.clone(), e.svc.clone());
+    let (h, tid, kid1) = (e.h, task.id, e.kid1);
+    let a = tokio::spawn(async move { svc1.complete(h, tid, Some(kid1), None).await });
+    let b = tokio::spawn(async move { svc2.reopen(h, tid).await });
+    let (_a, _b) = (a.await.unwrap(), b.await.unwrap());
+    let (status, undo): (String, Option<serde_json::Value>) =
+        sqlx::query_as("SELECT status, completion_undo FROM task WHERE id = $1")
+            .bind(task.id.as_uuid())
+            .fetch_one(&e.pool)
+            .await
+            .unwrap();
+    if status == "open" {
+        assert!(undo.is_none());
+    }
+}
+
+/// C2-26: undoing a completion deletes only untouched later occurrences; an edited or claimed
+/// one is archived (with a version bump), not hard-deleted.
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn undo_archives_later_occurrences_someone_touched(pool: PgPool) {
+    let e = env(pool).await;
+    e.def(|i| {
+        i.lead_days = 10;
+        i.schedule = Schedule::Rrule {
+            rrule: "FREQ=DAILY".into(),
+        };
+        i.steps_template = vec![];
+    })
+    .await;
+    let t0 = t(2026, 3, 1, 9, 0);
+    e.materialize(t0).await;
+    let first = e.tasks(StatusFilter::Open).await.remove(0);
+    e.at(t0);
+    e.svc
+        .complete(e.h, first.id, Some(e.kid1), None)
+        .await
+        .unwrap();
+    e.materialize(t0 + Duration::minutes(1)).await;
+    let later = e.tasks(StatusFilter::Open).await;
+    assert_eq!(later.len(), 1);
+    // Someone edits the follow-up occurrence before the undo.
+    let touched = &later[0];
+    e.svc
+        .update_task(
+            e.h,
+            touched.id,
+            TaskPatch {
+                title: Some("Edited".into()),
+                notes: None,
+                due_at: None,
+                assignees: None,
+                priority_flag: None,
+                calendar_display: None,
+                steps: None,
+            },
+            touched.version,
+        )
+        .await
+        .unwrap();
+    e.at(t0 + Duration::minutes(5));
+    e.svc.reopen(e.h, first.id).await.unwrap();
+    let rows: Vec<(uuid::Uuid, bool)> = sqlx::query_as(
+        "SELECT id, archived_at IS NOT NULL FROM task WHERE id <> $1 AND definition_id IS NOT NULL",
+    )
+    .bind(first.id.as_uuid())
+    .fetch_all(&e.pool)
+    .await
+    .unwrap();
+    assert_eq!(rows.len(), 1, "{rows:?}");
+    assert_eq!(rows[0].0, touched.id.as_uuid());
+    assert!(rows[0].1, "the edited one is archived");
+}
+
+/// C2-24/C2-25 at the service: unknown assignee and over-long input are `Invalid`.
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn service_rejects_unknown_assignees_and_long_input(pool: PgPool) {
+    let e = env(pool).await;
+    let base = || NewTask {
+        list: e.list,
+        title: "T".into(),
+        notes: None,
+        due_at: None,
+        assignees: vec![],
+        steps: vec![],
+        priority_flag: None,
+        calendar_display: None,
+        member: None,
+    };
+    let mut n = base();
+    n.assignees = vec![MemberId::new()];
+    assert!(matches!(
+        e.svc.create_task(e.h, n, Some(e.adult), None).await,
+        Err(TaskError::Invalid { field, .. }) if field == "assignees"
+    ));
+    let mut n = base();
+    n.title = "x".repeat(201);
+    assert!(matches!(
+        e.svc.create_task(e.h, n, Some(e.adult), None).await,
+        Err(TaskError::Invalid { field, .. }) if field == "title"
+    ));
+    let mut n = base();
+    n.steps = vec!["s".into(); 51];
+    assert!(matches!(
+        e.svc.create_task(e.h, n, Some(e.adult), None).await,
+        Err(TaskError::Invalid { field, .. }) if field == "steps"
+    ));
+}

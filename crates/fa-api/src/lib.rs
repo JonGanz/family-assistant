@@ -159,6 +159,7 @@ impl AppState {
 pub const CSRF_HEADER: &str = "x-fa-request";
 pub const SESSION_COOKIE: &str = "fa_session";
 
+#[allow(deprecated)]
 pub fn router(state: AppState) -> Router {
     let v1 = Router::new()
         .route("/setup", get(setup::get_setup))
@@ -345,6 +346,10 @@ pub fn router(state: AppState) -> Router {
             "/members/{id}/away",
             get(tasks::list_away).post(tasks::add_away),
         )
+        .route(
+            "/members/{member_id}/away/{id}",
+            delete(tasks::delete_member_away),
+        )
         .route("/away/{id}", delete(tasks::delete_away))
         .route(
             "/members/{id}/notify-prefs",
@@ -353,7 +358,8 @@ pub fn router(state: AppState) -> Router {
         .route("/members/{id}/notify-prefs/test", post(notify::test_prefs))
         .route("/dashboard", get(feeds::get_dashboard))
         .route("/status", get(feeds::get_status))
-        .route("/device/elevate", post(routes::elevate))
+        .route("/devices/elevate", post(routes::elevate))
+        .route("/device/elevate", post(routes::elevate_deprecated))
         .route("/sessions", get(routes::list_sessions))
         .route("/sessions/{id}", delete(routes::revoke_session))
         .route("/stream", get(routes::stream))

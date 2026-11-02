@@ -14,8 +14,8 @@ use fa_domain::{
     MemberId, NewAway, NewTask, PolicyCtx, Resource, Role, RoutineId, RoutineInput, RoutinePatch,
     RoutineRunId, RoutineRunView, RoutineStepId, RoutineView, Schedule, StepTick, TaskDefinitionId,
     TaskDefinitionInput, TaskDefinitionPatch, TaskDefinitionView, TaskId, TaskListId,
-    TaskListInput, TaskListPatch, TaskListView, TaskPatch, TaskStatus, TaskStepId, TaskView,
-    ValidateDefinitionRequest, ValidateDefinitionResponse,
+    TaskListInput, TaskListPatch, TaskListView, TaskPage, TaskPatch, TaskStatus, TaskStepId,
+    TaskView, ValidateDefinitionRequest, ValidateDefinitionResponse,
 };
 use fa_store::{HouseholdRepo, MemberRepo, TaskDefinitionRepo, TaskFilter, TaskListRepo, TaskRepo};
 use fa_tasks::{StatusFilter, TaskQuery, TaskViewMode, Viewer};
@@ -164,13 +164,15 @@ impl Loaded {
         }
     }
 
-    /// Children see only tasks assigned to them, or unassigned ones; never suggestions.
+    /// Suggestions (made from mail) are for signed-in adults only, never devices or children;
+    /// children also see only tasks assigned to them, or unassigned ones.
     fn visible_to(&self, actor: &Actor) -> bool {
+        if self.row.task.value.status == TaskStatus::Suggested && !viewer_of(actor).sees_suggested()
+        {
+            return false;
+        }
         match is_child_user(actor) {
-            Some(me) => {
-                self.row.task.value.status != TaskStatus::Suggested
-                    && (self.row.assignees.is_empty() || self.row.assignees.contains(&me))
-            }
+            Some(me) => self.row.assignees.is_empty() || self.row.assignees.contains(&me),
             None => true,
         }
     }
@@ -250,16 +252,24 @@ pub struct TaskListQuery {
     status: Option<StatusParam>,
     from: Option<DateTime<Utc>>,
     to: Option<DateTime<Utc>>,
+    /// RFC 3339 cursor: the `next_before` of the previous page.
+    before: Option<DateTime<Utc>>,
+    /// Page size, default 50, at most 200 (above is clamped).
+    limit: Option<u32>,
 }
 
+/// Tasks, newest created first: keyset on `created_at DESC, id DESC`, cursor `created_at`.
+/// `view=now` is a short ranked list and is not paged. `suggested` tasks (made from mail) are
+/// returned only to a signed-in adult; for a child or a device (elevated or not) they are left
+/// out, so `status=suggested` is empty.
 #[utoipa::path(get, path = "/api/v1/tasks", tag = "tasks", params(TaskListQuery),
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 200, body = Vec<TaskView>), (status = 403, body = Problem)))]
+    responses((status = 200, body = TaskPage), (status = 403, body = Problem)))]
 pub async fn list_tasks(
     State(s): State<AppState>,
     auth: Auth,
     ApiQuery(q): ApiQuery<TaskListQuery>,
-) -> ApiResult<Json<Vec<TaskView>>> {
+) -> ApiResult<Json<TaskPage>> {
     require_read(&auth.actor)?;
     let query = TaskQuery {
         view: match q.view {
@@ -279,14 +289,23 @@ pub async fn list_tasks(
         from: q.from,
         to: q.to,
     };
-    let list = s
+    let page = s
         .services
         .tasks
-        .list_tasks(household(&auth.actor)?, &query, viewer_of(&auth.actor))
+        .list_tasks_page(
+            household(&auth.actor)?,
+            &query,
+            viewer_of(&auth.actor),
+            q.before,
+            q.limit,
+        )
         .await?;
-    Ok(Json(list))
+    Ok(Json(page))
 }
 
+/// Creates a task. Limits (422 `{field}` beyond them): `title` 200 characters, `notes` 10 000,
+/// at most 50 `steps` of 200 characters each. Every assignee must be an active member of the
+/// household; a child can assign only themself.
 #[utoipa::path(post, path = "/api/v1/tasks", tag = "tasks", request_body = NewTask,
     security(("cookie" = []), ("bearer" = [])),
     responses((status = 201, body = TaskView), (status = 403, body = Problem),
@@ -349,6 +368,9 @@ pub async fn get_task(
     Ok(with_etag(view.version, view))
 }
 
+/// Edits a task (`If-Match` required). Same limits as creating: `title` 200 characters, `notes`
+/// 10 000, at most 50 `steps` of 200 characters. Newly added assignees must be active members of
+/// the household; a child may set `assignees` to empty or to themself only (403 otherwise).
 #[utoipa::path(patch, path = "/api/v1/tasks/{id}", tag = "tasks", request_body = TaskPatch,
     params(("id" = String, Path, description = "task id"),
            ("If-Match" = Option<String>, Header, description = "record version")),
@@ -371,6 +393,12 @@ pub async fn patch_task(
         &loaded.resource(),
         &loaded.ctx(),
     )?;
+    if let (Some(me), Some(assignees)) = (is_child_user(&auth.actor), &p.assignees) {
+        // A child cannot put anyone else on a task.
+        if !assignees.iter().all(|a| *a == me) {
+            return Err(ApiError::Forbidden("forbidden".into()));
+        }
+    }
     let expected = parse_version(&headers, None)?;
     let view = s.services.tasks.update_task(hid, id, p, expected).await?;
     Ok(with_etag(view.version, view))
@@ -717,6 +745,8 @@ pub async fn list_definitions(
     ))
 }
 
+/// Limits (422 `{field}` beyond them): `title` 200 characters, `notes` 10 000, at most 50
+/// `steps_template` entries of 200 characters each.
 #[utoipa::path(post, path = "/api/v1/task-definitions", tag = "tasks", request_body = TaskDefinitionInput,
     security(("cookie" = []), ("bearer" = [])),
     responses((status = 201, body = TaskDefinitionView), (status = 403, body = Problem),
@@ -858,6 +888,7 @@ pub async fn list_routines(
     ))
 }
 
+/// Limits (422 `{field}` beyond them): `name` 200 characters, at most 50 `steps` of 200 characters each.
 #[utoipa::path(post, path = "/api/v1/routines", tag = "tasks", request_body = RoutineInput,
     security(("cookie" = []), ("bearer" = [])),
     responses((status = 201, body = RoutineView), (status = 403, body = Problem),
@@ -1031,10 +1062,32 @@ pub async fn add_away(
     Ok((StatusCode::CREATED, Json(v)).into_response())
 }
 
+#[utoipa::path(delete, path = "/api/v1/members/{member_id}/away/{id}", tag = "tasks",
+    params(("member_id" = String, Path, description = "member id"),
+           ("id" = String, Path, description = "absence id")),
+    security(("cookie" = []), ("bearer" = [])),
+    responses((status = 204), (status = 403, body = Problem), (status = 404, body = Problem)))]
+pub async fn delete_member_away(
+    State(s): State<AppState>,
+    auth: Auth,
+    ApiPath((member, id)): ApiPath<(MemberId, MemberAwayId)>,
+) -> ApiResult<StatusCode> {
+    require_manage(&auth.actor)?;
+    let hid = household(&auth.actor)?;
+    let owned = s.services.tasks.list_away(hid, Some(member)).await?;
+    if !owned.iter().any(|a| a.id == id) {
+        return Err(ApiError::NotFound);
+    }
+    s.services.tasks.delete_away(hid, id).await?;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// Deprecated alias of `DELETE /api/v1/members/{member_id}/away/{id}`, removed after M4.
 #[utoipa::path(delete, path = "/api/v1/away/{id}", tag = "tasks",
     params(("id" = String, Path, description = "absence id")),
     security(("cookie" = []), ("bearer" = [])),
     responses((status = 204), (status = 403, body = Problem), (status = 404, body = Problem)))]
+#[deprecated = "use DELETE /api/v1/members/{member_id}/away/{id}"]
 pub async fn delete_away(
     State(s): State<AppState>,
     auth: Auth,

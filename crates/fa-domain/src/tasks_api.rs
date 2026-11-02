@@ -315,6 +315,16 @@ dto!(
 );
 
 dto!(
+    /// One page of `GET /tasks`, newest created first. `view=now` is never paged.
+    pub struct TaskPage {
+        pub items: Vec<TaskView>,
+        /// RFC 3339; pass as `before` for the next page. Absent on the last page.
+        #[ts(optional = nullable)]
+        pub next_before: Option<DateTime<Utc>>,
+    }
+);
+
+dto!(
     pub struct NewTask {
         pub list: TaskListId,
         pub title: String,

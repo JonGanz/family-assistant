@@ -616,7 +616,7 @@ async fn sessions_listing_and_revocation(pool: PgPool) {
     let uri = format!("/api/v1/sessions?member={}", fx.child);
     let list = send(&fx.app, Method::GET, &uri, &[("cookie", &adult)], None).await;
     assert_eq!(list.status, StatusCode::OK);
-    let handle = list.json()[0]["id"].as_str().unwrap().to_owned();
+    let handle = list.json()["items"][0]["id"].as_str().unwrap().to_owned();
     let del = send(
         &fx.app,
         Method::DELETE,
@@ -627,7 +627,35 @@ async fn sessions_listing_and_revocation(pool: PgPool) {
     .await;
     assert_eq!(del.status, StatusCode::NO_CONTENT);
     let list = send(&fx.app, Method::GET, &uri, &[("cookie", &adult)], None).await;
-    assert!(list.json().as_array().unwrap().is_empty());
+    assert!(list.json()["items"].as_array().unwrap().is_empty());
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn sessions_list_is_an_envelope_with_keyset_paging(pool: PgPool) {
+    let fx = seed(pool).await;
+    let adult = login(&fx, "alex", ADULT_PW).await;
+    for _ in 0..3 {
+        login(&fx, "sam", CHILD_PW).await;
+    }
+    let uri = format!("/api/v1/sessions?member={}", fx.child);
+    let get = |q: String| {
+        let (app, adult) = (fx.app.clone(), adult.clone());
+        async move { send(&app, Method::GET, &q, &[("cookie", &adult)], None).await }
+    };
+    let first = get(format!("{uri}&limit=2")).await.json();
+    assert_eq!(first["items"].as_array().unwrap().len(), 2);
+    let cursor = first["next_before"].as_str().unwrap().to_owned();
+    let second = get(format!(
+        "{uri}&limit=2&before={}",
+        cursor.replace('+', "%2B")
+    ))
+    .await
+    .json();
+    assert_eq!(second["items"].as_array().unwrap().len(), 1);
+    assert!(second["next_before"].is_null());
+    let clamped = get(format!("{uri}&limit=1000")).await;
+    assert_eq!(clamped.status, StatusCode::OK);
+    assert_eq!(clamped.json()["items"].as_array().unwrap().len(), 3);
 }
 
 #[sqlx::test(migrations = "../fa-store/migrations")]

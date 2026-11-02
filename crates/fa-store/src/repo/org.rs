@@ -135,6 +135,25 @@ impl OrgRepo {
         rows.into_iter().map(TryInto::try_into).collect()
     }
 
+    /// Keyset page of live organisations, newest created first (`created_at DESC, id DESC`).
+    /// `before` is the `created_at` of the previous page's last row; `limit` rows are fetched.
+    pub async fn page(
+        conn: &mut PgConnection,
+        before: Option<DateTime<Utc>>,
+        limit: i64,
+    ) -> Result<Vec<Versioned<Org>>> {
+        let rows: Vec<OrgRow> = sqlx::query_as(&format!(
+            "SELECT {ORG_COLS} FROM org
+             WHERE archived_at IS NULL AND ($1::timestamptz IS NULL OR created_at < $1)
+             ORDER BY created_at DESC, id DESC LIMIT $2"
+        ))
+        .bind(before)
+        .bind(limit)
+        .fetch_all(conn)
+        .await?;
+        rows.into_iter().map(TryInto::try_into).collect()
+    }
+
     /// Returns the new version, or `Conflict` if `expected_version` is stale.
     pub async fn update(conn: &mut PgConnection, o: &Org, expected_version: i32) -> Result<i32> {
         let v: Option<i32> = sqlx::query_scalar(

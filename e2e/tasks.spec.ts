@@ -93,9 +93,9 @@ const tasks = async (
   ctx: APIRequestContext,
   query = "view=all&status=any",
 ): Promise<J[]> => {
-  const res = await ctx.get(`/api/v1/tasks?${query}`);
+  const res = await ctx.get(`/api/v1/tasks?${query}&limit=200`);
   expect(res.ok()).toBeTruthy();
-  return res.json();
+  return ((await res.json()) as { items: J[] }).items;
 };
 const byTitle = async (ctx: APIRequestContext, title: string, query?: string) =>
   (await tasks(ctx, query)).filter((t) => t.title === title);

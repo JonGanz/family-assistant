@@ -1131,9 +1131,27 @@ async fn inbox_lists_items_and_devices_get_counts_only(pool: PgPool) {
             .collect(),
     );
     assert_eq!(kinds, vec!["bill", "contact", "event", "task"]);
+    assert!(v["next_before"].is_null());
     let r = get(&fx, Adult, "/api/v1/inbox?kind=bill").await;
     assert_eq!(r.json()["items"].as_array().unwrap().len(), 1);
     assert_eq!(r.json()["items"][0]["bill"]["id"], json!(it.bill));
+
+    // Keyset paging over the mixed items; the counts cover every page.
+    let first = get(&fx, Adult, "/api/v1/inbox?limit=3").await.json();
+    assert_eq!(first["items"].as_array().unwrap().len(), 3);
+    assert_eq!(first["counts"]["total"], json!(4));
+    let cursor = first["next_before"].as_str().unwrap().replace('+', "%2B");
+    let second = get(
+        &fx,
+        Adult,
+        &format!("/api/v1/inbox?limit=3&before={cursor}"),
+    )
+    .await
+    .json();
+    assert_eq!(second["items"].as_array().unwrap().len(), 1);
+    assert!(second["next_before"].is_null());
+    let all = get(&fx, Adult, "/api/v1/inbox?limit=1000").await.json();
+    assert_eq!(all["items"].as_array().unwrap().len(), 4);
 
     // D-068: the inbox is for signed-in adults; devices get 403, elevated or not.
     for who in [Device, Elevated] {
@@ -1637,15 +1655,33 @@ async fn bills_list_and_patch(pool: PgPool) {
 
     let r = get(&fx, Adult, "/api/v1/bills").await;
     assert_eq!(r.status, StatusCode::OK, "{}", r.text());
-    assert_eq!(r.json().as_array().unwrap().len(), 2);
+    assert_eq!(r.json()["items"].as_array().unwrap().len(), 2);
+    assert!(r.json()["next_before"].is_null());
     let r = get(&fx, Adult, "/api/v1/bills?status=open").await;
-    assert_eq!(ids(&r.json(), "id"), vec![open.to_string()]);
-    assert_eq!(r.json()[0]["message"], json!(mx.m_owned));
-    assert_eq!(r.json()[0]["amount_minor"], json!(12_345));
+    assert_eq!(ids(&r.json()["items"], "id"), vec![open.to_string()]);
+    assert_eq!(r.json()["items"][0]["message"], json!(mx.m_owned));
+    assert_eq!(r.json()["items"][0]["amount_minor"], json!(12_345));
     // The hidden message's link is withheld from the adult who cannot read it.
     let r = get(&fx, Adult, "/api/v1/bills?status=proposed").await;
-    assert_eq!(r.json()[0]["message"], Value::Null);
-    assert_eq!(r.json()[0]["external_url"], Value::Null);
+    assert_eq!(r.json()["items"][0]["message"], Value::Null);
+    assert_eq!(r.json()["items"][0]["external_url"], Value::Null);
+
+    // Keyset paging, newest created first.
+    let _third = new_bill(&fx, "Gas Co", BillStatus::Open, None).await;
+    let first = get(&fx, Adult, "/api/v1/bills?limit=2").await.json();
+    assert_eq!(first["items"].as_array().unwrap().len(), 2);
+    let cursor = first["next_before"].as_str().unwrap().replace('+', "%2B");
+    let second = get(
+        &fx,
+        Adult,
+        &format!("/api/v1/bills?limit=2&before={cursor}"),
+    )
+    .await
+    .json();
+    assert_eq!(second["items"].as_array().unwrap().len(), 1);
+    assert!(second["next_before"].is_null());
+    let all = get(&fx, Adult, "/api/v1/bills?limit=1000").await.json();
+    assert_eq!(all["items"].as_array().unwrap().len(), 3);
     for who in [Child, Device, Elevated] {
         assert_eq!(
             get(&fx, who, "/api/v1/bills").await.status,
@@ -2070,7 +2106,39 @@ async fn labelling_orgs_and_enrollments_over_http(pool: PgPool) {
     assert_eq!(r.status, StatusCode::CREATED, "{}", r.text());
     let contact = id(&r.json());
     let r = get(&fx, Adult2, "/api/v1/orgs").await;
-    assert_eq!(r.json()[0]["contacts"].as_array().unwrap().len(), 1);
+    assert_eq!(
+        r.json()["items"][0]["contacts"].as_array().unwrap().len(),
+        1
+    );
+    assert!(r.json()["next_before"].is_null());
+
+    // Keyset paging, newest created first.
+    for name in ["Second Org", "Third Org"] {
+        let r = post(
+            &fx,
+            Adult2,
+            "/api/v1/orgs",
+            Some(json!({"kind": "school", "name": name})),
+        )
+        .await;
+        assert_eq!(r.status, StatusCode::CREATED, "{}", r.text());
+    }
+    let first = get(&fx, Adult2, "/api/v1/orgs?limit=2").await.json();
+    assert_eq!(first["items"][0]["name"], json!("Third Org"));
+    assert_eq!(first["items"].as_array().unwrap().len(), 2);
+    let cursor = first["next_before"].as_str().unwrap().replace('+', "%2B");
+    let second = get(
+        &fx,
+        Adult2,
+        &format!("/api/v1/orgs?limit=2&before={cursor}"),
+    )
+    .await
+    .json();
+    assert_eq!(second["items"].as_array().unwrap().len(), 1);
+    assert_eq!(second["items"][0]["name"], json!("Example School"));
+    assert!(second["next_before"].is_null());
+    let all = get(&fx, Adult2, "/api/v1/orgs?limit=1000").await.json();
+    assert_eq!(all["items"].as_array().unwrap().len(), 3);
 
     // Enrollments of a member, with the contact linked.
     let r = post(

@@ -10,7 +10,8 @@ use chrono::{DateTime, NaiveDate, Utc};
 use fa_domain::{
     Action, Actor, AuditEntry, AuditEntryId, DeviceDto, DeviceId, HouseholdDto, HouseholdId,
     Member, MemberDto, MemberId, MemberPublicDto, MemberView, Resource, Role, UserAccount,
-    UserAccountDto, UserAccountId, system_api::OwnPasswordChange, validate_password,
+    UserAccountDto, UserAccountId, keyset_page, page_limit, system_api::OwnPasswordChange,
+    validate_password,
 };
 use fa_store::{
     AuditRepo, ChangeBus, DeviceRepo, HouseholdRepo, MemberAvatarRepo, MemberRepo, SessionRepo, Tx,
@@ -898,7 +899,7 @@ pub struct ElevateResp {
     pub expires_at: DateTime<Utc>,
 }
 
-#[utoipa::path(post, path = "/api/v1/device/elevate", tag = "devices", request_body = ElevateReq,
+#[utoipa::path(post, path = "/api/v1/devices/elevate", tag = "devices", request_body = ElevateReq,
     security(("bearer" = [])),
     responses((status = 200, body = ElevateResp), (status = 401, body = Problem),
               (status = 403, body = Problem), (status = 423, body = Problem)))]
@@ -931,11 +932,27 @@ pub async fn elevate(
     }))
 }
 
+/// Deprecated alias of `POST /api/v1/devices/elevate`, removed after M4.
+#[utoipa::path(post, path = "/api/v1/device/elevate", tag = "devices", request_body = ElevateReq,
+    security(("bearer" = [])),
+    responses((status = 200, body = ElevateResp), (status = 401, body = Problem),
+              (status = 403, body = Problem), (status = 423, body = Problem)))]
+#[deprecated = "use POST /api/v1/devices/elevate"]
+pub async fn elevate_deprecated(
+    state: State<AppState>,
+    auth: Auth,
+    req: ApiJson<ElevateReq>,
+) -> ApiResult<Json<ElevateResp>> {
+    elevate(state, auth, req).await
+}
+
 // ---- sessions ----
 
 #[derive(Deserialize)]
 pub struct SessionsQuery {
     member: Option<MemberId>,
+    before: Option<DateTime<Utc>>,
+    limit: Option<u32>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -948,6 +965,15 @@ pub struct SessionView {
     pub expires_at: DateTime<Utc>,
 }
 
+/// One page of `GET /sessions`, newest created first.
+#[derive(Serialize, ToSchema)]
+pub struct SessionPage {
+    pub items: Vec<SessionView>,
+    /// RFC 3339; pass as `before` for the next page. Absent on the last page.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub next_before: Option<DateTime<Utc>>,
+}
+
 fn session_owner(actor: &Actor, q: Option<MemberId>) -> ApiResult<MemberId> {
     match (q, actor) {
         (Some(m), _) => Ok(m),
@@ -958,28 +984,39 @@ fn session_owner(actor: &Actor, q: Option<MemberId>) -> ApiResult<MemberId> {
     }
 }
 
+/// Live sessions, newest created first: keyset on `created_at DESC` (then handle), cursor
+/// `created_at`. The member's live sessions are few, so the page is cut from the full list.
 #[utoipa::path(get, path = "/api/v1/sessions", tag = "sessions",
-    params(("member" = Option<String>, Query, description = "member id; defaults to yourself")),
+    params(("member" = Option<String>, Query, description = "member id; defaults to yourself"),
+           ("before" = Option<String>, Query, description = "RFC 3339 cursor: the `next_before` of the previous page"),
+           ("limit" = Option<u32>, Query, description = "page size, default 50, at most 200 (above is clamped)")),
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 200, body = Vec<SessionView>), (status = 403, body = Problem)))]
+    responses((status = 200, body = SessionPage), (status = 403, body = Problem)))]
 pub async fn list_sessions(
     State(s): State<AppState>,
     auth: Auth,
     ApiQuery(q): ApiQuery<SessionsQuery>,
-) -> ApiResult<Json<Vec<SessionView>>> {
+) -> ApiResult<Json<SessionPage>> {
     let owner = session_owner(&auth.actor, q.member)?;
     let list = s.auth.list_sessions(&auth.actor, owner).await?;
-    Ok(Json(
-        list.into_iter()
-            .map(|i| SessionView {
-                id: i.handle,
-                user_agent: i.user_agent,
-                created_at: i.created_at,
-                last_seen: i.last_seen,
-                expires_at: i.expires_at,
-            })
-            .collect(),
-    ))
+    let rows = list
+        .into_iter()
+        .map(|i| {
+            (
+                i.created_at,
+                i.handle.clone(),
+                SessionView {
+                    id: i.handle,
+                    user_agent: i.user_agent,
+                    created_at: i.created_at,
+                    last_seen: i.last_seen,
+                    expires_at: i.expires_at,
+                },
+            )
+        })
+        .collect();
+    let (items, next_before) = keyset_page(rows, q.before, page_limit(q.limit));
+    Ok(Json(SessionPage { items, next_before }))
 }
 
 #[utoipa::path(delete, path = "/api/v1/sessions/{id}", tag = "sessions",

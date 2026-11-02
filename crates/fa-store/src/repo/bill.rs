@@ -135,6 +135,29 @@ impl BillRepo {
         rows.into_iter().map(TryInto::try_into).collect()
     }
 
+    /// Keyset page of bills, newest created first (`created_at DESC, id DESC`). `before` is
+    /// the `created_at` of the previous page's last bill. Fetches `limit` rows; callers ask for
+    /// one more than they show to learn whether another page follows.
+    pub async fn page(
+        conn: &mut PgConnection,
+        status: Option<BillStatus>,
+        before: Option<DateTime<Utc>>,
+        limit: i64,
+    ) -> Result<Vec<Versioned<Bill>>> {
+        let rows: Vec<BillRow> = sqlx::query_as(&format!(
+            "SELECT {BILL_COLS} FROM bill
+             WHERE ($1::text IS NULL OR status = $1)
+               AND ($2::timestamptz IS NULL OR created_at < $2)
+             ORDER BY created_at DESC, id DESC LIMIT $3"
+        ))
+        .bind(status.as_ref().map(enum_str))
+        .bind(before)
+        .bind(limit)
+        .fetch_all(conn)
+        .await?;
+        rows.into_iter().map(TryInto::try_into).collect()
+    }
+
     /// Updates payee, amount, currency, due date, account hint, statement period and status.
     pub async fn update(conn: &mut PgConnection, b: &Bill, expected_version: i32) -> Result<i32> {
         let v: Option<i32> = sqlx::query_scalar(

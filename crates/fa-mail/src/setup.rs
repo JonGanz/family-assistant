@@ -1,15 +1,15 @@
 //! Mail setup: organisations, contacts, enrollments, rules, signals, categories, and the message
 //! queries of the mail views.
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use fa_domain::{
     BillTemplate, Category, CategoryBehaviour, CategoryId, CategoryInput, CategoryPatch,
     CategoryView, ContactMode, DecisionPointKey, Enrollment, EnrollmentId, EnrollmentInput,
     EnrollmentPatch, EnrollmentView, HouseholdId, MailRule, MailRuleId, MailRuleInput,
     MailRulePatch, MailRuleView, MemberId, MessageDetail, MessageId, MessagePage, MessageQuery,
     MessageSummary, Org, OrgContact, OrgContactId, OrgContactInput, OrgContactPatch,
-    OrgContactView, OrgId, OrgInput, OrgPatch, OrgView, RuleCondition, RuleField, RuleOp,
-    RuleTestMatch, RuleTestRequest, RuleTestResult, SignalView, normalise_address,
+    OrgContactView, OrgId, OrgInput, OrgPage, OrgPatch, OrgView, RuleCondition, RuleField, RuleOp,
+    RuleTestMatch, RuleTestRequest, RuleTestResult, SignalView, normalise_address, page_limit,
     valid_category_key,
 };
 use fa_store::{
@@ -263,6 +263,29 @@ impl SetupService {
             out.push(org_view(&o, contacts));
         }
         Ok(out)
+    }
+
+    /// One page of live organisations, newest created first (`created_at DESC, id DESC`).
+    pub async fn list_orgs_page(
+        &self,
+        household: HouseholdId,
+        before: Option<DateTime<Utc>>,
+        limit: Option<u32>,
+    ) -> Result<OrgPage> {
+        let limit = page_limit(limit);
+        let mut tx = self.store.tx_for(household).await?;
+        let mut rows = OrgRepo::page(&mut tx, before, limit as i64 + 1).await?;
+        let more = rows.len() > limit;
+        rows.truncate(limit);
+        let next_before = more
+            .then(|| rows.last().map(|o| o.value.created_at))
+            .flatten();
+        let mut items = Vec::with_capacity(rows.len());
+        for o in &rows {
+            let contacts = OrgContactRepo::list(&mut tx, o.value.id).await?;
+            items.push(org_view(o, contacts));
+        }
+        Ok(OrgPage { items, next_before })
     }
 
     pub async fn create_org(&self, household: HouseholdId, i: OrgInput) -> Result<OrgView> {

@@ -450,6 +450,32 @@ pub fn mask_url(url: &str) -> String {
     format!("{scheme}://{host}/…")
 }
 
+/// Page size of the keyset-paged lists (`limit`): default 50, at most 200, at least 1.
+pub const PAGE_DEFAULT: u32 = 50;
+pub const PAGE_MAX: u32 = 200;
+
+/// The effective page size for a `limit` query parameter (above the maximum is clamped).
+pub fn page_limit(limit: Option<u32>) -> usize {
+    limit.unwrap_or(PAGE_DEFAULT).clamp(1, PAGE_MAX) as usize
+}
+
+/// Sorts `rows` newest first by `(created_at, id)`, drops those at or after `before`, keeps one
+/// page and returns the cursor (`created_at` of the last kept row) when more rows follow.
+pub fn keyset_page<T, I: Ord>(
+    mut rows: Vec<(chrono::DateTime<chrono::Utc>, I, T)>,
+    before: Option<chrono::DateTime<chrono::Utc>>,
+    limit: usize,
+) -> (Vec<T>, Option<chrono::DateTime<chrono::Utc>>) {
+    rows.sort_by(|a, b| (b.0, &b.1).cmp(&(a.0, &a.1)));
+    if let Some(b) = before {
+        rows.retain(|r| r.0 < b);
+    }
+    let more = rows.len() > limit;
+    rows.truncate(limit);
+    let next = if more { rows.last().map(|r| r.0) } else { None };
+    (rows.into_iter().map(|r| r.2).collect(), next)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

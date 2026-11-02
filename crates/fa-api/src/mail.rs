@@ -15,17 +15,17 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use chrono::{DateTime, Duration, Utc};
 use fa_domain::{
-    Action, Actor, BillId, BillPatch, BillPatchStatus, BillStatus, BillView, CategoryId,
+    Action, Actor, BillId, BillPage, BillPatch, BillPatchStatus, BillStatus, BillView, CategoryId,
     CategoryInput, CategoryPatch, CategoryView, ContactApproval, ContactSuggestionId, EnrollmentId,
     EnrollmentInput, EnrollmentPatch, EnrollmentView, EvalSampleInput, EventApproval, EventId,
-    EventOrigin, EventStatus, HouseholdId, ImapTestRequest, ImapTestResult, InboxKind, InboxView,
+    EventOrigin, EventStatus, HouseholdId, ImapTestRequest, ImapTestResult, InboxKind, InboxPage,
     LabelInput, LabelQueueItem, MailActionId, MailActionInput, MailActionView, MailRuleId,
     MailRuleInput, MailRulePatch, MailRuleView, MailSource, MailSourceId, MailSourcePatch,
     MailSourceView, MakeTaskInput, MemberId, Message, MessageDetail, MessageId, MessagePage,
     MessageQuery, NewMailSource, OrgContactId, OrgContactInput, OrgContactPatch, OrgContactView,
-    OrgId, OrgInput, OrgPatch, OrgView, PolicyCtx, ProcessingState, Resource, Role,
+    OrgId, OrgInput, OrgPage, OrgPatch, OrgView, PolicyCtx, ProcessingState, Resource, Role,
     RuleTestRequest, RuleTestResult, SignalPatch, SignalView, TaskApproval, TaskId, TaskOrigin,
-    TaskPatch, TaskStatus, authorize,
+    TaskPatch, TaskStatus, authorize, page_limit,
 };
 use fa_mail::actions::UNDO_DAYS;
 use fa_mail::context::Viewer;
@@ -600,16 +600,30 @@ pub async fn labelling_next(
 
 // ---- organisations, contacts, enrollments ----
 
-#[utoipa::path(get, path = "/api/v1/orgs", tag = "mail",
+#[derive(Deserialize, IntoParams)]
+#[into_params(parameter_in = Query)]
+pub struct OrgListQuery {
+    /// RFC 3339 cursor: the `next_before` of the previous page.
+    before: Option<DateTime<Utc>>,
+    /// Page size, default 50, at most 200 (above is clamped).
+    limit: Option<u32>,
+}
+
+/// Organisations, newest created first: keyset on `created_at DESC, id DESC`, cursor `created_at`.
+#[utoipa::path(get, path = "/api/v1/orgs", tag = "mail", params(OrgListQuery),
     security(("cookie" = [])),
-    responses((status = 200, body = Vec<OrgView>), (status = 403, body = Problem)))]
-pub async fn list_orgs(State(s): State<AppState>, auth: Auth) -> ApiResult<Json<Vec<OrgView>>> {
+    responses((status = 200, body = OrgPage), (status = 403, body = Problem)))]
+pub async fn list_orgs(
+    State(s): State<AppState>,
+    auth: Auth,
+    ApiQuery(q): ApiQuery<OrgListQuery>,
+) -> ApiResult<Json<OrgPage>> {
     require_adult(&auth.actor)?;
     Ok(Json(
         s.services
             .mail
             .setup
-            .list_orgs(household(&auth.actor)?)
+            .list_orgs_page(household(&auth.actor)?, q.before, q.limit)
             .await?,
     ))
 }
@@ -1034,21 +1048,32 @@ pub struct InboxQuery {
     /// `event`, `bill`, `task` or `contact`; default all.
     #[param(value_type = Option<String>)]
     kind: Option<InboxKind>,
+    /// RFC 3339 cursor: the `next_before` of the previous page.
+    before: Option<DateTime<Utc>>,
+    /// Page size, default 50, at most 200 (above is clamped).
+    limit: Option<u32>,
 }
 
+/// Pending items, newest first: keyset on the item's `created_at DESC` (then id), cursor
+/// `created_at`. `counts` cover every kind and every page.
 #[utoipa::path(get, path = "/api/v1/inbox", tag = "inbox", params(InboxQuery),
     security(("cookie" = []), ("bearer" = [])),
-    responses((status = 200, body = InboxView, description = "a device without elevation gets `items: []` and the counts"),
+    responses((status = 200, body = InboxPage, description = "a device without elevation gets `items: []` and the counts"),
               (status = 403, body = Problem)))]
 pub async fn get_inbox(
     State(s): State<AppState>,
     auth: Auth,
     ApiQuery(q): ApiQuery<InboxQuery>,
-) -> ApiResult<Json<InboxView>> {
+) -> ApiResult<Json<InboxPage>> {
     require(&auth.actor, Action::ReadInbox, &Resource::Household)?;
     let hid = household(&auth.actor)?;
     let viewer = viewer_of(&auth.actor)?;
-    let v = s.services.mail.inbox.list_kind(hid, viewer, q.kind).await?;
+    let v = s
+        .services
+        .mail
+        .inbox
+        .list_page(hid, viewer, q.kind, q.before, q.limit)
+        .await?;
     Ok(Json(v))
 }
 
@@ -1281,6 +1306,10 @@ pub struct BillListQuery {
     /// `proposed`, `open`, `paid` or `dismissed`; default all.
     #[param(value_type = Option<String>)]
     status: Option<BillStatus>,
+    /// RFC 3339 cursor: the `next_before` of the previous page.
+    before: Option<DateTime<Utc>>,
+    /// Page size, default 50, at most 200 (above is clamped).
+    limit: Option<u32>,
 }
 
 /// Bill views with the message link only when the viewer may read the message's source.
@@ -1355,23 +1384,33 @@ async fn bill_views(
     Ok(out)
 }
 
+/// Bills, newest created first: keyset on `created_at DESC, id DESC`, cursor `created_at`.
 #[utoipa::path(get, path = "/api/v1/bills", tag = "bills", params(BillListQuery),
     security(("cookie" = [])),
-    responses((status = 200, body = Vec<BillView>), (status = 403, body = Problem)))]
+    responses((status = 200, body = BillPage), (status = 403, body = Problem)))]
 pub async fn list_bills(
     State(s): State<AppState>,
     auth: Auth,
     ApiQuery(q): ApiQuery<BillListQuery>,
-) -> ApiResult<Json<Vec<BillView>>> {
+) -> ApiResult<Json<BillPage>> {
     require_adult(&auth.actor)?;
     let hid = household(&auth.actor)?;
-    let bills = {
+    let limit = page_limit(q.limit);
+    let mut bills = {
         let mut tx = s.store.tx_for(hid).await?;
-        let b = BillRepo::list(&mut tx, q.status).await?;
+        let b = BillRepo::page(&mut tx, q.status, q.before, limit as i64 + 1).await?;
         tx.rollback().await?;
         b
     };
-    Ok(Json(bill_views(&s, hid, &auth.actor, bills).await?))
+    let more = bills.len() > limit;
+    bills.truncate(limit);
+    let next_before = more
+        .then(|| bills.last().map(|b| b.value.created_at))
+        .flatten();
+    Ok(Json(BillPage {
+        items: bill_views(&s, hid, &auth.actor, bills).await?,
+        next_before,
+    }))
 }
 
 #[utoipa::path(patch, path = "/api/v1/bills/{id}", tag = "bills", request_body = BillPatch,

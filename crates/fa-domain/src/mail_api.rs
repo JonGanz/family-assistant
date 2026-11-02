@@ -462,6 +462,16 @@ dto!(
 );
 
 dto!(
+    /// One page of `GET /orgs`, newest created first.
+    pub struct OrgPage {
+        pub items: Vec<OrgView>,
+        /// RFC 3339; pass as `before` for the next page. Absent on the last page.
+        #[ts(optional = nullable)]
+        pub next_before: Option<DateTime<Utc>>,
+    }
+);
+
+dto!(
     pub struct OrgInput {
         pub kind: OrgKind,
         pub name: String,
@@ -860,6 +870,16 @@ dto!(
     }
 );
 
+dto!(
+    /// One page of `GET /bills`, newest created first.
+    pub struct BillPage {
+        pub items: Vec<BillView>,
+        /// RFC 3339; pass as `before` for the next page. Absent on the last page.
+        #[ts(optional = nullable)]
+        pub next_before: Option<DateTime<Utc>>,
+    }
+);
+
 text_enum!(
     /// The statuses a user may set on a bill.
     BillPatchStatus { Open, Dismissed }
@@ -982,6 +1002,17 @@ dto!(
     pub struct InboxView {
         pub items: Vec<InboxItem>,
         pub counts: InboxCounts,
+    }
+);
+
+dto!(
+    /// One page of `GET /inbox`, newest first. `counts` cover every kind and every page.
+    pub struct InboxPage {
+        pub items: Vec<InboxItem>,
+        pub counts: InboxCounts,
+        /// RFC 3339; pass as `before` for the next page. Absent on the last page.
+        #[ts(optional = nullable)]
+        pub next_before: Option<DateTime<Utc>>,
     }
 );
 

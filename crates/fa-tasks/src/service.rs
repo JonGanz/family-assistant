@@ -41,6 +41,66 @@ pub struct Viewer {
     pub device: bool,
 }
 
+impl Viewer {
+    /// Suggested tasks come from mail: only a signed-in adult sees them. A device, elevated or
+    /// not, and a child never do.
+    pub fn sees_suggested(&self) -> bool {
+        self.role == Some(Role::Adult) && !self.device
+    }
+}
+
+/// Longest task, definition or routine title (characters).
+pub const MAX_TITLE_CHARS: usize = 200;
+/// Longest task or definition notes (characters).
+pub const MAX_NOTES_CHARS: usize = 10_000;
+/// Most steps on a task, definition template or routine.
+pub const MAX_STEPS: usize = 50;
+/// Longest step text (characters).
+pub const MAX_STEP_CHARS: usize = 200;
+
+fn check_chars(field: &str, v: &str, max: usize) -> Result<()> {
+    if v.chars().count() > max {
+        return Err(TaskError::invalid(
+            field,
+            format!("at most {max} characters"),
+        ));
+    }
+    Ok(())
+}
+
+fn check_steps<'a>(field: &str, steps: impl ExactSizeIterator<Item = &'a str>) -> Result<()> {
+    if steps.len() > MAX_STEPS {
+        return Err(TaskError::invalid(
+            field,
+            format!("at most {MAX_STEPS} steps"),
+        ));
+    }
+    for t in steps {
+        check_chars(field, t, MAX_STEP_CHARS)?;
+    }
+    Ok(())
+}
+
+/// Every id is an active member of the household (RLS scopes the read to it).
+async fn check_members(tx: &mut Tx, ids: &[MemberId]) -> Result<()> {
+    if ids.is_empty() {
+        return Ok(());
+    }
+    let active: HashSet<MemberId> = MemberRepo::list(tx, false)
+        .await?
+        .into_iter()
+        .map(|m| m.value.id)
+        .collect();
+    if ids.iter().all(|i| active.contains(i)) {
+        Ok(())
+    } else {
+        Err(TaskError::invalid(
+            "assignees",
+            "every assignee must be an active member of this household",
+        ))
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum TaskViewMode {
     Now,
@@ -277,6 +337,48 @@ impl TaskService {
         q: &TaskQuery,
         viewer: Viewer,
     ) -> Result<Vec<TaskView>> {
+        Ok(self
+            .list_stamped(household, q, viewer)
+            .await?
+            .into_iter()
+            .map(|(_, v)| v)
+            .collect())
+    }
+
+    /// One page of the same list, newest created first (`created_at DESC, id DESC`); `before` is
+    /// the previous page's `next_before` and `limit` is clamped (default 50, max 200). The
+    /// `now` view is a short ranked list and is never paged. Paging happens after the
+    /// per-viewer filters, so a page is always full unless it is the last.
+    pub async fn list_tasks_page(
+        &self,
+        household: HouseholdId,
+        q: &TaskQuery,
+        viewer: Viewer,
+        before: Option<DateTime<Utc>>,
+        limit: Option<u32>,
+    ) -> Result<TaskPage> {
+        let stamped = self.list_stamped(household, q, viewer).await?;
+        if q.view == TaskViewMode::Now {
+            let items = stamped.into_iter().map(|(_, v)| v).collect();
+            return Ok(TaskPage {
+                items,
+                next_before: None,
+            });
+        }
+        let rows = stamped
+            .into_iter()
+            .map(|(at, v)| (at, v.id.as_uuid(), v))
+            .collect();
+        let (items, next_before) = keyset_page(rows, before, page_limit(limit));
+        Ok(TaskPage { items, next_before })
+    }
+
+    async fn list_stamped(
+        &self,
+        household: HouseholdId,
+        q: &TaskQuery,
+        viewer: Viewer,
+    ) -> Result<Vec<(DateTime<Utc>, TaskView)>> {
         let now = self.now();
         let mut tx = self.store.tx_for(household).await?;
         let h = household_of(&mut tx, household).await?;
@@ -312,17 +414,21 @@ impl TaskService {
         if calendar {
             rows.retain(calendar_rule);
         }
+        if !viewer.sees_suggested() {
+            rows.retain(|r| r.task.value.status != TaskStatus::Suggested);
+        }
         if viewer.role == Some(Role::Child) {
             rows.retain(|r| {
-                r.task.value.status != TaskStatus::Suggested
-                    && (r.assignees.is_empty()
-                        || viewer.member.is_some_and(|m| r.assignees.contains(&m)))
+                r.assignees.is_empty() || viewer.member.is_some_and(|m| r.assignees.contains(&m))
             });
         }
         let env = ViewEnv::load(&mut tx, &h, now).await?;
-        let mut views: Vec<TaskView> = rows.iter().map(|r| env.task_view(r)).collect();
+        let mut views: Vec<(DateTime<Utc>, TaskView)> = rows
+            .iter()
+            .map(|r| (r.task.value.created_at, env.task_view(r)))
+            .collect();
         if q.view == TaskViewMode::Now {
-            views.sort_by(cmp_now);
+            views.sort_by(|a, b| cmp_now(&a.1, &b.1));
             views.truncate(h.now_list_size.max(1) as usize);
         }
         Ok(views)
@@ -399,8 +505,14 @@ impl TaskService {
         if title.is_empty() {
             return Err(TaskError::invalid("title", "a title is required"));
         }
+        check_chars("title", &title, MAX_TITLE_CHARS)?;
+        if let Some(n) = &new.notes {
+            check_chars("notes", n, MAX_NOTES_CHARS)?;
+        }
+        check_steps("steps", new.steps.iter().map(String::as_str))?;
         let creator = by.or(new.member);
         let mut tx = self.store.tx_for(household).await?;
+        check_members(&mut tx, &new.assignees).await?;
         let h = household_of(&mut tx, household).await?;
         let list = TaskListRepo::get(&mut tx, new.list)
             .await?
@@ -466,9 +578,25 @@ impl TaskService {
                 return Err(TaskError::invalid("title", "a title is required"));
             }
             t.title = title.trim().to_owned();
+            check_chars("title", &t.title, MAX_TITLE_CHARS)?;
         }
         if let Some(n) = patch.notes {
+            if let Some(n) = &n {
+                check_chars("notes", n, MAX_NOTES_CHARS)?;
+            }
             t.notes = n;
+        }
+        if let Some(s) = &patch.steps {
+            check_steps("steps", s.iter().map(String::as_str))?;
+        }
+        if let Some(a) = &patch.assignees {
+            // Members already on the task stay valid even if archived since.
+            let fresh: Vec<MemberId> = a
+                .iter()
+                .copied()
+                .filter(|m| !cur.assignees.contains(m))
+                .collect();
+            check_members(&mut tx, &fresh).await?;
         }
         if let Some(d) = patch.due_at {
             t.due_at = d;
@@ -528,6 +656,7 @@ impl TaskService {
         id: TaskId,
         allow_suggested: bool,
     ) -> Result<(Task, Vec<MemberId>)> {
+        TaskRepo::lock(tx, id).await?;
         let row = row_of(tx, id).await?;
         let t = row.task.value;
         let ok =
@@ -632,6 +761,7 @@ impl TaskService {
     /// `suggested` to `open`.
     pub async fn accept(&self, household: HouseholdId, task: TaskId) -> Result<TaskView> {
         let mut tx = self.store.tx_for(household).await?;
+        TaskRepo::lock(&mut tx, task).await?;
         let row = row_of(&mut tx, task).await?;
         if row.task.value.status != TaskStatus::Suggested {
             return Err(TaskError::WrongStatus {
@@ -666,6 +796,7 @@ impl TaskService {
     pub async fn reopen(&self, household: HouseholdId, task: TaskId) -> Result<TaskView> {
         let now = self.now();
         let mut tx = self.store.tx_for(household).await?;
+        TaskRepo::lock(&mut tx, task).await?;
         let row = row_of(&mut tx, task).await?;
         let t = &row.task.value;
         if !matches!(t.status, TaskStatus::Done | TaskStatus::Skipped) {
@@ -747,7 +878,12 @@ impl TaskService {
             Some(m) => now + Duration::minutes(i64::from(m)),
             None => fa_domain::tasks::due_instant(local_date(now, tz), None, tz).max(now),
         };
-        TaskRepo::set_claim(&mut tx, task, Some(member), Some(until)).await?;
+        TaskRepo::set_claim_at(&mut tx, task, Some(member), Some(until), now)
+            .await
+            .map_err(|e| match e {
+                fa_store::StoreError::Conflict => TaskError::ClaimedByOther,
+                e => e.into(),
+            })?;
         self.finish(tx, household, task).await
     }
 
@@ -1169,6 +1305,8 @@ impl TaskService {
         if i.name.trim().is_empty() {
             return Err(TaskError::invalid("name", "a name is required"));
         }
+        check_chars("name", i.name.trim(), MAX_TITLE_CHARS)?;
+        check_steps("steps", i.steps.iter().map(|s| s.text.as_str()))?;
         let now = self.now();
         let mut tx = self.store.tx_for(household).await?;
         let tz = tz_of(&household_of(&mut tx, household).await?);
@@ -1210,7 +1348,11 @@ impl TaskService {
             .await?
             .ok_or(TaskError::NotFound)?;
         let mut r = cur.routine.value.clone();
+        if let Some(steps) = &p.steps {
+            check_steps("steps", steps.iter().map(|s| s.text.as_str()))?;
+        }
         if let Some(v) = p.name {
+            check_chars("name", v.trim(), MAX_TITLE_CHARS)?;
             r.name = v;
         }
         if let Some(v) = p.starts_at {
@@ -1415,6 +1557,14 @@ pub(crate) fn validate_definition(d: &TaskDefinition) -> Result<()> {
     if d.title.trim().is_empty() {
         return Err(TaskError::invalid("title", "a title is required"));
     }
+    check_chars("title", &d.title, MAX_TITLE_CHARS)?;
+    if let Some(n) = &d.notes {
+        check_chars("notes", n, MAX_NOTES_CHARS)?;
+    }
+    check_steps(
+        "steps_template",
+        d.steps_template.iter().map(String::as_str),
+    )?;
     if d.lead_days < 0 {
         return Err(TaskError::invalid("lead_days", "must not be negative"));
     }
