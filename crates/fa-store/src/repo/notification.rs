@@ -24,6 +24,7 @@ pub struct NewNotification {
     pub not_before: Option<DateTime<Utc>>,
 }
 
+#[derive(sqlx::FromRow)]
 struct Row {
     id: Uuid,
     household_id: Uuid,
@@ -193,22 +194,24 @@ impl NotificationRepo {
         row.map(TryInto::try_into).transpose()
     }
 
-    /// Pending rows that are due, oldest first. Use a system tx: it spans households.
+    /// Claims pending rows that are due, oldest first: `FOR UPDATE SKIP LOCKED`, so the caller
+    /// holds them until its transaction ends and an overlapping run skips them instead of
+    /// sending them twice. Keep the transaction open until the rows are marked.
     pub async fn pending(
         conn: &mut PgConnection,
         now: DateTime<Utc>,
         limit: i64,
     ) -> Result<Vec<Notification>> {
-        let rows = sqlx::query_as!(
-            Row,
+        let rows = sqlx::query_as::<_, Row>(
             "SELECT id, household_id, member_id, trigger, subject_type, subject_id, title, body,
                     click_path, priority, dedupe_key, status, not_before, sent_at, attempts,
                     last_error, created_at
              FROM notification WHERE status = 'pending' AND not_before <= $1
-             ORDER BY created_at, id LIMIT $2",
-            now,
-            limit
+             ORDER BY created_at, id LIMIT $2
+             FOR UPDATE SKIP LOCKED",
         )
+        .bind(now)
+        .bind(limit)
         .fetch_all(conn)
         .await?;
         rows.into_iter().map(TryInto::try_into).collect()
@@ -279,6 +282,29 @@ impl NotificationRepo {
             next_try,
             give_up
         )
+        .execute(conn)
+        .await?
+        .rows_affected())
+    }
+
+    /// Keeps the row pending after a transport error or a 5xx, without counting against
+    /// `attempts`; `failed` once `give_up` (the row is too old).
+    pub async fn record_transient(
+        conn: &mut PgConnection,
+        id: NotificationId,
+        error: &str,
+        next_try: DateTime<Utc>,
+        give_up: bool,
+    ) -> Result<()> {
+        one(sqlx::query(
+            "UPDATE notification SET last_error = $2, not_before = $3,
+                    status = CASE WHEN $4 THEN 'failed' ELSE 'pending' END
+             WHERE id = $1",
+        )
+        .bind(id.as_uuid())
+        .bind(error)
+        .bind(next_try)
+        .bind(give_up)
         .execute(conn)
         .await?
         .rows_affected())

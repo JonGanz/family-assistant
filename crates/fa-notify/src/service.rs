@@ -6,7 +6,7 @@ use fa_store::{MemberRepo, NotifyPref, NotifyPrefRepo, Store, Versioned};
 use rand::Rng;
 use uuid::Uuid;
 
-use crate::{Notifier, NotifyError, NtfyMessage, NtfyNotifier};
+use crate::{Notifier, NotifyError, NtfyMessage, NtfyNotifier, PublishError};
 
 /// Process settings handed in by `fa-server`.
 #[derive(Debug, Clone)]
@@ -33,8 +33,8 @@ struct Unconfigured;
 
 #[async_trait::async_trait]
 impl Notifier for Unconfigured {
-    async fn publish(&self, _: &str, _: &NtfyMessage) -> Result<(), NotifyError> {
-        Err(NotifyError::NotConfigured)
+    async fn publish(&self, _: &str, _: &NtfyMessage) -> Result<(), PublishError> {
+        Err(PublishError::NotConfigured)
     }
 }
 
@@ -245,6 +245,9 @@ impl NotifyService {
             tags: vec!["white_check_mark".into()],
             click: Some(self.click_url("")),
         };
-        self.notifier.publish(&p.value.topic, &msg).await
+        self.notifier
+            .publish(&p.value.topic, &msg)
+            .await
+            .map_err(NotifyError::from)
     }
 }

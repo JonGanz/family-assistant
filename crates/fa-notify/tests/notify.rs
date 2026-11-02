@@ -2,24 +2,40 @@ use std::sync::{Arc, Mutex};
 
 use chrono::{DateTime, Duration, NaiveTime, TimeZone, Utc};
 use fa_domain::*;
-use fa_notify::{Notifier, NotifyConfig, NotifyError, NotifyService, NtfyMessage};
+use fa_notify::{Notifier, NotifyConfig, NotifyError, NotifyService, NtfyMessage, PublishError};
 use fa_store::*;
 use sqlx::PgPool;
 use uuid::Uuid;
 use wiremock::matchers::{header, method, path};
 use wiremock::{Mock, MockServer, ResponseTemplate};
 
+#[derive(Clone, Copy, PartialEq)]
+enum Fail {
+    Rejected,
+    Transient,
+}
+
 #[derive(Default)]
 struct Fake {
     sent: Mutex<Vec<(String, NtfyMessage)>>,
-    fail: Mutex<bool>,
+    fail: Mutex<Option<Fail>>,
+    /// Publishes started, counted before the gate.
+    calls: Mutex<usize>,
+    /// When set, a publish waits for a permit before it completes.
+    gate: Option<tokio::sync::Semaphore>,
 }
 
 #[async_trait::async_trait]
 impl Notifier for Fake {
-    async fn publish(&self, topic: &str, msg: &NtfyMessage) -> Result<(), NotifyError> {
-        if *self.fail.lock().unwrap() {
-            return Err(NotifyError::Publish("boom".into()));
+    async fn publish(&self, topic: &str, msg: &NtfyMessage) -> Result<(), PublishError> {
+        *self.calls.lock().unwrap() += 1;
+        if let Some(g) = &self.gate {
+            g.acquire().await.unwrap().forget();
+        }
+        match *self.fail.lock().unwrap() {
+            Some(Fail::Rejected) => return Err(PublishError::Rejected("boom".into())),
+            Some(Fail::Transient) => return Err(PublishError::Transient("down".into())),
+            None => {}
         }
         self.sent.lock().unwrap().push((topic.into(), msg.clone()));
         Ok(())
@@ -80,6 +96,10 @@ async fn member(store: &Store, h: HouseholdId, name: &str, role: Role) -> Member
 }
 
 async fn env(pool: &PgPool, url: Option<&str>) -> Env {
+    env_with(pool, url, Fake::default()).await
+}
+
+async fn env_with(pool: &PgPool, url: Option<&str>, fake: Fake) -> Env {
     let store = Store::from_pool(pool.clone());
     let hh = Household {
         id: HouseholdId::new(),
@@ -115,7 +135,7 @@ async fn env(pool: &PgPool, url: Option<&str>) -> Env {
     tx.commit().await.unwrap();
     let adult = member(&store, hh.id, "Alex", Role::Adult).await;
     let child = member(&store, hh.id, "Sam", Role::Child).await;
-    let fake = Arc::new(Fake::default());
+    let fake = Arc::new(fake);
     let svc =
         NotifyService::with_notifier(store.clone(), config(url.map(Into::into)), fake.clone());
     Env {
@@ -138,6 +158,30 @@ impl Env {
         priority: i32,
         now: DateTime<Utc>,
     ) -> NotificationId {
+        self.row_full(who, trigger, title, &format!("{title} body"), priority, now)
+            .await
+    }
+
+    async fn row_with(
+        &self,
+        who: MemberId,
+        trigger: NotifyTrigger,
+        title: &str,
+        body: &str,
+        now: DateTime<Utc>,
+    ) -> NotificationId {
+        self.row_full(who, trigger, title, body, 3, now).await
+    }
+
+    async fn row_full(
+        &self,
+        who: MemberId,
+        trigger: NotifyTrigger,
+        title: &str,
+        body: &str,
+        priority: i32,
+        now: DateTime<Utc>,
+    ) -> NotificationId {
         let key = format!("t:{title}:{who}");
         let mut tx = self.store.tx_for(self.h).await.unwrap();
         NotificationRepo::insert_dedupe(
@@ -149,7 +193,7 @@ impl Env {
                 subject_type: "task".into(),
                 subject_id: None,
                 title: title.into(),
-                body: format!("{title} body"),
+                body: body.into(),
                 click_path: Some("/tasks/1".into()),
                 priority,
                 dedupe_key: key.clone(),
@@ -296,12 +340,12 @@ async fn batching_merges_and_respects_window(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../fa-store/migrations")]
-async fn failures_back_off_and_give_up(pool: PgPool) {
+async fn rejected_publishes_back_off_and_give_up(pool: PgPool) {
     let e = env(&pool, Some(URL)).await;
     let mut now = utc(26, 12, 0);
     e.svc.get_prefs(e.h, e.adult).await.unwrap();
     let id = e.row(e.adult, NotifyTrigger::Assigned, "x", 3, now).await;
-    *e.fake.fail.lock().unwrap() = true;
+    *e.fake.fail.lock().unwrap() = Some(Fail::Rejected);
     for attempt in 1..=5 {
         e.svc.run_send_at(now).await.unwrap();
         let r = e.get(id).await;
@@ -316,9 +360,132 @@ async fn failures_back_off_and_give_up(pool: PgPool) {
         }
     }
     // Not retried once failed.
-    *e.fake.fail.lock().unwrap() = false;
+    *e.fake.fail.lock().unwrap() = None;
     e.svc.run_send_at(now + Duration::hours(1)).await.unwrap();
     assert!(e.sent().is_empty());
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn outage_keeps_rows_pending_with_capped_backoff_until_max_age(pool: PgPool) {
+    let e = env(&pool, Some(URL)).await;
+    let t0 = utc(26, 12, 0);
+    e.svc.get_prefs(e.h, e.adult).await.unwrap();
+    let id = e.row(e.adult, NotifyTrigger::Assigned, "x", 3, t0).await;
+    *e.fake.fail.lock().unwrap() = Some(Fail::Transient);
+    let mut now = t0;
+    // Six hours of outage (inside the day: quiet hours would defer the row): far more failures than MAX_ATTEMPTS, none of them counted.
+    let mut tries = 0;
+    while now < t0 + Duration::hours(6) {
+        e.svc.run_send_at(now).await.unwrap();
+        let r = e.get(id).await;
+        assert_eq!(r.status, NotificationStatus::Pending);
+        assert_eq!(r.attempts, 0);
+        assert_eq!(r.last_error.as_deref(), Some("publish failed: down"));
+        let wait = r.not_before - now;
+        assert!(wait >= Duration::minutes(1) && wait <= Duration::minutes(15));
+        now = r.not_before;
+        tries += 1;
+    }
+    assert!(tries > 5);
+    // The server is back: the row goes out.
+    *e.fake.fail.lock().unwrap() = None;
+    e.svc.run_send_at(now).await.unwrap();
+    assert_eq!(e.get(id).await.status, NotificationStatus::Sent);
+    assert_eq!(e.sent().len(), 1);
+
+    // A row that has waited longer than the maximum age fails for good.
+    let old = e
+        .row(
+            e.adult,
+            NotifyTrigger::Overdue,
+            "old",
+            3,
+            now - Duration::hours(25),
+        )
+        .await;
+    *e.fake.fail.lock().unwrap() = Some(Fail::Transient);
+    e.svc.run_send_at(now).await.unwrap();
+    let r = e.get(old).await;
+    assert_eq!(r.status, NotificationStatus::Failed);
+    assert_eq!(r.attempts, 0);
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn long_titles_and_bodies_are_truncated_on_char_boundaries(pool: PgPool) {
+    let e = env(&pool, Some(URL)).await;
+    let now = utc(26, 12, 0);
+    e.svc.get_prefs(e.h, e.adult).await.unwrap();
+    let title = "Zażółć gęślą jaźń ".repeat(30);
+    let body = "ü".repeat(3000);
+    e.row_with(e.adult, NotifyTrigger::Assigned, &title, &body, now)
+        .await;
+    e.svc.run_send_at(now).await.unwrap();
+    let m = &e.sent()[0].1;
+    assert_eq!(m.title.chars().count(), 120);
+    assert!(m.title.ends_with('…') && m.title.starts_with("Zażółć"));
+    assert_eq!(m.body.chars().count(), 2000);
+
+    // A short one is untouched.
+    e.row(e.adult, NotifyTrigger::Assigned, "short", 3, now)
+        .await;
+    e.svc.run_send_at(now + Duration::minutes(2)).await.unwrap();
+    assert_eq!(e.sent()[1].1.title, "short");
+
+    // A batch body of many long titles is capped too.
+    for i in 0..30 {
+        e.row_with(
+            e.adult,
+            NotifyTrigger::Assigned,
+            &format!("{i} {}", "w".repeat(119)),
+            "b",
+            now + Duration::minutes(10),
+        )
+        .await;
+    }
+    e.svc
+        .run_send_at(now + Duration::minutes(10))
+        .await
+        .unwrap();
+    let m = &e.sent()[2].1;
+    assert_eq!(m.title, "30 updates");
+    assert_eq!(m.body.chars().count(), 2000);
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn overlapping_runs_do_not_send_twice(pool: PgPool) {
+    let fake = Fake {
+        gate: Some(tokio::sync::Semaphore::new(0)),
+        ..Fake::default()
+    };
+    let e = env_with(&pool, Some(URL), fake).await;
+    let now = utc(26, 12, 0);
+    e.svc.get_prefs(e.h, e.adult).await.unwrap();
+    let id = e
+        .row(e.adult, NotifyTrigger::Assigned, "once", 3, now)
+        .await;
+
+    // Run A stops inside the publish (ntfy slow).
+    let a = {
+        let svc = e.svc.clone();
+        tokio::spawn(async move { svc.run_send_at(now).await })
+    };
+    while *e.fake.calls.lock().unwrap() == 0 {
+        tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+    }
+    // Run B, a minute later, must neither wait for A nor publish the same row.
+    let b = tokio::time::timeout(
+        std::time::Duration::from_secs(5),
+        e.svc.run_send_at(now + Duration::minutes(1)),
+    )
+    .await
+    .expect("run B must not block on run A");
+    b.unwrap();
+    assert_eq!(*e.fake.calls.lock().unwrap(), 1);
+
+    e.fake.gate.as_ref().unwrap().add_permits(10);
+    a.await.unwrap().unwrap();
+    assert_eq!(e.sent().len(), 1);
+    assert_eq!(e.get(id).await.status, NotificationStatus::Sent);
 }
 
 #[sqlx::test(migrations = "../fa-store/migrations")]

@@ -11,11 +11,29 @@ use fa_store::{
 };
 use uuid::Uuid;
 
-use crate::{NotifyError, NotifyService, NtfyMessage};
+use crate::{NotifyError, NotifyService, NtfyMessage, PublishError};
 
 const BATCH_WINDOW_SECS: i64 = 60;
 const MAX_ATTEMPTS: i32 = 5;
 const PENDING_LIMIT: i64 = 500;
+/// How long a row keeps being retried after transport errors and 5xx before it is marked
+/// `failed`. A constant for now, to become a setting.
+const MAX_PENDING_AGE: Duration = Duration::hours(24);
+/// Longest wait between retries after a transport error or 5xx.
+const MAX_TRANSIENT_BACKOFF: Duration = Duration::minutes(15);
+/// Limits on what goes into ntfy: titles end up in a header, which proxies cap.
+const MAX_TITLE_CHARS: usize = 120;
+const MAX_BODY_CHARS: usize = 2000;
+
+/// Cuts `s` to at most `max` characters (never inside one), ending in `…` when it was cut.
+fn truncate_chars(s: &str, max: usize) -> String {
+    if s.chars().count() <= max {
+        return s.to_string();
+    }
+    let mut out: String = s.chars().take(max.saturating_sub(1)).collect();
+    out.push('…');
+    out
+}
 
 struct Group {
     topic: String,
@@ -74,6 +92,11 @@ impl NotifyService {
 
         let mut tx = self.store.tx_for(h.id).await?;
         self.produce_reauth(&mut tx, h).await?;
+        tx.commit().await?;
+
+        // The claimed rows stay locked until the end of this transaction, which spans the
+        // publishes, so an overlapping run skips them instead of sending them again.
+        let mut tx = self.store.tx_for(h.id).await?;
         let rows = NotificationRepo::pending(&mut tx, now, PENDING_LIMIT).await?;
         let mut prefs = HashMap::new();
         for row in rows {
@@ -153,31 +176,31 @@ impl NotifyService {
                 g.rows.push(row);
             }
         }
-        tx.commit().await?;
 
         for (_, g) in groups {
-            self.deliver(h, g, now).await?;
+            self.deliver(&mut tx, h, g, now).await?;
         }
+        tx.commit().await?;
         Ok(())
     }
 
     async fn deliver(
         &self,
+        tx: &mut sqlx::PgConnection,
         h: &Household,
         g: Group,
         now: DateTime<Utc>,
     ) -> Result<(), NotifyError> {
         let msg = self.compose(&g.rows);
         let result = self.notifier.publish(&g.topic, &msg).await;
-        let mut tx = self.store.tx_for(h.id).await?;
         match result {
             Ok(()) => {
                 let ids: Vec<_> = g.rows.iter().map(|r| r.id).collect();
-                NotificationRepo::mark_sent(&mut tx, &ids, now).await?;
+                NotificationRepo::mark_sent(tx, &ids, now).await?;
                 if let Some((name, adult)) = &g.copy {
                     for r in g.rows.iter().filter(|r| !r.dedupe_key.starts_with("copy:")) {
                         NotificationRepo::insert_dedupe(
-                            &mut tx,
+                            tx,
                             &NewNotification {
                                 household_id: h.id,
                                 member_id: *adult,
@@ -199,21 +222,34 @@ impl NotifyService {
             Err(e) => {
                 tracing::warn!(error = %e, rows = g.rows.len(), "ntfy publish failed");
                 let err = e.to_string();
+                let permanent = matches!(e, PublishError::Rejected(_));
                 for r in &g.rows {
-                    let attempts = r.attempts + 1;
-                    let next = now + Duration::minutes(1_i64 << attempts.min(20));
-                    NotificationRepo::record_failure(
-                        &mut tx,
-                        r.id,
-                        &err,
-                        next,
-                        attempts >= MAX_ATTEMPTS,
-                    )
-                    .await?;
+                    if permanent {
+                        let attempts = r.attempts + 1;
+                        let next = now + Duration::minutes(1_i64 << attempts.min(20));
+                        NotificationRepo::record_failure(
+                            tx,
+                            r.id,
+                            &err,
+                            next,
+                            attempts >= MAX_ATTEMPTS,
+                        )
+                        .await?;
+                    } else {
+                        let age = now - r.created_at;
+                        let wait = (age / 2).clamp(Duration::minutes(1), MAX_TRANSIENT_BACKOFF);
+                        NotificationRepo::record_transient(
+                            tx,
+                            r.id,
+                            &err,
+                            now + wait,
+                            age >= MAX_PENDING_AGE,
+                        )
+                        .await?;
+                    }
                 }
             }
         }
-        tx.commit().await?;
         Ok(())
     }
 
@@ -226,8 +262,8 @@ impl NotifyService {
         let tags = vec![tag(top.trigger).to_string()];
         if let [r] = rows {
             return NtfyMessage {
-                title: r.title.clone(),
-                body: r.body.clone(),
+                title: truncate_chars(&r.title, MAX_TITLE_CHARS),
+                body: truncate_chars(&r.body, MAX_BODY_CHARS),
                 priority,
                 tags,
                 click: r.click_path.as_deref().map(|p| self.click_url(p)),
@@ -235,11 +271,14 @@ impl NotifyService {
         }
         NtfyMessage {
             title: format!("{} updates", rows.len()),
-            body: rows
-                .iter()
-                .map(|r| r.title.as_str())
-                .collect::<Vec<_>>()
-                .join("\n"),
+            body: truncate_chars(
+                &rows
+                    .iter()
+                    .map(|r| r.title.as_str())
+                    .collect::<Vec<_>>()
+                    .join("\n"),
+                MAX_BODY_CHARS,
+            ),
             priority,
             tags,
             click: Some(self.click_url(batch_click(rows))),
