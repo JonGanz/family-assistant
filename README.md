@@ -575,6 +575,8 @@ scripts/e2e.sh
 |---|---|
 | [`IMPROVEMENTS.md`](IMPROVEMENTS.md) | Outstanding review findings and suggestions, by area |
 | `python3 tools/fa.py check` | Lints the design tree (`arch/`, `design/`, `decisions/`, `log/`, `plan/`, `research/`): front-matter keys, status values, id/filename parity, duplicate numbers, index ⇄ file parity. CI runs it |
+| `python3 tools/fa.py <subcommand> --flags` | The design-workflow CLI (`--help` lists everything; keyword flags only, long text as `@path`; tested by `python3 tools/test_fa.py`, which `scripts/ci-local.sh` runs). Subcommands: `check`, `check-yaml`, `next-id --kind q\|d`, `answered`, `new-q`, `new-d`, `resolve`, `supersede`, `annotate`, `log`, `status`, `rebuild-design-index`. Every writer stamps `updated:` in the index it touches. Set `FA_ROOT` or `--root` to run against another tree |
+| [`STATUS.md`](STATUS.md) | **Generated** by `python3 tools/fa.py status`, do not edit: open questions, open human steps, unfinished tasks of plans that are not closed, and the newest log. Re-run it after changing any of those |
 | [`scripts/ci-local.sh`](scripts/ci-local.sh) | Mirrors `.github/workflows/ci.yml` (manual-dispatch only; GitHub runs just the tagged release builds): fmt, clippy, tests against a **fresh throwaway Postgres** with `SQLX_OFFLINE=true`, the GreenMail-gated IMAP tests (a throwaway GreenMail), cargo-deny (if installed), the example-data hygiene check, and web lint, typecheck, test and build. `--no-web` skips the web part |
 | [`scripts/e2e.sh`](scripts/e2e.sh) | The end-to-end suite. Starts a throwaway Postgres, `serve api` and `serve worker` as **separate processes**, a fixture server (ICS calendars and an Open-Meteo stub, [`e2e/stubs/`](e2e/stubs/) and [`e2e/fixtures/`](e2e/fixtures/)), Radicale (CalDAV, `tomsquest/docker-radicale`, also the writable calendar for approved events), a real ntfy (`binwiederhier/ntfy`) and a GreenMail (`greenmail/standalone`, fictional fixture mails from [`e2e/fixtures/mail/`](e2e/fixtures/mail/)), seeds the example household, sources, a device, task lists, chores, a routine, a weather rule and an IMAP mailbox through the API, runs `tasks run-now` and `mail sync-now`, then runs the Playwright API specs (`e2e/`) and UI specs (`apps/web/e2e/`). Everything is torn down on exit. It also starts two empty-database instances for the setup API and wizard specs; the wizard one is browsed through the host's LAN address so it is a plain-HTTP, non-secure context. `FA_E2E_HOLD=<seconds>` keeps the seeded stack up for debugging |
 | [`scripts/compose-smoke.sh`](scripts/compose-smoke.sh) | Builds the image, starts `deploy/compose.yaml` (with the build overlay) with **no `.env`**, checks the generated secrets and their idempotence, runs setup through the API over plain HTTP (no `Secure` cookie), takes an on-demand backup and checks that `down -v` leaves no volumes. `FA_SMOKE_IMAGE` (optional) tests a prebuilt image instead. CI runs it as the `compose-smoke` job |
@@ -639,7 +641,8 @@ deploy/          compose.yaml (install file), compose.build.yaml (build overlay)
 scripts/         Dev, CI and ops scripts
 config/examples/ Fictional household config
 arch/ design/ decisions/ research/ plan/ log/   Design system (see below)
-tools/           Python helpers for the design docs (diagram generator, workflow helpers)
+tools/           Python helpers for the design docs (diagram generator, the `fa.py` workflow CLI and its tests)
+STATUS.md        Generated snapshot of what is open (`python3 tools/fa.py status`)
 ```
 
 ## How this project is designed
