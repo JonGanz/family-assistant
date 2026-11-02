@@ -1,6 +1,6 @@
 ---
 title: Design Questions Index
-updated: 2026-10-29
+updated: 2026-11-02
 ---
 
 # Design Questions
@@ -27,8 +27,14 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Open
-_None. The next question number is Q-078._
+## Batch 21, open
+| ID | Title | Area |
+|---|---|---|
+| [Q-078](Q-078-email-origin-task-scope.md) | Visibility of tasks made from a private mailbox's mail | tasks |
+| [Q-079](Q-079-caldav-other-hosts.md) | CalDAV servers that send the client to another host | feeds |
+| [Q-080](Q-080-lan-imap-tls.md) | Self-hosted IMAP on the LAN: certificate pinning and plain IMAP | ingest |
+| [Q-081](Q-081-max-message-size.md) | What happens to a mail message over the size limit | ingest |
+| [Q-082](Q-082-ntfy-generic-text.md) | A generic-text mode for notifications sent through ntfy | notify |
 
 ## Resolved
 | ID | Title | Decisions |

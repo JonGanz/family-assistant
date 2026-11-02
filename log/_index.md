@@ -1,6 +1,6 @@
 ---
 title: Log Index
-updated: 2026-10-26
+updated: 2026-11-02
 ---
 
 # Daily Logs
@@ -15,3 +15,4 @@ updated: 2026-10-26
 - [2026-10-30](2026-10-30.md): household TOML import and export removed (D-089, supersedes D-018); dashboard menu on the shorter screen edge, orientation detected not configured (D-090); heartbeat folded into the connection status (D-091); dashboard screensaver (D-092); busier dev sample calendars; e2e and demo seeding through the setup API; dashboard modals time out after 60 s
 - [2026-10-31](2026-10-31.md): dashboard whiteboard view (pen, eraser, hue colours, local storage)
 - [2026-11-01](2026-11-01.md): week view portrait: larger event titles and forecast temperatures
+- [2026-11-02](2026-11-02.md): IMPROVEMENTS.md re-checked; M3.7 review follow-ups (C-10 secrets AAD, C-14 list envelopes, C-13 route conventions, P-06 fa.py CLI, P-07 skills, second code review)

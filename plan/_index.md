@@ -1,6 +1,6 @@
 ---
 title: Plans Index
-updated: 2026-10-29
+updated: 2026-11-02
 ---
 
 # Plans
@@ -17,10 +17,12 @@ There is one plan per milestone (`M<n>.md`). Its sub-agent task briefs are in `M
 | M3 Ingest | [M3.md](M3.md) | code-complete, awaiting human steps H-10, H-11 | [M3/](M3/): T-01 to T-15 (+ `_rules.md`), plus human steps H-10, H-11 |
 | M3.5 Onboarding and shakedown | [M3.5.md](M3.5.md) | code-complete, awaiting human steps H-12 to H-14, then the shakedown (H-02 to H-11 redone on the new install, U-16, a week of inbox numbers) | [M3.5/](M3.5/): T-01 to T-10 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)), plus human steps H-12 to H-14 and the shakedown |
 | M3.6 Themes | [M3.6.md](M3.6.md) | code-complete; e2e, clippy and tests green, compose-smoke pending (D-079 to D-081) | [M3.6/](M3.6/): T-01 to T-08 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)); T-09 integration is the main session |
+| M3.7 Review follow-ups | [M3.7.md](M3.7.md) | running (C-10, C-13, C-14, P-06, P-07, second code review) | [M3.7/](M3.7/): T-01 to T-07 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)) |
 
 ## Reviews
 Time-boxed review sessions (CLAUDE.md workflow 7). Each file has findings tables with IDs, sizes and status.
 
 | Date | Review | Open items |
 |---|---|---|
+| 2026-11-02 | [Code review 2: fa-mail internals, ICS and CalDAV, tasks, notify](reviews/2026-11-02-code-review-2.md) | QUICK groups fixed in M3.7 wave 2 (T-08 to T-13). LARGER: C2-02, C2-05, C2-08, C2-09, C2-15, C2-19, C2-21, C2-30 for M4. Questions Q-078 to Q-082 |
 | 2026-10-26 | [Repository review: process, code, direction, UI](reviews/2026-10-26-repo-review.md) | M3.5 closed its share. Left for M4: C-10, C-13, C-14, P-06, P-07, the second code review. Shakedown: R-01 to R-04, U-16 |

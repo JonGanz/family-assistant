@@ -2,7 +2,7 @@
 title: Platform
 scope: code layout, runtime, security, deployment, backups, dev workflow
 status: draft
-updated: 2026-10-30
+updated: 2026-11-02
 drawio: Platform.drawio
 drawio_src: src/Platform.py
 depends_on: [D-002, D-003, D-004, D-005, D-006, D-010, D-018, D-019, D-020, D-023, D-025, D-026, D-031, D-032, D-033, D-034, D-035, D-064, D-065, D-069, D-072, D-073, D-074, D-075, D-076, D-077]
@@ -76,6 +76,30 @@ The platform that M0 builds and every later milestone depends on. **v4 is the M3
 - **API types:** DTOs derive `utoipa::ToSchema` (from M1), so `openapi.json` is exact and the web client's types are generated from it only.
 - Pagination is keyset (cursor), using UUIDv7 ordering. Mutable resources carry a `version` and require `If-Match`, so a conflict returns 409.
 
+### API naming (D-067, M3.7)
+- Collections are plural nouns. An item is `/{collection}/{id}`; a sub-collection is `/{collection}/{id}/{sub}` and its item `/{collection}/{id}/{sub}/{sub_id}` (for example `/members/{member_id}/away/{id}`; a handler that deletes a sub-item checks that it belongs to the parent and answers 404 otherwise).
+- An action on the **calling device or session** lives under its collection with no id: `POST /devices/elevate`.
+- Dry runs: `validate` checks the payload alone (no I/O beyond the DB); `test` runs it against something, either an external system or stored data. The existing routes already follow this:
+
+| Route | Kind | Why |
+|---|---|---|
+| `POST /task-definitions/validate` | validate | parses the rule and schedule in the payload |
+| `POST /weather-rules/validate` | validate | parses the condition expression in the payload |
+| `POST /mail-sources/imap/test` | test | connects to the IMAP server |
+| `POST /calendar-sources/test` | test | fetches the feed |
+| `POST /mail-rules/test` | test | runs the rule against stored mail |
+| `POST /members/{id}/notify-prefs/test` | test | publishes a test message to ntfy |
+
+- The inbox keeps `{kind}` in its path as a sub-collection per proposal kind: `/inbox/{kind}/{id}/approve`.
+
+#### Deprecated aliases
+The old paths stay routed to the same handlers and are marked `deprecated` in OpenAPI.
+
+| Old path | New path | Removed after |
+|---|---|---|
+| `POST /device/elevate` | `POST /devices/elevate` | M4 |
+| `DELETE /away/{id}` | `DELETE /members/{member_id}/away/{id}` | M4 |
+
 ## 5. Security (page "Security")
 | Area | Design |
 |---|---|
@@ -89,7 +113,7 @@ The platform that M0 builds and every later milestone depends on. **v4 is the M3
 | Client IP | Login rate limiting keys on the client IP. **Trusted proxies default to loopback only** (D-069). The compose network has a fixed subnet and the Tailscale sidecar a fixed address, which compose sets as `FA_TRUSTED_PROXIES`; a hoster's own proxy is added in Settings, System. For trusted peers the rightmost `X-Forwarded-For` entry is the client and `X-Forwarded-Proto` is believed; for everyone else both headers are ignored and the peer address is the client |
 | CSRF | SameSite=Lax, plus a required `X-FA-Request: 1` header on mutating requests (the JS client sets it) |
 | Dashboard device | Paired by an adult (the UI, or `device pair`) → a long random token, of which only the SHA-256 hash is stored. It is sent as a bearer token from localStorage. The pairing link is `/dashboard?device=<token>` on the stored public address (and the tailnet address when the sidecar is on, and the D-064 address when that listener is on): the page saves the token and strips it from the URL at once, request logs record only the path, and every response sends `Referrer-Policy: no-referrer`. Revocable |
-| PIN step-up | `POST /api/v1/device/elevate {member, pin}` → a `DeviceElevation` for that adult lasting 5 minutes. 5 failures lock it for 15 minutes and raise a notification to adults (D-019). Allowed on the main listener over HTTP or HTTPS (D-072) |
+| PIN step-up | `POST /api/v1/devices/elevate {member_id, pin}` → a `DeviceElevation` for that adult lasting 5 minutes. 5 failures lock it for 15 minutes and raise a notification to adults (D-019). Allowed on the main listener over HTTP or HTTPS (D-072) |
 | Authorization | One `Policy::authorize(actor, action, resource)` in `fa-auth`, where actor is a user, a device, or a device elevated by an adult. It follows the matrix in Domain.md and is unit-tested exhaustively. Postgres RLS adds household isolation |
 | RLS mechanics | Every transaction runs `SET LOCAL ROLE fa_app` (a NOLOGIN role without BYPASSRLS, because the Postgres login user may be a superuser) and sets either `app.household_id` (`tx_for`) or `app.system=on` (`tx_system`, used only for pre-household lookups, setup, and system tables such as `instance_setting`). Data is never queried through the raw pool. All SQL is parameterised |
 | Secrets | **Envelope encryption.** A 256-bit master key comes from a file (default `/run/fa-secrets/master_key` in the `fa-secrets` volume, created by `init`, D-074; a hoster-provided docker secret still works). Each secret gets its own random DEK, and the DEK is wrapped by the master key (AES-256-GCM). `key_version` supports rotation (runbook `rotate-key.md`). The master key is **never** in the DB, git, or DB backups. The wizard requires an adult to copy or download it (`GET /api/v1/system/master-key`, audited) and Settings, System warns until a backup is confirmed |

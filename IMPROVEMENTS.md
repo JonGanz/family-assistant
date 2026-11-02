@@ -1,6 +1,6 @@
 # Improvements backlog
 
-Outstanding findings and suggestions from the 2026-10-26 repository review (full tables with status in [plan/reviews/2026-10-26-repo-review.md](plan/reviews/2026-10-26-repo-review.md)). Items already fixed in that session are not repeated here. Size: **QUICK** = a sub-agent brief under 10 minutes, **LARGER** = a milestone task or a question first.
+Outstanding findings and suggestions from the 2026-10-26 repository review (full tables with status in [plan/reviews/2026-10-26-repo-review.md](plan/reviews/2026-10-26-repo-review.md)). Items already fixed in that session are not repeated here. **2026-11-02:** the six items deferred to M4 were done in [plan/M3.7.md](plan/M3.7.md); the second code review's own findings live in [plan/reviews/2026-11-02-code-review-2.md](plan/reviews/2026-11-02-code-review-2.md). Size: **QUICK** = a sub-agent brief under 10 minutes, **LARGER** = a milestone task or a question first.
 
 ## Decisions taken (batches 17 and 18, 2026-10-26)
 | Q | Decision | Effect on this backlog |
@@ -13,7 +13,7 @@ Outstanding findings and suggestions from the 2026-10-26 repository review (full
 | Q-066 | D-071: interests, hobbies, responsibilities feed LLM features only (M4+) | R-07 accepted as by design |
 | Q-067 to Q-072 | D-072 to D-077: whole app over HTTP, open first-run wizard, generated secrets, settings in the UI, one container, GHCR amd64 | onboarding, see [plan/M3.5.md](plan/M3.5.md) |
 
-**Where each item goes:** [plan/M3.5.md](plan/M3.5.md), workstream E, takes C-01b, C-02, C-03, C-04, C-05, C-08, C-09, C-12, C-15, U-08, U-09b to U-16, P-02, P-08b, P-09, P-10, P-14 to P-16. **Deferred to the M4 plan:** C-10, C-13, C-14, P-06, P-07, and the second code review of the unreviewed crates.
+**Where each item goes:** [plan/M3.5.md](plan/M3.5.md), workstream E, takes C-01b, C-02, C-03, C-04, C-05, C-08, C-09, C-12, C-15, U-08, U-09b to U-16, P-02, P-08b, P-09, P-10, P-14 to P-16. **Done in M3.7 (2026-11-02):** C-10, C-13, C-14, P-06, P-07, and the second code review of the unreviewed crates (22 of its 30 findings fixed the same day; 8 LARGER items and 5 questions, Q-078 to Q-082, remain for M4).
 
 ## Direction (section 3 of the review)
 - **R-01** *(M3.5 shakedown, D-066)* Nothing has run on real data: human steps H-02..H-11 are all open, so "code-complete" is not done. Recommendation: an M3.5 shakedown on the real server (one real mail source, one Google and one CalDAV calendar, the Echo Show via D-064, ntfy on phones).
@@ -33,16 +33,16 @@ Outstanding findings and suggestions from the 2026-10-26 repository review (full
 | C-05 ✅ done 2026-10-26 (M3.5) | MED | Outbound HTTP client checks only the scheme: SSRF through calendar-source test URLs to loopback, private and link-local addresses, through redirects (`fa-connectors/src/http.rs:24`) | Private-network denylist with a custom resolver, `allow_private_hosts` toggle (default off, a Settings, System field per D-075) for local CalDAV, same check in the redirect policy | LARGER |
 | C-08 ✅ done 2026-10-26 (M3.5) | LOW | Unelevated devices can read the approval inbox (`fa-domain/src/authz.rs`) | Refuse `ReadInbox` for all devices; remove the dashboard inbox panel (D-068) | QUICK |
 | C-09 ✅ done 2026-10-26 (M3.5) | LOW | Anyone can dismiss weather advisories | Remove dismiss; advisories clear when the rule stops matching or `valid_until` passes (D-068) | QUICK |
-| C-10 | LOW | AES-GCM secrets carry no AAD, so rows can be swapped between owners by someone with DB write access (`fa-store/src/secret.rs`) | Bind AAD to household, owner and kind; re-encryption migration | LARGER |
+| C-10 ✅ done 2026-11-02 (M3.7 T-02) | LOW | AES-GCM secrets carry no AAD, so rows can be swapped between owners by someone with DB write access (`fa-store/src/secret.rs`) | Bind AAD to household, owner and kind; re-encryption migration | LARGER |
 | C-12 ✅ done 2026-10-26 (M3.5) | LOW | argon2 verify runs inside an open pooled transaction; a burst exhausts the pool (`login.rs:75`, `pin.rs:76`) | Read, release, verify, then a short transaction to record | QUICK |
 | C-15 ✅ done 2026-10-26 (M3.5) | LOW | Session cookie built by hand with `format!`; `cookie_secure=false` behind TLS goes unnoticed (`routes.rs:192`) | Use the `cookie` builder; `Secure` becomes per-request (`FA_COOKIE_SECURE=auto`, D-065), which replaces the startup warning | QUICK |
 
 ## Code: API consistency and extensibility
 | ID | Finding | Fix | Size |
 |---|---|---|---|
-| C-13 | Route naming drifts: `/device/elevate` vs `/devices`, `/away/{id}` vs `/members/{id}/away`, three dry-run verbs (`validate`, `validate`, `test`), kind in the path for `/inbox/{kind}/{id}/approve` | Settle conventions in the Platform.md API table, alias old paths for one milestone | QUICK doc, LARGER code |
-| C-14 | Only `GET /messages` paginates; tasks, bills, orgs, inbox and sessions return bare arrays | Standard `{items, next_before}` envelope for lists that grow | LARGER |
-| — | Review coverage gaps: fa-mail IMAP/Gmail internals, ICS and recipe fetch beyond `http.rs`, most of `tasks.rs`, notify webhooks were not reviewed | Schedule a second code review on those crates | — |
+| C-13 ✅ done 2026-11-02 (M3.7 T-06; aliases removed after M4) | Route naming drifts: `/device/elevate` vs `/devices`, `/away/{id}` vs `/members/{id}/away`, three dry-run verbs (`validate`, `validate`, `test`), kind in the path for `/inbox/{kind}/{id}/approve` | Settle conventions in the Platform.md API table, alias old paths for one milestone | QUICK doc, LARGER code |
+| C-14 ✅ done 2026-11-02 (M3.7 T-03) | Only `GET /messages` paginates; tasks, bills, orgs, inbox and sessions return bare arrays | Standard `{items, next_before}` envelope for lists that grow | LARGER |
+| — ✅ done 2026-11-02 (M3.7 T-05) | Review coverage gaps: fa-mail IMAP/Gmail internals, ICS and recipe fetch beyond `http.rs`, most of `tasks.rs`, notify webhooks were not reviewed | Second code review written: `plan/reviews/2026-11-02-code-review-2.md` | — |
 
 ## Front end
 | ID | Finding | Fix | Size |
@@ -60,8 +60,8 @@ Outstanding findings and suggestions from the 2026-10-26 repository review (full
 | ID | Finding | Fix | Size |
 |---|---|---|---|
 | P-02 ✅ done 2026-10-26 (M3.5 T-01) | No single "what should I do next" page: open questions, H-01..H-11 status, decisions waiting (RUSTSEC-2026-0192), M3 known gaps live in four places | `plan/human-steps.md` with one row per H-step and status, plus `fa.py status` writing `STATUS.md` | LARGER |
-| P-06 | `tools/fa.py` is a library; the skill asks agents for `python3 -c` one-liners whose positional args silently corrupt files | argparse subcommands `new-q`, `new-d`, `resolve`, `supersede`, `log`, `status` with keyword flags (`check` exists) | LARGER |
-| P-07 | Only one skill (`process-answers`) while each milestone repeats plan → rules → briefs → cross-check → waves → integrate → close | `plan-milestone`, `run-wave`, `close-milestone` skills | LARGER |
+| P-06 ✅ done 2026-11-02 (M3.7 T-04) | `tools/fa.py` is a library; the skill asks agents for `python3 -c` one-liners whose positional args silently corrupt files | argparse subcommands `new-q`, `new-d`, `resolve`, `supersede`, `log`, `status` with keyword flags (`check` exists) | LARGER |
+| P-07 ✅ done 2026-11-02 (M3.7 T-07) | Only one skill (`process-answers`) while each milestone repeats plan → rules → briefs → cross-check → waves → integrate → close | `plan-milestone`, `run-wave`, `close-milestone` skills | LARGER |
 | P-08b ✅ done 2026-10-26 (M3.5 T-01) | M0 and M1 plans have no `## Outcome` section | Backfill | QUICK |
 | P-09 ✅ done 2026-10-26 (M3.5 T-01) | `plan/M*/_rules.md` is copied and hand-edited per milestone | `plan/_rules-common.md` plus per-milestone deltas | QUICK |
 | P-10 ✅ done 2026-10-26 (M3.5 T-01) | 5 of 15 M3 briefs cite no decision | `decisions:` key in task front-matter, enforced by `fa.py check` | QUICK |
@@ -73,4 +73,5 @@ Outstanding findings and suggestions from the 2026-10-26 repository review (full
 1. ~~Answer Q-061 to Q-066~~ (done: D-066 to D-071).
 2. ~~M3.5 code~~ (done 2026-10-26: every item listed for it above is closed; see [plan/M3.5.md](plan/M3.5.md), *Outcome*).
 3. The M3.5 shakedown (R-01 to R-04, U-16).
-4. The M4 plan picks up the deferred items: C-10, C-13, C-14, P-06, P-07, and the second code review.
+4. ~~The M4 plan picks up the deferred items~~ (done 2026-11-02, M3.7).
+5. The M4 plan picks up the LARGER findings of code review 2 (C2-02, C2-05, C2-08, C2-09, C2-15, C2-19, C2-21, C2-30) once Q-078 to Q-082 are answered.
