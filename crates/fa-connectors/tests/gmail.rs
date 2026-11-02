@@ -254,3 +254,39 @@ async fn error_mapping() {
         assert_eq!(e, want, "status {status}");
     }
 }
+
+#[tokio::test]
+async fn get_raw_accepts_message_over_default_cap_and_flags_over_limit() {
+    // A ~12 MB raw message is ~16 MB of base64: over the 10 MB default cap, under the message cap.
+    let s = MockServer::start().await;
+    let raw = vec![b'a'; 12 * 1024 * 1024];
+    Mock::given(method("GET"))
+        .and(path("/gmail/v1/users/me/messages/big"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "id": "big", "threadId": "t", "internalDate": "1792915200000",
+            "raw": URL_SAFE_NO_PAD.encode(&raw)
+        })))
+        .mount(&s)
+        .await;
+    let m = gmail::get_raw(&http(), &s.uri(), "tok", "big")
+        .await
+        .unwrap();
+    assert_eq!(m.raw.len(), raw.len());
+}
+
+#[tokio::test]
+async fn get_raw_over_message_cap_is_too_large() {
+    let s = MockServer::start().await;
+    let filler = "A".repeat(gmail::GMAIL_MESSAGE_MAX_BYTES + 1024);
+    Mock::given(method("GET"))
+        .and(path("/gmail/v1/users/me/messages/huge"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "id": "huge", "threadId": "t", "internalDate": "1792915200000", "raw": filler
+        })))
+        .mount(&s)
+        .await;
+    let e = gmail::get_raw(&http(), &s.uri(), "tok", "huge")
+        .await
+        .unwrap_err();
+    assert_eq!(e, ConnectorError::TooLarge);
+}

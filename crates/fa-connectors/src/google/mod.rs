@@ -12,9 +12,21 @@ pub const DEFAULT_API_BASE: &str = "https://www.googleapis.com";
 /// Status mapping shared by the Gmail and Calendar clients. 401 → `Unauthorized`, 403 for a
 /// missing scope → `InsufficientScope`, 429/5xx and rate-limit 403s → `Retryable`.
 pub(crate) async fn ok_body(http: &Http, resp: Response) -> Result<Bytes> {
+    ok_body_with_limit(http, resp, None).await
+}
+
+/// Like `ok_body`, with a per-request body cap (`None` keeps the client's default).
+pub(crate) async fn ok_body_with_limit(
+    http: &Http,
+    resp: Response,
+    max_body: Option<usize>,
+) -> Result<Bytes> {
     let status = resp.status().as_u16();
     if resp.status().is_success() {
-        return http.body(resp).await;
+        return match max_body {
+            Some(max) => http.body_with_limit(resp, max).await,
+            None => http.body(resp).await,
+        };
     }
     match status {
         401 => Err(ConnectorError::Unauthorized),

@@ -292,3 +292,48 @@ async fn session_cleanup_runs(pool: PgPool) {
         .await
         .unwrap();
 }
+
+struct Hang;
+
+impl JobHandler for Hang {
+    fn kind(&self) -> &'static str {
+        "test.hang"
+    }
+    fn run<'a>(
+        &'a self,
+        _ctx: &'a JobContext,
+        _payload: serde_json::Value,
+    ) -> BoxFuture<'a, Result<(), JobError>> {
+        Box::pin(async move {
+            std::future::pending::<()>().await;
+            Ok(())
+        })
+    }
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn a_hung_job_times_out_and_fails(pool: PgPool) {
+    let store = Store::from_pool(pool.clone());
+    enqueue(&store, "test.hang", serde_json::json!({}), None, 0, None)
+        .await
+        .unwrap();
+    let ctx = JobContext {
+        store: store.clone(),
+        backup_dir: None,
+    };
+    let mut cfg = WorkerConfig {
+        job_timeout: std::time::Duration::from_secs(60),
+        ..WorkerConfig::default()
+    };
+    cfg.kind_timeouts
+        .insert("test.hang".into(), std::time::Duration::from_millis(100));
+    assert_eq!(cfg.timeout_for("other"), std::time::Duration::from_secs(60));
+    let h: Arc<dyn JobHandler> = Arc::new(Hang);
+    let w = Worker::new(ctx, vec![h], cfg);
+    let started = std::time::Instant::now();
+    assert!(w.run_once().await.unwrap());
+    assert!(started.elapsed() < std::time::Duration::from_secs(10));
+    let j = &all_jobs(&pool).await[0];
+    assert_eq!((j.0.as_str(), j.1), ("queued", 1));
+    assert!(j.2.as_deref().unwrap().contains("timed out"));
+}

@@ -14,7 +14,7 @@
 //! docker rm -f -v fa-t02-greenmail
 //! ```
 
-use std::{fmt, sync::Arc, time::Duration};
+use std::{fmt, net::SocketAddr, sync::Arc, time::Duration};
 
 use async_imap::{
     Client, Session,
@@ -24,7 +24,7 @@ use chrono::{DateTime, NaiveDate, Utc};
 use futures::TryStreamExt;
 use tokio::{
     io::{AsyncRead, AsyncWrite},
-    net::TcpStream,
+    net::{TcpStream, lookup_host},
     time::timeout,
 };
 use tokio_rustls::{
@@ -37,10 +37,15 @@ use tokio_rustls::{
     },
 };
 
-use crate::{ConnectorError, error::Result};
+use crate::{ConnectorError, error::Result, http::is_private_ip};
 
 const FETCH_BATCH: usize = 50;
+/// Longest wait for one server read or one session call.
 const IO_TIMEOUT: Duration = Duration::from_secs(60);
+/// Longest a whole command (all its reads) may take. Below the job lease (300 s) so a hung sync
+/// fails before its job is claimed a second time.
+const RUN_DEADLINE: Duration = Duration::from_secs(240);
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(30);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ImapSecurity {
@@ -124,6 +129,8 @@ type Stream = Box<dyn Io>;
 
 pub struct ImapClient {
     session: Session<Stream>,
+    io_timeout: Duration,
+    run_deadline: Duration,
 }
 
 fn err<E: fmt::Display>(e: E) -> ConnectorError {
@@ -202,11 +209,11 @@ fn connector(insecure: bool) -> Result<TlsConnector> {
 }
 
 async fn tls(tcp: TcpStream, host: &str, insecure: bool) -> Result<Stream> {
-    let name = ServerName::try_from(host.to_owned()).map_err(err)?;
+    let name = ServerName::try_from(host.to_owned()).map_err(|_| connect_failed())?;
     let s = connector(insecure)?
         .connect(name, tcp)
         .await
-        .map_err(|e| ConnectorError::Network(format!("tls: {e}")))?;
+        .map_err(|_| connect_failed())?;
     Ok(Box::new(s))
 }
 
@@ -235,67 +242,154 @@ fn parse_date(s: &str) -> Option<DateTime<Utc>> {
         .map(|d| d.with_timezone(&Utc))
 }
 
+/// One session call under the per-call timeout.
+async fn guard<T, E: fmt::Display>(
+    io: Duration,
+    fut: impl Future<Output = std::result::Result<T, E>>,
+) -> Result<T> {
+    timeout(io, fut)
+        .await
+        .map_err(|_| ConnectorError::Network("imap command timed out".into()))?
+        .map_err(err)
+}
+
+/// The one error every failure before the login returns (resolving, a refused address, TCP,
+/// TLS, the greeting, STARTTLS, a timeout), so that `imap/test` is no port-scan oracle.
+fn connect_failed() -> ConnectorError {
+    ConnectorError::Network("could not connect to the IMAP server".into())
+}
+
+/// Resolves the host and drops private addresses unless `allow_private_hosts`. The caller
+/// connects to the returned addresses, so a second lookup cannot change the answer.
+async fn resolve(host: &str, port: u16, allow_private_hosts: bool) -> Result<Vec<SocketAddr>> {
+    let addrs: Vec<SocketAddr> = lookup_host((host, port))
+        .await
+        .map_err(|_| connect_failed())?
+        .filter(|a| allow_private_hosts || !is_private_ip(a.ip()))
+        .collect();
+    if addrs.is_empty() {
+        return Err(connect_failed());
+    }
+    Ok(addrs)
+}
+
+/// Maps the text of a `NO` to `LOGIN`. Only an explicit authentication or authorization failure
+/// code, or a plain `NO` without any code, means the credentials are wrong (and pauses the
+/// mailbox); any other code (`UNAVAILABLE`, `INUSE`, `LIMIT`, `SERVERBUG`, ...) is transient.
+fn login_no(msg: &str) -> ConnectorError {
+    // async-imap formats `code: <parsed code>, info: <text>`; codes it does not know stay in the text.
+    if msg.starts_with("code: Some(") {
+        return ConnectorError::Imap("login temporarily refused by the server".into());
+    }
+    let text = msg.split_once("info:").map_or(msg, |(_, t)| t);
+    let code = text
+        .split_once('[')
+        .and_then(|(_, r)| r.split_once(']'))
+        .map(|(c, _)| c);
+    match code {
+        None => ConnectorError::AuthFailed,
+        Some(c)
+            if c.eq_ignore_ascii_case("AUTHENTICATIONFAILED")
+                || c.eq_ignore_ascii_case("AUTHORIZATIONFAILED") =>
+        {
+            ConnectorError::AuthFailed
+        }
+        Some(_) => ConnectorError::Imap("login temporarily refused by the server".into()),
+    }
+}
+
 impl ImapClient {
+    /// Connects without the private-address policy: for tests and trusted callers. Servers
+    /// reachable from user input use [`ImapClient::connect_with_policy`].
     pub async fn connect(cfg: ImapConfig) -> Result<Self> {
-        timeout(Duration::from_secs(30), Self::connect_inner(cfg))
-            .await
-            .map_err(|_| ConnectorError::Network("imap connect timed out".into()))?
+        Self::connect_with_policy(cfg, true).await
     }
 
-    async fn connect_inner(cfg: ImapConfig) -> Result<Self> {
-        let tcp = TcpStream::connect((cfg.host.as_str(), cfg.port))
+    /// Like `connect`, but with `allow_private_hosts = false` it refuses hosts that resolve only
+    /// to loopback, private, link-local or otherwise internal addresses (the SSRF policy of
+    /// `Http::with_policy`). Every failure before the login is the same generic error.
+    pub async fn connect_with_policy(cfg: ImapConfig, allow_private_hosts: bool) -> Result<Self> {
+        timeout(
+            CONNECT_TIMEOUT,
+            Self::connect_inner(cfg, allow_private_hosts),
+        )
+        .await
+        .map_err(|_| connect_failed())?
+    }
+
+    async fn open(cfg: &ImapConfig, allow_private_hosts: bool) -> Result<Client<Stream>> {
+        let addrs = resolve(&cfg.host, cfg.port, allow_private_hosts).await?;
+        let tcp = TcpStream::connect(&addrs[..])
             .await
-            .map_err(|e| ConnectorError::Network(format!("imap connect: {e}")))?;
+            .map_err(|_| connect_failed())?;
         let mut client = match cfg.security {
             ImapSecurity::Implicit => Client::new(tls(tcp, &cfg.host, cfg.insecure_tls).await?),
             ImapSecurity::Plain => Client::new(Box::new(tcp) as Stream),
             ImapSecurity::StartTls => {
                 let mut c = Client::new(tcp);
-                c.read_response().await.map_err(err)?;
+                c.read_response().await.map_err(|_| connect_failed())?;
                 c.run_command_and_check_ok("STARTTLS", None)
                     .await
-                    .map_err(err)?;
+                    .map_err(|_| connect_failed())?;
                 Client::new(tls(c.into_inner(), &cfg.host, cfg.insecure_tls).await?)
             }
         };
         if cfg.security != ImapSecurity::StartTls {
-            client.read_response().await.map_err(err)?;
+            client.read_response().await.map_err(|_| connect_failed())?;
         }
+        Ok(client)
+    }
+
+    async fn connect_inner(cfg: ImapConfig, allow_private_hosts: bool) -> Result<Self> {
+        let client = Self::open(&cfg, allow_private_hosts).await?;
         let session =
             client
                 .login(&cfg.username, &cfg.password)
                 .await
                 .map_err(|(e, _)| match e {
-                    async_imap::error::Error::No(_) => ConnectorError::AuthFailed,
-                    e => err(e),
+                    async_imap::error::Error::No(m) => login_no(&m),
+                    _ => ConnectorError::Imap("login failed".into()),
                 })?;
-        Ok(Self { session })
+        Ok(Self {
+            session,
+            io_timeout: IO_TIMEOUT,
+            run_deadline: RUN_DEADLINE,
+        })
     }
 
-    /// Runs a command, calling `f` for every untagged response until the tagged completion.
+    /// Runs a command, calling `f` for every untagged response until the tagged completion. Each
+    /// read has a timeout and the whole command has a deadline.
     async fn run(&mut self, cmd: &str, mut f: impl FnMut(&Response<'_>)) -> Result<()> {
-        let id = self.session.run_command(cmd).await.map_err(err)?;
-        loop {
-            let resp = timeout(IO_TIMEOUT, self.session.read_response())
+        let (io, deadline) = (self.io_timeout, self.run_deadline);
+        timeout(deadline, async {
+            let id = timeout(io, self.session.run_command(cmd))
                 .await
-                .map_err(|_| ConnectorError::Network("imap read timed out".into()))?
-                .map_err(err)?
-                .ok_or_else(|| ConnectorError::Network("imap connection closed".into()))?;
-            match resp.parsed() {
-                Response::Done { tag, status, .. } if *tag == id => {
-                    return match status {
-                        Status::Ok => Ok(()),
-                        Status::No => Err(ConnectorError::Imap("command rejected (NO)".into())),
-                        _ => Err(ConnectorError::Imap("command failed".into())),
-                    };
+                .map_err(|_| ConnectorError::Network("imap command timed out".into()))?
+                .map_err(err)?;
+            loop {
+                let resp = timeout(io, self.session.read_response())
+                    .await
+                    .map_err(|_| ConnectorError::Network("imap read timed out".into()))?
+                    .map_err(err)?
+                    .ok_or_else(|| ConnectorError::Network("imap connection closed".into()))?;
+                match resp.parsed() {
+                    Response::Done { tag, status, .. } if *tag == id => {
+                        return match status {
+                            Status::Ok => Ok(()),
+                            Status::No => Err(ConnectorError::Imap("command rejected (NO)".into())),
+                            _ => Err(ConnectorError::Imap("command failed".into())),
+                        };
+                    }
+                    other => f(other),
                 }
-                other => f(other),
             }
-        }
+        })
+        .await
+        .map_err(|_| ConnectorError::Network("imap command exceeded its deadline".into()))?
     }
 
     pub async fn capabilities(&mut self) -> Result<Caps> {
-        let c = self.session.capabilities().await.map_err(err)?;
+        let c = guard(self.io_timeout, self.session.capabilities()).await?;
         Ok(Caps {
             gmail_ext: c.has_str("X-GM-EXT-1"),
             move_: c.has_str("MOVE"),
@@ -306,14 +400,12 @@ impl ImapClient {
     }
 
     pub async fn list_folders(&mut self) -> Result<Vec<Folder>> {
-        let names: Vec<_> = self
-            .session
-            .list(Some(""), Some("*"))
-            .await
-            .map_err(err)?
-            .try_collect()
-            .await
-            .map_err(err)?;
+        let io = self.io_timeout;
+        let session = &mut self.session;
+        let names: Vec<_> = guard(io, async {
+            session.list(Some(""), Some("*")).await?.try_collect().await
+        })
+        .await?;
         Ok(names
             .iter()
             .filter(|n| !n.attributes().contains(&NameAttribute::NoSelect))
@@ -334,12 +426,14 @@ impl ImapClient {
 
     pub async fn select(&mut self, folder: &str) -> Result<FolderStatus> {
         let condstore = self.capabilities().await?.condstore;
-        let mb = if condstore {
-            self.session.select_condstore(folder).await
-        } else {
-            self.session.select(folder).await
-        }
-        .map_err(err)?;
+        let mb = guard(self.io_timeout, async {
+            if condstore {
+                self.session.select_condstore(folder).await
+            } else {
+                self.session.select(folder).await
+            }
+        })
+        .await?;
         Ok(FolderStatus {
             uidvalidity: mb
                 .uid_validity
@@ -361,11 +455,8 @@ impl ImapClient {
         if let Some(raw) = gm_raw.filter(|s| !s.trim().is_empty()) {
             q.push_str(&format!(" X-GM-RAW {}", quote(raw)?));
         }
-        let mut uids: Vec<u32> = self
-            .session
-            .uid_search(q)
-            .await
-            .map_err(err)?
+        let mut uids: Vec<u32> = guard(self.io_timeout, self.session.uid_search(q))
+            .await?
             .into_iter()
             .collect();
         uids.sort_unstable();
@@ -399,14 +490,14 @@ impl ImapClient {
         with_gmail: bool,
     ) -> Result<Vec<ImapMessage>> {
         // `n:*` always matches the last message even when its UID is below `n`.
-        let mut uids: Vec<u32> = self
-            .session
-            .uid_search(format!("UID {from_uid}:*"))
-            .await
-            .map_err(err)?
-            .into_iter()
-            .filter(|u| *u >= from_uid)
-            .collect();
+        let mut uids: Vec<u32> = guard(
+            self.io_timeout,
+            self.session.uid_search(format!("UID {from_uid}:*")),
+        )
+        .await?
+        .into_iter()
+        .filter(|u| *u >= from_uid)
+        .collect();
         uids.sort_unstable();
         self.uid_fetch(&uids, with_gmail).await
     }
@@ -485,7 +576,7 @@ impl ImapClient {
     }
 
     pub async fn logout(&mut self) -> Result<()> {
-        self.session.logout().await.map_err(err)
+        guard(self.io_timeout, self.session.logout()).await
     }
 }
 
@@ -527,4 +618,158 @@ fn message_of(r: &Response<'_>) -> Option<ImapMessage> {
     }
     // Label-only fetches carry no body.
     (m.uid != 0 && (has_body || !m.gm_labels.is_empty() || m.gm_msgid.is_some())).then_some(m)
+}
+
+#[cfg(test)]
+mod tests {
+    use tokio::{
+        io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+        net::TcpListener,
+    };
+
+    use super::*;
+
+    #[derive(Clone, Copy)]
+    enum Mode {
+        /// Accepts the login, then never answers `CAPABILITY`.
+        Hang,
+        /// Accepts the login, then answers every other command with endless untagged lines.
+        Drip,
+        /// Answers the login with the given tagged response text.
+        Login(&'static str),
+    }
+
+    /// A one-connection fake server on loopback. Returns its port.
+    async fn fake(mode: Mode) -> u16 {
+        let l = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let port = l.local_addr().unwrap().port();
+        tokio::spawn(async move {
+            let Ok((sock, _)) = l.accept().await else {
+                return;
+            };
+            let (r, mut w) = sock.into_split();
+            let _ = w.write_all(b"* OK ready\r\n").await;
+            let mut lines = BufReader::new(r).lines();
+            while let Ok(Some(line)) = lines.next_line().await {
+                let mut p = line.split(' ');
+                let (tag, cmd) = (p.next().unwrap_or(""), p.next().unwrap_or(""));
+                match (cmd, mode) {
+                    ("LOGIN", Mode::Login(reply)) => {
+                        let _ = w.write_all(format!("{tag} {reply}\r\n").as_bytes()).await;
+                    }
+                    ("LOGIN", _) => {
+                        let _ = w.write_all(format!("{tag} OK done\r\n").as_bytes()).await;
+                    }
+                    (_, Mode::Drip) => loop {
+                        if w.write_all(b"* 1 EXISTS\r\n").await.is_err() {
+                            return;
+                        }
+                        tokio::time::sleep(Duration::from_millis(20)).await;
+                    },
+                    _ => {}
+                }
+            }
+        });
+        port
+    }
+
+    fn cfg(port: u16) -> ImapConfig {
+        ImapConfig {
+            host: "127.0.0.1".into(),
+            port,
+            security: ImapSecurity::Plain,
+            username: "u@example.com".into(),
+            password: "pw".into(),
+            insecure_tls: false,
+        }
+    }
+
+    #[test]
+    fn only_explicit_auth_failures_or_a_bare_no_mean_wrong_credentials() {
+        let no = |m: &str| login_no(m);
+        assert!(matches!(
+            no("code: None, info: Some(\"[AUTHENTICATIONFAILED] Invalid credentials\")"),
+            ConnectorError::AuthFailed
+        ));
+        assert!(matches!(
+            no("code: None, info: Some(\"[authorizationfailed] nope\")"),
+            ConnectorError::AuthFailed
+        ));
+        assert!(matches!(
+            no("code: None, info: Some(\"Invalid login/password\")"),
+            ConnectorError::AuthFailed
+        ));
+        for transient in [
+            "code: None, info: Some(\"[UNAVAILABLE] try again later\")",
+            "code: None, info: Some(\"[LIMIT] too many connections\")",
+            "code: None, info: Some(\"[INUSE] mailbox busy\")",
+            "code: Some(Alert), info: Some(\"maintenance\")",
+        ] {
+            assert!(
+                matches!(no(transient), ConnectorError::Imap(_)),
+                "{transient}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn login_no_codes_map_over_the_wire() {
+        let p = fake(Mode::Login("NO [UNAVAILABLE] try later")).await;
+        let e = ImapClient::connect(cfg(p)).await.err().unwrap();
+        assert!(matches!(e, ConnectorError::Imap(_)), "{e:?}");
+        let p = fake(Mode::Login("NO [AUTHENTICATIONFAILED] bad")).await;
+        let e = ImapClient::connect(cfg(p)).await.err().unwrap();
+        assert!(matches!(e, ConnectorError::AuthFailed), "{e:?}");
+    }
+
+    #[tokio::test]
+    async fn private_hosts_are_refused_with_the_same_error_as_a_closed_port() {
+        // A live loopback server: refused by policy.
+        let p = fake(Mode::Hang).await;
+        let blocked = ImapClient::connect_with_policy(cfg(p), false)
+            .await
+            .err()
+            .unwrap();
+        // Nothing listens there: refused by the OS.
+        let closed = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let free = closed.local_addr().unwrap().port();
+        drop(closed);
+        let refused = ImapClient::connect_with_policy(cfg(free), true)
+            .await
+            .err()
+            .unwrap();
+        assert_eq!(blocked.to_string(), refused.to_string());
+        // The policy did not reach the server: it can still accept a connection.
+        assert!(ImapClient::connect_with_policy(cfg(p), true).await.is_ok());
+        // Literal private addresses, no DNS involved.
+        for host in ["10.0.0.1", "169.254.169.254", "::1", "192.168.1.1"] {
+            let mut c = cfg(143);
+            c.host = host.into();
+            let e = ImapClient::connect_with_policy(c, false)
+                .await
+                .err()
+                .unwrap();
+            assert_eq!(e.to_string(), blocked.to_string(), "{host}");
+        }
+    }
+
+    #[tokio::test]
+    async fn a_session_call_that_never_answers_times_out() {
+        let p = fake(Mode::Hang).await;
+        let mut c = ImapClient::connect(cfg(p)).await.unwrap();
+        c.io_timeout = Duration::from_millis(200);
+        let e = c.capabilities().await.unwrap_err();
+        assert!(e.to_string().contains("timed out"), "{e}");
+    }
+
+    #[tokio::test]
+    async fn a_command_that_keeps_dripping_hits_the_overall_deadline() {
+        let p = fake(Mode::Drip).await;
+        let mut c = ImapClient::connect(cfg(p)).await.unwrap();
+        c.run_deadline = Duration::from_millis(300);
+        let started = std::time::Instant::now();
+        let e = c.uid_fetch(&[1], false).await.unwrap_err();
+        assert!(e.to_string().contains("deadline"), "{e}");
+        assert!(started.elapsed() < Duration::from_secs(5));
+    }
 }

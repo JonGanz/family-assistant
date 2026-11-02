@@ -20,7 +20,8 @@ pub struct Http {
     max_body: usize,
 }
 
-/// True for loopback, RFC 1918, link-local, CGNAT, unique-local, unspecified and similar addresses.
+/// True for loopback, RFC 1918, link-local, CGNAT, unique-local, unspecified, benchmarking,
+/// reserved, NAT64, 6to4 and IPv4-compatible addresses.
 pub fn is_private_ip(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(a) => is_private_v4(a),
@@ -41,13 +42,23 @@ fn is_private_v4(a: Ipv4Addr) -> bool {
         || a.is_unspecified()
         || a.is_broadcast()
         || (o[0] == 100 && (64..128).contains(&o[1]))
+        // 198.18.0.0/15 benchmarking, 192.0.0.0/24 IETF protocol assignments, 240.0.0.0/4 reserved.
+        || (o[0] == 198 && (o[1] & 0xfe) == 18)
+        || (o[0] == 192 && o[1] == 0 && o[2] == 0)
+        || o[0] >= 240
 }
 
 fn is_private_v6(a: Ipv6Addr) -> bool {
+    let s = a.segments();
     a.is_loopback()
         || a.is_unspecified()
-        || (a.segments()[0] & 0xfe00) == 0xfc00
-        || (a.segments()[0] & 0xffc0) == 0xfe80
+        || (s[0] & 0xfe00) == 0xfc00
+        || (s[0] & 0xffc0) == 0xfe80
+        // IPv4-compatible ::/96, NAT64 64:ff9b::/96 and 64:ff9b:1::/48, 6to4 2002::/16: all can
+        // carry an IPv4 destination that a gateway would reach, so refuse them wholesale.
+        || s[..6].iter().all(|x| *x == 0)
+        || (s[0] == 0x64 && s[1] == 0xff9b && (s[2..6].iter().all(|x| *x == 0) || s[2] == 1))
+        || s[0] == 0x2002
 }
 
 fn url_is_private_literal(url: &Url) -> bool {
@@ -84,15 +95,23 @@ impl Resolve for PublicOnly {
 }
 
 impl Http {
-    pub fn new(allow_http: bool) -> Result<Self> {
+    /// Allows loopback and private hosts (LAN ntfy, tests) and honours `HTTP(S)_PROXY`. Use
+    /// `with_policy(_, false)` for anything that takes a user-supplied URL.
+    pub fn permissive(allow_http: bool) -> Result<Self> {
         Self::with_max_body(allow_http, MAX_BODY)
     }
 
+    /// Old name of [`Http::permissive`]; kept so callers outside this crate keep building.
+    pub fn new(allow_http: bool) -> Result<Self> {
+        Self::permissive(allow_http)
+    }
+
+    /// Permissive (see [`Http::permissive`]) with a different default body cap.
     pub fn with_max_body(allow_http: bool, max_body: usize) -> Result<Self> {
         Self::build(allow_http, true, max_body)
     }
 
-    /// Like `new`, but with `allow_private_hosts = false` it refuses loopback, private,
+    /// Like `permissive`, but with `allow_private_hosts = false` it refuses loopback, private,
     /// link-local, CGNAT, unique-local and unspecified addresses at connect time and on redirects.
     pub fn with_policy(allow_http: bool, allow_private_hosts: bool) -> Result<Self> {
         Self::build(allow_http, allow_private_hosts, MAX_BODY)
@@ -113,7 +132,8 @@ impl Http {
             .redirect(policy)
             .user_agent(concat!("family-assistant/", env!("CARGO_PKG_VERSION")));
         if !allow_private_hosts {
-            builder = builder.dns_resolver(Arc::new(PublicOnly));
+            // A proxy resolves names itself, which would bypass `PublicOnly`.
+            builder = builder.no_proxy().dns_resolver(Arc::new(PublicOnly));
         }
         let client = builder
             .build()
@@ -179,12 +199,14 @@ impl Http {
         }
     }
 
-    /// Reads the body while enforcing the size cap.
-    pub async fn body(&self, mut resp: Response) -> Result<Bytes> {
-        if resp
-            .content_length()
-            .is_some_and(|l| l > self.max_body as u64)
-        {
+    /// Reads the body while enforcing the default size cap.
+    pub async fn body(&self, resp: Response) -> Result<Bytes> {
+        self.body_with_limit(resp, self.max_body).await
+    }
+
+    /// Reads the body while enforcing `max_body` instead of the client's default cap.
+    pub async fn body_with_limit(&self, mut resp: Response, max_body: usize) -> Result<Bytes> {
+        if resp.content_length().is_some_and(|l| l > max_body as u64) {
             return Err(ConnectorError::TooLarge);
         }
         let mut buf = BytesMut::new();
@@ -193,7 +215,7 @@ impl Http {
             .await
             .map_err(|e| ConnectorError::Network(e.without_url().to_string()))?
         {
-            if buf.len() + chunk.len() > self.max_body {
+            if buf.len() + chunk.len() > max_body {
                 return Err(ConnectorError::TooLarge);
             }
             buf.extend_from_slice(&chunk);
@@ -237,10 +259,31 @@ mod tests {
             "fd00::1",
             "fe80::1",
             "::ffff:127.0.0.1",
+            "198.18.0.1",
+            "198.19.255.254",
+            "192.0.0.8",
+            "240.0.0.1",
+            "255.255.255.254",
+            "64:ff9b::7f00:1",
+            "64:ff9b::a9fe:a9fe",
+            "64:ff9b:1::1",
+            "2002:7f00:1::1",
+            "2002:a9fe:a9fe::",
+            "::127.0.0.1",
+            "::10.0.0.1",
         ] {
             assert!(is_private_ip(ip.parse().unwrap()), "{ip}");
         }
-        for ip in ["8.8.8.8", "93.184.216.34", "100.128.0.1", "2606:4700::1111"] {
+        for ip in [
+            "8.8.8.8",
+            "93.184.216.34",
+            "100.128.0.1",
+            "198.20.0.1",
+            "192.0.1.1",
+            "239.255.255.255",
+            "2606:4700::1111",
+            "2001:4860:4860::8888",
+        ] {
             assert!(!is_private_ip(ip.parse().unwrap()), "{ip}");
         }
     }
@@ -264,7 +307,12 @@ mod tests {
         assert!(strict.get(&u("http://93.184.216.34/x")).is_ok());
         let open = Http::with_policy(true, true).unwrap();
         assert!(open.get(&u("http://127.0.0.1/x")).is_ok());
-        assert!(Http::new(true).unwrap().get(&u("http://10.0.0.1/")).is_ok());
+        assert!(
+            Http::permissive(true)
+                .unwrap()
+                .get(&u("http://10.0.0.1/"))
+                .is_ok()
+        );
     }
 
     #[test]

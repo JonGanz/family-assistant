@@ -7,7 +7,7 @@ use reqwest::Method;
 use serde::Deserialize;
 use serde_json::json;
 
-use super::{api_url, ok_body, parse_json};
+use super::{api_url, ok_body, ok_body_with_limit, parse_json};
 use crate::{ConnectorError, Http, error::Result};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -58,6 +58,17 @@ fn endpoint(base: &str, tail: &[&str]) -> Result<url::Url> {
 async fn get(http: &Http, url: &url::Url, access: &str) -> Result<bytes::Bytes> {
     let resp = http.send(http.get(url)?.bearer_auth(access)).await?;
     ok_body(http, resp).await
+}
+
+/// Body cap for `messages.get` and attachment fetches. The message arrives as base64 inside JSON,
+/// so 40 MB covers Gmail's 25 MB message limit with headroom. A fixed constant until the limit
+/// becomes a setting (Q-081). Over the cap the call returns [`ConnectorError::TooLarge`], which the
+/// caller should treat as "skip this message", not as a transient failure.
+pub const GMAIL_MESSAGE_MAX_BYTES: usize = 40 * 1024 * 1024;
+
+async fn get_message_bytes(http: &Http, url: &url::Url, access: &str) -> Result<bytes::Bytes> {
+    let resp = http.send(http.get(url)?.bearer_auth(access)).await?;
+    ok_body_with_limit(http, resp, Some(GMAIL_MESSAGE_MAX_BYTES)).await
 }
 
 fn b64(s: &str) -> Result<Vec<u8>> {
@@ -194,7 +205,7 @@ pub async fn list_history(
     Ok(out)
 }
 
-/// `messages.get?format=raw`.
+/// `messages.get?format=raw`. `Err(TooLarge)` when the response exceeds [`GMAIL_MESSAGE_MAX_BYTES`].
 pub async fn get_raw(http: &Http, base: &str, access: &str, id: &str) -> Result<RawMessage> {
     #[derive(Deserialize)]
     struct M {
@@ -209,7 +220,7 @@ pub async fn get_raw(http: &Http, base: &str, access: &str, id: &str) -> Result<
     }
     let mut url = endpoint(base, &["messages", id])?;
     url.query_pairs_mut().append_pair("format", "raw");
-    let m: M = parse_json(&get(http, &url, access).await?)?;
+    let m: M = parse_json(&get_message_bytes(http, &url, access).await?)?;
     let ms: i64 = m
         .internal_date
         .as_deref()
@@ -237,7 +248,7 @@ pub async fn get_attachment(
         data: String,
     }
     let url = endpoint(base, &["messages", message, "attachments", attachment])?;
-    let a: A = parse_json(&get(http, &url, access).await?)?;
+    let a: A = parse_json(&get_message_bytes(http, &url, access).await?)?;
     b64(&a.data)
 }
 

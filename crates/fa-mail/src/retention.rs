@@ -64,13 +64,34 @@ pub async fn run_all(store: &Store, now: DateTime<Utc>) -> Result<RetentionResul
         let mut tx = store.tx_system().await?;
         HouseholdRepo::list(&mut tx).await?
     };
+    let ids = households.iter().map(|h| h.value.id).collect();
+    run_each(ids, |id| Box::pin(run_household(store, id, now))).await
+}
+
+/// Runs `run` for every household. A failing household is logged and skipped; the first error
+/// is returned at the end, so one broken household cannot starve the others.
+async fn run_each<'a>(
+    ids: Vec<HouseholdId>,
+    mut run: impl FnMut(HouseholdId) -> BoxFuture<'a, Result<RetentionResult>>,
+) -> Result<RetentionResult> {
     let mut total = RetentionResult::default();
-    for h in households {
-        let r = run_household(store, h.value.id, now).await?;
-        total.expired += r.expired;
-        total.purged += r.purged;
+    let mut first_err = None;
+    for id in ids {
+        match run(id).await {
+            Ok(r) => {
+                total.expired += r.expired;
+                total.purged += r.purged;
+            }
+            Err(e) => {
+                tracing::warn!(household = %id, error = %e, "mail.retention failed for a household");
+                first_err.get_or_insert(e);
+            }
+        }
     }
-    Ok(total)
+    match first_err {
+        Some(e) => Err(e),
+        None => Ok(total),
+    }
 }
 
 struct Retention;
@@ -94,4 +115,54 @@ impl JobHandler for Retention {
 
 pub fn handlers(_: &Arc<MailDeps>) -> Vec<Arc<dyn JobHandler>> {
     vec![Arc::new(Retention)]
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn a_failing_household_does_not_stop_the_rest() {
+        let ids: Vec<HouseholdId> = (0..3).map(|_| HouseholdId::new()).collect();
+        let bad = ids[0];
+        let seen = std::sync::Mutex::new(Vec::new());
+        let r = run_each(ids.clone(), |id| {
+            seen.lock().unwrap().push(id);
+            Box::pin(async move {
+                if id == bad {
+                    Err(crate::MailError::NotFound)
+                } else {
+                    Ok(RetentionResult {
+                        expired: 1,
+                        purged: 2,
+                    })
+                }
+            })
+        })
+        .await;
+        assert!(matches!(r, Err(crate::MailError::NotFound)));
+        assert_eq!(*seen.lock().unwrap(), ids);
+    }
+
+    #[tokio::test]
+    async fn all_households_ok_sums_up() {
+        let ids: Vec<HouseholdId> = (0..2).map(|_| HouseholdId::new()).collect();
+        let r = run_each(ids, |_| {
+            Box::pin(async {
+                Ok(RetentionResult {
+                    expired: 1,
+                    purged: 2,
+                })
+            })
+        })
+        .await
+        .unwrap();
+        assert_eq!(
+            r,
+            RetentionResult {
+                expired: 2,
+                purged: 4
+            }
+        );
+    }
 }

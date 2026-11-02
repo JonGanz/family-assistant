@@ -8,7 +8,9 @@ use std::time::{Duration, Instant};
 use async_trait::async_trait;
 use chrono::{DateTime, NaiveDate, Utc};
 use fa_connectors::google::gmail;
-use fa_connectors::{Caps, ConnectorError, Http, ImapClient, ImapConfig, ImapSecurity, SpecialUse};
+use fa_connectors::{
+    Caps, ConnectorError, Http, ImapClient, ImapConfig, ImapMessage, ImapSecurity, SpecialUse,
+};
 use fa_domain::{
     AccessTokenProvider, HouseholdId, MailProvider as ProviderKind, MailSource, MailSourceId,
     OAuthAccountId, SecretKind, TokenError,
@@ -319,10 +321,15 @@ impl MailProvider for GmailProvider {
                     tok.clone(),
                     r.id.clone(),
                 );
-                set.spawn(async move { gmail::get_raw(&http, &base, &tok, &id).await });
+                set.spawn(async move {
+                    let res = gmail::get_raw(&http, &base, &tok, &id).await;
+                    (id, res)
+                });
             }
             while let Some(res) = set.join_next().await {
-                match res.map_err(|e| MailError::Connector(format!("fetch task: {e}")))? {
+                let (id, res) =
+                    res.map_err(|e| MailError::Connector(format!("fetch task: {e}")))?;
+                match res {
                     Ok(m) => out.push(Fetched {
                         remote_id: m.id,
                         thread_id: Some(m.thread_id).filter(|t| !t.is_empty()),
@@ -333,6 +340,10 @@ impl MailProvider for GmailProvider {
                     }),
                     // Deleted between listing and fetching.
                     Err(ConnectorError::Http(404)) => {}
+                    // Over the size cap: retrying cannot help, so skip this one message (C2-01).
+                    Err(ConnectorError::TooLarge) => {
+                        tracing::warn!(message = %id, "skipping a Gmail message over the size cap");
+                    }
                     Err(e) => return Err(conn_err(e)),
                 }
             }
@@ -445,6 +456,18 @@ pub fn imap_config(deps: &MailDeps, src: &MailSource, password: String) -> Resul
     })
 }
 
+/// The message that arrived in the destination folder, found by its Message-ID. Without a usable
+/// id (absent or empty) nothing is returned rather than the first new arrival, which could be an
+/// unrelated message (C2-10).
+fn pick_moved<'a>(moved: &'a [ImapMessage], rfc822: Option<&str>) -> Option<&'a ImapMessage> {
+    let id = rfc822.map(str::trim).filter(|id| !id.is_empty())?;
+    moved.iter().find(|m| {
+        m.raw
+            .windows(id.len())
+            .any(|w| w.eq_ignore_ascii_case(id.as_bytes()))
+    })
+}
+
 /// Port 993 is TLS from the first byte; elsewhere STARTTLS, or no encryption when the process
 /// allows it (`FA_ALLOW_PLAIN_IMAP`, tests only).
 pub fn security_for(port: u16, allow_plain: bool) -> ImapSecurity {
@@ -460,10 +483,13 @@ pub fn security_for(port: u16, allow_plain: bool) -> ImapSecurity {
 impl ImapProvider {
     pub async fn connect(
         cfg: ImapConfig,
+        allow_private_hosts: bool,
         src: &MailSource,
         states: Vec<MailFolderState>,
     ) -> Result<Self> {
-        let mut client = ImapClient::connect(cfg).await.map_err(conn_err)?;
+        let mut client = ImapClient::connect_with_policy(cfg, allow_private_hosts)
+            .await
+            .map_err(conn_err)?;
         let caps = client.capabilities().await.map_err(conn_err)?;
         let existing = client.list_folders().await.map_err(conn_err)?;
         let mut folders: Vec<String> = src
@@ -612,19 +638,10 @@ impl ImapProvider {
             .uid_fetch_range(before.uidnext, false)
             .await
             .map_err(conn_err)?;
-        let hit = moved
-            .iter()
-            .find(|m| match rfc822 {
-                Some(id) => m
-                    .raw
-                    .windows(id.len())
-                    .any(|w| w.eq_ignore_ascii_case(id.as_bytes())),
-                None => true,
-            })
-            .map(|m| Relocated {
-                remote_id: format!("{}:{}", after.uidvalidity, m.uid),
-                folder: dest.to_owned(),
-            });
+        let hit = pick_moved(&moved, rfc822).map(|m| Relocated {
+            remote_id: format!("{}:{}", after.uidvalidity, m.uid),
+            folder: dest.to_owned(),
+        });
         Ok(hit)
     }
 }
@@ -833,8 +850,42 @@ pub async fn open(
             let states = MailFolderStateRepo::list(&mut tx, id).await?;
             drop(tx);
             let cfg = imap_config(deps, &src, pw)?;
-            Box::new(ImapProvider::connect(cfg, &src, states).await?)
+            Box::new(ImapProvider::connect(cfg, deps.cfg.allow_private_hosts, &src, states).await?)
         }
     };
     Ok((src, provider))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn msg(uid: u32, raw: &str) -> ImapMessage {
+        ImapMessage {
+            uid,
+            raw: raw.as_bytes().to_vec(),
+            flags: vec![],
+            internal_date: None,
+            gm_msgid: None,
+            gm_thrid: None,
+            gm_labels: vec![],
+        }
+    }
+
+    #[test]
+    fn relocation_needs_a_real_message_id() {
+        let moved = [
+            msg(7, "Message-ID: <other@example.com>\r\n\r\nx"),
+            msg(8, "Message-ID: <Mine@Example.com>\r\n\r\ny"),
+        ];
+        assert_eq!(
+            pick_moved(&moved, Some("<mine@example.com>")).unwrap().uid,
+            8
+        );
+        // An empty id used to panic in `windows(0)`; with no id nothing is guessed.
+        assert!(pick_moved(&moved, Some("")).is_none());
+        assert!(pick_moved(&moved, Some("  ")).is_none());
+        assert!(pick_moved(&moved, None).is_none());
+        assert!(pick_moved(&moved, Some("<absent@example.com>")).is_none());
+    }
 }

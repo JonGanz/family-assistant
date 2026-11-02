@@ -513,3 +513,35 @@ async fn auto_actions_label_once_and_read_only_is_refused(pool: PgPool) {
     assert_eq!(modifies(server.received_requests().await.unwrap()), 2);
     assert_eq!(count(&e, "SELECT count(*) FROM mail_action").await, 2);
 }
+
+/// C2-01: one message over the size cap is skipped, the sync completes and the cursor advances.
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn an_oversized_message_is_skipped_not_retried_forever(pool: PgPool) {
+    let server = MockServer::start().await;
+    let e = env(pool, &server.uri(), false).await;
+    let src = make_source(&e, &[GMAIL_READONLY], true).await;
+    mount_profile(&server, "100").await;
+    mount_list(&server, &["big", "m2"]).await;
+    mount_message(&server, "m2", 2, &["INBOX"]).await;
+    // Over fa_connectors::google::gmail::GMAIL_MESSAGE_MAX_BYTES (40 MB); never parsed.
+    let huge = "A".repeat(41 * 1024 * 1024);
+    Mock::given(method("GET"))
+        .and(path(format!("{API}/messages/big")))
+        .and(query_param("format", "raw"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "id": "big", "threadId": "tbig", "internalDate": "1793000000000", "raw": huge,
+        })))
+        .mount(&server)
+        .await;
+
+    SyncService::new(e.deps.clone())
+        .sync_source(e.h, src)
+        .await
+        .unwrap();
+
+    assert_eq!(count(&e, "SELECT count(*) FROM message").await, 1);
+    assert_eq!(message(&e, "m2").await.subject, "Subject m2");
+    let s = source(&e, src).await;
+    assert_eq!(s.state, MailSourceState::Ok);
+    assert_eq!(s.history_id.as_deref(), Some("100"));
+}

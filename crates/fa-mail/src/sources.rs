@@ -356,6 +356,12 @@ impl SourceService {
             creds_changed = s.imap_host.as_deref() != Some(imap.host.trim())
                 || s.imap_port != Some(imap.port)
                 || s.imap_username.as_deref() != Some(imap.username.as_str());
+            // The stored password must not follow the source to another server or account (C2-07).
+            if creds_changed && imap.password.as_ref().is_none_or(|p| p.is_empty()) {
+                return Err(MailError::Invalid(
+                    "the password is required when the host, port or username changes".into(),
+                ));
+            }
             s.imap_host = Some(imap.host.trim().to_owned());
             s.imap_port = Some(imap.port);
             s.imap_username = Some(imap.username.clone());
@@ -434,7 +440,9 @@ impl SourceService {
             insecure_tls: self.deps.cfg.imap_tls_insecure,
         };
         let run = async {
-            let mut c = ImapClient::connect(cfg).await.map_err(conn_err)?;
+            let mut c = ImapClient::connect_with_policy(cfg, self.deps.cfg.allow_private_hosts)
+                .await
+                .map_err(conn_err)?;
             let caps = c.capabilities().await.map_err(conn_err)?;
             let folders = c.list_folders().await.map_err(conn_err)?;
             let _ = c.logout().await;

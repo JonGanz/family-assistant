@@ -418,6 +418,9 @@ async fn ingest(
             return Ok(None);
         }
     };
+    if parsed.truncated {
+        tracing::info!(source = %src.id, "message content cut at the size caps");
+    }
     if dedupe_rfc
         && let Some(m) = &parsed.message_id
         && MessageRepo::exists_rfc822(tx, src.id, m).await?

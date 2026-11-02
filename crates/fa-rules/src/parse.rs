@@ -11,6 +11,13 @@ use crate::{Error, Result};
 /// PDFs larger than this are not kept in memory (Ingest.md 4.8).
 pub const MAX_PDF_BYTES: usize = 5 * 1024 * 1024;
 
+/// Caps on stored content, so one hostile or huge mail cannot fill the message row (C2-06).
+pub const MAX_TEXT_BYTES: usize = 256 * 1024;
+pub const MAX_HTML_BYTES: usize = 1024 * 1024;
+pub const MAX_ICS_BYTES: usize = 256 * 1024;
+pub const MAX_ATTACHMENTS: usize = 32;
+pub const MAX_HEADER_CHARS: usize = 4096;
+
 #[derive(Debug, Clone)]
 pub struct ParsedAttachment {
     pub part: String,
@@ -43,6 +50,23 @@ pub struct ParsedMessage {
     /// `reply-to`, `in-reply-to`.
     pub headers: HashMap<String, String>,
     pub attachments: Vec<ParsedAttachment>,
+    /// Whether any cap cut the body, a header, an ICS text or the attachment list.
+    pub truncated: bool,
+    /// Ids of the attachment parts whose `ics` text was cut at `MAX_ICS_BYTES`.
+    pub truncated_parts: Vec<String>,
+}
+
+/// Cuts `s` to at most `max` bytes on a char boundary; returns whether it was cut.
+fn cap_str(s: &mut String, max: usize) -> bool {
+    if s.len() <= max {
+        return false;
+    }
+    let mut end = max;
+    while !s.is_char_boundary(end) {
+        end -= 1;
+    }
+    s.truncate(end);
+    true
 }
 
 impl ParsedMessage {
@@ -115,7 +139,12 @@ pub fn parse(raw: &[u8]) -> Result<ParsedMessage> {
     for name in KEPT_HEADERS {
         if let Some(h) = msg.headers().get(name) {
             let v = String::from_utf8_lossy(h.raw_value());
-            let v = crate::text::collapse_ws(&v);
+            let mut v = crate::text::collapse_ws(&v);
+            let cut = v.chars().count() > MAX_HEADER_CHARS;
+            if cut {
+                v = v.chars().take(MAX_HEADER_CHARS).collect();
+                out.truncated = true;
+            }
             if !v.is_empty() {
                 out.headers.insert(name.to_lowercase(), v);
             }
@@ -142,13 +171,18 @@ pub fn parse(raw: &[u8]) -> Result<ParsedMessage> {
             html = part.html_utf8().map(|t| t.into_owned());
         }
     }
-    let html = html
+    let mut html = html
         .map(|h| sanitise_html(&h))
         .filter(|h| !h.trim().is_empty());
-    out.body_text = match text.filter(|t| !t.trim().is_empty()) {
+    if let Some(h) = html.as_mut() {
+        out.truncated |= cap_str(h, MAX_HTML_BYTES);
+    }
+    let mut body_text = match text.filter(|t| !t.trim().is_empty()) {
         Some(t) => t,
         None => html.as_deref().map(html_to_text).unwrap_or_default(),
     };
+    out.truncated |= cap_str(&mut body_text, MAX_TEXT_BYTES);
+    out.body_text = body_text;
     out.body_html = html;
 
     for part in msg.parts() {
@@ -168,12 +202,34 @@ pub fn parse(raw: &[u8]) -> Result<ParsedMessage> {
         if !(part.is_attachment() || is_ics || is_pdf) {
             continue;
         }
+        if out.attachments.len() >= MAX_ATTACHMENTS {
+            out.truncated = true;
+            break;
+        }
         let size = part.decoded_len();
+        let keep_pdf = is_pdf && size <= MAX_PDF_BYTES;
+        // Decode once; the bytes serve both the ICS text and the PDF copy.
+        let decoded = (is_ics || keep_pdf).then(|| part.decoded());
+        let ics = match (&decoded, is_ics) {
+            (Some(d), true) => {
+                let mut t = String::from_utf8_lossy(d).into_owned();
+                if cap_str(&mut t, MAX_ICS_BYTES) {
+                    out.truncated = true;
+                    out.truncated_parts.push(part.id().to_string());
+                }
+                Some(t)
+            }
+            _ => None,
+        };
+        let pdf = match decoded {
+            Some(d) if keep_pdf => Some(d.into_owned()),
+            _ => None,
+        };
         out.attachments.push(ParsedAttachment {
             part: part.id().to_string(),
             filename,
-            ics: is_ics.then(|| String::from_utf8_lossy(&part.decoded()).into_owned()),
-            pdf: (is_pdf && size <= MAX_PDF_BYTES).then(|| part.decoded().into_owned()),
+            ics,
+            pdf,
             mime,
             size,
         });
@@ -265,6 +321,69 @@ mod tests {
         assert!(m.headers.contains_key("list-unsubscribe"));
         assert!(m.body_text.contains("Hi there"));
         assert!(m.date.is_some());
+    }
+
+    fn mail(ctype: &str, body: &str) -> Vec<u8> {
+        format!("From: a@example.com\r\nSubject: s\r\nContent-Type: {ctype}\r\n\r\n{body}\r\n")
+            .into_bytes()
+    }
+
+    #[test]
+    fn caps_text_html_and_headers() {
+        let big = "x".repeat(MAX_TEXT_BYTES * 2);
+        let m = parse(&mail("text/plain; charset=utf-8", &big)).unwrap();
+        assert!(m.body_text.len() <= MAX_TEXT_BYTES);
+        assert!(m.truncated);
+
+        let html = format!("<p>{}</p>", "é".repeat(MAX_HTML_BYTES));
+        let m = parse(&mail("text/html; charset=utf-8", &html)).unwrap();
+        assert!(m.body_html.as_deref().unwrap().len() <= MAX_HTML_BYTES);
+        assert!(m.body_text.len() <= MAX_TEXT_BYTES);
+        assert!(m.truncated);
+
+        let raw = format!(
+            "From: a@example.com\r\nList-Unsubscribe: <mailto:{}@example.com>\r\n\r\nhi\r\n",
+            "u".repeat(MAX_HEADER_CHARS * 2)
+        );
+        let m = parse(raw.as_bytes()).unwrap();
+        assert!(m.headers["list-unsubscribe"].chars().count() <= MAX_HEADER_CHARS);
+        assert!(m.truncated);
+
+        let small = parse(&mail("text/plain", "hello")).unwrap();
+        assert!(!small.truncated);
+    }
+
+    fn multipart(parts: &[(&str, String)]) -> Vec<u8> {
+        let mut s = String::from(
+            "From: a@example.com\r\nSubject: s\r\nContent-Type: multipart/mixed; boundary=b\r\n\r\n--b\r\nContent-Type: text/plain\r\n\r\nbody\r\n",
+        );
+        for (name, body) in parts {
+            s.push_str(&format!(
+                "--b\r\nContent-Type: text/calendar\r\nContent-Disposition: attachment; filename=\"{name}\"\r\n\r\n{body}\r\n"
+            ));
+        }
+        s.push_str("--b--\r\n");
+        s.into_bytes()
+    }
+
+    #[test]
+    fn caps_ics_text_and_attachment_count() {
+        let ics = format!(
+            "BEGIN:VCALENDAR\r\nX-PAD:{}\r\nEND:VCALENDAR",
+            "y".repeat(MAX_ICS_BYTES * 2)
+        );
+        let m = parse(&multipart(&[("a.ics", ics)])).unwrap();
+        assert_eq!(m.attachments.len(), 1);
+        assert!(m.attachments[0].ics.as_ref().unwrap().len() <= MAX_ICS_BYTES);
+        assert_eq!(m.truncated_parts, vec![m.attachments[0].part.clone()]);
+        assert!(m.truncated);
+
+        let many: Vec<(&str, String)> = (0..MAX_ATTACHMENTS + 8)
+            .map(|_| ("e.ics", "BEGIN:VCALENDAR\r\nEND:VCALENDAR".to_string()))
+            .collect();
+        let m = parse(&multipart(&many)).unwrap();
+        assert_eq!(m.attachments.len(), MAX_ATTACHMENTS);
+        assert!(m.truncated);
     }
 
     #[test]

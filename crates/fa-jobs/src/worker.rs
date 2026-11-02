@@ -12,6 +12,20 @@ pub struct WorkerConfig {
     pub concurrency: usize,
     pub lease_secs: i64,
     pub poll_interval: Duration,
+    /// Maximum runtime of one job; a longer run is aborted and fails like any other error.
+    /// Keep it below `lease_secs`, or the lease expires and the job is claimed a second time.
+    pub job_timeout: Duration,
+    /// Per-kind overrides of `job_timeout`.
+    pub kind_timeouts: HashMap<String, Duration>,
+}
+
+impl WorkerConfig {
+    pub fn timeout_for(&self, kind: &str) -> Duration {
+        self.kind_timeouts
+            .get(kind)
+            .copied()
+            .unwrap_or(self.job_timeout)
+    }
 }
 
 impl Default for WorkerConfig {
@@ -20,6 +34,8 @@ impl Default for WorkerConfig {
             concurrency: 2,
             lease_secs: 300,
             poll_interval: Duration::from_secs(2),
+            job_timeout: Duration::from_secs(240),
+            kind_timeouts: HashMap::new(),
         }
     }
 }
@@ -92,7 +108,7 @@ async fn process_one(
     let job = JobRepo::claim(&mut tx, name, cfg.lease_secs).await?;
     tx.commit().await?;
     let Some(job) = job else { return Ok(false) };
-    let result = dispatch(ctx, handlers, &job).await;
+    let result = dispatch(ctx, handlers, &job, cfg.timeout_for(&job.kind)).await;
     let mut tx = ctx.store.tx_system().await?;
     match result {
         Ok(()) => JobRepo::complete(&mut tx, job.id).await?,
@@ -109,6 +125,7 @@ async fn dispatch(
     ctx: &JobContext,
     handlers: &HashMap<&'static str, Arc<dyn JobHandler>>,
     job: &Job,
+    max_runtime: Duration,
 ) -> Result<(), JobError> {
     let Some(h) = handlers.get(job.kind.as_str()) else {
         return Err(JobError::Handler(format!(
@@ -120,7 +137,16 @@ async fn dispatch(
     let h = h.clone();
     let ctx = ctx.clone();
     let payload = job.payload.clone();
-    tokio::spawn(async move { h.run(&ctx, payload).await })
-        .await
-        .map_err(|e| JobError::Handler(format!("handler panicked: {e}")))?
+    let mut task = tokio::spawn(async move { h.run(&ctx, payload).await });
+    match tokio::time::timeout(max_runtime, &mut task).await {
+        Ok(joined) => joined.map_err(|e| JobError::Handler(format!("handler panicked: {e}")))?,
+        Err(_) => {
+            task.abort();
+            tracing::warn!(job = %job.id, kind = %job.kind, "job timed out");
+            Err(JobError::Handler(format!(
+                "timed out after {}s",
+                max_runtime.as_secs_f64().ceil() as u64
+            )))
+        }
+    }
 }
