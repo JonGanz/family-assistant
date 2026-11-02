@@ -12,8 +12,12 @@ export interface DashboardExtras {
   task_lists?: TaskListView[]
   /** The household's Now list size; falls back to 7. */
   now_list_size?: number
-  /** False once the server refused a device completion (override off): tasks become read-only. */
+  /** False when the household turned dashboard completion off (or a routine step was refused): read-only. */
   completion_enabled?: boolean
+  /** The device is PIN-elevated: an adult acts, so adults-only lists can be completed. */
+  elevated?: boolean
+  /** Tasks the server refused to complete from this device: they lose their checkbox. */
+  refused?: string[]
   /** Bumped to reset uncontrolled checkboxes after a cancelled picker. */
   epoch?: number
 }

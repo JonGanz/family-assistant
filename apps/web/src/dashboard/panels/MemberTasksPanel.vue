@@ -5,13 +5,12 @@ import TaskItem from '../../components/tasks/TaskItem.vue'
 import { hueVar } from '../../lib/hues'
 import { visibleMembers } from '../filter'
 import { S } from '../strings'
-import { memberColumns, toTaskItem } from '../tasksModel'
+import { memberColumns, taskLocked, toTaskItem } from '../tasksModel'
 import type { PanelProps } from '../types'
 
 const props = defineProps<PanelProps>()
 const emit = defineEmits<{ complete: [id: string] }>()
 const tz = computed(() => props.data.household.tz)
-const readOnly = computed(() => props.data.completion_enabled === false)
 const cols = computed(() =>
   memberColumns(props.data, visibleMembers(props.data, props.settings), props.panel, props.now),
 )
@@ -35,8 +34,8 @@ const cols = computed(() =>
         <li
           v-for="t in c.tasks"
           :key="`${t.id}-${data.epoch ?? 0}`"
-          :class="{ ro: readOnly }"
-          :inert="readOnly"
+          :class="{ ro: taskLocked(data, t) }"
+          :inert="taskLocked(data, t)"
         >
           <TaskItem
             :task="toTaskItem(t, data.members)"

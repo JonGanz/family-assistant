@@ -4,7 +4,7 @@ import MemberPicker from '../components/tasks/MemberPicker.vue'
 import UndoToast from '../components/tasks/UndoToast.vue'
 import { useDashboardStore } from '../stores/dashboard'
 import { S } from './strings'
-import { tasksOf, toMemberRef } from './tasksModel'
+import { taskLocked, tasksOf, toMemberRef } from './tasksModel'
 
 const store = useDashboardStore()
 const data = computed(() => store.snapshot)
@@ -16,7 +16,7 @@ const undo = ref<{ id: string; member: string; title: string } | null>(null)
 
 function beginComplete(id: string): void {
   const t = tasksOf(data.value!).find((x) => x.id === id)
-  if (!t || data.value?.completion_enabled === false) return
+  if (!t || !data.value || taskLocked(data.value, t)) return
   completing.value = { id, pre: t.assignees.length === 1 ? (t.assignees[0] ?? null) : null }
 }
 

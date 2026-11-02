@@ -36,6 +36,13 @@ export function idFilter(panel: PanelConfig, key: string): Set<string> | null {
   return Array.isArray(v) && v.length > 0 ? new Set(v.map(String)) : null
 }
 
+/** Whether a task has no checkbox here: completion is off, its list is adults-only, or it was refused. */
+export function taskLocked(data: DashboardData, t: TaskView): boolean {
+  if (data.completion_enabled === false || data.refused?.includes(t.id)) return true
+  if (data.elevated) return false
+  return (data.task_lists ?? []).find((l) => l.id === t.list)?.completion_policy === 'adult_only'
+}
+
 export const tasksOf = (d: DashboardData): TaskView[] => d.tasks ?? []
 export const runsOf = (d: DashboardData): RoutineRunView[] => d.routines ?? []
 

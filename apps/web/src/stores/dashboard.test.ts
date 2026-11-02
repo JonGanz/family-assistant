@@ -194,11 +194,12 @@ describe('dashboard store', () => {
     expect(s.snapshot?.tasks).toHaveLength(1)
   })
 
-  it('a 403 on completion switches the dashboard to read-only', async () => {
+  it('a 403 on completion locks only that task, not the whole dashboard', async () => {
     const s = await loaded()
     vi.mocked(taskApi.complete).mockRejectedValue(new ApiError(403, { status: 403 }))
     expect(await s.complete('t1', 'm1')).toBe(false)
-    expect(s.snapshot?.completion_enabled).toBe(false)
+    expect(s.snapshot?.refused).toEqual(['t1'])
+    expect(s.snapshot?.completion_enabled).not.toBe(false)
     expect(s.snapshot?.epoch).toBe(1)
   })
 

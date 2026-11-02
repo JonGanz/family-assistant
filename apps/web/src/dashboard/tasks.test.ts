@@ -148,6 +148,33 @@ describe('now panel', () => {
   })
 })
 
+describe('per-task completion lock', () => {
+  const lists = [
+    { id: 'adults', completion_policy: 'adult_only' },
+    { id: 'all', completion_policy: 'assignee' },
+  ] as never
+  it('only tasks of adults-only lists lose their checkbox', () => {
+    const d = data({
+      task_lists: lists,
+      tasks: [task('a', { list: 'adults' }), task('b', { list: 'all' })],
+    })
+    const w = canvas(d, [{ kind: 'now' }])
+    expect(w.findAll('li.ro')).toHaveLength(1)
+  })
+  it('an elevated device can complete them', () => {
+    const d = data({ task_lists: lists, elevated: true, tasks: [task('a', { list: 'adults' })] })
+    expect(
+      canvas(d, [{ kind: 'now' }])
+        .find('li.ro')
+        .exists(),
+    ).toBe(false)
+  })
+  it('a refused task is locked, the others are not', () => {
+    const d = data({ refused: ['a'], tasks: [task('a'), task('b')] })
+    expect(canvas(d, [{ kind: 'now' }]).findAll('li.ro')).toHaveLength(1)
+  })
+})
+
 describe('member_tasks panel', () => {
   it('has a column per member with today and overdue tasks, plus Anyone', () => {
     const d = data({

@@ -2,15 +2,17 @@
 import { computed } from 'vue'
 import TaskItem from '../../components/tasks/TaskItem.vue'
 import { S } from '../strings'
-import { nowTasks, toTaskItem } from '../tasksModel'
+import { nowTasks, taskLocked, toTaskItem } from '../tasksModel'
 import type { PanelProps } from '../types'
 
 const props = defineProps<PanelProps>()
 const emit = defineEmits<{ complete: [id: string]; add: [] }>()
 const tz = computed(() => props.data.household.tz)
-const readOnly = computed(() => props.data.completion_enabled === false)
 const items = computed(() =>
-  nowTasks(props.data, props.panel).map((t) => toTaskItem(t, props.data.members)),
+  nowTasks(props.data, props.panel).map((t) => ({
+    model: toTaskItem(t, props.data.members),
+    locked: taskLocked(props.data, t),
+  })),
 )
 const canAdd = computed(() => (props.data.task_lists ?? []).some((l) => l.dashboard_add))
 </script>
@@ -27,12 +29,12 @@ const canAdd = computed(() => (props.data.task_lists ?? []).some((l) => l.dashbo
     <ul>
       <li
         v-for="t in items"
-        :key="`${t.id}-${data.epoch ?? 0}`"
-        :class="{ ro: readOnly }"
-        :inert="readOnly"
+        :key="`${t.model.id}-${data.epoch ?? 0}`"
+        :class="{ ro: t.locked }"
+        :inert="t.locked"
       >
         <TaskItem
-          :task="t"
+          :task="t.model"
           :now="now"
           :tz="tz"
           size="kiosk"

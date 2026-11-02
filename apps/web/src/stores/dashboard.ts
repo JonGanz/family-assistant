@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { api, type DashboardView } from '../api/client'
 import type { DashboardData, TaskView } from '../dashboard/types'
 import { ApiError } from '../api/http'
@@ -61,11 +61,18 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const loadError = ref<string | null>(null)
   /** Epoch ms until which the device is elevated (PIN step-up), or null. */
   const elevatedUntil = ref<number | null>(null)
+  /** Tasks the server refused to complete from this device (a list policy, not the household switch). */
+  const refused = ref<string[]>([])
   /** The week the Week view shows (its first day), and that week's events and tasks. */
   const weekFrom = ref<string | null>(null)
   const weekData = ref<{ from: string; events: DashboardData['events']; tasks: TaskView[] } | null>(
     null,
   )
+  // An elevated (adult) session may complete adults-only tasks; a new one also lifts earlier refusals.
+  watch(elevatedUntil, (until) => {
+    refused.value = []
+    patch({ elevated: until !== null && until > Date.now(), refused: [] })
+  })
   let handle: SseHandle | null = null
   let midnight: ReturnType<typeof setTimeout> | undefined
   let inflight: Promise<void> | null = null
@@ -107,6 +114,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
       now_list_size: data.household.now_list_size,
       completion_enabled: data.household.completion_override,
       epoch: snapshot.value?.epoch,
+      elevated: elevatedUntil.value !== null && elevatedUntil.value > Date.now(),
+      refused: refused.value,
     }
   }
 
@@ -119,13 +128,21 @@ export const useDashboardStore = defineStore('dashboard', () => {
     patch({ epoch: (snapshot.value?.epoch ?? 0) + 1 })
   }
 
-  /** Complete a task for `member`. A 403 means the household turned dashboard completion off. */
+  /**
+   * Complete a task for `member`. A 403 is about this task (its list is adults-only), so only
+   * that task loses its checkbox; whether the household switched completion off comes with the
+   * refetched snapshot.
+   */
   async function complete(id: string, member: string): Promise<boolean> {
     try {
       await taskApi.complete(id, member)
     } catch (e) {
-      if (e instanceof ApiError && e.status === 403) patch({ completion_enabled: false })
+      if (e instanceof ApiError && e.status === 403 && !refused.value.includes(id)) {
+        refused.value = [...refused.value, id]
+        patch({ refused: refused.value })
+      }
       resetChecks()
+      await refresh()
       return false
     }
     await refresh()
