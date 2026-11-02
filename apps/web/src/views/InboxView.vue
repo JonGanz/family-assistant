@@ -85,5 +85,6 @@ const approve = (kind: InboxKind, id: string, edits: Approval) => inbox.approve(
         />
       </template>
     </ul>
+    <button v-if="inbox.nextBefore" type="button" @click="inbox.loadMore()">Load more</button>
   </section>
 </template>

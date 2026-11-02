@@ -134,6 +134,7 @@
         "tags": [
           "tasks"
         ],
+        "summary": "Deprecated alias of `DELETE /api/v1/members/{member_id}/away/{id}`, removed after M4.",
         "operationId": "delete_away",
         "parameters": [
           {
@@ -171,6 +172,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "cookie": []
@@ -186,6 +188,7 @@
         "tags": [
           "bills"
         ],
+        "summary": "Bills, newest created first: keyset on `created_at DESC, id DESC`, cursor `created_at`.",
         "operationId": "list_bills",
         "parameters": [
           {
@@ -196,6 +199,27 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "description": "RFC 3339 cursor: the `next_before` of the previous page.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Page size, default 50, at most 200 (above is clamped).",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
           }
         ],
         "responses": {
@@ -204,10 +228,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/BillView"
-                  }
+                  "$ref": "#/components/schemas/BillPage"
                 }
               }
             }
@@ -1140,7 +1161,8 @@
         "tags": [
           "devices"
         ],
-        "operationId": "elevate",
+        "summary": "Deprecated alias of `POST /api/v1/devices/elevate`, removed after M4.",
+        "operationId": "elevate_deprecated",
         "requestBody": {
           "content": {
             "application/json": {
@@ -1193,6 +1215,7 @@
             }
           }
         },
+        "deprecated": true,
         "security": [
           {
             "bearer": []
@@ -1281,6 +1304,71 @@
           {
             "cookie": []
           },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/devices/elevate": {
+      "post": {
+        "tags": [
+          "devices"
+        ],
+        "operationId": "elevate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ElevateReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ElevateResp"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "423": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
           {
             "bearer": []
           }
@@ -1865,6 +1953,7 @@
         "tags": [
           "inbox"
         ],
+        "summary": "Pending items, newest first: keyset on the item's `created_at DESC` (then id), cursor\n`created_at`. `counts` cover every kind and every page.",
         "operationId": "get_inbox",
         "parameters": [
           {
@@ -1875,6 +1964,27 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "description": "RFC 3339 cursor: the `next_before` of the previous page.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Page size, default 50, at most 200 (above is clamped).",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
           }
         ],
         "responses": {
@@ -1883,7 +1993,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InboxView"
+                  "$ref": "#/components/schemas/InboxPage"
                 }
               }
             }
@@ -4095,6 +4205,67 @@
         ]
       }
     },
+    "/api/v1/members/{member_id}/away/{id}": {
+      "delete": {
+        "tags": [
+          "tasks"
+        ],
+        "operationId": "delete_member_away",
+        "parameters": [
+          {
+            "name": "member_id",
+            "in": "path",
+            "description": "member id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "absence id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/messages": {
       "get": {
         "tags": [
@@ -4856,17 +5027,38 @@
         "tags": [
           "mail"
         ],
+        "summary": "Organisations, newest created first: keyset on `created_at DESC, id DESC`, cursor `created_at`.",
         "operationId": "list_orgs",
+        "parameters": [
+          {
+            "name": "before",
+            "in": "query",
+            "description": "RFC 3339 cursor: the `next_before` of the previous page.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Page size, default 50, at most 200 (above is clamped).",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/OrgView"
-                  }
+                  "$ref": "#/components/schemas/OrgPage"
                 }
               }
             }
@@ -5315,6 +5507,7 @@
         "tags": [
           "tasks"
         ],
+        "summary": "Limits (422 `{field}` beyond them): `name` 200 characters, at most 50 `steps` of 200 characters each.",
         "operationId": "create_routine",
         "requestBody": {
           "content": {
@@ -5585,6 +5778,7 @@
         "tags": [
           "sessions"
         ],
+        "summary": "Live sessions, newest created first: keyset on `created_at DESC` (then handle), cursor\n`created_at`. The member's live sessions are few, so the page is cut from the full list.",
         "operationId": "list_sessions",
         "parameters": [
           {
@@ -5595,6 +5789,26 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "description": "RFC 3339 cursor: the `next_before` of the previous page",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "page size, default 50, at most 200 (above is clamped)",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
           }
         ],
         "responses": {
@@ -5603,10 +5817,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/SessionView"
-                  }
+                  "$ref": "#/components/schemas/SessionPage"
                 }
               }
             }
@@ -6203,6 +6414,7 @@
         "tags": [
           "tasks"
         ],
+        "summary": "Limits (422 `{field}` beyond them): `title` 200 characters, `notes` 10 000, at most 50\n`steps_template` entries of 200 characters each.",
         "operationId": "create_definition",
         "requestBody": {
           "content": {
@@ -6738,6 +6950,7 @@
         "tags": [
           "tasks"
         ],
+        "summary": "Tasks, newest created first: keyset on `created_at DESC, id DESC`, cursor `created_at`.\n`view=now` is a short ranked list and is not paged. `suggested` tasks (made from mail) are\nreturned only to a signed-in adult; for a child or a device (elevated or not) they are left\nout, so `status=suggested` is empty.",
         "operationId": "list_tasks",
         "parameters": [
           {
@@ -6789,6 +7002,27 @@
               "type": "string",
               "format": "date-time"
             }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "description": "RFC 3339 cursor: the `next_before` of the previous page.",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Page size, default 50, at most 200 (above is clamped).",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
           }
         ],
         "responses": {
@@ -6797,10 +7031,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/TaskView"
-                  }
+                  "$ref": "#/components/schemas/TaskPage"
                 }
               }
             }
@@ -6829,6 +7060,7 @@
         "tags": [
           "tasks"
         ],
+        "summary": "Creates a task. Limits (422 `{field}` beyond them): `title` 200 characters, `notes` 10 000,\nat most 50 `steps` of 200 characters each. Every assignee must be an active member of the\nhousehold; a child can assign only themself.",
         "operationId": "create_task",
         "requestBody": {
           "content": {
@@ -6984,6 +7216,7 @@
         "tags": [
           "tasks"
         ],
+        "summary": "Edits a task (`If-Match` required). Same limits as creating: `title` 200 characters, `notes`\n10 000, at most 50 `steps` of 200 characters. Newly added assignees must be active members of\nthe household; a child may set `assignees` to empty or to themself only (403 otherwise).",
         "operationId": "patch_task",
         "parameters": [
           {
@@ -8161,6 +8394,29 @@
       "BillId": {
         "type": "string",
         "format": "uuid"
+      },
+      "BillPage": {
+        "type": "object",
+        "description": "One page of `GET /bills`, newest created first.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BillView"
+            }
+          },
+          "next_before": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "RFC 3339; pass as `before` for the next page. Absent on the last page."
+          }
+        }
       },
       "BillPatch": {
         "type": "object",
@@ -10379,6 +10635,33 @@
           }
         ]
       },
+      "InboxPage": {
+        "type": "object",
+        "description": "One page of `GET /inbox`, newest first. `counts` cover every kind and every page.",
+        "required": [
+          "items",
+          "counts"
+        ],
+        "properties": {
+          "counts": {
+            "$ref": "#/components/schemas/InboxCounts"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InboxItem"
+            }
+          },
+          "next_before": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "RFC 3339; pass as `before` for the next page. Absent on the last page."
+          }
+        }
+      },
       "InboxSettings": {
         "type": "object",
         "required": [
@@ -10395,25 +10678,6 @@
             "type": "integer",
             "format": "int32",
             "description": "1..=365."
-          }
-        }
-      },
-      "InboxView": {
-        "type": "object",
-        "description": "Devices without elevation get `items: []` and the counts only.",
-        "required": [
-          "items",
-          "counts"
-        ],
-        "properties": {
-          "counts": {
-            "$ref": "#/components/schemas/InboxCounts"
-          },
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/InboxItem"
-            }
           }
         }
       },
@@ -12309,6 +12573,29 @@
           "other"
         ]
       },
+      "OrgPage": {
+        "type": "object",
+        "description": "One page of `GET /orgs`, newest created first.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrgView"
+            }
+          },
+          "next_before": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "RFC 3339; pass as `before` for the next page. Absent on the last page."
+          }
+        }
+      },
       "OrgPatch": {
         "type": "object",
         "properties": {
@@ -13442,6 +13729,29 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "SessionPage": {
+        "type": "object",
+        "description": "One page of `GET /sessions`, newest created first.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SessionView"
+            }
+          },
+          "next_before": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "RFC 3339; pass as `before` for the next page. Absent on the last page."
           }
         }
       },
@@ -14683,6 +14993,29 @@
           "weather",
           "email"
         ]
+      },
+      "TaskPage": {
+        "type": "object",
+        "description": "One page of `GET /tasks`, newest created first. `view=now` is never paged.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TaskView"
+            }
+          },
+          "next_before": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time",
+            "description": "RFC 3339; pass as `before` for the next page. Absent on the last page."
+          }
+        }
       },
       "TaskPatch": {
         "type": "object",

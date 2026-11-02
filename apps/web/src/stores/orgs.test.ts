@@ -22,9 +22,9 @@ const m = vi.mocked(mailApi, true)
 beforeEach(() => {
   setActivePinia(createPinia())
   vi.resetAllMocks()
-  m.orgs.mockResolvedValue([
-    { id: 'o1', name: 'Example School', version: 4, contacts: [] },
-  ] as never)
+  m.orgs.mockResolvedValue({
+    items: [{ id: 'o1', name: 'Example School', version: 4, contacts: [] }],
+  } as never)
 })
 
 describe('orgs store', () => {

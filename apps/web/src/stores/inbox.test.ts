@@ -23,6 +23,18 @@ beforeEach(() => {
 })
 
 describe('inbox store', () => {
+  it('loadMore appends the next page', async () => {
+    m.inbox.mockResolvedValueOnce({ ...view, items: [view.items[0]], next_before: 'c1' } as never)
+    m.inbox.mockResolvedValueOnce({ ...view, items: [view.items[1]] } as never)
+    const s = useInboxStore()
+    await s.load()
+    expect(s.nextBefore).toBe('c1')
+    await s.loadMore()
+    expect(m.inbox).toHaveBeenLastCalledWith(undefined, 'c1')
+    expect(s.items).toHaveLength(2)
+    expect(s.nextBefore).toBeNull()
+  })
+
   it('loads items and counts', async () => {
     const s = useInboxStore()
     await s.load()

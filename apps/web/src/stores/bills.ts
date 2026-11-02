@@ -25,11 +25,44 @@ export const useBillsStore = defineStore('bills', () => {
   const filter = ref<BillFilter>('')
   const loading = ref(false)
   const error = ref<string | null>(null)
+  /** Cursor of the next page; null when everything is loaded. */
+  const nextBefore = ref<string | null>(null)
+
+  /** The server pages newest-created first; the list shows the soonest due first (undated last). */
+  function byDue(a: BillView, b: BillView): number {
+    if (a.due_on && b.due_on) return a.due_on < b.due_on ? -1 : a.due_on > b.due_on ? 1 : 0
+    if (a.due_on) return -1
+    if (b.due_on) return 1
+    return 0
+  }
 
   async function load(): Promise<void> {
     loading.value = true
     try {
-      items.value = await api.bills(filter.value || undefined)
+      const shown = items.value.length
+      let page = await api.bills(filter.value || undefined)
+      const all = [...page.items]
+      while (page.next_before && all.length < shown) {
+        page = await api.bills(filter.value || undefined, page.next_before)
+        all.push(...page.items)
+      }
+      items.value = all.sort(byDue)
+      nextBefore.value = page.next_before ?? null
+      error.value = null
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function loadMore(): Promise<void> {
+    if (!nextBefore.value) return
+    loading.value = true
+    try {
+      const page = await api.bills(filter.value || undefined, nextBefore.value)
+      items.value = [...items.value, ...page.items].sort(byDue)
+      nextBefore.value = page.next_before ?? null
       error.value = null
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
@@ -53,5 +86,5 @@ export const useBillsStore = defineStore('bills', () => {
     }
   }
 
-  return { items, filter, loading, error, load, patch }
+  return { items, filter, loading, error, nextBefore, load, loadMore, patch }
 })

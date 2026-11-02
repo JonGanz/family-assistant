@@ -24,7 +24,7 @@ describe('formatMoney', () => {
 
 describe('bills store', () => {
   it('filters by status', async () => {
-    m.bills.mockResolvedValue([])
+    m.bills.mockResolvedValue({ items: [] })
     const s = useBillsStore()
     s.filter = 'open'
     await s.load()
@@ -34,8 +34,23 @@ describe('bills store', () => {
     expect(m.bills).toHaveBeenLastCalledWith(undefined)
   })
 
+  it('loads more with the cursor and keeps the soonest due first', async () => {
+    m.bills.mockResolvedValueOnce({
+      items: [{ id: 'b1', due_on: '2026-12-01' }],
+      next_before: '2026-11-01T00:00:00Z',
+    } as never)
+    m.bills.mockResolvedValueOnce({ items: [{ id: 'b2', due_on: '2026-11-15' }] } as never)
+    const s = useBillsStore()
+    await s.load()
+    expect(s.nextBefore).toBe('2026-11-01T00:00:00Z')
+    await s.loadMore()
+    expect(m.bills).toHaveBeenLastCalledWith(undefined, '2026-11-01T00:00:00Z')
+    expect(s.items.map((b) => b.id)).toEqual(['b2', 'b1'])
+    expect(s.nextBefore).toBeNull()
+  })
+
   it('patch reloads, and a conflict reloads and reports false', async () => {
-    m.bills.mockResolvedValue([])
+    m.bills.mockResolvedValue({ items: [] })
     m.patchBill.mockResolvedValueOnce({} as never)
     const s = useBillsStore()
     const bill = { id: 'b', version: 3 } as never

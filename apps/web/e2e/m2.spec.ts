@@ -293,8 +293,10 @@ test('the dashboard + button adds a task through the member picker', async ({ pa
     await expect(picker).toBeVisible()
     await picker.getByRole('button', { name: 'Riley' }).click()
     await expect(screen.getByTestId('add-form')).toBeHidden()
-    const tasks = await (await page.request.get('/api/v1/tasks?view=all&status=open')).json()
-    const made = tasks.find((t: { title: string }) => t.title === title)
+    const tasks = await (
+      await page.request.get('/api/v1/tasks?view=all&status=open&limit=200')
+    ).json()
+    const made = tasks.items.find((t: { title: string }) => t.title === title)
     expect(made, 'the new task').toBeTruthy()
     expect(made.list_name).toBe('Errands')
   } finally {
@@ -356,8 +358,10 @@ test('a suggested weather task is accepted from the Suggested tab', async ({ pag
   expect(rule.status()).toBe(201)
 
   await expect(async () => {
-    const found = await (await page.request.get('/api/v1/tasks?view=all&status=suggested')).json()
-    expect(found.some((t: { title: string }) => t.title === title)).toBe(true)
+    const found = await (
+      await page.request.get('/api/v1/tasks?view=all&status=suggested&limit=200')
+    ).json()
+    expect(found.items.some((t: { title: string }) => t.title === title)).toBe(true)
   }).toPass({ timeout: 60_000 })
 
   await page.goto('/tasks')
@@ -366,8 +370,8 @@ test('a suggested weather task is accepted from the Suggested tab', async ({ pag
   await expect(row).toBeVisible()
   await row.getByRole('button', { name: 'Accept' }).click()
   await expect(row).toHaveCount(0)
-  const open = await (await page.request.get('/api/v1/tasks?view=all&status=open')).json()
-  expect(open.some((t: { title: string }) => t.title === title)).toBe(true)
+  const open = await (await page.request.get('/api/v1/tasks?view=all&status=open&limit=200')).json()
+  expect(open.items.some((t: { title: string }) => t.title === title)).toBe(true)
 })
 
 test('Settings, Notifications: Send test succeeds', async ({ page }) => {

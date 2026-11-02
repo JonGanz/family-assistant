@@ -74,6 +74,14 @@ watch(
         </div>
       </li>
     </ul>
+    <button
+      v-if="bills.nextBefore"
+      type="button"
+      :disabled="bills.loading"
+      @click="bills.loadMore()"
+    >
+      Load more
+    </button>
   </section>
 </template>
 

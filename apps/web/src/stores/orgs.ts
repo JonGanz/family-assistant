@@ -24,7 +24,7 @@ export const useOrgsStore = defineStore('orgs', () => {
 
   async function load(): Promise<void> {
     try {
-      orgs.value = await mailApi.orgs()
+      orgs.value = (await mailApi.orgs()).items.sort((a, b) => a.name.localeCompare(b.name))
       error.value = null
       conflict.value = false
     } catch (e) {

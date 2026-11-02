@@ -12,6 +12,14 @@ const QUERY = {
   suggested: { view: 'all', status: 'suggested' },
 } as const
 
+/** The server pages newest-created first; the lists show the soonest due first (undated last). */
+function byDue(a: TaskView, b: TaskView): number {
+  if (a.due_at && b.due_at) return a.due_at < b.due_at ? -1 : a.due_at > b.due_at ? 1 : 0
+  if (a.due_at) return -1
+  if (b.due_at) return 1
+  return 0
+}
+
 export interface UndoState {
   id: string
   title: string
@@ -19,6 +27,8 @@ export interface UndoState {
 
 export const useTasksStore = defineStore('tasks', () => {
   const tabs = ref<Partial<Record<TaskTab, TaskView[]>>>({})
+  /** Cursor of the next page per tab; absent when the tab is fully loaded. */
+  const nextBefore = ref<Partial<Record<TaskTab, string>>>({})
   /** Calendar ranges: key `from|to` → tasks (RFC 3339 instants, `to` exclusive). */
   const ranges = ref<Record<string, TaskView[]>>({})
   const error = ref<string | null>(null)
@@ -30,11 +40,41 @@ export const useTasksStore = defineStore('tasks', () => {
 
   const msg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
+  function setTab(tab: TaskTab, items: TaskView[], next: string | null | undefined): void {
+    tabs.value[tab] = tab === 'now' ? items : [...items].sort(byDue)
+    if (next) nextBefore.value[tab] = next
+    else delete nextBefore.value[tab]
+  }
+
+  /** Reloads the tab's first page, and further pages until as many rows as were shown are back. */
   async function load(tab: TaskTab): Promise<void> {
     wanted.add(tab)
     pending.value++
     try {
-      tabs.value[tab] = await api.tasks(QUERY[tab])
+      const shown = tabs.value[tab]?.length ?? 0
+      let page = await api.tasks(QUERY[tab])
+      const items = [...page.items]
+      while (page.next_before && items.length < shown) {
+        page = await api.tasks({ ...QUERY[tab], before: page.next_before })
+        items.push(...page.items)
+      }
+      setTab(tab, items, page.next_before)
+      error.value = null
+    } catch (e) {
+      error.value = msg(e)
+    } finally {
+      pending.value--
+    }
+  }
+
+  /** Appends the next page of a tab while its cursor is set. */
+  async function loadMore(tab: TaskTab): Promise<void> {
+    const before = nextBefore.value[tab]
+    if (!before) return
+    pending.value++
+    try {
+      const page = await api.tasks({ ...QUERY[tab], before })
+      setTab(tab, [...(tabs.value[tab] ?? []), ...page.items], page.next_before)
       error.value = null
     } catch (e) {
       error.value = msg(e)
@@ -46,7 +86,7 @@ export const useTasksStore = defineStore('tasks', () => {
   async function loadRange(from: string, to: string): Promise<void> {
     pending.value++
     try {
-      ranges.value[`${from}|${to}`] = await api.tasks({ from, to })
+      ranges.value[`${from}|${to}`] = await api.tasksAll({ from, to })
       error.value = null
     } catch (e) {
       error.value = msg(e)
@@ -133,6 +173,7 @@ export const useTasksStore = defineStore('tasks', () => {
 
   function reset(): void {
     tabs.value = {}
+    nextBefore.value = {}
     ranges.value = {}
     wanted.clear()
     undo.value = null
@@ -140,12 +181,14 @@ export const useTasksStore = defineStore('tasks', () => {
 
   return {
     tabs,
+    nextBefore,
     ranges,
     error,
     loading,
     conflict,
     undo,
     load,
+    loadMore,
     loadRange,
     rangeTasks,
     refresh,

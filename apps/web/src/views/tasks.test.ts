@@ -41,7 +41,7 @@ beforeEach(() => {
 describe('TaskAddForm', () => {
   it('offers a child only child_can_add lists and assigns to themself', async () => {
     m.createTask.mockResolvedValue({} as never)
-    m.tasks.mockResolvedValue([])
+    m.tasks.mockResolvedValue({ items: [] })
     const w = mount(TaskAddForm, {
       props: {
         lists: lists as never,
@@ -94,7 +94,7 @@ describe('complete and undo', () => {
     m.members.mockResolvedValue(members as never)
     m.taskLists.mockResolvedValue(lists as never)
     m.household.mockResolvedValue({ tz: 'UTC' } as never)
-    m.tasks.mockResolvedValue([t] as never)
+    m.tasks.mockResolvedValue({ items: [t] } as never)
     m.completeTask.mockResolvedValue({} as never)
     m.reopenTask.mockResolvedValue({} as never)
     const s = useSessionStore()

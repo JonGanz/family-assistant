@@ -29,7 +29,7 @@ beforeEach(() => {
 
 describe('tasks store', () => {
   it('loads a tab with its query', async () => {
-    m.tasks.mockResolvedValue([{ id: 't1' }] as never)
+    m.tasks.mockResolvedValue({ items: [{ id: 't1' }] } as never)
     const s = useTasksStore()
     await s.load('now')
     expect(m.tasks).toHaveBeenCalledWith({ view: 'now', status: 'open' })
@@ -37,7 +37,7 @@ describe('tasks store', () => {
   })
 
   it('completing arms an undo that reopens, and expiry disarms it', async () => {
-    m.tasks.mockResolvedValue([])
+    m.tasks.mockResolvedValue({ items: [] })
     m.completeTask.mockResolvedValue({} as never)
     m.reopenTask.mockResolvedValue({} as never)
     const s = useTasksStore()
@@ -65,8 +65,20 @@ describe('tasks store', () => {
 })
 
 describe('live events', () => {
+  it('loadMore appends the next page while the cursor is set', async () => {
+    m.tasks.mockResolvedValueOnce({ items: [{ id: 'a' }], next_before: 'c1' } as never)
+    m.tasks.mockResolvedValueOnce({ items: [{ id: 'b' }] } as never)
+    const s = useTasksStore()
+    await s.load('all')
+    expect(s.nextBefore.all).toBe('c1')
+    await s.loadMore('all')
+    expect(m.tasks).toHaveBeenLastCalledWith({ view: 'all', status: 'open', before: 'c1' })
+    expect(s.tabs.all?.map((t) => t.id)).toEqual(['a', 'b'])
+    expect(s.nextBefore.all).toBeUndefined()
+  })
+
   it('tasks.updated refetches only what is held; unrelated kinds do not', async () => {
-    m.tasks.mockResolvedValue([])
+    m.tasks.mockResolvedValue({ items: [] })
     m.taskLists.mockResolvedValue([])
     const t = useTasksStore()
     const l = useListsStore()

@@ -25,7 +25,7 @@ export const useAwayStore = defineStore('away', () => {
   }
 
   async function remove(member: string, id: string): Promise<void> {
-    await api.deleteAway(id)
+    await api.deleteAway(member, id)
     byMember.value[member] = await api.away(member)
   }
 

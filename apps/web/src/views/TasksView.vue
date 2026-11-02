@@ -205,6 +205,15 @@ const undo = () => act(() => tasks.undoLast())
       </ul>
     </template>
 
+    <button
+      v-if="tab !== 'now' && tasks.nextBefore[dataTab]"
+      type="button"
+      :disabled="tasks.loading"
+      @click="tasks.loadMore(dataTab)"
+    >
+      Load more
+    </button>
+
     <UndoToast
       v-if="tasks.undo"
       :key="tasks.undo.id"

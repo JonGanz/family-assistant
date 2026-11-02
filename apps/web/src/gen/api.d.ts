@@ -62,6 +62,10 @@ export interface paths {
         get?: never;
         put?: never;
         post?: never;
+        /**
+         * Deprecated alias of `DELETE /api/v1/members/{member_id}/away/{id}`, removed after M4.
+         * @deprecated
+         */
         delete: operations["delete_away"];
         options?: never;
         head?: never;
@@ -75,6 +79,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Bills, newest created first: keyset on `created_at DESC, id DESC`, cursor `created_at`. */
         get: operations["list_bills"];
         put?: never;
         post?: never;
@@ -253,7 +258,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        post: operations["elevate"];
+        /**
+         * Deprecated alias of `POST /api/v1/devices/elevate`, removed after M4.
+         * @deprecated
+         */
+        post: operations["elevate_deprecated"];
         delete?: never;
         options?: never;
         head?: never;
@@ -270,6 +279,22 @@ export interface paths {
         get: operations["list_devices"];
         put?: never;
         post: operations["pair_device"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/devices/elevate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["elevate"];
         delete?: never;
         options?: never;
         head?: never;
@@ -347,6 +372,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Pending items, newest first: keyset on the item's `created_at DESC` (then id), cursor
+         *     `created_at`. `counts` cover every kind and every page.
+         */
         get: operations["get_inbox"];
         put?: never;
         post?: never;
@@ -740,6 +769,22 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/members/{member_id}/away/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete: operations["delete_member_away"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/messages": {
         parameters: {
             query?: never;
@@ -923,6 +968,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /** Organisations, newest created first: keyset on `created_at DESC, id DESC`, cursor `created_at`. */
         get: operations["list_orgs"];
         put?: never;
         post: operations["create_org"];
@@ -989,6 +1035,7 @@ export interface paths {
         };
         get: operations["list_routines"];
         put?: never;
+        /** Limits (422 `{field}` beyond them): `name` 200 characters, at most 50 `steps` of 200 characters each. */
         post: operations["create_routine"];
         delete?: never;
         options?: never;
@@ -1035,6 +1082,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Live sessions, newest created first: keyset on `created_at DESC` (then handle), cursor
+         *     `created_at`. The member's live sessions are few, so the page is cut from the full list.
+         */
         get: operations["list_sessions"];
         put?: never;
         post?: never;
@@ -1229,6 +1280,10 @@ export interface paths {
         };
         get: operations["list_definitions"];
         put?: never;
+        /**
+         * Limits (422 `{field}` beyond them): `title` 200 characters, `notes` 10 000, at most 50
+         *     `steps_template` entries of 200 characters each.
+         */
         post: operations["create_definition"];
         delete?: never;
         options?: never;
@@ -1307,8 +1362,19 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
+        /**
+         * Tasks, newest created first: keyset on `created_at DESC, id DESC`, cursor `created_at`.
+         *     `view=now` is a short ranked list and is not paged. `suggested` tasks (made from mail) are
+         *     returned only to a signed-in adult; for a child or a device (elevated or not) they are left
+         *     out, so `status=suggested` is empty.
+         */
         get: operations["list_tasks"];
         put?: never;
+        /**
+         * Creates a task. Limits (422 `{field}` beyond them): `title` 200 characters, `notes` 10 000,
+         *     at most 50 `steps` of 200 characters each. Every assignee must be an active member of the
+         *     household; a child can assign only themself.
+         */
         post: operations["create_task"];
         delete?: never;
         options?: never;
@@ -1329,6 +1395,11 @@ export interface paths {
         delete: operations["delete_task"];
         options?: never;
         head?: never;
+        /**
+         * Edits a task (`If-Match` required). Same limits as creating: `title` 200 characters, `notes`
+         *     10 000, at most 50 `steps` of 200 characters. Newly added assignees must be active members of
+         *     the household; a child may set `assignees` to empty or to themself only (403 otherwise).
+         */
         patch: operations["patch_task"];
         trace?: never;
     };
@@ -1587,6 +1658,15 @@ export interface components {
         };
         /** Format: uuid */
         BillId: string;
+        /** @description One page of `GET /bills`, newest created first. */
+        BillPage: {
+            items: components["schemas"]["BillView"][];
+            /**
+             * Format: date-time
+             * @description RFC 3339; pass as `before` for the next page. Absent on the last page.
+             */
+            next_before?: string | null;
+        };
         BillPatch: {
             account_hint?: string | null;
             /** Format: int64 */
@@ -2189,6 +2269,16 @@ export interface components {
             /** @enum {string} */
             kind: "contact";
         };
+        /** @description One page of `GET /inbox`, newest first. `counts` cover every kind and every page. */
+        InboxPage: {
+            counts: components["schemas"]["InboxCounts"];
+            items: components["schemas"]["InboxItem"][];
+            /**
+             * Format: date-time
+             * @description RFC 3339; pass as `before` for the next page. Absent on the last page.
+             */
+            next_before?: string | null;
+        };
         InboxSettings: {
             /**
              * Format: int32
@@ -2200,11 +2290,6 @@ export interface components {
              * @description 1..=365.
              */
             task_expiry_days: number;
-        };
-        /** @description Devices without elevation get `items: []` and the counts only. */
-        InboxView: {
-            counts: components["schemas"]["InboxCounts"];
-            items: components["schemas"]["InboxItem"][];
         };
         LabelInput: {
             decision_point: components["schemas"]["DecisionPointKey"];
@@ -2686,6 +2771,15 @@ export interface components {
         };
         /** @enum {string} */
         OrgKind: "school" | "daycare" | "club" | "biller" | "other";
+        /** @description One page of `GET /orgs`, newest created first. */
+        OrgPage: {
+            items: components["schemas"]["OrgView"][];
+            /**
+             * Format: date-time
+             * @description RFC 3339; pass as `before` for the next page. Absent on the last page.
+             */
+            next_before?: string | null;
+        };
         OrgPatch: {
             bill_template?: null | components["schemas"]["BillTemplate"];
             contact_mode?: null | components["schemas"]["ContactMode"];
@@ -2968,6 +3062,15 @@ export interface components {
             relevance?: null | components["schemas"]["Relevance"];
             text: string;
             title?: string | null;
+        };
+        /** @description One page of `GET /sessions`, newest created first. */
+        SessionPage: {
+            items: components["schemas"]["SessionView"][];
+            /**
+             * Format: date-time
+             * @description RFC 3339; pass as `before` for the next page. Absent on the last page.
+             */
+            next_before?: string | null;
         };
         SessionView: {
             /** Format: date-time */
@@ -3275,6 +3378,15 @@ export interface components {
         TaskMode: "create" | "suggest";
         /** @enum {string} */
         TaskOrigin: "manual" | "system" | "weather" | "email";
+        /** @description One page of `GET /tasks`, newest created first. `view=now` is never paged. */
+        TaskPage: {
+            items: components["schemas"]["TaskView"][];
+            /**
+             * Format: date-time
+             * @description RFC 3339; pass as `before` for the next page. Absent on the last page.
+             */
+            next_before?: string | null;
+        };
         TaskPatch: {
             assignees?: components["schemas"]["MemberId"][] | null;
             calendar_display?: null | components["schemas"]["CalendarDisplay"];
@@ -3574,6 +3686,10 @@ export interface operations {
             query?: {
                 /** @description `proposed`, `open`, `paid` or `dismissed`; default all. */
                 status?: string;
+                /** @description RFC 3339 cursor: the `next_before` of the previous page. */
+                before?: string;
+                /** @description Page size, default 50, at most 200 (above is clamped). */
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -3586,7 +3702,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["BillView"][];
+                    "application/json": components["schemas"]["BillPage"];
                 };
             };
             403: {
@@ -4189,7 +4305,7 @@ export interface operations {
             };
         };
     };
-    elevate: {
+    elevate_deprecated: {
         parameters: {
             query?: never;
             header?: never;
@@ -4285,6 +4401,53 @@ export interface operations {
                 };
             };
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    elevate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ElevateReq"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ElevateResp"];
+                };
+            };
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            423: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -4666,6 +4829,10 @@ export interface operations {
             query?: {
                 /** @description `event`, `bill`, `task` or `contact`; default all. */
                 kind?: string;
+                /** @description RFC 3339 cursor: the `next_before` of the previous page. */
+                before?: string;
+                /** @description Page size, default 50, at most 200 (above is clamped). */
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -4679,7 +4846,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InboxView"];
+                    "application/json": components["schemas"]["InboxPage"];
                 };
             };
             403: {
@@ -6182,6 +6349,44 @@ export interface operations {
             };
         };
     };
+    delete_member_away: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description member id */
+                member_id: string;
+                /** @description absence id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     list_messages: {
         parameters: {
             query?: {
@@ -6661,7 +6866,12 @@ export interface operations {
     };
     list_orgs: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description RFC 3339 cursor: the `next_before` of the previous page. */
+                before?: string;
+                /** @description Page size, default 50, at most 200 (above is clamped). */
+                limit?: number;
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -6673,7 +6883,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OrgView"][];
+                    "application/json": components["schemas"]["OrgPage"];
                 };
             };
             403: {
@@ -7146,6 +7356,10 @@ export interface operations {
             query?: {
                 /** @description member id; defaults to yourself */
                 member?: string;
+                /** @description RFC 3339 cursor: the `next_before` of the previous page */
+                before?: string;
+                /** @description page size, default 50, at most 200 (above is clamped) */
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -7158,7 +7372,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SessionView"][];
+                    "application/json": components["schemas"]["SessionPage"];
                 };
             };
             403: {
@@ -7971,6 +8185,10 @@ export interface operations {
                 status?: components["schemas"]["StatusParam"];
                 from?: string;
                 to?: string;
+                /** @description RFC 3339 cursor: the `next_before` of the previous page. */
+                before?: string;
+                /** @description Page size, default 50, at most 200 (above is clamped). */
+                limit?: number;
             };
             header?: never;
             path?: never;
@@ -7983,7 +8201,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["TaskView"][];
+                    "application/json": components["schemas"]["TaskPage"];
                 };
             };
             403: {

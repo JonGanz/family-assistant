@@ -38,7 +38,8 @@ export type OrgContactPatch = S['OrgContactPatch']
 export type EnrollmentView = S['EnrollmentView']
 export type EnrollmentInput = S['EnrollmentInput']
 export type EnrollmentPatch = S['EnrollmentPatch']
-export type InboxView = S['InboxView']
+export type InboxPage = S['InboxPage']
+export type OrgPage = S['OrgPage']
 export type InboxItem = S['InboxItem']
 export type InboxCounts = S['InboxCounts']
 export type InboxKind = 'event' | 'bill' | 'task' | 'contact'
@@ -110,7 +111,7 @@ export const mailApi = {
       json('PATCH', { enabled }),
     ),
 
-  orgs: () => request<OrgView[]>('/api/v1/orgs', U),
+  orgs: () => request<OrgPage>('/api/v1/orgs?limit=200', U),
   createOrg: (b: OrgInput) => request<OrgView>('/api/v1/orgs', json('POST', b)),
   patchOrg: (id: string, version: number, b: OrgPatch) =>
     request<OrgView>(`/api/v1/orgs/${id}`, json('PATCH', b, version)),
@@ -142,7 +143,7 @@ export const mailApi = {
 
 /** Inbox calls made with the kiosk's device bearer (the elevated device). */
 export const inboxApi = {
-  list: (kind?: InboxKind) => request<InboxView>(`/api/v1/inbox${kind ? `?kind=${kind}` : ''}`),
+  list: (kind?: InboxKind) => request<InboxPage>(`/api/v1/inbox${kind ? `?kind=${kind}` : ''}`),
   approve: (kind: InboxKind, id: string, body?: unknown) =>
     request<void>(`/api/v1/inbox/${kind}/${id}/approve`, { method: 'POST', body: body ?? {} }),
   reject: (kind: InboxKind, id: string) =>

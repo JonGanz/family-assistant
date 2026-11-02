@@ -32,19 +32,41 @@ export const useInboxStore = defineStore('inbox', () => {
   const items = ref<InboxItem[]>([])
   const counts = ref<InboxCounts>(emptyCounts())
   const loaded = ref(false)
+  /** Cursor of the next page; null when everything is loaded. */
+  const nextBefore = ref<string | null>(null)
   const error = ref<string | null>(null)
   const total = computed(() => counts.value.total)
 
   async function load(): Promise<void> {
     try {
-      const v = await api.inbox()
-      items.value = v.items
+      const shown = items.value.length
+      let v = await api.inbox()
+      const all = [...v.items]
+      while (v.next_before && all.length < shown) {
+        v = await api.inbox(undefined, v.next_before)
+        all.push(...v.items)
+      }
+      items.value = all
       counts.value = v.counts
+      nextBefore.value = v.next_before ?? null
       error.value = null
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
     } finally {
       loaded.value = true
+    }
+  }
+
+  async function loadMore(): Promise<void> {
+    if (!nextBefore.value) return
+    try {
+      const v = await api.inbox(undefined, nextBefore.value)
+      items.value = [...items.value, ...v.items]
+      counts.value = v.counts
+      nextBefore.value = v.next_before ?? null
+      error.value = null
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
     }
   }
 
@@ -85,7 +107,9 @@ export const useInboxStore = defineStore('inbox', () => {
     total,
     loaded,
     error,
+    nextBefore,
     load,
+    loadMore,
     invalidate,
     approve,
     reject,

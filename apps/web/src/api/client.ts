@@ -66,7 +66,9 @@ export type CategoryView = S['CategoryView']
 export type DecisionPointKey = S['DecisionPointKey']
 export type LabelQueueItem = S['LabelQueueItem']
 export type MakeTaskInput = S['MakeTaskInput']
-export type InboxView = S['InboxView']
+export type TaskPage = S['TaskPage']
+export type BillPage = S['BillPage']
+export type InboxPage = S['InboxPage']
 export type InboxItem = S['InboxItem']
 export type InboxCounts = S['InboxCounts']
 export type SetupStatus = S['SetupStatus']
@@ -105,6 +107,10 @@ export interface TaskQuery {
   status?: 'open' | 'done' | 'skipped' | 'suggested' | 'any'
   from?: string
   to?: string
+  /** The previous page's `next_before` (RFC 3339). */
+  before?: string
+  /** Page size, default 50, at most 200. */
+  limit?: number
 }
 
 /** Adults get every field; children and devices only the public ones. */
@@ -118,6 +124,13 @@ type Body<K extends keyof operations> = operations[K] extends {
 
 const U = { bearer: false } as const
 const ifMatch = (version: number) => ({ 'If-Match': String(version) })
+
+function fetchTasks(q: TaskQuery = {}): Promise<TaskPage> {
+  const p = new URLSearchParams()
+  for (const [k, v] of Object.entries(q)) if (v) p.set(k, String(v))
+  const qs = p.toString()
+  return request<TaskPage>(`/api/v1/tasks${qs ? `?${qs}` : ''}`, U)
+}
 
 export const api = {
   login: (b: Body<'login'>) =>
@@ -145,7 +158,7 @@ export const api = {
     request<PairDeviceResp>('/api/v1/devices', { method: 'POST', body: { name }, ...U }),
   revokeDevice: (id: string) => request<void>(`/api/v1/devices/${id}`, { method: 'DELETE', ...U }),
   elevate: (member_id: string, pin: string) =>
-    http.post<S['ElevateResp']>('/api/v1/device/elevate', { member_id, pin }),
+    http.post<S['ElevateResp']>('/api/v1/devices/elevate', { member_id, pin }),
 
   household: () => request<HouseholdViewExt>('/api/v1/household', U),
   patchHousehold: (version: number, b: HouseholdPatch) =>
@@ -278,11 +291,18 @@ export const api = {
 
   status: () => request<StatusView>('/api/v1/status', U),
 
-  tasks: (q: TaskQuery = {}) => {
-    const p = new URLSearchParams()
-    for (const [k, v] of Object.entries(q)) if (v) p.set(k, v)
-    const qs = p.toString()
-    return request<TaskView[]>(`/api/v1/tasks${qs ? `?${qs}` : ''}`, U)
+  tasks: fetchTasks,
+  /** Every page of a (calendar-range) query: such views need all the rows, not the first page. */
+  tasksAll: async (q: TaskQuery = {}): Promise<TaskView[]> => {
+    const out: TaskView[] = []
+    let before: string | undefined
+    for (let page = 0; page < 50; page++) {
+      const r = await fetchTasks({ ...q, limit: 200, before })
+      out.push(...r.items)
+      if (!r.next_before) break
+      before = r.next_before
+    }
+    return out
   },
   task: (id: string) => request<TaskView>(`/api/v1/tasks/${id}`, U),
   createTask: (b: NewTask) => request<TaskView>('/api/v1/tasks', { method: 'POST', body: b, ...U }),
@@ -381,7 +401,8 @@ export const api = {
   away: (member: string) => request<MemberAwayView[]>(`/api/v1/members/${member}/away`, U),
   addAway: (member: string, b: NewAway) =>
     request<MemberAwayView>(`/api/v1/members/${member}/away`, { method: 'POST', body: b, ...U }),
-  deleteAway: (id: string) => request<void>(`/api/v1/away/${id}`, { method: 'DELETE', ...U }),
+  deleteAway: (member: string, id: string) =>
+    request<void>(`/api/v1/members/${member}/away/${id}`, { method: 'DELETE', ...U }),
 
   notifyPrefs: (member: string) =>
     request<NotifyPrefView>(`/api/v1/members/${member}/notify-prefs`, U),
@@ -427,7 +448,13 @@ export const api = {
       U,
     ),
 
-  inbox: (kind?: InboxKind) => request<InboxView>(`/api/v1/inbox${kind ? `?kind=${kind}` : ''}`, U),
+  inbox: (kind?: InboxKind, before?: string) => {
+    const p = new URLSearchParams()
+    if (kind) p.set('kind', kind)
+    if (before) p.set('before', before)
+    const qs = p.toString()
+    return request<InboxPage>(`/api/v1/inbox${qs ? `?${qs}` : ''}`, U)
+  },
   approveInbox: (
     kind: InboxKind,
     id: string,
@@ -436,8 +463,13 @@ export const api = {
   rejectInbox: (kind: InboxKind, id: string) =>
     request<void>(`/api/v1/inbox/${kind}/${id}/reject`, { method: 'POST', ...U }),
 
-  bills: (status?: string) =>
-    request<BillView[]>(`/api/v1/bills${status ? `?status=${status}` : ''}`, U),
+  bills: (status?: string, before?: string) => {
+    const p = new URLSearchParams()
+    if (status) p.set('status', status)
+    if (before) p.set('before', before)
+    const qs = p.toString()
+    return request<BillPage>(`/api/v1/bills${qs ? `?${qs}` : ''}`, U)
+  },
   patchBill: (id: string, version: number, b: BillPatch) =>
     request<BillView>(`/api/v1/bills/${id}`, {
       method: 'PATCH',
