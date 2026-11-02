@@ -88,6 +88,14 @@ body {
     line-height: 1.5;
 }
 
+/* Kiosk dashboard: the page never scrolls, so a stray drag cannot bring the browser bar back. */
+html.kiosk-lock,
+html.kiosk-lock body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
 a {
     color: var(--color-accent);
 }

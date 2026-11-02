@@ -50,13 +50,33 @@ const updatedAt = computed(() =>
 let stopKeepAlive: (() => void) | undefined
 let watchdog: Watchdog | undefined
 
+// Fullscreen (for the Echo Show's browser bar): a button, since browsers only allow it on a tap.
+const fullscreen = ref(false)
+const fullscreenSupported =
+  typeof document !== 'undefined' && !!document.documentElement.requestFullscreen
+const syncFullscreen = () => (fullscreen.value = document.fullscreenElement !== null)
+async function toggleFullscreen(): Promise<void> {
+  try {
+    if (document.fullscreenElement) await document.exitFullscreen()
+    else await document.documentElement.requestFullscreen()
+  } catch {
+    /* refused (no gesture, or unsupported): stay as is */
+  }
+  syncFullscreen()
+}
+
 onMounted(() => {
+  // The page itself must not scroll: a drag that scrolls it brings the browser bar back.
+  document.documentElement.classList.add('kiosk-lock')
+  document.addEventListener('fullscreenchange', syncFullscreen)
   if (!hasToken.value) return
   stopKeepAlive = startKeepAlive()
   watchdog = startWatchdog()
   void store.start(() => watchdog?.heartbeat())
 })
 onUnmounted(() => {
+  document.documentElement.classList.remove('kiosk-lock')
+  document.removeEventListener('fullscreenchange', syncFullscreen)
   clearInterval(remainingTimer)
   stopKeepAlive?.()
   watchdog?.stop()
@@ -133,6 +153,15 @@ const mmss = computed(
       @add="flow?.beginAdd()"
     >
       <template #nav-end>
+        <button
+          v-if="fullscreenSupported"
+          class="try"
+          data-testid="fullscreen"
+          :aria-pressed="fullscreen"
+          @click="toggleFullscreen"
+        >
+          {{ fullscreen ? S.exitFullscreen : S.fullscreen }}
+        </button>
         <span class="conn" :class="link" data-testid="connection" :data-status="link">
           ● {{ connLabel }}
         </span>

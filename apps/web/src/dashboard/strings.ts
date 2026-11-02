@@ -15,6 +15,8 @@ export const S = {
   rainChance: 'Rain',
   members: 'Members',
   elevate: 'Unlock for adults',
+  fullscreen: 'Fullscreen',
+  exitFullscreen: 'Exit fullscreen',
   navHome: 'Home',
   navWeek: 'Week',
   navWhiteboard: 'Whiteboard',
