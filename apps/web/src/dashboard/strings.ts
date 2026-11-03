@@ -75,7 +75,6 @@ export const S = {
   cancel: 'Cancel',
   addFailed: 'Could not add the task.',
   completedToast: (title: string) => `Done: ${title}`,
-  routineDone: 'All done. Well done!',
   keyDate: 'Key date',
   // members badge
   approvalsWaiting: (n: number) => `${n} waiting for approval`,

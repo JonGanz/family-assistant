@@ -244,7 +244,9 @@ describe('routine panel', () => {
     const done = run({
       steps: [{ step: 's1', ord: 0, text: 'Brush teeth', done_at: '2026-10-24T11:00:00Z' }],
     })
-    expect(canvas(data({ routines: [done] }), [{ kind: 'routine' }]).text()).toContain('Well done')
+    expect(canvas(data({ routines: [done] }), [{ kind: 'routine' }]).text()).not.toContain(
+      'Well done',
+    )
   })
 })
 

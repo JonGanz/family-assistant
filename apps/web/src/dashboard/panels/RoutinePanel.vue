@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import ProgressBar from '../../components/tasks/ProgressBar.vue'
-import { S } from '../strings'
 import { shownRuns } from '../tasksModel'
 import type { PanelProps } from '../types'
 
@@ -38,7 +37,6 @@ const runs = computed(() =>
         :label="x.run.routine_name"
         size="kiosk"
       />
-      <p v-if="x.done" class="celebrate" role="status">{{ S.routineDone }}</p>
       <ul>
         <li v-for="st in x.run.steps" :key="st.step">
           <button
@@ -87,12 +85,6 @@ h2 {
 .who {
   color: var(--color-muted);
   font-weight: 400;
-}
-.celebrate {
-  margin: 0;
-  font-size: var(--kiosk-font-base);
-  color: var(--color-success);
-  font-weight: 600;
 }
 ul {
   list-style: none;
