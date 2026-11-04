@@ -2,6 +2,11 @@
 import type { BillView } from "./BillView";
 import type { ContactSuggestionView } from "./ContactSuggestionView";
 import type { EventProposalView } from "./EventProposalView";
+import type { MessageId } from "./MessageId";
 import type { TaskView } from "./TaskView";
 
-export type InboxItem = { "kind": "event", event: EventProposalView, } | { "kind": "bill", bill: BillView, } | { "kind": "task", task: TaskView, } | { "kind": "contact", contact: ContactSuggestionView, };
+export type InboxItem = { "kind": "event", event: EventProposalView, } | { "kind": "bill", bill: BillView, } | { "kind": "task", task: TaskView, 
+/**
+ * The email that suggested it (`source_ref.message_id`).
+ */
+message?: MessageId | null, } | { "kind": "contact", contact: ContactSuggestionView, };

@@ -2263,6 +2263,7 @@ export interface components {
         } | {
             /** @enum {string} */
             kind: "task";
+            message?: null | components["schemas"]["MessageId"];
             task: components["schemas"]["TaskView"];
         } | {
             contact: components["schemas"]["ContactSuggestionView"];

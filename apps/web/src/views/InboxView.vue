@@ -71,6 +71,7 @@ const approve = (kind: InboxKind, id: string, edits: Approval) => inbox.approve(
         <TaskItem
           v-else-if="i.kind === 'task'"
           :task="i.task"
+          :message="i.message"
           :tz="household.tz"
           :members="members.items"
           @approve="(e) => approve('task', i.task.id, e)"

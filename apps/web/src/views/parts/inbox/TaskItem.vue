@@ -3,7 +3,13 @@ import { computed, reactive } from 'vue'
 import type { Member, TaskApproval, TaskView } from '../../../api/client'
 import { fmt, fromLocalInput, toLocalInput } from '../../../components/mail/format'
 
-const props = defineProps<{ task: TaskView; tz: string; members: Member[]; busy?: boolean }>()
+const props = defineProps<{
+  task: TaskView
+  message?: string | null
+  tz: string
+  members: Member[]
+  busy?: boolean
+}>()
 const emit = defineEmits<{ approve: [TaskApproval]; reject: [] }>()
 
 const form = reactive({
@@ -48,6 +54,9 @@ function approve() {
       Suggested for {{ names.length ? names.join(', ') : 'nobody yet' }}
       <span v-if="task.due_at">, due {{ fmt(task.due_at, tz) }}</span
       >.
+      <RouterLink v-if="message" :to="{ name: 'mail-detail', params: { id: message } }"
+        >Open message</RouterLink
+      >
     </p>
     <div class="actions">
       <button type="button" :disabled="busy" @click="approve">Approve</button>

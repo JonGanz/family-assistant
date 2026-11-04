@@ -10610,6 +10610,17 @@
                   "task"
                 ]
               },
+              "message": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/MessageId",
+                    "description": "The email that suggested it (`source_ref.message_id`)."
+                  }
+                ]
+              },
               "task": {
                 "$ref": "#/components/schemas/TaskView"
               }

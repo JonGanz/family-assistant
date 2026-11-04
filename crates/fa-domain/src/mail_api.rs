@@ -969,10 +969,21 @@ dto!(
 #[serde(tag = "kind", rename_all = "snake_case")]
 #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
 pub enum InboxItem {
-    Event { event: EventProposalView },
-    Bill { bill: BillView },
-    Task { task: TaskView },
-    Contact { contact: ContactSuggestionView },
+    Event {
+        event: EventProposalView,
+    },
+    Bill {
+        bill: BillView,
+    },
+    Task {
+        task: TaskView,
+        /// The email that suggested it (`source_ref.message_id`).
+        #[ts(as = "Option<MessageId>", optional = nullable)]
+        message: Option<MessageId>,
+    },
+    Contact {
+        contact: ContactSuggestionView,
+    },
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, TS, ToSchema)]

@@ -1029,7 +1029,7 @@ test!(inbox_lists_all_kinds_by_viewer, e, {
                 assert_eq!(x.status, BillStatus::Proposed);
                 kinds.push("bill");
             }
-            InboxItem::Task { task: x } => {
+            InboxItem::Task { task: x, .. } => {
                 assert_eq!(x.id, task);
                 assert_eq!(x.status, TaskStatus::Suggested);
                 kinds.push("task");

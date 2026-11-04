@@ -144,7 +144,7 @@ fn item_uuid(i: &InboxItem) -> Uuid {
     match i {
         InboxItem::Event { event } => event.id.as_uuid(),
         InboxItem::Bill { bill } => bill.id.as_uuid(),
-        InboxItem::Task { task } => task.id.as_uuid(),
+        InboxItem::Task { task, .. } => task.id.as_uuid(),
         InboxItem::Contact { contact } => contact.id.as_uuid(),
     }
 }
@@ -264,7 +264,10 @@ impl InboxService {
             }
             stamped.push((
                 r.task.value.created_at,
-                InboxItem::Task { task: task_view(r) },
+                InboxItem::Task {
+                    task: task_view(r),
+                    message: task_message(r),
+                },
             ));
         }
         let orgs: HashMap<_, _> = OrgRepo::list(&mut tx, true)
