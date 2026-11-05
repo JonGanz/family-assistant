@@ -1707,6 +1707,7 @@ export interface components {
              */
             due_on?: string | null;
             external_url?: string | null;
+            extracted_by: components["schemas"]["ExtractOrigin"];
             id: components["schemas"]["BillId"];
             message?: null | components["schemas"]["MessageId"];
             payee: string;
@@ -2057,6 +2058,7 @@ export interface components {
              */
             end_at: string;
             external_url?: string | null;
+            extracted_by: components["schemas"]["ExtractOrigin"];
             /** @description Sender display text. */
             from_label?: string | null;
             id: components["schemas"]["EventId"];
@@ -2115,6 +2117,11 @@ export interface components {
              */
             route_threshold: number;
         };
+        /**
+         * @description Who produced an extracted event, bill or task.
+         * @enum {string}
+         */
+        ExtractOrigin: "rules" | "llm";
         /** @enum {string} */
         Gender: "female" | "male" | "other";
         /** @description Words in mail that point at a gender-specific group ("girls' soccer"). */
@@ -3426,6 +3433,7 @@ export interface components {
             definition?: null | components["schemas"]["TaskDefinitionId"];
             /** Format: date-time */
             due_at?: string | null;
+            extracted_by: components["schemas"]["ExtractOrigin"];
             id: components["schemas"]["TaskId"];
             list: components["schemas"]["TaskListId"];
             list_name: string;

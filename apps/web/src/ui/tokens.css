@@ -1,0 +1,129 @@
+/*
+ * UI tokens (M4, D-095). Every colour is a color-mix() of the theme variables that applyTheme
+ * (src/themes/index.ts) writes, so all theme families and variants work unchanged:
+ *   --color-bg  --color-surface  --color-surface-2  --color-border  --color-muted  --color-text
+ *   --color-on-accent  --color-accent  --color-danger  --color-success  --color-warning
+ * Tone steps run bg -> surface -> surface-2, the direction each theme already defines as "raised".
+ * Colour tokens use only `var(--color-y)` and `color-mix(in srgb, A p%, B)`: ui/tokens.test.ts parses this file to check contrast for every theme variant.
+ */
+:root {
+    /* Colour */
+    --ui-surface: var(--color-bg);
+    --ui-surface-container-lowest: var(--color-bg);
+    --ui-surface-container-low: color-mix(in srgb, var(--color-bg) 50%, var(--color-surface));
+    --ui-surface-container-mid: var(--color-surface);
+    --ui-surface-container-high: color-mix(
+        in srgb,
+        var(--color-surface) 50%,
+        var(--color-surface-2)
+    );
+    --ui-surface-container-highest: var(--color-surface-2);
+    --ui-on-surface: var(--color-text);
+    --ui-on-surface-variant: var(--color-muted);
+    --ui-outline: color-mix(in srgb, var(--color-muted) 70%, var(--color-bg));
+    --ui-outline-variant: var(--color-border);
+    --ui-primary: var(--color-accent);
+    --ui-on-primary: var(--color-on-accent);
+    --ui-primary-container: color-mix(in srgb, var(--color-accent) 7%, var(--color-bg));
+    --ui-on-primary-container: var(--color-text);
+    --ui-error: color-mix(in srgb, var(--color-danger) 50%, var(--color-text));
+    --ui-on-error: var(--color-bg);
+    --ui-error-container: color-mix(in srgb, var(--color-danger) 7%, var(--color-bg));
+    --ui-on-error-container: var(--color-text);
+    --ui-success: var(--color-success);
+    --ui-warning: var(--color-warning);
+    --ui-scrim: color-mix(in srgb, var(--color-bg) 35%, transparent);
+    --ui-inverse-surface: var(--color-text);
+    --ui-inverse-on-surface: var(--color-bg);
+    --ui-inverse-primary: color-mix(in srgb, var(--color-accent) 70%, var(--color-bg));
+    /* State layers: laid over a component whose text colour is `currentColor` */
+    --ui-state-hover: color-mix(in srgb, currentColor 8%, transparent);
+    --ui-state-focus: color-mix(in srgb, currentColor 12%, transparent);
+    --ui-state-pressed: color-mix(in srgb, currentColor 12%, transparent);
+
+    /* Space */
+    --ui-space-1: 4px;
+    --ui-space-2: 8px;
+    --ui-space-3: 12px;
+    --ui-space-4: 16px;
+    --ui-space-5: 24px;
+    --ui-space-6: 32px;
+    --ui-space-7: 48px;
+    --ui-space-8: 64px;
+
+    /* Shape */
+    --ui-radius-xs: 4px;
+    --ui-radius-sm: 8px;
+    --ui-radius-md: 12px;
+    --ui-radius-lg: 16px;
+    --ui-radius-xl: 28px;
+    --ui-radius-full: 9999px;
+
+    /* Elevation: shadow in light themes; dark themes rely on the raised tones */
+    --ui-shadow: color-mix(in srgb, var(--color-text) 22%, transparent);
+    --ui-elev-0: none;
+    --ui-elev-1:
+        0 1px 2px var(--ui-shadow),
+        0 1px 3px 1px color-mix(in srgb, var(--ui-shadow) 60%, transparent);
+    --ui-elev-2:
+        0 1px 2px var(--ui-shadow),
+        0 2px 6px 2px color-mix(in srgb, var(--ui-shadow) 60%, transparent);
+    --ui-elev-3:
+        0 1px 3px var(--ui-shadow),
+        0 4px 8px 3px color-mix(in srgb, var(--ui-shadow) 60%, transparent);
+
+    /* Type scale (font shorthands) */
+    --ui-type-display-lg: 400 3.5625rem/4rem var(--font-sans);
+    --ui-type-display-md: 400 2.8125rem/3.25rem var(--font-sans);
+    --ui-type-display-sm: 400 2.25rem/2.75rem var(--font-sans);
+    --ui-type-headline-lg: 400 2rem/2.5rem var(--font-sans);
+    --ui-type-headline-md: 400 1.75rem/2.25rem var(--font-sans);
+    --ui-type-headline-sm: 400 1.5rem/2rem var(--font-sans);
+    --ui-type-title-lg: 400 1.375rem/1.75rem var(--font-sans);
+    --ui-type-title-md: 500 1rem/1.5rem var(--font-sans);
+    --ui-type-title-sm: 500 0.875rem/1.25rem var(--font-sans);
+    --ui-type-body-lg: 400 1rem/1.5rem var(--font-sans);
+    --ui-type-body-md: 400 0.875rem/1.25rem var(--font-sans);
+    --ui-type-body-sm: 400 0.75rem/1rem var(--font-sans);
+    --ui-type-label-lg: 500 0.875rem/1.25rem var(--font-sans);
+    --ui-type-label-md: 500 0.75rem/1rem var(--font-sans);
+    --ui-type-label-sm: 500 0.6875rem/1rem var(--font-sans);
+
+    /* Motion */
+    --ui-motion-short: 150ms;
+    --ui-motion-medium: 250ms;
+    --ui-ease: cubic-bezier(0.2, 0, 0, 1);
+
+    /* Sizes */
+    --ui-touch: 48px;
+    --ui-focus-ring: 2px solid var(--ui-primary);
+}
+
+:root[data-theme-mode='dark'] {
+    --ui-shadow: color-mix(in srgb, var(--color-bg) 40%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --ui-motion-short: 0ms;
+        --ui-motion-medium: 0ms;
+    }
+}
+
+/* Gallery helper: shows the focus ring without keyboard focus */
+.ui-show-focus
+    .ui-demo
+    :is(
+        button,
+        a,
+        input,
+        select,
+        textarea,
+        [role='switch'],
+        [role='radio'],
+        [role='checkbox'],
+        [role='tab']
+    ) {
+    outline: var(--ui-focus-ring);
+    outline-offset: 2px;
+}

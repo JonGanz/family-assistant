@@ -57,6 +57,7 @@ fn task_view(r: &TaskRow) -> TaskView {
                 done_by: s.done_by,
             })
             .collect(),
+        extracted_by: r.extracted_by,
         claimed_by: t.claimed_by,
         claimed_until: t.claimed_until,
         completed_at: t.completed_at,
@@ -232,6 +233,7 @@ impl InboxService {
                         from_label: r.message_from.or(r.org_name),
                         external_url: url,
                         write_error: e.write_error.clone(),
+                        extracted_by: e.extracted_by,
                         version: e.version,
                     },
                 },

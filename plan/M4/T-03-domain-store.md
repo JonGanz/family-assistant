@@ -5,7 +5,7 @@ milestone: M4
 wave: 1
 depends_on: [T-01]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-domain/**", "crates/fa-store/**", "crates/fa-mail/src/process/views.rs (extracted_by field only)", "crates/fa-mail/src/inbox.rs (extracted_by field only)", "crates/fa-calendar/src/ingest.rs (extracted_by field only)", "crates/fa-tasks/src/service.rs (extracted_by field only)", "crates/fa-tasks/tests/tasks.rs (extracted_by field only)", "crates/fa-api/src/mail.rs (extracted_by field only)"]
 decisions: [D-093, D-094, D-029, D-057, D-060]
 ---
@@ -74,3 +74,16 @@ You are a sub-agent implementing one task of milestone M4 of the Family Assistan
   - every field-only edit outside your crates;
   - "list what outside your paths needs changing";
   - README changes needed: none expected.
+
+## Outcome (T-03 report)
+- **Migration** `20261104000001_m4_llm`:
+  - adds `llm_endpoint`, `ai_settings` and `llm_call` with RLS;
+  - adds `extracted_by` to `event`, `bill` and `task`;
+  - allows `api_key` in the `secret.kind` CHECK.
+- **fa-domain:** `ai.rs`, `SecretKind::ApiKey`, and `extracted_by` on `BillView`, `EventProposalView` and `TaskView`.
+- **fa-store:** `repo/ai.rs` (`LlmEndpointRepo`, `AiSettingsRepo`, `LlmCallRepo`, `ExtractedByRepo`, `DecisionRepo::stage_counts_since`) and `tests/m4.rs` (7 tests).
+- **Deviations:**
+  - `BillView` reads `extracted_by` through `ExtractedByRepo::get`, an extra query per bill, because the domain `Bill` was not extended.
+  - The task view fetches `extracted_by` with a second runtime query, because the main one is a `query!` macro.
+  - The decision view already carried `stage`.
+- **For T-06:** call `ExtractedByRepo::set` after inserting LLM items; store the key with `SecretRepo::put(.., "llm_endpoint", id, SecretKind::ApiKey, ..)`.

@@ -5,7 +5,7 @@ milestone: M4
 wave: 1
 depends_on: [T-01]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-llm/** (except src/provider.rs)"]
 decisions: [D-093, D-094]
 ---
@@ -61,3 +61,8 @@ You are a sub-agent implementing one task of milestone M4 of the Family Assistan
   - any deviation from the plan's signatures;
   - "list what outside your paths needs changing" (for example, workspace deps);
   - README changes needed: none.
+
+## Outcome (T-04 report)
+- **Built:** `fa-llm` (`client.rs`, `schema.rs`, `tests/client.rs` with 6 axum-stub tests). It has both dialects, `models`, `ping` and `default_http()` (redirects off).
+- **Schema:** `json_schema_for` strips `$schema` and sets `additionalProperties: false`.
+- **Follow-up for T-06:** OpenAI strict mode also wants every property listed in `required`, so `Option` fields need handling if a server enforces it. Ollama does not enforce it.

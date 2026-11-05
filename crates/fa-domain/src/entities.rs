@@ -54,7 +54,11 @@ pub(crate) use text_enum;
 
 text_enum!(Role { Adult, Child });
 text_enum!(DeviceKind { Dashboard });
-text_enum!(SecretKind { OauthToken, Other });
+text_enum!(SecretKind {
+    OauthToken,
+    Other,
+    ApiKey
+});
 text_enum!(Units { Metric, Imperial });
 text_enum!(
     /// First day of the week on calendars; default Monday.

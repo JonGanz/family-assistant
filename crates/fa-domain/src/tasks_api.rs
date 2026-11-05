@@ -310,6 +310,7 @@ dto!(
         /// Until when a reopen restores the definition.
         pub undo_until: Option<DateTime<Utc>>,
         pub score: f64,
+        pub extracted_by: crate::ai::ExtractOrigin,
         pub version: i32,
     }
 );

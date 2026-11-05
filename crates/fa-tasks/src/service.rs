@@ -251,6 +251,7 @@ impl ViewEnv {
                     done_by: s.done_by,
                 })
                 .collect(),
+            extracted_by: r.extracted_by,
             claimed_by: t.claimed_by,
             claimed_until: t.claimed_until,
             completed_at: t.completed_at,

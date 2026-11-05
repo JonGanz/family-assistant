@@ -5,7 +5,7 @@ milestone: M4
 wave: 1
 depends_on: [T-01]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/ui/**", "apps/web/src/main.ts (the tokens import line only)", "apps/web/src/router/index.ts (the DEV-only /ui-gallery block only)", "apps/web/package.json", "apps/web/pnpm-lock.yaml", "apps/web/vite.config.ts", "apps/web/env.d.ts", "apps/web/playwright.config.ts", "apps/web/e2e/ui-shots.spec.ts", "scripts/ui-shots.sh"]
 decisions: [D-095, D-096, D-097, D-079, D-081]
 ---
@@ -87,3 +87,19 @@ The paths in `owns` above. In `main.ts` you add only `import './ui/tokens.css'` 
   - any family whose tones looked poor, with the fix;
   - **questions for the user's R1 review** (density, corner radius, card style, icon weight);
   - "list what outside your paths needs changing"
+
+## Outcome (T-02 report)
+- **Built:**
+  - the `ui/` library: tokens, 31 components plus the internal `UiOverlay`, `icons.ts` with 44 semantic names, and the composables `useBreakpoint`, `useSnackbar`, `useInstantSave`, `useFormDraft` and `useFocusTrap`;
+  - the dev-only `/ui-gallery`;
+  - `scripts/ui-shots.sh` and `e2e/ui-shots.spec.ts` (`@shots`, enabled by `UI_SHOTS`).
+- **Icons:** `unplugin-icons` 24.0.0 with `@iconify-json/material-symbols` works with Vite 8, vue-tsc and vitest.
+- **Contrast:** a test checks the tokens in all 36 theme variants.
+- **Deviations:**
+  - The gallery sits in the setup layout, so the 1280 px shot is narrow; a bare layout is a follow-up.
+  - `useFormDraft` confirms with `window.confirm`.
+  - `UiTextField` puts its label above the field.
+- **Follow-ups:**
+  - Theme data: the accent and on-accent pair is below AA in Solarized light, Tokyo Night day and Rose Pine dawn, and Seoul256's thin variants reach only 4:1.
+  - README: `ui-shots.sh` (for T-17).
+  - The `--all` shots have not run yet.

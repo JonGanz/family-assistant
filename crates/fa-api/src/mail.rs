@@ -35,7 +35,8 @@ use fa_mail::setup::SetupService;
 use fa_mail::sources::SourceService;
 use fa_mail::{MailDeps, MailError, actions::ActionService};
 use fa_store::{
-    BillRepo, ChangeBus, EventRepo, MailActionRepo, MailSourceRepo, MessageRepo, TaskRepo,
+    BillRepo, ChangeBus, EventRepo, ExtractTarget, ExtractedByRepo, MailActionRepo, MailSourceRepo,
+    MessageRepo, TaskRepo,
 };
 use serde::Deserialize;
 use utoipa::IntoParams;
@@ -1377,6 +1378,8 @@ async fn bill_views(
             task_done,
             message,
             external_url,
+            extracted_by: ExtractedByRepo::get(&mut tx, ExtractTarget::Bill, v.id.as_uuid())
+                .await?,
             version: b.version,
         });
     }

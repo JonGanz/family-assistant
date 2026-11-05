@@ -87,6 +87,7 @@ export function sampleTasks(
       visible_from: null,
       status: 'open',
       origin: 'manual',
+      extracted_by: 'rules',
       priority_flag: i === 0 ? 'high' : 'normal',
       calendar_display: i === 3 ? 'always' : 'hidden',
       assignees: m ? [m.id] : [],

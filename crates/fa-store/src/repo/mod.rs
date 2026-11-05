@@ -8,6 +8,7 @@ use crate::{Result, StoreError};
 
 mod account;
 mod advisory;
+mod ai;
 mod audit;
 mod avatar;
 mod bill;
@@ -55,6 +56,7 @@ mod weather_rule;
 
 pub use account::{AccountLockout, UserAccountRepo};
 pub use advisory::AdvisoryRepo;
+pub use ai::{AiSettingsRepo, ExtractTarget, ExtractedByRepo, LlmCallRepo, LlmEndpointRepo};
 pub use audit::AuditRepo;
 pub use avatar::MemberAvatarRepo;
 pub use bill::{BillRepo, InboxRepo, MailActionRepo, NewMailAction};
@@ -120,6 +122,7 @@ pub(crate) fn secret_kind_str(k: SecretKind) -> &'static str {
     match k {
         SecretKind::OauthToken => "oauth_token",
         SecretKind::Other => "other",
+        SecretKind::ApiKey => "api_key",
     }
 }
 

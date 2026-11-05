@@ -1,6 +1,7 @@
 import { execSync } from 'node:child_process'
 import { fileURLToPath, URL } from 'node:url'
 import vue from '@vitejs/plugin-vue'
+import Icons from 'unplugin-icons/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vitest/config'
 
@@ -29,6 +30,7 @@ export default defineConfig({
   },
   plugins: [
     vue(),
+    Icons({ compiler: 'vue3' }),
     VitePWA({
       registerType: 'autoUpdate',
       // Registered by hand in src/lib/pwa.ts (no workbox-window), and only in a secure context (D-072).

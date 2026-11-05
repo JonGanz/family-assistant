@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use utoipa::ToSchema;
 
+use crate::ai::ExtractOrigin;
 use crate::entities::*;
 use crate::ids::*;
 use crate::mail::*;
@@ -866,6 +867,7 @@ dto!(
         pub message: Option<MessageId>,
         #[ts(optional = nullable)]
         pub external_url: Option<String>,
+        pub extracted_by: ExtractOrigin,
         pub version: i32,
     }
 );
@@ -944,6 +946,7 @@ dto!(
         pub external_url: Option<String>,
         #[ts(optional = nullable)]
         pub write_error: Option<String>,
+        pub extracted_by: ExtractOrigin,
         pub version: i32,
     }
 );

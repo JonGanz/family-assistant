@@ -9,8 +9,8 @@ use fa_domain::{
     MessageId, MessageSummary, SectionView, TaskStatus, message_external_url,
 };
 use fa_store::{
-    BillRepo, DecisionPointRepo, DecisionRepo, EventRepo, MailActionRepo, MailSourceRepo,
-    MessageRepo, TaskRepo, Versioned,
+    BillRepo, DecisionPointRepo, DecisionRepo, EventRepo, ExtractTarget, ExtractedByRepo,
+    MailActionRepo, MailSourceRepo, MessageRepo, TaskRepo, Versioned,
 };
 use sqlx::PgConnection;
 
@@ -101,6 +101,7 @@ pub async fn bill_view(
         task_done,
         message: v.message_id,
         external_url: url,
+        extracted_by: ExtractedByRepo::get(conn, ExtractTarget::Bill, v.id.as_uuid()).await?,
         version: b.version,
     })
 }

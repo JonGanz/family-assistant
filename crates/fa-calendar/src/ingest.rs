@@ -60,6 +60,7 @@ fn proposal_view(e: EventFull, from_label: Option<String>) -> EventProposalView 
             .and_then(|v| v.as_str())
             .map(str::to_owned),
         write_error: e.write_error,
+        extracted_by: e.extracted_by,
         version: e.version,
     }
 }

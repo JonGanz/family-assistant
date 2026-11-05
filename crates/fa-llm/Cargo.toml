@@ -1,0 +1,26 @@
+[package]
+name = "fa-llm"
+description = "Family Assistant: System 2 client over an OpenAI-compatible endpoint (M4, D-093)"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+repository.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+reqwest.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+thiserror.workspace = true
+tracing.workspace = true
+url.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+axum.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }

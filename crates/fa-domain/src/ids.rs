@@ -101,6 +101,7 @@ id_type!(MailRuleId);
 id_type!(CategoryId);
 id_type!(BillId);
 id_type!(MailActionId);
+id_type!(LlmEndpointId);
 
 #[cfg(test)]
 mod tests {

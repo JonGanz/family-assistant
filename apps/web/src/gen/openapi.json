@@ -8516,6 +8516,7 @@
           "status",
           "confidence",
           "task_done",
+          "extracted_by",
           "version"
         ],
         "properties": {
@@ -8551,6 +8552,9 @@
               "string",
               "null"
             ]
+          },
+          "extracted_by": {
+            "$ref": "#/components/schemas/ExtractOrigin"
           },
           "id": {
             "$ref": "#/components/schemas/BillId"
@@ -9832,6 +9836,7 @@
           "confidence",
           "pending_cancel",
           "members",
+          "extracted_by",
           "version"
         ],
         "properties": {
@@ -9852,6 +9857,9 @@
               "string",
               "null"
             ]
+          },
+          "extracted_by": {
+            "$ref": "#/components/schemas/ExtractOrigin"
           },
           "from_label": {
             "type": [
@@ -10046,6 +10054,14 @@
             "description": "Routing confidence needed for auto write, 0..1."
           }
         }
+      },
+      "ExtractOrigin": {
+        "type": "string",
+        "description": "Who produced an extracted event, bill or task.",
+        "enum": [
+          "rules",
+          "llm"
+        ]
       },
       "Gender": {
         "type": "string",
@@ -15156,6 +15172,7 @@
           "assignee_away",
           "steps",
           "score",
+          "extracted_by",
           "version"
         ],
         "properties": {
@@ -15222,6 +15239,9 @@
               "null"
             ],
             "format": "date-time"
+          },
+          "extracted_by": {
+            "$ref": "#/components/schemas/ExtractOrigin"
           },
           "id": {
             "$ref": "#/components/schemas/TaskId"

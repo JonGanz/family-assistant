@@ -176,6 +176,7 @@ impl SecretRepo {
         for r in rows {
             let kind = match r.kind.as_str() {
                 "oauth_token" => SecretKind::OauthToken,
+                "api_key" => SecretKind::ApiKey,
                 _ => SecretKind::Other,
             };
             let plain = key.open(

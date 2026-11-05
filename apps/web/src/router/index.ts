@@ -166,6 +166,16 @@ export const routes: RouteRecordRaw[] = [
       },
     ],
   },
+  ...(import.meta.env.DEV
+    ? [
+        {
+          path: '/ui-gallery',
+          name: 'ui-gallery',
+          component: () => import('../ui/UiGallery.vue'),
+          meta: { layout: 'setup', auth: 'device' },
+        } satisfies RouteRecordRaw,
+      ]
+    : []),
   {
     path: '/dashboard',
     name: 'dashboard',

@@ -4,6 +4,7 @@
 //! `export_to = "../../../apps/web/src/gen/types/"` (relative to ts-rs's default
 //! `<crate>/bindings` dir). Files are written by `cargo test -p fa-domain`.
 
+pub mod ai;
 pub mod api;
 pub mod authz;
 pub mod calendar;
@@ -24,6 +25,7 @@ pub mod theme;
 pub mod timefmt;
 pub mod validation;
 
+pub use ai::*;
 pub use api::*;
 pub use authz::*;
 pub use dashboard::*;

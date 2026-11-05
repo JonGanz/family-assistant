@@ -2,8 +2,9 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Duration, Utc};
 use fa_domain::{
-    CalendarDisplay, DeviceId, HouseholdId, ListCompletionPolicy, MemberId, PriorityFlag, Task,
-    TaskDefinitionId, TaskId, TaskListId, TaskOrigin, TaskStatus, TaskStep, WeatherRuleId,
+    CalendarDisplay, DeviceId, ExtractOrigin, HouseholdId, ListCompletionPolicy, MemberId,
+    PriorityFlag, Task, TaskDefinitionId, TaskId, TaskListId, TaskOrigin, TaskStatus, TaskStep,
+    WeatherRuleId,
 };
 use sqlx::PgConnection;
 use uuid::Uuid;
@@ -58,6 +59,7 @@ pub struct TaskRow {
     pub completion_policy: ListCompletionPolicy,
     pub assignees: Vec<MemberId>,
     pub steps: Vec<TaskStep>,
+    pub extracted_by: ExtractOrigin,
 }
 
 struct Row {
@@ -377,6 +379,13 @@ impl TaskRepo {
         let task_ids: Vec<Uuid> = rows.iter().map(|r| r.id).collect();
         let mut assignees = assignees_of(conn, &task_ids).await?;
         let mut steps = steps_of(conn, &task_ids).await?;
+        let extracted: HashMap<Uuid, String> =
+            sqlx::query_as("SELECT id, extracted_by FROM task WHERE id = ANY($1)")
+                .bind(&task_ids)
+                .fetch_all(&mut *conn)
+                .await?
+                .into_iter()
+                .collect();
         rows.into_iter()
             .map(|r| {
                 let id = r.id;
@@ -414,6 +423,9 @@ impl TaskRepo {
                     completion_policy: parse_enum(&r.completion_policy)?,
                     assignees: assignees.remove(&id).unwrap_or_default(),
                     steps: steps.remove(&id).unwrap_or_default(),
+                    extracted_by: extracted
+                        .get(&id)
+                        .map_or(Ok(ExtractOrigin::Rules), |s| parse_enum(s))?,
                 })
             })
             .collect()

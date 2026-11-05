@@ -15,6 +15,9 @@ members = [
     "crates/fa-pipeline",
     "crates/fa-rules",
     "crates/fa-mail",
+    "crates/fa-llm",
+    "crates/fa-recipe",
+    "crates/fa-eval",
     "bins/fa-server",
     "bins/fa-gpu-agent",
 ]
@@ -58,6 +61,9 @@ fa-notify = { path = "crates/fa-notify" }
 fa-pipeline = { path = "crates/fa-pipeline" }
 fa-rules = { path = "crates/fa-rules" }
 fa-mail = { path = "crates/fa-mail" }
+fa-llm = { path = "crates/fa-llm" }
+fa-recipe = { path = "crates/fa-recipe" }
+fa-eval = { path = "crates/fa-eval" }
 
 # async and HTTP
 tokio = { version = "1.54.1", features = ["full"] }
@@ -123,6 +129,9 @@ aho-corasick = "1.1.5"
 strsim = "0.11.1"
 async-imap = { version = "0.12.0", default-features = false, features = ["runtime-tokio"] }
 tokio-rustls = "0.26.6"
+
+# ai (M4)
+schemars = "1.2.3"
 webpki-roots = "1.0.11"
 
 # dev-only

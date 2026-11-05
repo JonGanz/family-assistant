@@ -48,6 +48,7 @@ pub struct EventFull {
     pub decided_at: Option<DateTime<Utc>>,
     /// The event's own members (`event_member`).
     pub members: Vec<MemberId>,
+    pub extracted_by: fa_domain::ExtractOrigin,
 }
 
 /// A proposal as the inbox shows it.
@@ -96,6 +97,7 @@ struct EvRow {
     decided_by: Option<Uuid>,
     decided_at: Option<DateTime<Utc>>,
     member_ids: Vec<Uuid>,
+    extracted_by: String,
 }
 
 #[derive(sqlx::FromRow)]
@@ -113,7 +115,7 @@ const EV: &str = "e.id, e.household_id, e.calendar_id, e.remote_uid, e.instance_
     e.is_private, e.cancelled, e.origin, e.status, e.confidence, e.source_ref, e.dedupe_key,
     e.remote_etag, e.created_at, e.updated_at, e.version, e.message_id, e.org_id,
     e.target_calendar_id, e.route_confidence, e.pending_cancel, e.write_error, e.decided_by,
-    e.decided_at,
+    e.decided_at, e.extracted_by,
     ARRAY(SELECT member_id FROM event_member WHERE event_id = e.id ORDER BY member_id) AS member_ids";
 
 impl TryFrom<EvRow> for EventFull {
@@ -130,6 +132,7 @@ impl TryFrom<EvRow> for EventFull {
             decided_by: r.decided_by.map(Into::into),
             decided_at: r.decided_at,
             members: r.member_ids.into_iter().map(Into::into).collect(),
+            extracted_by: parse_enum(&r.extracted_by)?,
             event: Event {
                 id: r.id.into(),
                 household_id: r.household_id.into(),
