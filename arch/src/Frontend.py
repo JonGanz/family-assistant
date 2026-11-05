@@ -2,13 +2,13 @@ import sys; sys.path.insert(0, "tools")
 from drawio import Page, write, COMP, EXT, TITLE, PKG, NOTE, NODE, FRAME
 
 # Page 1: Components (UML 2 component diagram of apps/web)
-pc = Page("components", "Components", 1400, 850)
+pc = Page("components", "Components", 1400, 1000)
 b, e = pc.box, pc.edge
-b("Frontend: apps/web structure (UML 2 component), DRAFT v4 (M3.5)", 20, 10, 900, 30, TITLE)
-b("«subsystem» apps/web (Vue 3 PWA)", 20, 50, 1000, 720, PKG)
+b("Frontend: apps/web structure (UML 2 component), DRAFT v5 (M4 design system)", 20, 10, 900, 30, TITLE)
+b("«subsystem» apps/web (Vue 3 PWA)", 20, 50, 1000, 900, PKG)
 router = b("router\nguards: setup | user | adult | device\nsetup needed → /setup", 60, 100, 240, 60, COMP)
 setup = b("SetupLayout + setup/\nwizard: welcome · household · you · family · access · key backup · start", 340, 540, 400, 70, COMP)
-app = b("AppLayout + views\nToday · Calendar · Tasks · Routines · Mail · Message · Inbox · Labelling · Bills · SettingsLayout: Personal · Household (incl. members) · Sources and rules · System", 340, 100, 640, 60, COMP)
+app = b("AppLayout + views\nToday · Calendar · Tasks · Routines · Mail · Message · Inbox (AI chip) · Labelling · Bills · SettingsLayout (list-detail): Personal · Household (incl. members) · Sources and rules · AI · System", 340, 100, 640, 60, COMP)
 kiosk = b("KioskLayout + dashboard/ (at a glance, no mail)\nlayout engine · views: Home · Week table; panels: clock, weather (with advisories, self-clearing), agenda, week, members, now, member_tasks, routine", 340, 200, 640, 60, COMP)
 kmod = b("kiosk/\nkeepAlive · watchdog · deviceToken · sse", 60, 200, 240, 60, COMP)
 stores = b("stores (Pinia)\nsetup · session · members · household · calendar · weather · sources · devices · dashboard · tasks · mail · inbox · system", 340, 320, 640, 60, COMP)
@@ -23,7 +23,11 @@ for s, t, l in [(router, setup, ""), (setup, stores, ""), (router, app, ""), (ro
                 (stores, client, ""), (live, stores, "invalidate"), (client, gen, "types"), (kmod, ls, ""), (stores, ls, "snapshot cache"), (themes, ls, "fa.theme"), (app, themes, ""), (kiosk, themes, "")]:
     e(s, t, l)
 e(client, srv, "HTTP(S) JSON", False); e(live, srv, "SSE /stream", False)
-b("No UI framework: plain CSS tokens, Intl dates in household tz", 780, 560, 220, 70, NOTE)
+ui = b("ui/ design system (D-095)\ntokens.css (color-mix of theme vars) · Ui* components: Page, TopAppBar, Card, List, Button, TextField, Switch, Segmented, Chip, Dialog, Sheet, Snackbar, SaveBar, NavBar/Rail/Drawer\nicons.ts (Material Symbols) · useBreakpoint · useInstantSave · useFormDraft (D-096) · UiGallery (dev)", 340, 770, 660, 80, COMP)
+nav = b("app/navigation.ts\ndestinations as data\ncompact: bottom bar + More sheet\nmedium: rail · expanded: drawer", 60, 660, 240, 90, COMP)
+for s, t_, l in [(app, ui, "renders with"), (setup, ui, ""), (app, nav, "navigation"), (nav, ui, "NavBar/Rail/Drawer"), (ui, themes, "colour tokens")]:
+    e(s, t_, l)
+b("No UI framework: home-grown ui/ library, Intl dates in household tz", 780, 560, 220, 70, NOTE)
 b("Insecure context (plain HTTP): no service worker, lib/ids instead of randomUUID, lib/copy clipboard fallback, Google shown as needs HTTPS", 340, 640, 440, 70, NOTE)
 
 # Page 2: Deployment of clients

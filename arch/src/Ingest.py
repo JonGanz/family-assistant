@@ -28,7 +28,7 @@ e(con, gm, "HTTPS, OAuth (gmail.readonly | gmail.modify)", False)
 e(con, gc, "calendar.events | VEVENT PUT", False)
 e(con, im, "app password (D-052)", False)
 b("feature crates (fa-mail, fa-calendar, fa-tasks, fa-notify) never depend on each other: they meet through the store and the job queue. fa-pipeline and fa-rules are shared infrastructure", 820, 520, 420, 80, NOTE)
-b("M4 adds knn, system_one, llm stages (unavailable in M3)", 60, 540, 260, 50, NOTE)
+b("M4: llm stage via the mail.llm job (AI.md); M4.1: knn, system_one", 60, 540, 260, 50, NOTE)
 
 # Page 2: Model (UML 2 class)
 pm = Page("model", "Model", 1600, 1050)

@@ -2,14 +2,16 @@
 title: Platform
 scope: code layout, runtime, security, deployment, backups, dev workflow
 status: draft
-updated: 2026-11-02
+updated: 2026-11-04
 drawio: Platform.drawio
 drawio_src: src/Platform.py
-depends_on: [D-002, D-003, D-004, D-005, D-006, D-010, D-018, D-019, D-020, D-023, D-025, D-026, D-031, D-032, D-033, D-034, D-035, D-064, D-065, D-069, D-072, D-073, D-074, D-075, D-076, D-077]
+depends_on: [D-002, D-003, D-004, D-005, D-006, D-010, D-018, D-019, D-020, D-023, D-025, D-026, D-031, D-032, D-033, D-034, D-035, D-064, D-065, D-069, D-072, D-073, D-074, D-075, D-076, D-077, D-093, D-094]
 milestone: M0
 ---
 
-# Platform (DRAFT v4)
+# Platform (DRAFT v4.1)
+
+**v4.1 (2026-11-04, M4):** `fa-llm`, `fa-recipe` and basic `fa-eval` in the layout, the `eval` subcommand, the LLM-endpoint security row, and the GPU node served by any OpenAI-compatible server (D-093, D-094; [AI.md](AI.md)).
 
 The platform that M0 builds and every later milestone depends on. **v4 is the M3.5 Onboarding re-derivation** (D-065, D-069, D-072 to D-077): one compose file with one app container, plain HTTP by default with an optional Tailscale sidecar for HTTPS and remote access, generated secrets, runtime settings in the UI, and a first-run wizard instead of a TOML file and admin commands (the household TOML was removed entirely, D-089).
 
@@ -27,12 +29,12 @@ The platform that M0 builds and every later milestone depends on. **v4 is the M3
 │  ├─ fa-auth          passwords, sessions, devices, PIN step-up, RBAC policy
 │  ├─ fa-jobs          Postgres job queue + scheduler
 │  ├─ fa-api           axum routers, OpenAPI (utoipa), SSE hub
-│  ├─ fa-notify  fa-connectors  fa-rules  fa-pipeline  fa-decide  fa-llm
-│  ├─ fa-backends  fa-sysprobe  fa-eval  fa-calendar  fa-tasks  fa-weather  fa-meals  fa-gpu-node
+│  ├─ fa-notify  fa-connectors  fa-rules  fa-pipeline  fa-llm (M4)  fa-recipe (M4)  fa-decide (M4.1)
+│  ├─ fa-backends (M4.1)  fa-sysprobe (M4.1)  fa-eval (M4 basic)  fa-calendar  fa-tasks  fa-weather  fa-meals  fa-gpu-node
 │  └─ (M0 builds only: domain, store, config, auth, jobs, api, plus the bin crates)
 ├─ bins/
-│  ├─ fa-server        CLI: init · serve {all|api|worker} · migrate · config {import|export} · user {add|reset} · device {pair|revoke} · eval (recovery and scripting; setup is the wizard)
-│  └─ fa-gpu-agent     runs on GPU nodes (M4)
+│  ├─ fa-server        CLI: init · serve {all|api|worker} · migrate · config {import|export} · user {add|reset} · device {pair|revoke} · eval --household <id> --decision-point <dp> [--with-llm] [--limit N] [--json] (M4, AI.md §10) (recovery and scripting; setup is the wizard)
+│  └─ fa-gpu-agent     optional helper beside the LLM server on GPU nodes (M4.1; a stub until then)
 ├─ apps/web            Vue 3 + TS + Vite + Pinia + vue-router + vite-plugin-pwa (pnpm)
 │  └─ src/gen/         generated TS types (ts-rs) and API client (from OpenAPI)
 ├─ Dockerfile          cargo-chef + node build stages
@@ -62,7 +64,7 @@ The platform that M0 builds and every later milestone depends on. **v4 is the M3
 ## 3. Runtime processes
 - One image, `fa-server`, runs as **one `app` container** with `serve all`: HTTP, SSE and the web bundle, plus the scheduler and jobs (the worker role), in one process (D-076). Household scale needs no split; `serve api` and `serve worker` remain in the binary for tests and development but are not part of the deployment.
 - **`init` (one-shot):** `fa-server init` runs before Postgres and `app`. It creates `master_key` (32 random bytes) and `db_password` in the `fa-secrets` volume if they are absent, with mode 0400 for the app user, and exits 0. Files the hoster provides are kept (D-074).
-- **Startup:** read the DB password from `FA_DATABASE_PASSWORD_FILE` when set, `migrate` under a Postgres advisory lock, load runtime settings (§6), then (M4) `fa-sysprobe`.
+- **Startup:** read the DB password from `FA_DATABASE_PASSWORD_FILE` when set, `migrate` under a Postgres advisory lock, load runtime settings (§6), then (M4.1) `fa-sysprobe`.
 - **Setup state:** while no household exists, every `/api/v1/*` call except `/setup*`, `/healthz` and `/readyz` returns `409 setup_required`, and the web app routes to `/setup` (Frontend.md). Setup closes for good once the first adult account exists (D-073).
 - **Health:**
   - `/healthz` reports the process is alive.
@@ -118,7 +120,8 @@ The old paths stay routed to the same handlers and are marked `deprecated` in Op
 | RLS mechanics | Every transaction runs `SET LOCAL ROLE fa_app` (a NOLOGIN role without BYPASSRLS, because the Postgres login user may be a superuser) and sets either `app.household_id` (`tx_for`) or `app.system=on` (`tx_system`, used only for pre-household lookups, setup, and system tables such as `instance_setting`). Data is never queried through the raw pool. All SQL is parameterised |
 | Secrets | **Envelope encryption.** A 256-bit master key comes from a file (default `/run/fa-secrets/master_key` in the `fa-secrets` volume, created by `init`, D-074; a hoster-provided docker secret still works). Each secret gets its own random DEK, and the DEK is wrapped by the master key (AES-256-GCM). `key_version` supports rotation (runbook `rotate-key.md`). The master key is **never** in the DB, git, or DB backups. The wizard requires an adult to copy or download it (`GET /api/v1/system/master-key`, audited) and Settings, System warns until a backup is confirmed |
 | OAuth (Google) | The client ID and secret are runtime settings (Settings, System, the secret envelope-encrypted, or env, D-075). **Google requires an HTTPS redirect URI** (except localhost), so Google sign-in works only behind the Tailscale sidecar or another HTTPS proxy; on HTTP the UI shows it as "needs HTTPS". Testing-mode re-auth every 7 days (D-007) |
-| GPU agent | A per-node token is issued at pairing time. The agent connects outbound to the core API only |
+| LLM endpoint (M4, D-093) | The core calls an OpenAI-compatible server set by an adult in Settings → AI. Ollama has **no authentication**, so the install guide binds it to the GPU node's LAN or tailnet address (`OLLAMA_HOST`), never a public one; an optional API key (a `Secret`) covers servers and proxies that use one. The LLM client follows **no redirects**. Prompts and responses are never logged or stored; `llm_call` keeps only purpose, model, latency, outcome and token counts (AI.md §11) |
+| GPU agent (M4.1) | A per-node token is issued at pairing time. The agent connects outbound to the core API only |
 | Supply chain | `cargo deny` checks advisories and an AGPL-compatible licence allowlist. `pnpm audit` and license-checker do the same for the web app. Sidecar images are pinned by version or digest. We don't redistribute model weights, and their licences are recorded in the catalogue (D-025, D-035) |
 | Public-repo hygiene | A `gitleaks` scan in CI. A check rejects real-looking email domains in `config/examples/` and fixtures. Docs and logs must never contain household specifics (D-004, D-035) |
 
@@ -154,15 +157,15 @@ We ship **`deploy/compose.yaml`**, which has every service (D-033, D-065). The d
 | default | `ntfy` | `binwiederhier/ntfy:v2.17.0` | Published on `${FA_NTFY_PORT:-8090}`; reached by `app` as `http://ntfy:80` on the compose network |
 | default | `backup` | `prodrigestivill/postgres-backup-local:16` | Nightly, keeping 7 daily, 4 weekly, and 6 monthly. Writes to volume `fa-backups` by default; `BACKUP_DIR` points it at a NAS mount instead (D-005) |
 | `tailscale` | `tailscale` | `tailscale/tailscale:v1.104.2` | `TS_AUTHKEY`, `TS_HOSTNAME` (default `family`), `TS_STATE_DIR` on volume `ts-state`, `TS_USERSPACE=true`, `TS_SERVE_CONFIG` from the inline compose config `ts_serve` (443 → `app:8080`, 8443 → `ntfy:80`). Fixed address `172.30.89.10` on the compose subnet, which compose passes to `app` as `FA_DEFAULT_TRUSTED_PROXIES` (a default, editable in Settings, System; D-069) |
-| `ai-cpu` | `s1-small`, `embed` | pinned sidecar images | M4 (D-025, D-026) |
-| `gpu` | `ollama`, `s1-large` | pinned, NVIDIA runtime | On a GPU node, or on a single machine that runs everything (D-026, D-033) |
+| `ai-cpu` | `s1-small`, `embed` | pinned sidecar images | M4.1 (D-025, D-026, D-094) |
+| `gpu` | `ollama` (M4), `s1-large` (M4.1) | pinned, NVIDIA runtime | On a GPU node, or on a single machine that runs everything (D-026, D-033). A natively installed Ollama works the same: the app only needs its URL (D-093) |
 
 - **Images (D-077):** `.github/workflows/release-image.yml` builds `linux/amd64` with buildx on `v*` tags and pushes `ghcr.io/jonganz/fa-server` (public package). arm64 is a later CI matrix change; until then arm64 hosts build locally.
 - **Local build:** `compose.build.yaml` adds `build:` from the checkout (`docker compose -f compose.yaml -f compose.build.yaml up -d --build`), for developers and non-amd64 hosts. No split api/worker override is shipped (D-076).
 - **Tailscale on the host** (v3): still possible as an advanced alternative (`tailscale serve` on the host to `127.0.0.1:8080`, with `FA_TRUSTED_PROXIES` set to the Docker gateway). WoL from the core node (M4.1) needs host networking or a host-level helper, decided in AI.md.
 - The image is multi-stage: cargo-chef builds the Rust binaries, and node builds `apps/web`. The result is a debian-slim runtime with the web bundle at `/srv/web`.
 - **Build provenance:** `GET /api/v1/system/about` (adult) returns the crate version, the commit and the build time. `fa-server`'s `build.rs` takes the commit from `FA_GIT_COMMIT` (the Docker build arg `GIT_COMMIT`, because `.git` is not in the image) or from `git`, with `-dirty` for uncommitted changes. The web bundle is stamped the same way by `vite.config.ts`.
-- **GPU node:** `docker compose --profile gpu up ollama s1-large`. `fa-gpu-agent` runs **natively** from the release binary and `deploy/systemd/fa-gpu-agent.service`, because it needs host process visibility, `nvidia-smi`, and `systemctl suspend` (D-020).
+- **GPU node (M4):** any OpenAI-compatible LLM server; the default is Ollama (`ollama pull qwen3:8b`, `OLLAMA_HOST` on the LAN or tailnet address), configured in Settings → AI (AI.md §12). **M4.1:** `docker compose --profile gpu up ollama s1-large`, and `fa-gpu-agent` runs **natively** from the release binary and `deploy/systemd/fa-gpu-agent.service`, because it needs host process visibility, `nvidia-smi`, and `systemctl suspend` (D-020).
 
 ## 9. Backups & restore
 - The DB is backed up nightly as described above. The worker role raises an alert if the newest dump in the backup directory is older than 26 hours.

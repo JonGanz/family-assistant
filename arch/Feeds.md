@@ -99,7 +99,7 @@ An event's members are the members of its calendar. A calendar with no members i
 - `weather.fetch` runs on the cron `*/30 * * * *` (editable in the schedule settings). It skips when the household has no location. It calls Open-Meteo `/v1/forecast` with `current`, `hourly` (48 h), and `daily` (7 days) in metric units and the household tz, then stores a `weather_snapshot`.
 - **Fields used:** current: `temperature_2m`, `apparent_temperature`, `weather_code`, `wind_speed_10m`, `wind_gusts_10m`, `precipitation`, `is_day`. Hourly: `temperature_2m`, `apparent_temperature`, `precipitation_probability`, `precipitation`, `snowfall`, `wind_speed_10m`, `wind_gusts_10m`, `uv_index`, `weather_code`. Daily: `weather_code`, `temperature_2m_max`/`_min`, `precipitation_probability_max`, `precipitation_sum`, `sunrise`, `sunset`, `uv_index_max`.
 - After each fetch, `weather.evaluate` runs every `active` rule against the snapshot. A rule that matches upserts an `advisory` with the dedupe key `rule:{id}:{window start date}`, so a rule fires at most once per window. It then publishes `weather.updated` (and `advisory.updated` if anything changed).
-- **Advisory lifecycle (D-068):** nobody dismisses an advisory. It is removed (hard-deleted) when its `valid_until` passes, or when `weather.evaluate` finds its rule no longer matches the new snapshot for that window (the rule was edited, disabled or archived, or the forecast changed). Each evaluate pass reconciles: upsert the matching dedupe keys, delete this household's `source=rule` advisories whose key did not match. S2 advisories (M4) expire by `valid_until` only. A daily sweep in `weather.retention` deletes any past `valid_until` that a missed evaluate left behind.
+- **Advisory lifecycle (D-068):** nobody dismisses an advisory. It is removed (hard-deleted) when its `valid_until` passes, or when `weather.evaluate` finds its rule no longer matches the new snapshot for that window (the rule was edited, disabled or archived, or the forecast changed). Each evaluate pass reconciles: upsert the matching dedupe keys, delete this household's `source=rule` advisories whose key did not match. S2 advisories (M4.1, D-094) expire by `valid_until` only. A daily sweep in `weather.retention` deletes any past `valid_until` that a missed evaluate left behind.
 - **Data change:** `dismissed_at` and `dismissed_by` are dropped and `POST /advisories/{id}/dismiss` and the `DismissAdvisory` action are removed. This needs a **new migration** (M3.5); earlier migrations are never edited.
 - `weather.retention` (daily) deletes snapshots older than `weather_retention_days`.
 - **Units:** storage and the DSL are always metric. The API returns metric, and the UI converts using `household.units`.
@@ -131,7 +131,7 @@ op        := <= | < | >= | > | == | !=
 | High UV | `max(uv, today) >= 8` | info |
 | Thunderstorm | `any(code, today) >= 95` | severe |
 
-The S2-suggested rules and LLM advisories of D-017 come in M4. Weather-driven tasks come in M2.
+The S2-suggested rules and LLM advisories of D-017 come in M4.1 (D-094). Weather-driven tasks come in M2.
 
 ## 5. Configuration
 All of this is edited in Settings and stored in the database. There is no household file (D-089, which removed the TOML import and export of D-018).

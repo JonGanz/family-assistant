@@ -8,7 +8,7 @@ b("Platform: Workspace packages (UML 2 package diagram), DRAFT v4", 20, 10, 900,
 P = lambda name, x, y, w=170: b(name, x, y, w, 60, PKG)
 dom = P("fa-domain", 600, 620)
 store = P("fa-store", 380, 500); cfg = P("fa-config", 600, 500); auth = P("fa-auth", 820, 500); jobs = P("fa-jobs", 1040, 500)
-feats = b("feature crates\nfa-connectors · fa-rules · fa-pipeline · fa-decide · fa-llm · fa-backends · fa-sysprobe · fa-eval · fa-calendar · fa-tasks · fa-weather · fa-meals · fa-notify · fa-gpu-node",
+feats = b("feature crates\nfa-connectors · fa-rules · fa-pipeline · fa-llm · fa-recipe · fa-eval · fa-decide · fa-backends · fa-sysprobe · fa-calendar · fa-tasks · fa-weather · fa-meals · fa-notify · fa-gpu-node",
           380, 340, 830, 90, PKG)
 api = P("fa-api", 600, 190)
 srv = P("bins/fa-server", 500, 60); agt = P("bins/fa-gpu-agent", 820, 60)
@@ -37,7 +37,7 @@ ai = b("«container» s1-small, embed\n(profile: ai-cpu, M4)", 340, 420, 260, 50
 b("«artifact» ghcr.io/jonganz/fa-server:<tag>\n(compose.build.yaml builds locally instead)", 340, 560, 300, 50, ART)
 gpu = b("«device» GPU node(s)", 980, 300, 300, 200, NODE)
 gc = b("«compose profile: gpu» ollama, s1-large", 1000, 350, 260, 50, ART)
-ga = b("«systemd» fa-gpu-agent (native release binary)", 1000, 420, 260, 50, ART)
+ga = b("«systemd» fa-gpu-agent (M4.1, optional, native binary)", 1000, 420, 260, 50, ART)
 nas = b("«device» NAS (optional)", 980, 560, 200, 60, NODE)
 lanc = b("«device» Home-network clients\n(phones, desktop, wall screen)", 20, 240, 240, 70, NODE)
 tsc = b("«device» Clients on the tailnet\n(away from home)", 20, 130, 240, 60, NODE)

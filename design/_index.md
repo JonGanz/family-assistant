@@ -1,6 +1,6 @@
 ---
 title: Design Questions Index
-updated: 2026-11-02
+updated: 2026-11-04
 ---
 
 # Design Questions
@@ -116,3 +116,7 @@ decisions: []
 | [Q-075](resolved/Q-075-theme-scope.md) | Who chooses the theme: household, member, or device? | D-081 |
 | [Q-076](resolved/Q-076-custom-themes.md) | Can a household add its own themes? | D-079 |
 | [Q-077](resolved/Q-077-adding-another-adult.md) | How is a second adult added and set up? | D-088 |
+| [Q-083](resolved/Q-083-llm-transport.md) | How the core talks to the LLM on a GPU node | D-093 |
+| [Q-084](resolved/Q-084-m4-ai-scope.md) | How much AI goes into M4 | D-094 |
+| [Q-085](resolved/Q-085-ui-component-basis.md) | What the revamped UI components are built on | D-095 |
+| [Q-086](resolved/Q-086-apply-changes-model.md) | How pages apply changes | D-096 |

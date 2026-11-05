@@ -1,17 +1,17 @@
 ---
 title: Frontend
-scope: Vue PWA structure, routes, first-run wizard, settings structure, dashboard (kiosk) design and layout config, data flow (REST + SSE), offline and insecure-context behaviour
+scope: Vue PWA structure, design system and navigation, routes, first-run wizard, settings structure, dashboard (kiosk) design and layout config, data flow (REST + SSE), offline and insecure-context behaviour
 status: draft
-updated: 2026-10-30
+updated: 2026-11-04
 drawio: Frontend.drawio
 drawio_src: src/Frontend.py
-depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078, D-079, D-080, D-081]
-milestone: M3.5
+depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078, D-079, D-080, D-081, D-093, D-094, D-095, D-096, D-097]
+milestone: M4
 ---
 
-# Frontend (DRAFT v4)
+# Frontend (DRAFT v5, M4 design system)
 
-This doc describes the Vue 3 PWA in `apps/web`: one app with three shells. The **setup shell** is the first-run wizard (`/setup`, D-065). The **app shell** is for signed-in people on phones and desktops. The **kiosk shell** is `/dashboard` on the Echo Show and other wall screens. v4 (M3.5) adds the wizard, the grouped Settings area with Settings, System, moves Members into Settings, makes the dashboard at-a-glance only, and makes the app work over plain HTTP. Backend data comes from [Feeds.md](Feeds.md), [Tasks.md](Tasks.md) and [Ingest.md](Ingest.md); the runtime settings and setup API are in [Platform.md](Platform.md).
+This doc describes the Vue 3 PWA in `apps/web`: one app with three shells. The **setup shell** is the first-run wizard (`/setup`, D-065). The **app shell** is for signed-in people on phones and desktops. The **kiosk shell** is `/dashboard` on the Echo Show and other wall screens. v4 (M3.5) adds the wizard, the grouped Settings area with Settings, System, moves Members into Settings, makes the dashboard at-a-glance only, and makes the app work over plain HTTP. v5 (M4, D-095 to D-097) adds the design system (`ui/`, §1.2), the adaptive navigation (§1.3), one rule for applying changes (§1.4), list-detail Settings, and the Settings → AI screen with the inbox's AI provenance (§3e). Backend data comes from [Feeds.md](Feeds.md), [Tasks.md](Tasks.md) and [Ingest.md](Ingest.md); the runtime settings and setup API are in [Platform.md](Platform.md).
 
 ## 1. Structure (page "Components")
 ```
@@ -20,19 +20,21 @@ apps/web/src/
 ├─ gen/            api.d.ts generated from openapi.json (the gen commands in the README). The only source of API types
 ├─ stores/         Pinia: setup, session, members, household, calendar, weather, sources, devices, dashboard, tasks, mail, inbox, system
 ├─ composables/    useLiveStream (SSE → store invalidation), useUnits, useRange, useClock, useSecureContext
-├─ components/     shared UI: PageHeader, StateBlock, MemberChip, Avatar, PinPad, EventCard, WeatherIcon, DateRangeNav, ErrorBanner, Tabs
+├─ ui/             the design system (D-095, §1.2): tokens.css, Ui* components, icons.ts, composables (useBreakpoint, useSnackbar, useInstantSave, useFormDraft), dev-only UiGallery
+├─ app/            navigation.ts: the destinations list every navigation component renders (§1.3)
+├─ components/     domain components built on ui/: MemberChip, Avatar, PinPad, HuePicker, EventCard, WeatherIcon, DateRangeNav, tasks/, mail/
 ├─ themes/         theme catalogue as data (D-079): one file per family, the token set, `applyTheme`, the device's saved choice (§3d)
 ├─ lib/            platform shims: ids (randomId), copy (clipboard fallback), pwa (conditional service worker)
 ├─ setup/          the first-run wizard: SetupLayout + one component per step (§2a)
 ├─ views/          app-shell screens (§3); settings/ holds SettingsLayout, SettingsIndexView and the settings pages
 ├─ dashboard/      kiosk panels + layout engine (§4)
 ├─ kiosk/          keepAlive, watchdog, deviceToken, sse (M0)
-├─ layouts/        SetupLayout, AppLayout (nav), KioskLayout (full-screen, no nav)
+├─ layouts/        SetupLayout, AppLayout (adaptive navigation, snackbar host), KioskLayout (full-screen, no nav)
 └─ router/         routes + guards (setup | user | adult | device)
 ```
 - **API types:** one source only. `gen/api.d.ts` comes from the server's OpenAPI, which the server derives from its DTOs (`utoipa::ToSchema`).
 - **State:** stores fetch over REST and keep normalised data by ID. They never poll. They refresh when an SSE event invalidates their data (§5).
-- **No UI framework.** Plain CSS with design tokens and the UI kit in `styles/base.css` (colour tokens come from the active theme, §3d; spacing, type scale, `.form`, `.card-list`, `.badge`), plus a `kiosk` scale for viewing distance. That keeps the bundle small for Silk on Fire OS.
+- **No UI framework** (D-095). The app shell uses the home-grown component library in `ui/` (§1.2), whose colours all come from the active theme (§3d). `styles/base.css` keeps the theme aliases, resets and the `kiosk` scale for viewing distance. That keeps the bundle small for Silk on Fire OS.
 - **Dates:** `Intl.DateTimeFormat` in the household tz (from `/household`, not the browser's tz), with no date library. Recurrence is already expanded by the server.
 
 ### 1.1 Secure and insecure contexts (D-072)
@@ -43,6 +45,47 @@ The whole app must work over plain HTTP on a LAN address, where the browser is i
 - **No nag banners.** Plain HTTP is the hoster's choice. Settings, System states the connection type as a fact (§3c); the login page shows nothing about it.
 - **Google sign-in needs HTTPS** (Google rejects `http://` redirect URIs except localhost). On an insecure context, Settings, Calendars and Settings, Mail show Google as **"needs HTTPS"**, with a one-line pointer to the Tailscale profile, instead of hiding it. IMAP, CalDAV and ICS work the same in both.
 - e2e runs the UI suite over plain HTTP from a non-localhost address so that a secure-context-only API fails the build.
+
+### 1.2 Design system (D-095)
+A home-grown Vue component library in `apps/web/src/ui/`, modelled on Material 3 patterns and used by every app-shell and setup screen. The kiosk dashboard keeps its own look (§4) and reuses a `ui/` component only where nothing changes visually.
+- **Tokens** (`ui/tokens.css`), loaded after `styles/base.css`:
+  - **Colour** is never a literal. Every colour token is a `color-mix()` of the theme variables from §3d: surface and five container tones (`--ui-surface-container-{lowest,low,mid,high,highest}` mix `--color-surface` toward `--color-text`), on-surface and its variant, outline and its variant, primary (the `blue` hue), on-primary, primary container, error, and the state layers (hover 8 %, focus and pressed 12 %). Every theme in the catalogue therefore gets the same tonal structure.
+  - **Spacing** is a 4 px grid (`--ui-space-1..8`).
+  - **Shape** is `--ui-radius-xs..xl` plus `full` (4, 8, 12, 16, 28 px, pill).
+  - **Elevation** is `--ui-elev-0..3`: shadows plus a surface tint, readable in dark themes.
+  - **Type scale** has display, headline, title, body and label, each in lg, md and sm.
+  - **Motion** has short and medium durations with one easing; the durations drop to 0 under `prefers-reduced-motion`.
+- **Breakpoints** follow the Material window classes: **compact** < 600 px, **medium** 600–839 px, **expanded** ≥ 840 px (`useBreakpoint()`). Layouts are written mobile-first: compact is the base and wider classes add columns.
+- **Components** (`Ui*.vue`, exported from `ui/index.ts`):
+  - **Layout:** `UiPage` (scaffold with top-bar slot and a content max-width), `UiTopAppBar`, `UiSection`.
+  - **Surfaces:** `UiCard` (elevated, filled or outlined; media, header, body and actions slots; the whole card can be a link), `UiDivider`.
+  - **Lists:** `UiList` and `UiListItem` (one to three lines, leading and trailing slots), the main way to show collections on phones.
+  - **Actions:** `UiButton` (filled, tonal, outlined, text), `UiIconButton`, `UiFab`.
+  - **Inputs:** `UiTextField`, `UiSelect`, `UiSwitch`, `UiCheckbox`, `UiRadioGroup`, `UiSegmented`, `UiChip` (assist, filter, input).
+  - **Overlays:** `UiDialog`, `UiBottomSheet`, `UiSheet` (bottom sheet on compact, dialog otherwise), `UiMenu`, `UiSnackbarHost`.
+  - **Feedback:** `UiBadge`, `UiProgress`, `UiSkeleton`, `UiEmptyState`, `UiErrorState`, `UiSaveBar`.
+  - **Navigation:** `UiNavBar`, `UiNavRail`, `UiNavDrawer`.
+- **Cards separate content.** A screen is a stack of cards or lists on the surface. Each card holds one subject (a settings group, an event, a bill) with its own actions; there are no free-floating forms.
+- **Icons:** Material Symbols (rounded) as tree-shaken SVG components (R-005), coloured with `currentColor`. Views use semantic names from `ui/icons.ts` (`home`, `calendar`, `tasks`, `inbox`, `ai`, …) and never import an icon set directly, so the set can be swapped in one file. Icon-only buttons carry an `aria-label`.
+- **Gallery:** `/ui-gallery` (development builds only) shows every component in every state with a theme switcher. `scripts/ui-shots.sh` captures it and the app pages at 360, 800 and 1280 px in a light and a dark theme, for design review.
+
+### 1.3 Navigation (D-095)
+The destinations are data in `app/navigation.ts` (`id`, label, icon key, route, optional badge, adult-only, primary). Each navigation component renders that one list:
+| Window class | Navigation |
+|---|---|
+| compact | **bottom bar** with up to five primary destinations: Today, Calendar, Tasks, Inbox (adults, count badge), **More**. More opens a bottom sheet with Routines, Mail, Bills, Settings |
+| medium | **navigation rail** on the left with the primary destinations; More becomes a menu; Settings sits at the rail's foot |
+| expanded | **navigation drawer** (standard, always visible) with every destination, grouped: Plan (Today, Calendar, Tasks, Routines), Mail (Inbox, Mail, Bills), Settings |
+- Children see only the destinations their guards allow (no Inbox, Mail or Bills; D-063).
+- Each screen has a `UiTopAppBar` with its title, a back arrow on nested pages (`/tasks/:id`, `/settings/*` on compact), and its actions. The primary create action of a list screen is a `UiFab` on compact and a top-bar button otherwise.
+- A parent destination is active for its nested paths (§2).
+
+### 1.4 Applying changes (D-096)
+One rule everywhere outside the dashboard:
+- **A single control applies instantly.** A switch, a stand-alone single choice (radio group, segmented button, select) and a checkbox in a list save on change through `useInstantSave`: an optimistic update, then a snackbar "Saved" with **Undo** (about 5 s), which saves the old value. A failure reverts the control and shows the error in the snackbar.
+- **A multi-field form saves together.** It edits a draft from `useFormDraft` (`draft`, `dirty`, `save`, `discard`). While it is dirty, a sticky `UiSaveBar` (Discard, Save) shows: at the bottom on compact, at the top of the card otherwise. Leaving the page asks first (router guard and `beforeunload`). Success shows a snackbar; field errors from the server show under their fields, and a 409 shows "changed elsewhere, reload" in the bar.
+- **Creating** something (a task, a source, a member) is a form in a `UiSheet` with its own Save, never instant.
+- **Destructive** actions confirm in a dialog unless they offer Undo (task completion keeps its Undo snackbar, §3a).
 
 ## 2. Routes
 | Path | Shell | Guard | Content |
@@ -57,6 +100,7 @@ The whole app must work over plain HTTP on a LAN address, where the browser is i
 | `/settings/<page>` | app | per page | Child routes rendered inside `SettingsLayout` (§3c) |
 | `/oauth/done` | app | user | Landing page after the Google callback. It shows the result and continues to `return_to` |
 | `/dashboard` | kiosk | device | §4 |
+| `/ui-gallery` | app | none, development builds only | The component gallery (§1.2) |
 
 - **Setup guard:** the router asks `GET /api/v1/setup` once at start. While `needed` is true, **every route redirects to `/setup`**, and any API call answering `409 setup_required` does the same. Once setup is done, `/setup` redirects to `/`.
 - **No `/members` route** and no redirect from it (D-070): member management is `/settings/members`, adults only.
@@ -78,7 +122,7 @@ Shown when no household exists. It is **open to whoever opens the app first** (D
 
 - Each step saves when you press Next; `GET /setup` returns the step to resume at, so a reload or a second device continues where it stopped.
 - Back keeps values; steps 4–7 can be skipped and done later in Settings.
-- A failed step shows the server's field errors inline (`.form` errors), as in Settings.
+- Each step is a card; a failed step shows the server's field errors under their fields, as in Settings (§1.4).
 
 ## 3. App shell screens (M1)
 - **Today:** a merged list of today's and tomorrow's events with member chips, the current weather plus the 7-day strip, and advisories at the top.
@@ -97,7 +141,7 @@ Shown when no household exists. It is **open to whoever opens the app first** (D
 - All mutating forms send `If-Match` versions and show a "changed elsewhere, reload" banner on a 409.
 
 ## 3a. App shell screens (M2, [Tasks.md](Tasks.md))
-- **Tasks** (`/tasks`): tabs *Now* (D-042: "Mine" first, then "Household"), *Mine*, *Lists* (each list with its open tasks), and *Suggested* (adults, weather suggestions to accept or dismiss). Each item shows title, due (relative, overdue in red), assignee chips, a step count, and a claim button for pool tasks. Completing shows a 10-second **Undo** toast.
+- **Tasks** (`/tasks`): tabs *Now* (D-042: "Mine" first, then "Household"), *Mine*, *Lists* (each list with its open tasks), and *Suggested* (adults, weather suggestions to accept or dismiss). Each item shows title, due (relative, overdue in red), assignee chips, a step count, and a claim button for pool tasks. Completing shows a 10-second **Undo** snackbar.
 - **Task detail and editor:** title, notes, due, steps (add, reorder, tick), priority flag, and calendar display (`hidden`, `until done`, `always`; "key date" is the label for `always`, D-046). Children get the same editor for their own one-off tasks on lists that allow it (D-045).
 - **Routines** (`/routines`): today's runs with a **progress bar** per member (D-041). Children see their own.
 - **Settings → Tasks** (adults): lists (policy, flags, calendar default, claim time), definitions (schedule `every N days after done` or `repeat on…` with an RRULE builder for weekly/monthly, lead days, due time, missed behaviour, strategy and ordered candidates, rotation options, priority, season window and condition with the same validation as the weather rule editor, pause), routines (members, window, steps with target times, day filter, school calendar and keywords, dashboard toggle), and **absences** (member, from, until).
@@ -119,13 +163,14 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 - **Settings → Notifications** gains the `approval_needed` trigger (batched by default, immediate, digest only, off; D-061) and `mail_time_sensitive`.
 
 ## 3c. Settings area (M3.5, U-08, D-070, D-075)
-`/settings` is a parent route with `SettingsLayout`: a sidebar on desktop, a chip row on phones. Its index (`SettingsIndexView`) shows grouped cards. Every page keeps its own guard.
+`/settings` is a parent route with `SettingsLayout`, a **list-detail** layout (D-095). On compact and medium screens the index (`SettingsIndexView`) is a grouped list (icon, title, one-line summary) and each page opens full-screen with a back arrow. On expanded screens the list stays as the left pane and the page shows in the right pane. Each page is a stack of cards, one per setting group, following §1.4. Every page keeps its own guard.
 
 | Group | Pages (path under `/settings/`) | Guard |
 |---|---|---|
 | Personal | `account` (password, sessions), `appearance` (this device's theme, §3d), `notifications` (own, plus children's for adults; §3a) | user |
 | Household | `household` (name, tz, location, units, currency, calendar window, Now list weights, quiet hours, dashboard pending-approvals badge), **`members`** (add, edit, avatar, hue, role, account and password reset, PIN, aliases, gender and relevance tags, interests, hobbies and responsibilities), `tasks` (lists, definitions, routines, absences) | adult |
 | Sources and rules | `calendars`, `weather`, `mail`, `orgs` | adult |
+| AI | `ai` (§3e) | adult |
 | System | `system` (below), `devices` (pairing + dashboard layout editor, §4), `status`, `about` (server version, commit and build time, next to the same for this page's bundle; a banner when the two commits differ, which means the browser is showing a stale cached app) | adult |
 
 - **Members** (D-070): adults only, since other features rely on member details. Children see members on the dashboard's `members` strip, not in the app. A child sees only the Personal group.
@@ -155,6 +200,18 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 **Member colours** (D-080). A member's `color` is a hue name. The client uses `var(--hue-<name>)` for chips, the agenda and task items. `eventColors` returns one hue per linked member (an event for two members shows both), and a neutral for an event with none; calendars have no colour (D-086). In the Week view an event takes its column's member colour. The member picker shows the current theme's swatches.
 
 **Contrast** (build-time unit test over every variant): `text` and `muted` on `bg` and on both surfaces at least 4.5:1; each hue on `bg` at least 3:1 (stripes, chips, accents); `on-accent` on `blue`. A failing value is corrected in the theme data, never adjusted at run time.
+
+## 3e. Settings → AI and AI provenance (M4, D-093, D-094; detail in [AI.md](AI.md))
+`/settings/ai`, adults only, is a stack of cards:
+- **LLM endpoint:** base URL, model, dialect (OpenAI-compatible by default, Ollama native as a fallback), API key (write-only: "set" / "not set", replace, clear), timeout, and an enabled switch. It is a form with the Save bar (§1.4), except the enabled switch, which applies instantly.
+  - **Test connection** sends the unsaved values and shows the latency and whether the model was found, or the error kind.
+  - The model field is a select filled from the server's model list when one is available, otherwise free text.
+  - A one-line hint says the LLM server should listen only on the home network or tailnet.
+- **Email decisions:** one row per decision point (`email.category`, `email.time_sensitive`, `email.member_link`, `email.is_bill`), each with an LLM switch (instant) and an accept threshold slider (saves on release, with Undo).
+- **Extraction:** `mail_extract_mode` as a segmented button (Off, When rules find nothing, Always; instant) and the max input size (form).
+- **Activity:** a stats card for the last 7 days. It shows LLM calls per purpose (count, success share, p50 and p95 latency) and, per decision point, the share decided by rules, the LLM and a person. It is read-only.
+
+**AI provenance in the inbox:** items whose `extracted_by` is `llm` carry an **"AI" chip** (the `ai` icon) with the confidence as a percentage. Its tooltip, or a tap on compact screens, explains "suggested by the local language model". Approval works exactly as for rule-made items (D-057, D-060). The message screen's decision list marks decisions with `stage_kind = llm` the same way.
 
 ## 4. Dashboard (kiosk shell)
 **Navigation (D-082, D-084, D-090):** a bar along the shorter edge of the screen as detected (left in landscape, top in portrait; same button size in both) switches between **Home** (the configured panels below) and **Week** (a table: a row per day for the calendar week that starts on the household's `week_start` (Monday or Sunday) and holds today, a column per person; each cell lists that person's events, drawn like the calendar page's, and the tasks due that day; the day cell carries the forecast; it fills the view and never scrolls: a cell that cannot fit its items in one column splits them into two half-width columns when each half stays readable, then ends with a "+N" slot that opens a modal listing everything in that cell, D-087). A bottom row has previous and next arrows, a box showing "Current" or the date range of the shown week, and a "Hide past events" switch (ended events go; a task goes only once completed). The view fetches its own week with `GET /api/v1/dashboard?from=`). The view is local state. The Home view scrolls, so no panel is cropped when another needs more room: in landscape each of its two columns (left 4/12, right 8/12) scrolls on its own, in portrait the clock and weather share a fixed top row 50/50, a thin members strip follows, then two columns that each scroll on their own: "right now" (now, routines, member tasks) on the left and "coming up" (agenda, week) on the right, a lone column taking the full width (the groups are `PORTRAIT_*` in `layout/index.ts`); the Week view does not scroll (D-087). The connection status (Connected only while heartbeats arrive: "No data" after 45 s of silence, D-091), the stale badge and the adult unlock button sit at the end of the bar (D-085).
@@ -203,12 +260,13 @@ The layout is data held in `device.settings` and edited by adults in Settings �
 5. If the stream disconnects, the client reconnects with `Last-Event-ID`. If the hub can't replay that far, it sends `resync`.
 
 ## 6. Accessibility & i18n
-- Every interactive element is reachable by keyboard, with visible focus rings. Touch targets are at least 48 px on the kiosk.
+- Every interactive element is reachable by keyboard, with visible focus rings (a `ui/` token, never removed). Touch targets are at least 48 px in the app shell and on the kiosk. Icon-only buttons have an accessible name; snackbars use `role=status`; dialogs and sheets trap focus and close on Escape.
 - Member colours keep at least 4.5:1 contrast for chip text: text colour is computed from the background.
 - Strings are English and live in one `strings.ts` per area, which makes later i18n possible but isn't built now. Dates and numbers use `Intl` with the browser locale and the household tz.
 
 ## 7. Testing
 - **vitest:**
+  - `ui/` components and composables (`useInstantSave` undo and revert, `useFormDraft` dirty and leave guard, breakpoints);
   - stores (invalidation logic);
   - the layout engine (presets, unknown panels);
   - unit conversion;
@@ -221,4 +279,6 @@ The layout is data held in `device.settings` and edited by adults in Settings �
   - **first run** (M3.5): an empty database redirects every route to `/setup`; the wizard creates the household, owner, a child and confirms the key backup; `/setup` is then closed;
   - the whole suite runs over plain HTTP from a non-localhost address (insecure context, §1.1);
   - Settings, System shows env-set fields as locked;
-  - the dashboard has no advisory dismiss control and no inbox panel; a child sees no `/settings/members`.
+  - the dashboard has no advisory dismiss control and no inbox panel; a child sees no `/settings/members`;
+  - (M4) navigation adapts at 360, 800 and 1280 px; an instant switch shows Undo and Undo restores the value; a dirty form blocks navigation until saved or discarded.
+- **Screenshots** (`scripts/ui-shots.sh`, tagged `@shots`, not part of the default run) feed the design reviews; they are not compared pixel by pixel.

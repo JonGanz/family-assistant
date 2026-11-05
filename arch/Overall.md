@@ -2,14 +2,16 @@
 title: Overall Architecture
 scope: system
 status: draft
-updated: 2026-10-30
+updated: 2026-11-04
 drawio: Overall.drawio
 drawio_src: src/Overall.py
-depends_on: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012, D-013, D-014, D-015, D-017, D-018, D-019, D-020, D-021, D-023, D-024, D-025, D-026, D-027, D-028, D-029, D-031, D-032, D-033, D-034, D-035, D-036, D-037, D-038, D-039, D-040, D-041, D-042, D-043, D-044, D-045, D-046, D-047, D-048, D-049, D-050, D-051, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-064, D-065, D-066, D-067, D-068, D-069, D-070, D-071, D-072, D-073, D-074, D-075, D-076, D-077]
-research: [R-001]
+depends_on: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012, D-013, D-014, D-015, D-017, D-018, D-019, D-020, D-021, D-023, D-024, D-025, D-026, D-027, D-028, D-029, D-031, D-032, D-033, D-034, D-035, D-036, D-037, D-038, D-039, D-040, D-041, D-042, D-043, D-044, D-045, D-046, D-047, D-048, D-049, D-050, D-051, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-064, D-065, D-066, D-067, D-068, D-069, D-070, D-071, D-072, D-073, D-074, D-075, D-076, D-077, D-093, D-094, D-095, D-096, D-097]
+research: [R-001, R-004, R-005]
 ---
 
-# Overall Architecture (DRAFT v8)
+# Overall Architecture (DRAFT v8.1)
+
+**v8.1 (2026-11-04):** M4 is re-scoped (D-094 supersedes D-067). The LLM is reached over a configurable OpenAI-compatible endpoint, with Ollama on the GPU node as the default and no custom agent (D-093). M4 runs two tracks in parallel (D-097): the LLM extraction slice ([AI.md](AI.md)), and a UI revamp on a home-grown Material 3-style component library (D-095, D-096, [Frontend.md](Frontend.md)). System One, kNN, the registry, `fa-gpu-agent` and WoL move to M4.1.
 
 v8 re-derives the design from PROJECT.md and all accepted decisions (D-001 to D-077). D-016, D-022, and D-030 are superseded. New in v8: simple onboarding (D-065, D-072 to D-077), the M3.5 milestone (D-066), the M4/M4.1 split (D-067), an at-a-glance dashboard without the approval inbox (D-068), and member interests as LLM-only inputs (D-071). Detail is in [Platform.md](Platform.md) and [Frontend.md](Frontend.md).
 
@@ -31,8 +33,8 @@ v8 re-derives the design from PROJECT.md and all accepted decisions (D-001 to D-
 ## Deployment (page "Deployment"): reference hardware
 | Node | Always on | Runs |
 |---|---|---|
-| **Core node**: Ubuntu Server | yes | Docker Compose: `init` (one-shot, generates the master key and DB password into a `secrets` volume, D-074), **one `app` container** (`fa-server serve all`: api and worker, D-076), `postgres:16` + pgvector, `ntfy`, `backup` (to a volume or the NAS). Optional profile `tailscale`: a Tailscale sidecar that serves HTTPS on the tailnet (D-065). The app port is plain HTTP on the LAN (D-072). **Backends:** M4 adds one CPU System One backend; M4.1 adds `embed` and the registry (D-067) |
-| **GPU node(s)**: 0 or more. Reference is a Linux gaming PC with RTX 3070 8 GB | no | M4: `llm` (Ollama 7–8B Q4), used when the PC is awake, with rules as the fallback. M4.1: `fa-gpu-agent` (hardware report, gaming detection, suspend), WoL, `s1-large` (D-020, D-026, D-067) |
+| **Core node**: Ubuntu Server | yes | Docker Compose: `init` (one-shot, generates the master key and DB password into a `secrets` volume, D-074), **one `app` container** (`fa-server serve all`: api and worker, D-076), `postgres:16` + pgvector, `ntfy`, `backup` (to a volume or the NAS). Optional profile `tailscale`: a Tailscale sidecar that serves HTTPS on the tailnet (D-065). The app port is plain HTTP on the LAN (D-072). **Backends:** none new in M4 (the LLM server is on a GPU node, D-093); M4.1 adds a CPU System One sidecar, `embed` and the registry (D-094) |
+| **GPU node(s)**: 0 or more. Reference is a Linux gaming PC with RTX 3070 8 GB | no | M4: an OpenAI-compatible LLM server, by default Ollama with a 7–8B Q4 model (`qwen3:8b`) bound to the LAN or tailnet address, configured in Settings → AI and used when the PC is awake; rules and the inbox are the fallback (D-093). M4.1: `fa-gpu-agent` as an optional add-on (hardware report, gaming yield, suspend), WoL, `s1-large` (D-020, D-026, D-094) |
 | **NAS** (optional) | yes | Nightly pg_dump when `BACKUP_DIR` points at it; otherwise a local volume (D-005) |
 | **Echo Show 15** | yes | Silk browser on `/dashboard` over the LAN, with keep-alive (D-011). At-a-glance only: date, time, weather, agenda, tasks, routines (D-068) |
 | **Phones and desktops** | n/a | The web app (installable as a PWA over HTTPS) and the ntfy app; on the LAN, or through Tailscale from outside |
@@ -49,11 +51,12 @@ The final model choices come from `fa-eval` on the household's labelled sample (
 | `fa-connectors` | Gmail, IMAP, Google Calendar, CalDAV, ICS, Open-Meteo |
 | `fa-pipeline` | **Decision pipeline engine** (D-029): runs each decision point's stage list with thresholds and `on_unavailable` handling. Also handles versioning and dry-run. Email ingest uses it, followed by S2 extraction → emit events, tasks, and bills |
 | `fa-rules` | Deterministic rulesets (sender and Org maps, headers, keywords, biller templates) and extractors (ICS, dates, PDF) |
-| `fa-decide` | `DecisionBackend` trait with a `/v1/systemone` client (`choice`, `score`, `noul`) and the kNN stage over pgvector (D-024, D-028) |
-| `fa-llm` | System 2 client (Ollama): JSON-schema prompts for extraction, routing hints, recipes, advisories. Uses a queue when the backend is `on_demand` |
+| `fa-decide` (M4.1) | `DecisionBackend` trait with a `/v1/systemone` client (`choice`, `score`, `noul`) and the kNN stage over pgvector (D-024, D-028) |
+| `fa-llm` (M4) | System 2 client over the **OpenAI-compatible Chat Completions API** with JSON-schema structured output (dialect `openai_chat`, fallback `ollama_native`), and a per-household `Provider` (one call in flight, `llm_call` log without content). Used for mail extraction and decisions (`mail.llm` job), recipes, and later advisories (D-093, [AI.md](AI.md)) |
+| `fa-recipe` (M4) | Recipe extraction contract for M5: schema.org JSON-LD first, LLM fallback, `RecipeDraft` (nothing stored) |
 | `fa-backends` (M4.1) | **Backend registry**: availability tracking, preference-list routing, the model catalogue, and the profile suggester from node hardware reports (D-026) |
 | `fa-sysprobe` (M4.1) | Core node hardware probe |
-| `fa-eval` (M4 basic, M4.1 full) | Replays the labelled sample against backends and pipelines (accuracy, calibration, latency). Powers dry-run (D-028, D-029) |
+| `fa-eval` (M4 basic, M4.1 full) | Replays the labelled sample against pipelines: M4 compares rules with rules plus `llm` (accuracy, coverage, latency); M4.1 adds backends, calibration and dry-run (D-028, D-029) |
 | `fa-calendar` | Dedupe, approval inbox, writes. Routing is the `event.calendar_route` pipeline (D-008, D-027) |
 | `fa-tasks` | Recurrence, fixed/rotation/pool strategies (smart later), completion policy, priority (urgency from the `task.urgency` pipeline) (D-013) |
 | `fa-weather` | Snapshots, `WeatherRule`s, S2 advisories and suggested rules (D-017) |
@@ -61,8 +64,8 @@ The final model choices come from `fa-eval` on the household's labelled sample (
 | `fa-gpu-node` (M4.1) | WoL and agent state for each GPU node (D-020) |
 | `fa-notify` | `Notifier` trait with an ntfy implementation (D-010) |
 | `fa-domain`, `fa-store` | Entities, DTOs (`ts-rs`), SQLx repositories, encrypted secrets |
-| `fa-gpu-agent` (M4.1) | Separate binary on each GPU node |
-| `web` | Vue 3 + TS PWA: first-run wizard, at-a-glance dashboard, app pages, adult-only Settings (incl. Members, System, **Pipeline settings**, **Backends**) (D-065, D-070, D-075) |
+| `fa-gpu-agent` (M4.1) | Optional binary beside the LLM server on a GPU node: hardware report, gaming yield, suspend (not an inference runtime, D-093) |
+| `web` | Vue 3 + TS PWA: first-run wizard, at-a-glance dashboard, app pages on the `ui/` component library (M4, D-095, D-096), adult-only Settings (incl. Members, System, **AI** in M4; **Pipeline settings**, **Backends** in M4.1) (D-065, D-070, D-075) |
 | `fa-tui` | ratatui (stretch) |
 
 ## Domain model
@@ -97,7 +100,7 @@ The detailed model is in **[Domain.md](Domain.md)**. Summary:
 
 Platform details (layout, security, deployment, backups) are in **[Platform.md](Platform.md)**.
 
-## Roadmap (D-023, adjusted by D-029, D-050, D-066 and D-067)
+## Roadmap (D-023, adjusted by D-029, D-050, D-066, D-094 and D-097)
 | Milestone | Content | Arch docs needed first |
 |---|---|---|
 | M0 | Skeleton: workspace, DB, config, auth/RBAC, devices, Vue shell, compose, backups | `Domain.md`, `Platform.md` |
@@ -105,11 +108,11 @@ Platform details (layout, security, deployment, backups) are in **[Platform.md](
 | M2 | Tasks + ntfy | `Tasks.md` |
 | M3 | Email ingest, **pipeline engine with the 'Rules only' preset**, bills, linking, approvals, **labelling view** | `Ingest.md` |
 | M3.5 | **Onboarding** (D-065): one compose file with an optional Tailscale sidecar, optional HTTPS, generated secrets, the first-run wizard, Settings, System. **Shakedown** (D-066): H-02..H-11 on the real server through the new install, a week of approval-inbox measurement, the M3 known gaps | `Platform.md` v4, `Frontend.md` v4 |
-| M4 | **Minimal AI slice** (D-067): one CPU System One backend and one Ollama model behind the existing `fa-pipeline` stages, aimed at the decision points with the most inbox rejections in M3.5; basic eval; first LLM features using member interests (D-071) | `AI.md` |
-| M4.1 | Backend registry and profile suggester, sysprobe, GPU agent wake/yield and gaming detection, kNN, `s1-large`, full eval, **Pipeline and Backends settings**, S2 advisories | `AI.md` update |
+| M4 | Two parallel tracks (D-097). **AI: LLM extraction slice** (D-093, D-094): a configurable OpenAI-compatible endpoint (default Ollama on the GPU node), the `llm` stage for the email decision points and extraction (`mail.llm`), the recipe-extraction contract for M5, basic eval, Settings → AI. **UI revamp** (D-095, D-096): a Material 3-style component library on the theme variables, Material Symbols, new navigation, one apply-changes model, every non-dashboard view migrated | `AI.md`, `Frontend.md` v5 |
+| M4.1 | System One sidecar (CPU) and `fa-decide`, kNN and `embed`, backend registry and profile suggester, sysprobe, `fa-gpu-agent` (optional) with WoL, gaming yield and suspend, `s1-large`, full eval, **Pipeline and Backends settings**, S2 advisories, first member-interest feature (D-071) | `AI.md` update |
 | M5 | Recipes, meal plan, grocery | `Meals.md` |
 | M6 | Smart assignment, learned calendar routing | updates |
 | M7 | Goals: count or quantity targets, weekly cadence with reset, progress bars (D-048, D-051) | `Goals.md` |
 | M8 | TUI (stretch) | updates |
 
-The M6 to M8 split is D-050; M3.5 and the M4/M4.1 split are D-066 and D-067.
+The M6 to M8 split is D-050; M3.5 is D-066; the M4/M4.1 split is D-094 (superseding D-067) and M4's two tracks are D-097.

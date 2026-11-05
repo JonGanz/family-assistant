@@ -19,6 +19,8 @@ Models to copy: `plan/M3.6.md` with `plan/M3.6/_rules.md` and its briefs; `plan/
    - every column, table, crate or package a task needs is created by an earlier or same-wave task (or already exists: check the code, not memory);
    - every external name in a brief (image, crate, package, API path) was verified (`cargo add --dry-run`, `docker manifest inspect`, official docs) and is not a guess;
    - every new column has a writer and a default that matches the arch;
+   - every new column name is grepped against the migrations of its target table first (M4 planned `origin` on `event` and `task`, which already had an `origin` with another meaning);
+   - adding a field to a struct that another crate constructs (a deps struct, a view type) keeps the workspace green: the same task owns the construction sites (field-only edits), never "red until the next wave".
    - every time or date field has a wire format;
    - no two tasks in a wave own the same path; `CLAUDE.md`, the README and the root `Cargo.toml` have exactly one owner (usually the main session or a docs task);
    - tasks that add commands, env vars, ports or setup either own the README or are told to report the README change.

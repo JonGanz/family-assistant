@@ -142,11 +142,11 @@ Progress sources beyond manual entry, and the privacy of adults' goals, are sett
 
 The rule DSL, default rules, and evaluation are in [Feeds.md](Feeds.md) §4. M1 also adds `Household{units, calendar_past_days, calendar_future_days, weather_retention_days, private_events_as_busy, week_start}`, `MemberAvatar`, and `Device.settings` (dashboard layout, [Frontend.md](Frontend.md) §4).
 
-## Package: AI & Pipelines (M4. M3 has rules-only)
+## Package: AI & Pipelines (M4: LLM endpoint and `llm` stage, see AI.md; M4.1: registry and System One. M3 has rules-only)
 | Class | Key attributes |
 |---|---|
 | `Node` | kind: `core\|gpu`, name, hardware{cpu, cores, ram_mb, gpu?, vram_mb?}, state: `available\|busy_gaming\|asleep\|unknown`, wol_mac?, last_heartbeat (D-020, D-026) |
-| `Backend` | node, kind: `system_one\|llm\|embedding`, endpoint, model, dialect: `systemone_v1\|ollama`, capabilities[], availability: `always\|on_demand`, enabled |
+| `Backend` | node, kind: `system_one\|llm\|embedding`, endpoint, model, dialect: `openai_chat\|ollama_native\|systemone_v1` (D-093), capabilities[], availability: `always\|on_demand`, enabled |
 | `CatalogModel` | name, kind, min_ram_mb, min_vram_mb, license, notes (data shipped with releases) |
 | `DecisionPoint` | key, e.g. `email.category` (D-027), question_kind: `choice\|score\|noul`, options_source |
 | `PipelineVersion` | decision_point, version, active, created_by, dry_run_report? |

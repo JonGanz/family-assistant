@@ -1,6 +1,6 @@
 ---
 title: Decisions Index
-updated: 2026-10-26
+updated: 2026-11-04
 ---
 
 # Decisions
@@ -75,7 +75,7 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-064](D-064-lan-dashboard.md) | Optional dashboard-only listener on the home network; everything else stays tailnet-only | accepted | (user instruction) | arch/Platform.md, arch/Frontend.md |
 | [D-065](D-065-simple-onboarding.md) | Simple onboarding: one compose file, optional Tailscale sidecar, optional HTTPS, first-run wizard | accepted |  | arch/Platform.md, arch/Frontend.md, arch/Overall.md, README.md, deploy/README.md |
 | [D-066](D-066-m35-shakedown-first.md) | M3.5 is onboarding plus a real-hardware shakedown, before M4 | accepted | Q-061 | arch/Overall.md, plan/M3.5.md, README.md |
-| [D-067](D-067-m4-minimal-slice.md) | M4 ships a minimal AI slice first; the registry and platform pieces move to M4.1 | accepted | Q-062 | arch/Overall.md, README.md |
+| [D-067](D-067-m4-minimal-slice.md) | M4 ships a minimal AI slice first; the registry and platform pieces move to M4.1 | superseded → D-094 | Q-062 | arch/Overall.md, README.md |
 | [D-068](D-068-dashboard-at-a-glance.md) | The dashboard is at-a-glance only; advisories clear themselves and can't be dismissed | accepted | Q-063 | arch/Frontend.md, arch/Feeds.md, arch/Ingest.md, arch/Domain.md |
 | [D-069](D-069-trusted-proxies-explicit.md) | Trusted proxies: loopback by default, plus an explicit list that the compose file sets | accepted | Q-064 | arch/Platform.md |
 | [D-070](D-070-members-adult-settings.md) | Members are managed on an adult-only Settings screen; children see members on the dashboard | accepted | Q-065 | arch/Frontend.md, arch/Domain.md |
@@ -101,3 +101,8 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-090](D-090-screen-orientation-detected.md) | The dashboard's orientation is detected from the screen, not configured | accepted | (instruction) | arch/Frontend.md |
 | [D-091](D-091-heartbeat-in-connection-status.md) | The dashboard shows no heartbeat time; the connection status absorbs it | accepted | (instruction) | arch/Frontend.md |
 | [D-092](D-092-dashboard-screensaver.md) | The dashboard has a bouncing-icon screensaver after 15 idle minutes | accepted | (instruction) | arch/Frontend.md |
+| [D-093](D-093-openai-compatible-llm-endpoint.md) | System 2 is reached over a configurable OpenAI-compatible endpoint; no custom agent in M4 | accepted | Q-083 | arch/AI.md, arch/Overall.md, arch/Platform.md |
+| [D-094](D-094-m4-llm-extraction-slice.md) | M4's AI track is the LLM extraction slice; System One and the agent move to M4.1 | accepted | Q-084 | arch/AI.md, arch/Overall.md, arch/Ingest.md, README.md |
+| [D-095](D-095-ui-component-library.md) | The app UI is a home-grown Material 3-style component library on the theme variables, with Material Symbols | accepted | Q-085 | arch/Frontend.md |
+| [D-096](D-096-apply-changes-model.md) | Single controls apply instantly with Undo; multi-field forms use a Save/Discard bar | accepted | Q-086 | arch/Frontend.md |
+| [D-097](D-097-m4-two-tracks.md) | M4 runs the UI revamp and the AI slice as two parallel tracks | accepted | (instruction) | arch/Overall.md, README.md |

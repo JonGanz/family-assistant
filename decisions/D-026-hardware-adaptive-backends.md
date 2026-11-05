@@ -10,6 +10,8 @@ affects: [arch/Overall.md, arch/AI.md (future)]
 research: [R-001]
 ---
 
+> Refined by D-093: Backend.dialect defaults to openai_chat.
+
 # D-026: Hardware-adaptive model placement via a backend registry
 
 ## Context

@@ -23,3 +23,6 @@ This page answers "what is waiting on a person?" (P-02). There is one row per st
 | H-12 | M3.5 | Enable GHCR publishing, make the `fa-server` package public, push the first `v*` tag | open | M3.5 |
 | H-13 | M3.5 | Fresh install on the real server from `deploy/README.md`, timed, wizard finished | open | M3.5 |
 | H-14 | M3.5 | Tailscale auth key, `--profile tailscale`, phone on the tailnet, ntfy subscribed | open | M3.5 |
+| H-15 | M4 | Ollama on the GPU PC bound to the LAN or tailnet address (`OLLAMA_HOST`), `ollama pull qwen3:8b`, endpoint saved and tested in Settings → AI | open | M4 |
+| H-16 | M4 | Run `fa-server eval` for each email decision point with and without `--with-llm` on the real labelled sample; enable the `llm` stage where it helps | open | M4 (after H-15 and H-11) |
+| H-17 | M4 | UI review checkpoints R1 to R4 on the review artifacts | open | M4 |

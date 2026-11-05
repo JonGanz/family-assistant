@@ -2,14 +2,16 @@
 title: Ingest — email, rules pipeline, bills, linking, approvals
 scope: Mail sources (Gmail API and IMAP) and sync, message storage and retention, the decision pipeline engine (rules-only preset), deterministic classifiers and extractors, orgs, contacts and enrollments, bills, event proposals and calendar writes, the approval inbox, email tasks, the labelling view
 status: draft
-updated: 2026-10-30
+updated: 2026-11-04
 drawio: Ingest.drawio
 drawio_src: src/Ingest.py
-depends_on: [D-001, D-004, D-006, D-007, D-008, D-009, D-010, D-012, D-013, D-014, D-018, D-019, D-023, D-024, D-027, D-028, D-029, D-034, D-035, D-036, D-044, D-045, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-068, D-070, D-071, D-078]
+depends_on: [D-001, D-004, D-006, D-007, D-008, D-009, D-010, D-012, D-013, D-014, D-018, D-019, D-023, D-024, D-027, D-028, D-029, D-034, D-035, D-036, D-044, D-045, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-068, D-070, D-071, D-078, D-093, D-094]
 milestone: M3
 ---
 
-# Ingest: email, rules pipeline, bills, linking, approvals (DRAFT v1.1)
+# Ingest: email, rules pipeline, bills, linking, approvals (DRAFT v1.2)
+
+**v1.2 (2026-11-04, M4):** the `llm` stage and the `mail.llm` job (§5, §7, §13) and `ai_settings` (§14), from D-093 and D-094. Detail is in [AI.md](AI.md).
 
 This doc covers M3 (D-023, as adjusted by D-029):
 - mail ingest through the Gmail API or IMAP (D-052);
@@ -24,7 +26,7 @@ This doc covers M3 (D-023, as adjusted by D-029):
 v1 is re-derived from PROJECT.md and all accepted decisions, including batch 16 (D-052 to D-063). **In M3 nothing extracted is written to a calendar without approval** (D-057).
 
 **Not in M3:**
-- System One, kNN, the LLM (System 2) and their stages; Pipeline and Backends settings screens; `fa-eval` (all M4, `AI.md`);
+- System One, kNN, the LLM (System 2) and their stages; Pipeline and Backends settings screens; `fa-eval`. The LLM stage and basic eval come in M4, System One, kNN and the full screens in M4.1 ([AI.md](AI.md));
 - learned calendar routing (M6);
 - deals (D-012), school portal APIs (D-014), budgeting (D-009).
 
@@ -45,7 +47,7 @@ v1 is re-derived from PROJECT.md and all accepted decisions, including batch 16 
 | Crate | Responsibility | Depends on |
 |---|---|---|
 | `fa-connectors` (extended) | `gmail` client: `users.getProfile`, `messages.list` (with `q`), `history.list`, `messages.get` (`format=raw`), `attachments.get`, `messages.modify`, `labels.list/create`. `gcal` writes (`events.insert/patch/delete`) and CalDAV `PUT`/`DELETE` of a VEVENT. `imap`: a provider-neutral IMAP client (TLS login, folder `SELECT`, UID `FETCH`/`SEARCH`, `MOVE`, `STORE` flags, and the Gmail `X-GM-*` extension when advertised). No DB access | (external crates only) |
-| `fa-pipeline` (new) | The engine (§5): loads a decision point's active `PipelineVersion`, runs the enabled stages in order with thresholds and `on_unavailable`, and records `Decision` rows. The `Stage` trait has the `rules` and `human` implementations in M3; `knn`, `system_one` and `llm` are M4 and are treated as unavailable. Built-in presets, with 'Rules only' active | fa-domain, fa-store |
+| `fa-pipeline` (new) | The engine (§5): loads a decision point's active `PipelineVersion`, runs the enabled stages in order with thresholds and `on_unavailable`, and records `Decision` rows. The `Stage` trait has the `rules` and `human` implementations in M3; `llm` is added in M4 (§5, run as a deferred job); `knn` and `system_one` are M4.1 and are treated as unavailable. Built-in presets, with 'Rules only' active | fa-domain, fa-store |
 | `fa-rules` (new) | Deterministic rulesets and extractors, as pure functions over a parsed message (§6, §7): header and Gmail-label signals, org and contact matching, member name and grade matching, bill detection and biller templates, the date-phrase finder, ICS and schema.org extraction, PDF text | fa-domain (+ `mail-parser`, `html2text`, `scraper`, `pdf-extract`, `regex`, `aho-corasick`) |
 | `fa-mail` (new) | Sources and sync for both providers behind one `MailProvider` trait (§4), message storage, processing (`mail.process`: runs the email pipelines, then the extractors, then emits proposals through the store and job queue), Gmail actions with undo, the retention job, the labelling view's service | fa-domain, fa-store, fa-jobs, fa-connectors, fa-pipeline, fa-rules |
 | `fa-calendar` (extended) | `calendar.route`: dedupe, the `event.calendar_route` pipeline, the confidence gate, then either writes the event to Google or CalDAV or leaves it `proposed` for the inbox. Approve, edit and reject | + fa-pipeline |
@@ -138,6 +140,7 @@ Both providers implement `MailProvider { initial(window, filter), incremental(st
 - **Multi-valued `email.member_link`:** each match yields one member and its confidence. Every member at or above the threshold is linked (D-027 notes the single-label limit of System One; rules don't have it).
 - **Versioning:** an edit saves a new version, and an earlier one can be reactivated. In M3, rules can be edited (Settings → Mail rules) but the stage list can't; the Pipeline settings screen is M4.
 - Every decision records its stage, version, value and confidence, so M4 can report each stage's hit rate.
+- **The `llm` stage (M4, D-094, [AI.md](AI.md) §5):** offered for `email.category`, `email.time_sensitive`, `email.member_link` and `email.is_bill`, toggled per point in Settings → AI (each toggle saves a new version with `llm` inserted before `human`; default threshold 0.7, `on_unavailable = queue`). `Pipeline::run` never calls the LLM: when `rules` falls below its threshold and the next enabled stage is `llm`, the outcome carries `pending_llm`, the default applies meanwhile, and `mail.process` enqueues one `mail.llm{message}` job. The job's result goes through `Pipeline::record_stage`: at or above the threshold it is a `Decision` with `stage_kind = llm`, below it falls through to `human`. If the category changes, the message's category behaviour re-runs.
 
 ## 6. Classification rules (fa-rules)
 ### 6.1 Rule conditions
@@ -172,7 +175,7 @@ PROJECT.md asks for school and daycare mail to be filtered to the details that m
 - for each linked child, a section is **relevant** when it names the child, their grade, class, a relevance tag, or a gender term for their gender (household term lists, default `female`: girls, girls', girl's; `male`: boys, boys', boy's); it is **other** when it names only another grade or only the other gender's terms; otherwise **general**;
 - the message view, filtered to a child, shows relevant and general sections and collapses the others. Gender is used only for this and is never shown on the dashboard.
 
-Summarising a long newsletter per child is System 2 work (M4).
+Summarising a long newsletter per child is System 2 work (after M4).
 
 ## 7. Extraction
 | Extractor | Produces | Confidence |
@@ -185,7 +188,10 @@ Summarising a long newsletter per child is System 2 work (M4).
 | Action phrases ("please sign", "permission slip", "RSVP by", "reply by", "return by") with an optional deadline | suggested tasks (D-060) | 0.6–0.8 |
 | A direct question (`?` in a sentence addressed to the reader) from an `org_contact` | suggested reply task (adults) | 0.6 |
 
+| **LLM extraction (M4, `mail.llm`)**: one schema-constrained call per message (events, bills, tasks, and any pending decision points), when the category's behaviour is `extract` and `ai_settings.mail_extract_mode` is `always`, or `fallback` (the default) and no rule extractor reached 0.8 | events, bills, suggested tasks, all with `extracted_by = llm` and through the same dedupe and proposal paths | the model's own, gated by the `llm` threshold |
+
 - Extraction runs only for categories whose behaviour is `extract` (D-054).
+- Every extracted item records `extracted_by` (`rules` or `llm`); the inbox shows an "AI" chip for `llm`. LLM items are never applied without approval (D-057, D-060).
 - Junk is never extracted (D-012: no deals).
 - A pay task is created only after a bill is accepted.
 
@@ -277,9 +283,11 @@ Summarising a long newsletter per child is System 2 work (M4).
 | `tasks.from_bill{bill}`, `tasks.from_mail{message, kind}` | enqueued | Pay and email tasks (§9) |
 | `inbox.expire` | hourly | Marks stale proposals `expired` (D-061) |
 | `mail.retention` | daily | The D-034 policy: purge content, mark expired after `max_pending_days` |
+| `mail.llm{message}` (M4) | enqueued by `mail.process` (idempotency key `mail.llm:<message>`, 12 attempts) | One LLM call; record decisions, re-run behaviour, emit LLM proposals (§5, §7) |
+| `llm.prune` (M4) | daily 04:00 | Deletes `llm_call` rows older than 90 days |
 
 ## 14. Configuration
-Organizations, enrollments, mail sources, rules, categories, retention, events and inbox settings and thresholds are edited in Settings and stored in the database. There is no household file (D-089). Credentials are entered in the UI.
+Organizations, enrollments, mail sources, rules, categories, retention, events and inbox settings and thresholds are edited in Settings and stored in the database. M4 adds `ai_settings` (Settings → AI): `mail_extract_mode` `off|fallback|always` (default `fallback`) and `max_input_chars` (default 12000), plus the LLM endpoint ([AI.md](AI.md) §2). There is no household file (D-089). Credentials are entered in the UI.
 
 ## 15. Frontend (summary; detail in Frontend.md v3)
 New app screens:

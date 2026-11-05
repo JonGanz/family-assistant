@@ -1,13 +1,15 @@
 ---
 id: D-067
 title: M4 ships a minimal AI slice first; the registry and platform pieces move to M4.1
-status: accepted
+status: superseded
 date: 2026-10-26
 source_questions: [Q-062]
 supersedes: 
-superseded_by:
+superseded_by: D-094
 affects: [arch/Overall.md, README.md]
 ---
+
+> **Superseded by [D-094](D-094-m4-llm-extraction-slice.md).** M4 is now the LLM extraction slice over a standard endpoint (D-093, D-094); System One moves to M4.1 with the registry and agent.
 
 # D-067: M4 ships a minimal AI slice first; the registry and platform pieces move to M4.1
 
