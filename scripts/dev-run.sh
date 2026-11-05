@@ -8,6 +8,16 @@ cd "$(dirname "$0")/.."
 trap 'kill 0' EXIT
 
 mkdir -p .dev
+
+# A leftover server on the API port would answer wait_api while the fresh build fails to bind,
+# so the web app would quietly talk to old code. Refuse to start instead.
+api_port="${API_URL##*:}"
+if (exec 3<>"/dev/tcp/127.0.0.1/$api_port") 2>/dev/null; then
+  echo "port $api_port is already in use; stop that process first:" >&2
+  ss -ltnp "sport = :$api_port" 2>/dev/null | tail -n +2 >&2 || true
+  exit 1
+fi
+
 start_fixtures
 
 if cargo watch --version >/dev/null 2>&1; then

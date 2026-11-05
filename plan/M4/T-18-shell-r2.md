@@ -5,7 +5,7 @@ milestone: M4
 wave: 3
 depends_on: [T-05]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/ui/UiNavBar.vue", "apps/web/src/ui/UiNavRail.vue", "apps/web/src/ui/UiNavDrawer.vue", "apps/web/src/ui/UiTopAppBar.vue", "apps/web/src/ui/UiSaveBar.vue", "apps/web/src/ui/nav.ts", "apps/web/src/ui/navItem.ts", "apps/web/src/ui/composables/**", "apps/web/src/ui/UiGallery.vue", "apps/web/src/ui/components.test.ts", "apps/web/src/ui/composables.test.ts", "apps/web/src/app/**", "apps/web/src/layouts/AppLayout.vue", "apps/web/e2e/ui-shots.spec.ts"]
 decisions: [D-095, D-096]
 ---
@@ -55,3 +55,13 @@ The paths in `owns` above. **Not yours:** every file in `apps/web/src/views/**`,
 - [ ] `scripts/ui-shots.sh --gallery` passes. Do not run `--all`: the main session runs it after wave 3. List the PNG paths.
 - [ ] e2e: the specs use `getByRole('navigation', { name: 'Primary' })` and links inside it. At 1280 px the drawer must keep that accessible name. Grep `apps/web/e2e/*.spec.ts` for nav selectors and keep every one of them working at the viewport the specs use. Report any you could not keep.
 - [ ] Report (`plan/_rules-common.md` format), including: what a view must do to put actions in the top bar, and anything outside your paths that needs changing
+
+## Outcome (T-18 report)
+- **Compact:** the menu button is injected into `UiTopAppBar` through `navControlKey` (in `ui/nav.ts`) and opens a modal `UiNavDrawer` (scrim, focus trap, Esc, closes on navigation, Log out in the `#footer` slot). The bottom bar and More sheet are gone, and `--ui-bottom-offset` is 0.
+- **Expanded:** the drawer collapses to the rail; the choice is stored per device in `fa.nav.collapsed` (`app/navPrefs.ts`).
+- **Save bar:** `UiSaveBar` is sticky at the bottom on every width.
+- **Tests:** the gallery and tests are updated (519 web tests pass).
+- **Deviations:**
+  - `menu-open-rounded` is imported directly in `UiNavDrawer`.
+  - `navControlKey` is not re-exported from `ui/index.ts`.
+- **For wave 3:** contextual actions go in `UiTopAppBar`'s `#actions` slot: at most two icon buttons plus an overflow `UiMenu` at 360 px. A page that is not yet on `UiTopAppBar` has no menu button on phones until it migrates.

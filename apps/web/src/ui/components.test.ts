@@ -1,6 +1,6 @@
 import { mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it } from 'vitest'
-import { nextTick } from 'vue'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { nextTick, ref } from 'vue'
 import { createMemoryHistory, createRouter } from 'vue-router'
 import {
   UiBottomSheet,
@@ -11,9 +11,18 @@ import {
   UiNavRail,
   UiSegmented,
   UiSwitch,
+  UiTopAppBar,
 } from './index'
+import type { Breakpoint } from './composables/useBreakpoint'
 import { icons } from './icons'
-import { isActivePath, type NavDestination } from './nav'
+import saveBarSrc from './UiSaveBar.vue?raw'
+import { isActivePath, navControlKey, type NavDestination } from './nav'
+
+const bpRef = ref<Breakpoint>('compact')
+vi.mock('./composables/useBreakpoint', async (orig) => ({
+  ...(await orig<typeof import('./composables/useBreakpoint')>()),
+  useBreakpoint: () => bpRef,
+}))
 
 const destinations: NavDestination[] = [
   { id: 'home', label: 'Today', icon: 'today', to: '/' },
@@ -182,5 +191,39 @@ describe('navigation', () => {
   it('drawer groups destinations by their group', async () => {
     const w = await mountNav(UiNavDrawer, '/')
     expect(w.findAll('h2').map((h) => h.text())).toEqual(['Mail'])
+  })
+})
+
+describe('top app bar menu button', () => {
+  const shell = { openNav: vi.fn() }
+  const mountBar = (width: 'compact' | 'medium' | 'expanded', inShell: boolean, back = false) => {
+    bpRef.value = width
+    return mount(UiTopAppBar, {
+      props: { title: 'Page', back },
+      global: { provide: inShell ? { [navControlKey as symbol]: shell } : {} },
+    })
+  }
+  it('appears only on compact inside the shell, and opens the nav', async () => {
+    const w = mountBar('compact', true)
+    await w.find('[aria-label="Open navigation"]').trigger('click')
+    expect(shell.openNav).toHaveBeenCalled()
+    expect(mountBar('medium', true).find('[aria-label="Open navigation"]').exists()).toBe(false)
+    expect(mountBar('expanded', true).find('[aria-label="Open navigation"]').exists()).toBe(false)
+    expect(mountBar('compact', false).find('[aria-label="Open navigation"]').exists()).toBe(false)
+  })
+  it('keeps the back arrow on nested pages', () => {
+    const w = mountBar('compact', true, true)
+    expect(w.find('[aria-label="Open navigation"]').exists()).toBe(false)
+    expect(w.find('[aria-label="Back"]').exists()).toBe(true)
+  })
+})
+
+describe('save bar', () => {
+  it('is sticky at the bottom on every window class (no media-query override)', () => {
+    const src = saveBarSrc
+    expect(src).toMatch(/position: sticky;\s*bottom: 0;/)
+    expect(src).not.toMatch(/@media/)
+    expect(src).toContain('--ui-surface-container-high')
+    expect(src).toContain('--ui-elev-2')
   })
 })

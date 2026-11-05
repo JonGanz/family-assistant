@@ -5,7 +5,7 @@ milestone: M4
 wave: 3
 depends_on: [T-03, T-06, T-07]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: running
 owns: ["crates/fa-api/**", "bins/fa-server/**"]
 decisions: [D-093, D-094, D-029, D-006]
 ---

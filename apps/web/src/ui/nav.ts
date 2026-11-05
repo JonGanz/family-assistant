@@ -1,4 +1,11 @@
+import type { InjectionKey } from 'vue'
 import type { IconName } from './icons'
+
+/** Provided by the app shell on compact windows: lets the top app bar open the navigation drawer. */
+export interface NavControl {
+  openNav: () => void
+}
+export const navControlKey: InjectionKey<NavControl> = Symbol('navControl')
 
 export interface NavDestination {
   id: string

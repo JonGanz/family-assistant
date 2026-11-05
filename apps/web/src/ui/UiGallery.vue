@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // Dev-only gallery (route /ui-gallery): every component in every state, with fictional sample data.
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, defineComponent, onMounted, provide, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { applyDensity, getDensity, type Density } from '../app/density'
 import { FAMILIES, applyTheme, resolveVariant, type ThemeChoice } from '../themes'
@@ -45,6 +45,7 @@ import {
   type IconName,
   type NavDestination,
 } from './index'
+import { navControlKey } from './nav'
 
 const route = useRoute()
 const bp = useBreakpoint()
@@ -97,7 +98,16 @@ const drawerDestinations: NavDestination[] = [
     group: 'Household',
   },
 ]
-const navDemo = ref<'bar' | 'rail' | 'drawer'>('bar')
+const navDemo = ref<'bar' | 'rail' | 'drawer' | 'drawer-collapsed' | 'topbar'>('bar')
+const navControl = { openNav: () => (navDemoOpen.value = true) }
+const navDemoOpen = ref(false)
+// Stands in for the app shell: provides the nav control to the demo top bar only.
+const ShellDemo = defineComponent({
+  setup(_, { slots }) {
+    provide(navControlKey, navControl)
+    return () => slots.default?.()
+  },
+})
 const navActive = ref('/gallery/tasks/42')
 const longText =
   'Parent-teacher conference for the whole upper elementary group, rescheduled from Thursday because of the school assembly'
@@ -604,7 +614,9 @@ const dayOptions = [
           :options="[
             { value: 'bar', label: 'Bar' },
             { value: 'rail', label: 'Rail' },
-            { value: 'drawer', label: 'Drawer' },
+            { value: 'drawer', label: 'Drawer (expanded)' },
+            { value: 'drawer-collapsed', label: 'Drawer (collapsed)' },
+            { value: 'topbar', label: 'Top bar + menu' },
           ]"
         />
         <div class="g-nav ui-demo">
@@ -618,7 +630,37 @@ const dayOptions = [
             :destinations="destinations"
             :active-path="navActive"
           />
-          <UiNavDrawer v-else :destinations="drawerDestinations" :active-path="navActive" />
+          <UiNavDrawer
+            v-else-if="navDemo === 'drawer'"
+            :destinations="drawerDestinations"
+            :active-path="navActive"
+            collapsible
+          />
+          <UiNavRail
+            v-else-if="navDemo === 'drawer-collapsed'"
+            :destinations="destinations"
+            :active-path="navActive"
+          />
+          <ShellDemo v-else
+            ><div class="g-topbar">
+              <UiTopAppBar title="A long page title that has to truncate with an ellipsis">
+                <template #actions>
+                  <UiIconButton icon="palette" label="Theme" />
+                  <UiIconButton icon="menu" label="More actions" />
+                </template>
+              </UiTopAppBar>
+              <p>
+                On phones the bar shows the menu button inside the app shell. Here the shell is
+                simulated; the button opens a modal drawer.
+              </p>
+              <UiNavDrawer
+                modal
+                :open="navDemoOpen"
+                :destinations="drawerDestinations"
+                :active-path="navActive"
+                @close="navDemoOpen = false"
+              /></div
+          ></ShellDemo>
         </div>
         <UiSegmented
           v-model="navActive"

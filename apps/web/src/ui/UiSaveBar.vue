@@ -23,14 +23,15 @@ defineEmits<{ save: []; discard: [] }>()
 <style scoped>
 .ui-savebar {
   position: sticky;
-  bottom: calc(var(--ui-bottom-offset, 0px) + var(--ui-space-2));
+  bottom: 0;
   z-index: 10;
   display: flex;
   align-items: center;
   gap: var(--ui-space-2);
-  padding: var(--ui-space-2) var(--ui-space-3) var(--ui-space-2) var(--ui-space-4);
-  border-radius: var(--ui-radius-lg);
-  background: var(--ui-surface-container-highest);
+  padding: var(--ui-space-2) var(--ui-space-3) calc(var(--ui-space-2) + env(safe-area-inset-bottom))
+    var(--ui-space-4);
+  border-radius: var(--ui-radius-lg) var(--ui-radius-lg) 0 0;
+  background: var(--ui-surface-container-high);
   color: var(--ui-on-surface);
   box-shadow: var(--ui-elev-2);
 }
@@ -40,12 +41,6 @@ defineEmits<{ save: []; discard: [] }>()
 }
 .ui-savebar__text.is-error {
   color: var(--ui-error);
-}
-@media (min-width: 600px) {
-  .ui-savebar {
-    top: var(--ui-space-2);
-    bottom: auto;
-  }
 }
 .ui-savebar-enter-active,
 .ui-savebar-leave-active {

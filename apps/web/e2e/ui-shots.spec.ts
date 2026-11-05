@@ -7,14 +7,23 @@ import tasks from './ui-shots.routes/tasks'
 import today from './ui-shots.routes/today'
 import type { ShotRoute } from './ui-shots.routes/types'
 
-/** The shell itself: the More sheet on phones (main session). */
+/** The shell itself: the phone nav drawer and the collapsed desktop drawer (main session). */
 const shell: ShotRoute[] = [
   {
     route: '/',
-    name: 'shell-more-sheet',
+    name: 'shell-nav-drawer',
     widths: [360],
     before: async (page) => {
-      await page.getByRole('button', { name: 'More' }).click()
+      await page.getByRole('button', { name: 'Open navigation' }).click()
+      await page.waitForTimeout(300)
+    },
+  },
+  {
+    route: '/',
+    name: 'shell-rail-collapsed',
+    widths: [1280],
+    before: async (page) => {
+      await page.getByRole('button', { name: 'Collapse navigation' }).click()
       await page.waitForTimeout(300)
     },
   },
@@ -49,6 +58,8 @@ test.beforeAll(() => mkdirSync(OUT, { recursive: true }))
 for (const mode of MODES) {
   for (const width of WIDTHS) {
     test(`@shots gallery ${width} ${mode}`, async ({ page }) => {
+      // The gallery is a dev-only route; the --all run serves the production build.
+      test.skip(all, 'gallery shots run without --all (dev server only)')
       await page.setViewportSize({ width, height: 900 })
       await page.goto(`/ui-gallery?theme=catppuccin&mode=${mode}`)
       await expect(page.getByRole('heading', { name: 'UI gallery' })).toBeVisible()
@@ -78,7 +89,14 @@ test.describe('app routes', () => {
         for (const shot of APP_ROUTES) {
           if (shot.widths && !shot.widths.includes(width)) continue
           await page.goto(shot.route)
-          await page.waitForLoadState('networkidle')
+          // Not 'networkidle': the live update stream keeps a request open forever.
+          await page.waitForLoadState('load')
+          await page
+            .locator('.ui-skeleton')
+            .first()
+            .waitFor({ state: 'detached', timeout: 10_000 })
+            .catch(() => {})
+          await page.waitForTimeout(400)
           if (shot.before) await shot.before(page)
           await page.screenshot({
             path: `${OUT}/${shot.name ?? slug(shot.route)}-${width}-${mode}.png`,

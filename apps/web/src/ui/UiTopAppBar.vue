@@ -1,13 +1,25 @@
 <script setup lang="ts">
+import { inject } from 'vue'
 import UiIconButton from './UiIconButton.vue'
+import { useBreakpoint } from './composables/useBreakpoint'
+import { navControlKey } from './nav'
 
 defineProps<{ title: string; back?: boolean; backLabel?: string }>()
 defineEmits<{ back: [] }>()
+// Inside the app shell on a phone the bar carries the menu button (no bottom bar there).
+const nav = inject(navControlKey, null)
+const bp = useBreakpoint()
 </script>
 
 <template>
   <header class="ui-top">
     <UiIconButton v-if="back" icon="back" :label="backLabel ?? 'Back'" @click="$emit('back')" />
+    <UiIconButton
+      v-else-if="nav && bp === 'compact'"
+      icon="menu"
+      label="Open navigation"
+      @click="nav.openNav()"
+    />
     <h1 class="ui-top__title">{{ title }}</h1>
     <div class="ui-top__actions"><slot name="actions" /></div>
   </header>
@@ -40,6 +52,7 @@ defineEmits<{ back: [] }>()
   white-space: nowrap;
 }
 .ui-top__actions {
+  flex: none;
   display: flex;
   align-items: center;
 }
