@@ -6,7 +6,7 @@ wave: 3
 depends_on: [T-05]
 agent: {model: sonnet, effort: medium}
 status: todo
-owns: ["apps/web/src/views/MailView.vue", "apps/web/src/views/MessageView.vue", "apps/web/src/views/InboxView.vue", "apps/web/src/views/LabelView.vue", "apps/web/src/views/BillsView.vue", "apps/web/src/components/mail/**", "apps/web/src/stores/mail.ts", "apps/web/src/stores/mail.test.ts", "apps/web/src/stores/inbox.ts", "apps/web/src/stores/inbox.test.ts", "apps/web/src/stores/bills.ts", "apps/web/src/stores/bills.test.ts", "apps/web/src/views/mail.test.ts"]
+owns: ["apps/web/src/views/MailView.vue", "apps/web/src/views/MessageView.vue", "apps/web/src/views/InboxView.vue", "apps/web/src/views/LabelView.vue", "apps/web/src/views/BillsView.vue", "apps/web/src/components/mail/**", "apps/web/src/stores/mail.ts", "apps/web/src/stores/mail.test.ts", "apps/web/src/stores/inbox.ts", "apps/web/src/stores/inbox.test.ts", "apps/web/src/stores/bills.ts", "apps/web/src/stores/bills.test.ts", "apps/web/src/views/mail.test.ts", "apps/web/src/views/parts/inbox/**", "apps/web/src/views/parts/message/**", "apps/web/e2e/ui-shots.routes/mail.ts"]
 decisions: [D-095, D-096, D-057, D-060, D-062, D-063, D-078]
 ---
 

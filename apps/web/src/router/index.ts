@@ -12,7 +12,7 @@ import { useSetupStore } from '../stores/setup'
 
 declare module 'vue-router' {
   interface RouteMeta {
-    layout?: 'app' | 'kiosk' | 'setup'
+    layout?: 'app' | 'kiosk' | 'setup' | 'bare'
     auth?: 'user' | 'adult' | 'device'
   }
 }
@@ -172,7 +172,7 @@ export const routes: RouteRecordRaw[] = [
           path: '/ui-gallery',
           name: 'ui-gallery',
           component: () => import('../ui/UiGallery.vue'),
-          meta: { layout: 'setup', auth: 'device' },
+          meta: { layout: 'bare', auth: 'device' },
         } satisfies RouteRecordRaw,
       ]
     : []),

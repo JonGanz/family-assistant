@@ -52,6 +52,7 @@
     --ui-space-8: 64px;
 
     /* Shape */
+    --ui-radius-none: 0; /* calendar events inside month/week/day grids (R1 item 8) */
     --ui-radius-xs: 4px;
     --ui-radius-sm: 8px;
     --ui-radius-md: 12px;
@@ -96,7 +97,18 @@
 
     /* Sizes */
     --ui-touch: 48px;
+    --ui-button-height: 40px;
+    --ui-row-height: 56px;
     --ui-focus-ring: 2px solid var(--ui-primary);
+}
+
+:root[data-density='compact'] {
+    --ui-touch: 40px;
+    --ui-button-height: 32px;
+    --ui-row-height: 48px;
+    --ui-space-3: 10px;
+    --ui-space-4: 12px;
+    --ui-space-5: 20px;
 }
 
 :root[data-theme-mode='dark'] {

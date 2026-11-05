@@ -91,6 +91,7 @@ pub fn mail_deps(
             imap_tls_insecure: cfg.imap_tls_insecure,
             allow_private_hosts: cfg.allow_private_hosts,
         },
+        llm: None,
     }))
 }
 

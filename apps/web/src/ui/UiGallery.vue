@@ -2,6 +2,7 @@
 // Dev-only gallery (route /ui-gallery): every component in every state, with fictional sample data.
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { applyDensity, getDensity, type Density } from '../app/density'
 import { FAMILIES, applyTheme, resolveVariant, type ThemeChoice } from '../themes'
 import {
   UiBadge,
@@ -70,6 +71,9 @@ function apply() {
 watch([family, mode, variantId], apply)
 onMounted(apply)
 const showFocus = ref(false)
+const density = ref<Density>(getDensity())
+watch(density, (d) => applyDensity(d))
+onMounted(() => applyDensity(density.value))
 
 // ---- Sample data ----
 const iconNames = Object.keys(icons) as IconName[]
@@ -201,6 +205,14 @@ const dayOptions = [
               { value: 'dark', label: 'Dark' },
             ]"
           />
+          <UiSegmented
+            v-model="density"
+            label="Density"
+            :options="[
+              { value: 'comfortable', label: 'Comfortable' },
+              { value: 'compact', label: 'Compact' },
+            ]"
+          />
           <UiSwitch v-model="showFocus" label="Show focus rings" />
         </div>
         <p class="g-note">Window class: {{ bp }}</p>
@@ -236,7 +248,7 @@ const dayOptions = [
         </div>
         <div class="g-row g-shapes">
           <div
-            v-for="r in ['xs', 'sm', 'md', 'lg', 'xl', 'full']"
+            v-for="r in ['none', 'xs', 'sm', 'md', 'lg', 'xl', 'full']"
             :key="r"
             class="g-shape"
             :style="{ borderRadius: `var(--ui-radius-${r})` }"

@@ -88,10 +88,12 @@ pub(crate) struct Extractor<'a> {
     pub is_bill: Option<bool>,
     pub members: &'a [MemberId],
     pub attachments: Option<&'a Arc<dyn AttachmentSource>>,
+    /// Set when a rule extractor found an item at `BILL_OPEN_THRESHOLD` or above.
+    pub strong: bool,
 }
 
 impl Extractor<'_> {
-    fn external_url(&self) -> Option<String> {
+    pub(crate) fn external_url(&self) -> Option<String> {
         message_external_url(
             self.source.provider,
             self.source.gmail_ext,
@@ -100,7 +102,7 @@ impl Extractor<'_> {
         )
     }
 
-    fn source_ref(&self) -> serde_json::Value {
+    pub(crate) fn source_ref(&self) -> serde_json::Value {
         serde_json::json!({
             "kind": "email",
             "message_id": self.msg.id.to_string(),
@@ -108,7 +110,7 @@ impl Extractor<'_> {
         })
     }
 
-    fn org(&self) -> Option<&OrgCtx> {
+    pub(crate) fn org(&self) -> Option<&OrgCtx> {
         match_org(&self.of.from_addr, &self.pc.rules.orgs)
     }
 
@@ -121,6 +123,7 @@ impl Extractor<'_> {
             .map(|e| e.event.dedupe_key)
             .collect();
         for e in fa_rules::extract_events(&self.of.facts(), &self.pc.rules) {
+            self.strong |= e.confidence >= BILL_OPEN_THRESHOLD;
             let end = e.end.unwrap_or(e.start);
             if end < now {
                 continue;
@@ -215,6 +218,7 @@ impl Extractor<'_> {
         }
         for b in found {
             let open = b.confidence >= BILL_OPEN_THRESHOLD;
+            self.strong |= open;
             let bill = Bill {
                 id: BillId::new(),
                 household_id: self.household,
@@ -266,12 +270,9 @@ impl Extractor<'_> {
         Ok(())
     }
 
-    pub async fn tasks(&mut self, out: &mut Emitted) -> Result<()> {
-        let mode = match self.category.email_tasks {
-            EmailTasksMode::Off => return Ok(()),
-            EmailTasksMode::Suggest => "suggest",
-            EmailTasksMode::Create => "create",
-        };
+    /// `(reply assignees, action assignees)`: the source's adult owners (else every adult), and
+    /// the message's members (else the owners).
+    pub(crate) fn task_targets(&self) -> (Vec<MemberId>, Vec<MemberId>) {
         let owner_adults: Vec<MemberId> = self
             .pc
             .adults
@@ -289,7 +290,18 @@ impl Extractor<'_> {
         } else {
             self.members.to_vec()
         };
+        (reply_to, action_to)
+    }
+
+    pub async fn tasks(&mut self, out: &mut Emitted) -> Result<()> {
+        let mode = match self.category.email_tasks {
+            EmailTasksMode::Off => return Ok(()),
+            EmailTasksMode::Suggest => "suggest",
+            EmailTasksMode::Create => "create",
+        };
+        let (reply_to, action_to) = self.task_targets();
         for a in fa_rules::extract_actions(&self.of.facts(), &self.pc.rules) {
+            self.strong |= a.confidence >= BILL_OPEN_THRESHOLD;
             let (kind, assignees) = match a.kind {
                 ActionKind::Action => ("action", &action_to),
                 ActionKind::Reply => ("reply", &reply_to),

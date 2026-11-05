@@ -5,7 +5,7 @@ milestone: M4
 wave: 2
 depends_on: [T-04]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-recipe/**"]
 decisions: [D-094, D-093, D-015]
 ---
@@ -59,3 +59,16 @@ You are a sub-agent implementing one task of milestone M4 of the Family Assistan
   - the ts export path;
   - "list what outside your paths needs changing";
   - README changes needed: none.
+
+## Outcome (T-07 report)
+- **API:**
+  - `from_html`, `parse_iso_duration`, `parse_ingredient`, `from_llm`, `fetch_page`, `visible_text` and `extract(http, Option<&LlmClient>, RecipeInput)`.
+  - Types `RecipeDraft`, `RecipeIngredient`, `RecipeOrigin` and `RecipeInput`, exported to `gen/types`.
+  - `RecipeError::{Fetch, NotHtml, NoRecipe, LlmUnavailable, Llm}`.
+  - 12 tests with fictional fixtures.
+- **Fetch:** through `Http::with_policy(true, false)`, which blocks private hosts (redirects included). The limits are 10 MB, 20 s and 5 redirects, replacing the plan's 5 MB, 15 s and 3.
+- **Deviations:**
+  - The LLM schema uses all-required fields, with empty values meaning absent.
+  - At most 24,000 characters go to the LLM.
+  - When a page has several recipes, the one with the most ingredients wins.
+- **For T-08:** map `NoRecipe` to 422, `LlmUnavailable` to 503 and other `Llm` errors to 502.

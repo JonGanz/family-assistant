@@ -6,7 +6,7 @@ wave: 3
 depends_on: [T-05]
 agent: {model: sonnet, effort: medium}
 status: todo
-owns: ["apps/web/src/views/HomeView.vue", "apps/web/src/views/CalendarView.vue", "apps/web/src/views/RoutinesView.vue", "apps/web/src/components/EventCard.vue", "apps/web/src/components/DateRangeNav.vue", "apps/web/src/components/MemberChip.vue", "apps/web/src/components/Avatar.vue", "apps/web/src/components/WeatherIcon.vue", "apps/web/src/components/icons/**", "apps/web/src/components/components.test.ts", "apps/web/src/stores/calendar.ts", "apps/web/src/stores/calendar.test.ts", "apps/web/src/stores/routines.ts", "apps/web/src/stores/weather.ts", "apps/web/src/views/today.test.ts"]
+owns: ["apps/web/src/views/HomeView.vue", "apps/web/src/views/CalendarView.vue", "apps/web/src/views/RoutinesView.vue", "apps/web/src/components/EventCard.vue", "apps/web/src/components/DateRangeNav.vue", "apps/web/src/components/MemberChip.vue", "apps/web/src/components/Avatar.vue", "apps/web/src/components/WeatherIcon.vue", "apps/web/src/components/icons/**", "apps/web/src/components/components.test.ts", "apps/web/src/stores/calendar.ts", "apps/web/src/stores/calendar.test.ts", "apps/web/src/stores/routines.ts", "apps/web/src/stores/weather.ts", "apps/web/src/views/today.test.ts", "apps/web/src/views/parts/AdvisoryList.vue", "apps/web/src/views/parts/AgendaList.vue", "apps/web/src/views/parts/WeatherCard.vue", "apps/web/e2e/ui-shots.routes/today.ts"]
 decisions: [D-095, D-096, D-086, D-080, D-046, D-041]
 ---
 
@@ -36,6 +36,9 @@ The paths in `owns` above. `MemberChip`, `Avatar`, `EventCard` and `WeatherIcon`
 8. **Keep behaviour:** guards, store calls, SSE invalidation, `If-Match` and 409 handling, and every existing feature of your views stay. This is a visual and interaction revamp, not a feature change. Keep the accessible names and test ids that `apps/web/e2e` uses; any change you cannot avoid goes in the report.
 9. **Tests:** update your area's test file (`apps/web/src/views/today.test.ts`, split by the main session) and the tests next to the components and stores you own. Add at least one instant-save Undo test and one dirty-form test where your views have them.
 10. Run `scripts/ui-shots.sh --all` for your routes (add them to the route constant in `apps/web/e2e/ui-shots.spec.ts` only if the main session made it data-driven per area; otherwise list the routes in the report).
+
+## R1 rule (user, 2026-11-04)
+Calendar events **inside calendar grids** (month, week and day grids in `CalendarView` and its components) are square: use `--ui-radius-none` (added by T-05). Event cards in lists, such as the Today agenda, keep the normal card rounding. The kiosk `EventCard` look is unchanged.
 
 ## R2 feedback
 (filled by main session before launch)

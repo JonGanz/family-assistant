@@ -1,5 +1,24 @@
 import { mkdirSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
+import mail from './ui-shots.routes/mail'
+import settings1 from './ui-shots.routes/settings1'
+import settings2 from './ui-shots.routes/settings2'
+import tasks from './ui-shots.routes/tasks'
+import today from './ui-shots.routes/today'
+import type { ShotRoute } from './ui-shots.routes/types'
+
+/** The shell itself: the More sheet on phones (main session). */
+const shell: ShotRoute[] = [
+  {
+    route: '/',
+    name: 'shell-more-sheet',
+    widths: [360],
+    before: async (page) => {
+      await page.getByRole('button', { name: 'More' }).click()
+      await page.waitForTimeout(300)
+    },
+  },
+]
 
 // 2x pixel density so the review images stay sharp on high-DPI screens.
 test.use({ deviceScaleFactor: 2 })
@@ -7,31 +26,13 @@ test.use({ deviceScaleFactor: 2 })
 // Review screenshots (M4). Run through scripts/ui-shots.sh, never in the default e2e run.
 // Output: apps/web/test-results/ui-shots/<page>-<width>-<light|dark>.png
 
-/** App routes captured with `--all` (UI_SHOTS_ALL=1). Edit this list when views are added or split. */
-const APP_ROUTES = [
-  '/',
-  '/calendar',
-  '/tasks',
-  '/routines',
-  '/mail',
-  '/inbox',
-  '/bills',
-  '/settings',
-  '/settings/account',
-  '/settings/appearance',
-  '/settings/notifications',
-  '/settings/household',
-  '/settings/members',
-  '/settings/tasks',
-  '/settings/calendars',
-  '/settings/weather',
-  '/settings/mail',
-  '/settings/orgs',
-  '/settings/system',
-  '/settings/devices',
-  '/settings/about',
-  '/settings/status',
-]
+/** App routes captured with `--all` (UI_SHOTS_ALL=1), one file per area so wave-3 tasks own their own list.
+ *  UI_SHOTS_AREAS=tasks,mail narrows the run. */
+const AREAS: Record<string, ShotRoute[]> = { today, tasks, mail, settings1, settings2, shell }
+const areaFilter = (process.env.UI_SHOTS_AREAS ?? '').split(',').filter(Boolean)
+const APP_ROUTES: ShotRoute[] = Object.entries(AREAS)
+  .filter(([a]) => areaFilter.length === 0 || areaFilter.includes(a))
+  .flatMap(([, rs]) => rs)
 
 const WIDTHS = [360, 800, 1280]
 const MODES = ['light', 'dark'] as const
@@ -74,11 +75,13 @@ test.describe('app routes', () => {
         await page.getByLabel('Password').fill(process.env.E2E_PASSWORD ?? '')
         await page.getByRole('button', { name: 'Log in' }).click()
         await expect(page).toHaveURL(/\/$/)
-        for (const route of APP_ROUTES) {
-          await page.goto(route)
+        for (const shot of APP_ROUTES) {
+          if (shot.widths && !shot.widths.includes(width)) continue
+          await page.goto(shot.route)
           await page.waitForLoadState('networkidle')
+          if (shot.before) await shot.before(page)
           await page.screenshot({
-            path: `${OUT}/${slug(route)}-${width}-${mode}.png`,
+            path: `${OUT}/${shot.name ?? slug(shot.route)}-${width}-${mode}.png`,
             fullPage: true,
           })
         }

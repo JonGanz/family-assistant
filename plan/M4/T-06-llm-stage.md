@@ -5,7 +5,7 @@ milestone: M4
 wave: 2
 depends_on: [T-03, T-04]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-pipeline/**", "crates/fa-mail/**", "crates/fa-llm/src/provider.rs", "crates/fa-llm/src/lib.rs (the provider mod/pub use lines only)", "crates/fa-llm/Cargo.toml", "bins/fa-server/src (the MailDeps construction line only)"]
 decisions: [D-093, D-094, D-029, D-027, D-057, D-060, D-002]
 ---
@@ -68,6 +68,10 @@ You are a sub-agent implementing one task of milestone M4 of the Family Assistan
 - `llm_call` rows hold no subject or body text: assert that the fixture subject string appears in no column.
 - `set_llm_stage` versions, and prune.
 
+## Notes from wave 1 (main session)
+- T-03: mark LLM-made items with `ExtractedByRepo::set(conn, ExtractTarget::{Event,Bill,Task}, id, ExtractOrigin::Llm)` after the existing insert. The API key is a secret: `SecretRepo::put(.., "llm_endpoint", endpoint.id, SecretKind::ApiKey, ..)`, which you read through the existing secret repo (C-10 AAD).
+- T-04: `fa_llm::json_schema_for` adds `additionalProperties: false` but does not list `Option` fields in `required`. Ollama does not enforce strict mode. Keep `MailLlmResult` parts that are optional as `Option` and tolerate a missing key. Do not change `schema.rs` unless a test shows it is needed, and if you do, report it.
+
 ## Acceptance
 - [ ] `df -h /` shows at least 6 GB free; `CARGO_INCREMENTAL=0`.
 - [ ] On a fresh container (port 55406): `cargo test -p fa-pipeline -p fa-mail -p fa-llm` passes.
@@ -80,3 +84,25 @@ You are a sub-agent implementing one task of milestone M4 of the Family Assistan
   - deviations;
   - "list what outside your paths needs changing";
   - README changes needed: none (T-17 writes the AI docs).
+
+## Outcome (T-06 report)
+- **`fa-llm`:** `Provider` (`new(store, key, http)`, `client_for`, `call` writes `llm_call`, `invalidate`).
+- **`fa-pipeline`:** `Outcome.pending_llm`, `record_stage` (LLM only) and `set_llm_stage`, with a test.
+- **`fa-mail`:**
+  - `process/llm.rs` holds `MailLlmResult`, the `mail.llm` job (key `mail.llm:<id>`, `max_attempts` 12) and `llm.prune` at `0 4 * * *`. Items are approval-only (bills `Proposed`, tasks `suggest`), and duplicates of rule items are dropped.
+  - `MailDeps.llm: Option<Arc<Provider>>`.
+  - `tests/llm_flow.rs` (7 tests).
+- **Deviations:**
+  - The job payload is `{message_id, household, rules_strong}`.
+  - The `llm` stage sets `pending_llm`, and a later stage that accepts clears it.
+  - When the category is still pending, the one call also asks for extraction.
+  - A category change re-queues `mail.auto_actions` and re-runs `extract`.
+  - The item threshold is the `email.category` `llm` threshold, or 0.7.
+- **Main-session fixes at integration:**
+  - `fa-tasks` `MailTaskRequest.extracted_by` now marks LLM tasks through `ExtractedByRepo::set`.
+  - `llm: None` was added to six fa-api test files.
+  - `extracted_by: None` was added to `MailTaskRequest` test literals.
+- **Known gaps** (follow-ups):
+  - An LLM `time_sensitive = true` sends no notification.
+  - A later `mail.process` re-run records a default decision that hides the earlier LLM one.
+  - LLM task due dates are set to 23:59 local.

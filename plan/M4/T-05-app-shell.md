@@ -5,8 +5,8 @@ milestone: M4
 wave: 2
 depends_on: [T-02]
 agent: {model: sonnet, effort: medium}
-status: todo
-owns: ["apps/web/src/app/**", "apps/web/src/layouts/AppLayout.vue", "apps/web/src/views/SettingsLayout.vue", "apps/web/src/views/TasksView.vue", "apps/web/src/views/SettingsHouseholdView.vue", "apps/web/src/router/index.ts", "apps/web/src/App.vue", "apps/web/src/app/*.test.ts"]
+status: done
+owns: ["apps/web/src/app/**", "apps/web/src/layouts/AppLayout.vue", "apps/web/src/views/SettingsLayout.vue", "apps/web/src/views/TasksView.vue", "apps/web/src/views/SettingsHouseholdView.vue", "apps/web/src/router/index.ts", "apps/web/src/App.vue", "apps/web/src/app/*.test.ts", "apps/web/src/ui/** (R1 items 1, 4, 8, 9 only)", "apps/web/src/layouts/BareLayout.vue"]
 decisions: [D-095, D-096, D-097, D-063, D-070]
 ---
 
@@ -66,7 +66,22 @@ The paths in `owns` above. **Not yours:** `ui/**` (report a missing component or
 9. Run `scripts/ui-shots.sh --all` for `/`, `/tasks`, `/settings`, `/settings/household` and the More sheet open (add those routes to the spec's route constant only if T-02 left it data-driven; otherwise report).
 
 ## R1 feedback
-(filled by main session before launch)
+The user accepted every R1 suggestion on 2026-11-04 (review artifact R1) and added one rule.
+
+1. **Density:** configurable per device, default **comfortable** (the current Material 3 sizes), with a **compact** option.
+   - Add `data-density="comfortable|compact"` on `<html>`, with a `[data-density="compact"]` block in `ui/tokens.css` that tightens the touch, row-height and spacing tokens (compact: 40 px touch, 32 px buttons, 48 px list rows).
+   - Store it per device next to the theme choice: `localStorage` key `fa.density`, read and applied in `src/app/density.ts` (`getDensity()`, `setDensity()`, `applyDensity()`), and applied at start-up in `App.vue`.
+   - The Appearance screen control is T-13's (wave 3). You provide the module and its test.
+2. **Corners:** Material 3 rounding as in the gallery.
+3. **Cards:** `UiCard` defaults to `filled`; use `outlined` for lists inside cards, and `elevated` only for floating surfaces (menus, sheets).
+4. **Icons:** Rounded. The **active** destination in `UiNavBar`, `UiNavRail` and `UiNavDrawer` shows the **filled** glyph. Add `-rounded` filled variants to `ui/icons.ts` (iconify `material-symbols:<name>-rounded` vs `<name>-outline-rounded`; check the names in the set). Each `NavDestination.icon` resolves to an outline and filled pair.
+5. **Primary colour:** keep the plain accent (T-13 fixes the three weak theme pairs in wave 3).
+6. **Navigation:** as proposed: bottom bar with Today, Calendar, Tasks, Inbox and More; rail on medium; drawer on expanded.
+7. **Text fields:** keep the label above the box.
+8. **New rule: calendar events inside calendar grids are square.** In month, week and day grids, an event block has radius 0 (`--ui-radius-none: 0` token). Cards, chips and list items elsewhere keep the rounding. You only add the token; T-10 applies it.
+9. **Bare layout for `/ui-gallery`:** add a `bare` layout (no header, full width) and switch the gallery route to it.
+
+For this wave you also own `apps/web/src/ui/**` (T-02 is done) for items 1, 4, 8 and 9 only. Keep the gallery and its tests green, and add the compact density and filled nav icons to the gallery.
 
 ## Acceptance
 - [ ] In `apps/web`: `corepack pnpm@9 run lint`, `typecheck`, `test` and `build` pass; `corepack pnpm@9 run format` was run
@@ -79,3 +94,25 @@ The paths in `owns` above. **Not yours:** `ui/**` (report a missing component or
   - store changes needed;
   - **open questions for R2**: navigation order and the More contents, density (comfortable or compact lists), cards versus lists for Tasks on phones, the Save bar position;
   - "list what outside your paths needs changing"
+
+## Outcome (T-05 report)
+- **Built:**
+  - `app/navigation.ts` (destinations as data, role filter, badge), `app/density.ts`, `app/SettingsPage.vue` and `app/ResponsiveItems.vue`;
+  - `layouts/BareLayout.vue`, used by `/ui-gallery`;
+  - a rebuilt `AppLayout` (bottom bar and More on compact, rail on medium, drawer on expanded, one snackbar host) and a list-detail `SettingsLayout`;
+  - reference pages `TasksView` and `SettingsHouseholdView`.
+- **R1 items:** density tokens, filled active glyphs (`navGlyph`), `--ui-radius-none`. `nav.ts` gained `action` and `current` for the More button.
+- **Deviations:**
+  - Household uses one draft and one Save bar for the page (the API is a single versioned PATCH); switches save instantly; a 409 offers Reload.
+  - Task Undo moved to a 10 s snackbar, so `UndoToast.vue` is unused (T-11 deletes it).
+  - There is no Tasks filter action.
+- **Rules for wave 3** (T-05's "rules of the house"):
+  - Pages are `UiPage` + `UiTopAppBar`; Settings children use `SettingsPage`.
+  - Each group is a filled `UiCard`; collections use `ResponsiveItems`.
+  - Create actions are a FAB that opens a `UiSheet`.
+  - Every list has skeleton, error and empty states.
+  - Single controls use `useInstantSave`; forms use `useFormDraft` + `UiSaveBar`.
+  - Colours come from tokens only.
+- **Gaps in `ui/`:** no time-zone picker, no autocomplete, no menu slot on `UiTopAppBar`, no footer slot on the nav components.
+- **Follow-ups:** T-13 and T-14 wrap Settings pages in `SettingsPage` and add icons to `settingsNav.ts`. Remove the `:deep` padding rules in `AppLayout` and `SettingsLayout` after wave 3.
+- **R2 (user):** the compact bottom bar is replaced by a hamburger drawer, the desktop drawer becomes collapsible, and the Save bar is sticky everywhere (follow-up T-18).

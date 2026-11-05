@@ -1,82 +1,82 @@
 <script setup lang="ts">
+// List-detail (Frontend.md §3c). Compact and medium: /settings is the grouped list and a child page
+// fills the screen (its SettingsPage supplies the back arrow). Expanded: list left, page right.
 import { computed } from 'vue'
+import { useRoute } from 'vue-router'
 import { useSessionStore } from '../stores/session'
-import { visibleGroups } from './settingsNav'
+import { UiList, UiListItem, UiIcon, UiSection, UiTopAppBar, useBreakpoint } from '../ui'
+import type { IconName } from '../ui'
+import { visibleGroups, type SettingsPage } from './settingsNav'
 
 const session = useSessionStore()
+const route = useRoute()
+const bp = useBreakpoint()
 const groups = computed(() => visibleGroups(session.isAdult))
+const expanded = computed(() => bp.value === 'expanded')
+const isIndex = computed(() => route.path === '/settings' || route.path === '/settings/')
+
+// Until settingsNav.ts carries an icon per page (T-13), every row gets the settings glyph.
+const iconFor = (p: SettingsPage): IconName => (p as { icon?: IconName }).icon ?? 'settings'
+const showList = computed(() => expanded.value || isIndex.value)
+const showPage = computed(() => expanded.value || !isIndex.value)
+const isActive = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
 </script>
 
 <template>
-  <div class="settings-layout">
-    <nav aria-label="Settings" class="settings-nav">
-      <RouterLink to="/settings" exact-active-class="router-link-active" class="settings-all"
-        >All settings</RouterLink
-      >
-      <template v-for="g in groups" :key="g.title">
-        <h2 class="settings-group">{{ g.title }}</h2>
-        <RouterLink v-for="p in g.pages" :key="p.to" :to="p.to">{{ p.label }}</RouterLink>
-      </template>
-    </nav>
-    <div class="settings-body"><RouterView /></div>
+  <div class="settings-layout" :class="{ 'is-split': expanded }">
+    <div v-if="showList" class="settings-list">
+      <UiTopAppBar v-if="!expanded" title="Settings" />
+      <nav aria-label="Settings" class="settings-nav">
+        <UiSection v-for="g in groups" :key="g.title" :heading="g.title">
+          <UiList>
+            <UiListItem
+              v-for="p in g.pages"
+              :key="p.to"
+              :headline="p.label"
+              :supporting="expanded ? undefined : p.blurb"
+              :to="p.to"
+              :class="{ 'is-current': expanded && isActive(p.to) }"
+            >
+              <template #leading><UiIcon :name="iconFor(p)" /></template>
+            </UiListItem>
+          </UiList>
+        </UiSection>
+      </nav>
+    </div>
+    <div v-if="showPage" class="settings-page"><RouterView /></div>
   </div>
 </template>
 
 <style scoped>
-.settings-layout {
-  display: grid;
-  grid-template-columns: 13rem minmax(0, 1fr);
-  gap: var(--space-4);
-  align-items: start;
-}
 .settings-nav {
   display: grid;
-  gap: var(--space-1);
+  gap: var(--ui-space-4);
+  padding: var(--ui-space-2) var(--ui-space-4) var(--ui-space-4);
+}
+.settings-layout.is-split {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  align-items: start;
+}
+.is-split .settings-list {
   position: sticky;
-  top: var(--space-3);
+  top: 0;
+  max-height: 100dvh;
+  overflow-y: auto;
+  border-right: 1px solid var(--ui-outline-variant);
 }
-.settings-nav a {
-  padding: var(--space-1) var(--space-3);
-  border-radius: var(--radius-md);
-  color: var(--color-text);
-  text-decoration: none;
+.is-split .settings-nav {
+  padding-top: var(--ui-space-4);
 }
-.settings-nav a:hover {
-  background: var(--color-surface);
+/* Pages not yet on SettingsPage keep the old padding until they are migrated. */
+.settings-page > :deep(:not(.ui-page)) {
+  box-sizing: border-box;
+  max-width: 64rem;
+  margin: 0 auto;
+  padding: 1rem;
 }
-.settings-nav a.router-link-active {
-  color: var(--color-accent);
-  font-weight: 600;
-  background: var(--color-surface);
-}
-.settings-group {
-  margin: var(--space-3) 0 0;
-  padding: 0 var(--space-3);
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--color-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-@media (max-width: 40rem) {
-  .settings-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .settings-nav {
-    position: static;
-    display: flex;
-    gap: var(--space-2);
-    overflow-x: auto;
-    padding-bottom: var(--space-2);
-  }
-  .settings-nav a {
-    flex: none;
-    white-space: nowrap;
-    border: 1px solid var(--color-border);
-    border-radius: 0;
-  }
-  .settings-group {
-    display: none;
-  }
+.is-current :deep(.ui-li__row) {
+  background: var(--ui-primary-container);
+  border-radius: var(--ui-radius-full);
 }
 </style>

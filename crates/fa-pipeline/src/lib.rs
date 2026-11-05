@@ -2,8 +2,8 @@
 //! "Pipeline engine".
 
 use fa_domain::{
-    Decision, DecisionId, DecisionPointKey, HouseholdId, MemberId, PipelineStage,
-    PipelineVersionId, StageKind, Subject,
+    Decision, DecisionId, DecisionPointKey, HouseholdId, MemberId, OnUnavailable, PipelineStage,
+    PipelineStageId, PipelineVersionId, StageKind, Subject,
 };
 use fa_store::{DecisionPointRepo, DecisionRepo, NewDecision, PipelineRepo, mail_defaults};
 use sqlx::PgConnection;
@@ -31,6 +31,9 @@ pub struct Outcome {
     pub stage: StageKind,
     pub is_final: bool,
     pub version: PipelineVersionId,
+    /// An enabled `llm` stage follows the below-threshold `rules` stage: the default applies for
+    /// now and the caller queues the deferred LLM job.
+    pub pending_llm: bool,
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -117,6 +120,7 @@ impl Pipeline {
                 PipelineError::Invalid(format!("no active pipeline for {}", dp.as_str()))
             })?;
         let mut warned = false;
+        let mut pending_llm = false;
         let mut stored: Option<(StageKind, bool, Vec<Candidate>)> = None;
         for stage in stages.iter().filter(|s| s.enabled) {
             match stage.kind {
@@ -128,7 +132,8 @@ impl Pipeline {
                     }
                 }
                 StageKind::Human => break,
-                StageKind::Knn | StageKind::SystemOne | StageKind::Llm => {
+                StageKind::Llm => pending_llm = true,
+                StageKind::Knn | StageKind::SystemOne => {
                     if !warned {
                         warned = true;
                         tracing::debug!(
@@ -141,6 +146,7 @@ impl Pipeline {
                 }
             }
         }
+        pending_llm &= stored.is_none();
         let (kind, is_final, values) = stored.unwrap_or_else(|| {
             (
                 StageKind::Human,
@@ -175,7 +181,144 @@ impl Pipeline {
             stage: kind,
             is_final,
             version: version.id,
+            pending_llm,
         })
+    }
+
+    /// Records the LLM stage's candidates of `version`. Candidates at or above the `llm` stage's
+    /// threshold become `Decision`s with `stage_kind = llm`; otherwise nothing is written and the
+    /// outcome is `human` with the default kept.
+    pub async fn record_stage(
+        conn: &mut PgConnection,
+        subject: Subject,
+        dp: DecisionPointKey,
+        kind: StageKind,
+        candidates: Vec<Candidate>,
+        version: PipelineVersionId,
+    ) -> Result<Outcome> {
+        if kind != StageKind::Llm {
+            return Err(PipelineError::Invalid(
+                "record_stage handles the llm stage only".into(),
+            ));
+        }
+        let point = dp_id(conn, dp).await?;
+        let stage = PipelineRepo::stages(conn, version)
+            .await?
+            .into_iter()
+            .find(|s| s.enabled && s.kind == StageKind::Llm)
+            .ok_or_else(|| PipelineError::Invalid("the version has no enabled llm stage".into()))?;
+        let accepted = accept(dp, candidates, stage.accept_threshold);
+        if accepted.is_empty() {
+            return Ok(Outcome {
+                values: vec![Candidate {
+                    value: point.default_value.clone(),
+                    confidence: 0.0,
+                    source: "default".into(),
+                }],
+                stage: StageKind::Human,
+                is_final: false,
+                version,
+                pending_llm: false,
+            });
+        }
+        for c in &accepted {
+            DecisionRepo::insert(
+                conn,
+                &NewDecision {
+                    household_id: point.household_id,
+                    decision_point_id: point.id,
+                    subject,
+                    pipeline_version_id: Some(version),
+                    stage_kind: StageKind::Llm,
+                    value: c.value.clone(),
+                    confidence: c.confidence,
+                    is_final: true,
+                    source: Some(c.source.clone()),
+                    decided_by: None,
+                },
+            )
+            .await?;
+        }
+        Ok(Outcome {
+            values: accepted,
+            stage: StageKind::Llm,
+            is_final: true,
+            version,
+            pending_llm: false,
+        })
+    }
+
+    /// Saves a new active version with the `llm` stage inserted right before `human` (or updated
+    /// in place). The previous version stays for rollback. Unchanged settings return the active
+    /// version.
+    pub async fn set_llm_stage(
+        conn: &mut PgConnection,
+        household: HouseholdId,
+        dp: DecisionPointKey,
+        enabled: bool,
+        threshold: f32,
+    ) -> Result<PipelineVersionId> {
+        let point = dp_id(conn, dp).await?;
+        let (active, stages) = PipelineRepo::active_version(conn, point.id)
+            .await?
+            .ok_or_else(|| {
+                PipelineError::Invalid(format!("no active pipeline for {}", dp.as_str()))
+            })?;
+        let existing = stages.iter().find(|s| s.kind == StageKind::Llm);
+        match existing {
+            Some(s) if s.enabled == enabled && s.accept_threshold == threshold => {
+                return Ok(active.id);
+            }
+            None if !enabled => return Ok(active.id),
+            _ => {}
+        }
+        let new_id = PipelineVersionId::new();
+        let llm = PipelineStage {
+            id: PipelineStageId::new(),
+            household_id: household,
+            pipeline_version_id: new_id,
+            ord: 0,
+            kind: StageKind::Llm,
+            enabled,
+            accept_threshold: threshold,
+            on_unavailable: existing.map_or(OnUnavailable::Queue, |s| s.on_unavailable),
+            config: existing.map_or_else(|| serde_json::json!({}), |s| s.config.clone()),
+        };
+        let mut next: Vec<PipelineStage> = stages
+            .iter()
+            .filter(|s| s.kind != StageKind::Llm)
+            .cloned()
+            .collect();
+        let at = next
+            .iter()
+            .position(|s| s.kind == StageKind::Human)
+            .unwrap_or(next.len());
+        next.insert(at, llm);
+        for (i, s) in next.iter_mut().enumerate() {
+            s.id = PipelineStageId::new();
+            s.pipeline_version_id = new_id;
+            s.ord = i32::try_from(i).unwrap_or(i32::MAX);
+        }
+        validate_version(&next)?;
+        let latest = PipelineRepo::versions(conn, point.id)
+            .await?
+            .first()
+            .map_or(active.version, |v| v.version.max(active.version));
+        PipelineRepo::insert_version(
+            conn,
+            &fa_domain::PipelineVersion {
+                id: new_id,
+                household_id: household,
+                decision_point_id: point.id,
+                version: latest + 1,
+                active: true,
+                name: if enabled { "Rules + LLM" } else { "Rules only" }.into(),
+                created_by: None,
+            },
+            &next,
+        )
+        .await?;
+        Ok(new_id)
     }
 
     pub async fn record_human(

@@ -101,6 +101,7 @@ pub async fn env(pool: PgPool, gmail_base: &str, allow_plain: bool) -> Env {
             imap_tls_insecure: false,
             allow_private_hosts: true,
         },
+        llm: None,
     });
     Env {
         store,

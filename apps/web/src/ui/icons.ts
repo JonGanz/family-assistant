@@ -42,8 +42,20 @@ import I_refresh from '~icons/material-symbols/refresh-rounded'
 import I_sync from '~icons/material-symbols/sync-rounded'
 import I_lock from '~icons/material-symbols/lock-rounded'
 import I_key from '~icons/material-symbols/key-rounded'
+import I_logout from '~icons/material-symbols/logout-rounded'
 import I_visibility from '~icons/material-symbols/visibility-rounded'
 import I_visibility_off from '~icons/material-symbols/visibility-off-rounded'
+
+import I_home_outline from '~icons/material-symbols/home-outline-rounded'
+import I_today_outline from '~icons/material-symbols/today-outline-rounded'
+import I_calendar_outline from '~icons/material-symbols/calendar-month-outline-rounded'
+import I_tasks_outline from '~icons/material-symbols/task-alt-outline-rounded'
+import I_routines_outline from '~icons/material-symbols/event-repeat-outline-rounded'
+import I_inbox_outline from '~icons/material-symbols/inbox-outline-rounded'
+import I_mail_outline from '~icons/material-symbols/mail-outline-rounded'
+import I_bills_outline from '~icons/material-symbols/receipt-long-outline-rounded'
+import I_settings_outline from '~icons/material-symbols/settings-outline-rounded'
+import I_more_outline from '~icons/material-symbols/more-horiz-outline-rounded'
 
 export const icons = {
   home: I_home,
@@ -88,8 +100,25 @@ export const icons = {
   sync: I_sync,
   lock: I_lock,
   key: I_key,
+  logout: I_logout,
   visibility: I_visibility,
   visibility_off: I_visibility_off,
+  home_outline: I_home_outline,
+  today_outline: I_today_outline,
+  calendar_outline: I_calendar_outline,
+  tasks_outline: I_tasks_outline,
+  routines_outline: I_routines_outline,
+  inbox_outline: I_inbox_outline,
+  mail_outline: I_mail_outline,
+  bills_outline: I_bills_outline,
+  settings_outline: I_settings_outline,
+  more_outline: I_more_outline,
 } as const
 
 export type IconName = keyof typeof icons
+
+/** The glyph for a nav item: filled while active, outline otherwise (when the set has an outline pair). */
+export function navGlyph(name: IconName, active: boolean): IconName {
+  const outline = `${name}_outline` as IconName
+  return !active && outline in icons ? outline : name
+}

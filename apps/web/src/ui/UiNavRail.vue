@@ -2,29 +2,34 @@
 import { RouterLink } from 'vue-router'
 import UiBadge from './UiBadge.vue'
 import UiIcon from './UiIcon.vue'
+import { navGlyph } from './icons'
 import type { NavDestination } from './nav'
 import { useActivePath } from './navItem'
 
 const props = defineProps<{ destinations: NavDestination[]; label?: string; activePath?: string }>()
-const active = useActivePath(() => props.activePath)
+const path = useActivePath(() => props.activePath)
+const active = (d: NavDestination) => (d.action ? !!d.current : path(d.to))
+const linkAttrs = (d: NavDestination) =>
+  d.action ? { type: 'button', onClick: d.action } : { to: d.to }
 </script>
 
 <template>
   <nav class="ui-rail" :aria-label="label ?? 'Primary'">
-    <RouterLink
+    <component
+      :is="d.action ? 'button' : RouterLink"
       v-for="d in destinations"
       :key="d.id"
-      :to="d.to"
+      v-bind="linkAttrs(d)"
       class="ui-rail__item"
-      :class="{ 'is-active': active(d.to) }"
-      :aria-current="active(d.to) ? 'page' : undefined"
+      :class="{ 'is-active': active(d) }"
+      :aria-current="active(d) ? 'page' : undefined"
     >
       <span class="ui-rail__pill">
-        <UiIcon :name="d.icon" />
+        <UiIcon :name="navGlyph(d.icon, active(d))" />
         <UiBadge v-if="d.badge" :count="d.badge" class="ui-rail__badge" />
       </span>
       <span class="ui-rail__label">{{ d.label }}</span>
-    </RouterLink>
+    </component>
   </nav>
 </template>
 
@@ -40,6 +45,10 @@ const active = useActivePath(() => props.activePath)
   color: var(--ui-on-surface-variant);
 }
 .ui-rail__item {
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
   display: flex;
   flex-direction: column;
   align-items: center;

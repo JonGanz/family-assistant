@@ -2054,6 +2054,7 @@ test!(job_handlers_run_from_payloads, e, {
         tokens: Arc::new(NoTokens),
         key: Arc::new(MasterKey::from_bytes(&[7u8; 32], 1).unwrap()),
         cfg: Default::default(),
+        llm: None,
     });
     let handlers = fa_mail::handlers(&deps);
     let find = |kind: &str| -> Arc<dyn JobHandler> {

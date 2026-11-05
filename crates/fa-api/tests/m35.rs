@@ -106,6 +106,7 @@ async fn app_with(pool: PgPool, cfg: ApiConfig, auth: AuthConfig) -> App {
             },
         ),
         mail: fa_api::MailServices::new(Arc::new(fa_mail::MailDeps {
+            llm: None,
             store: store.clone(),
             http: fa_connectors::Http::new(true).unwrap(),
             tokens: Arc::new(oauth.clone()),

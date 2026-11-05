@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { useSessionStore } from '../stores/session'
+import { resetSnackbar, useSnackbar } from '../ui/composables/useSnackbar'
 import { toInstant, fromInstant } from './parts/dateInput'
 import TaskAddForm from './parts/TaskAddForm.vue'
 import TasksView from './TasksView.vue'
@@ -36,6 +37,7 @@ const members = [
 beforeEach(() => {
   setActivePinia(createPinia())
   vi.resetAllMocks()
+  resetSnackbar()
 })
 
 describe('TaskAddForm', () => {
@@ -107,11 +109,12 @@ describe('complete and undo', () => {
     await w.find('input.check').trigger('change')
     await flushPromises()
     expect(m.completeTask).toHaveBeenCalledWith('t1', undefined)
-    expect(w.text()).toContain('Completed “Dishes”')
-    await w.find('button.undo').trigger('click')
+    const snack = useSnackbar().state.current
+    expect(snack?.text).toBe('Completed “Dishes”')
+    expect(snack?.timeoutMs).toBe(10_000)
+    await snack!.action!.run()
     await flushPromises()
     expect(m.reopenTask).toHaveBeenCalledWith('t1')
-    expect(w.find('button.undo').exists()).toBe(false)
   })
 })
 

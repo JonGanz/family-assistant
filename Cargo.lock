@@ -1243,6 +1243,9 @@ name = "fa-llm"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "chrono",
+ "fa-domain",
+ "fa-store",
  "reqwest",
  "schemars",
  "serde",
@@ -1259,15 +1262,18 @@ version = "0.1.0"
 dependencies = [
  "async-imap",
  "async-trait",
+ "axum",
  "base64 0.22.1",
  "chrono",
  "chrono-tz",
  "fa-connectors",
  "fa-domain",
  "fa-jobs",
+ "fa-llm",
  "fa-pipeline",
  "fa-rules",
  "fa-store",
+ "schemars",
  "serde",
  "serde_json",
  "sqlx",
@@ -1318,6 +1324,21 @@ dependencies = [
 [[package]]
 name = "fa-recipe"
 version = "0.1.0"
+dependencies = [
+ "axum",
+ "fa-connectors",
+ "fa-llm",
+ "schemars",
+ "scraper",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "ts-rs",
+ "url",
+ "utoipa 5.5.0",
+]
 
 [[package]]
 name = "fa-rules"

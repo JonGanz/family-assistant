@@ -12,3 +12,18 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+fa-llm.workspace = true
+fa-connectors.workspace = true
+scraper.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+schemars.workspace = true
+thiserror.workspace = true
+url.workspace = true
+ts-rs.workspace = true
+utoipa.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+axum.workspace = true
+tokio = { workspace = true, features = ["macros", "rt"] }

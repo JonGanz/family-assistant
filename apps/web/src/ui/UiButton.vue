@@ -36,7 +36,7 @@ withDefaults(
   align-items: center;
   justify-content: center;
   gap: var(--ui-space-2);
-  min-height: 40px;
+  min-height: var(--ui-button-height);
   padding: 0 var(--ui-space-5);
   border: 1px solid transparent;
   border-radius: var(--ui-radius-full);

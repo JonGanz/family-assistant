@@ -1267,6 +1267,7 @@ test!(from_weather_is_idempotent_and_suggests, |e| {
 
 fn mail_req(e: &Env, msg: MessageId, title: &str, mode: MailTaskMode) -> MailTaskRequest {
     MailTaskRequest {
+        extracted_by: None,
         household: Some(e.h),
         message: msg,
         kind: Some("action".into()),

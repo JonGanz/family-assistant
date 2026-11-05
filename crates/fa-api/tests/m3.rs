@@ -74,6 +74,7 @@ fn member(h: HouseholdId, name: &str, role: Role) -> Member {
 
 fn mail_services(store: &Store, oauth: &fa_auth::OAuthService) -> fa_api::MailServices {
     fa_api::MailServices::new(std::sync::Arc::new(fa_mail::MailDeps {
+        llm: None,
         store: store.clone(),
         http: fa_connectors::Http::new(true).unwrap(),
         tokens: std::sync::Arc::new(oauth.clone()),
@@ -1087,6 +1088,7 @@ async fn seed_inbox(fx: &Fx, mx: &Mx) -> Items {
     tx.commit().await.unwrap();
     let task = fa_tasks::TaskService::new(fx.store.clone())
         .from_mail(fa_tasks::MailTaskRequest {
+            extracted_by: None,
             household: Some(fx.hid),
             message: mx.m_owned,
             kind: None,
@@ -1397,6 +1399,7 @@ async fn inbox_approve_and_reject_each_kind(pool: PgPool) {
     );
     let t2 = fa_tasks::TaskService::new(fx.store.clone())
         .from_mail(fa_tasks::MailTaskRequest {
+            extracted_by: None,
             household: Some(fx.hid),
             message: mx.m_owned,
             kind: None,
@@ -1597,6 +1600,7 @@ async fn adult_cannot_decide_another_adults_owners_only_item(pool: PgPool) {
     let event = new_event(&fx, "Hidden concert", Some(mx.m_hidden), "proposed").await;
     let task = fa_tasks::TaskService::new(fx.store.clone())
         .from_mail(fa_tasks::MailTaskRequest {
+            extracted_by: None,
             household: Some(fx.hid),
             message: mx.m_hidden,
             kind: None,

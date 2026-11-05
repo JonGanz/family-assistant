@@ -5,20 +5,21 @@
 mod expire;
 mod extract;
 mod facts;
+mod llm;
 pub(crate) mod views;
 
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use fa_domain::{
-    Candidate, CategoryBehaviour, DecidedBy, DecisionPointKey, HouseholdId, MemberId, MessageId,
-    NotifyTrigger, ProcessingState, Subject, SubjectType,
+    Candidate, CategoryBehaviour, DecidedBy, DecisionPointKey, HouseholdId, MailExtractMode,
+    MemberId, MessageId, NotifyTrigger, ProcessingState, Subject, SubjectType,
 };
 use fa_jobs::{BoxFuture, JobContext, JobError, JobHandler};
 use fa_pipeline::Pipeline;
 use fa_store::{
-    ChangeBus, DecisionPointRepo, DecisionRepo, MailSourceRepo, MessageRepo, NewNotification,
-    NotificationRepo, Store, mail_defaults,
+    AiSettingsRepo, ChangeBus, DecisionPointRepo, DecisionRepo, JobRepo, MailSourceRepo,
+    MessageRepo, NewJob, NewNotification, NotificationRepo, Store, mail_defaults,
 };
 use serde::Deserialize;
 use sqlx::PgConnection;
@@ -29,6 +30,7 @@ pub(crate) use extract::{
     create_contact, enqueue, enqueue_pay_task, link_to_enrollments, local_part,
 };
 pub(crate) use facts::{OwnedFacts, RulesEvaluator, short_hash, truncate};
+pub use llm::MailLlmResult;
 
 use crate::context::{self, ProcessCtx};
 use crate::{MailDeps, MailError, Result};
@@ -98,6 +100,8 @@ impl Steps {
 pub(crate) struct Decided {
     pub values: Vec<Candidate>,
     pub by: DecidedBy,
+    /// The pipeline waits for its `llm` stage; the default applies meanwhile.
+    pub pending_llm: bool,
 }
 
 /// A person's final decision wins over the pipeline; otherwise the pipeline runs.
@@ -127,6 +131,7 @@ async fn decide(
         return Ok(Decided {
             values,
             by: DecidedBy::User,
+            pending_llm: false,
         });
     }
     let o = Pipeline::run(conn, household, dp, subject, eval).await?;
@@ -137,6 +142,7 @@ async fn decide(
         } else {
             DecidedBy::Default
         },
+        pending_llm: o.pending_llm,
     })
 }
 
@@ -188,6 +194,7 @@ struct Payload {
 pub struct ProcessService {
     store: Store,
     attachments: Option<Arc<dyn AttachmentSource>>,
+    llm: Option<Arc<fa_llm::Provider>>,
     now: Arc<dyn Fn() -> DateTime<Utc> + Send + Sync>,
 }
 
@@ -196,6 +203,7 @@ impl ProcessService {
         Self {
             store,
             attachments: None,
+            llm: None,
             now: Arc::new(Utc::now),
         }
     }
@@ -203,6 +211,12 @@ impl ProcessService {
     /// Replaces the clock (tests): events that already ended by then are not proposed.
     pub fn with_clock(mut self, now: impl Fn() -> DateTime<Utc> + Send + Sync + 'static) -> Self {
         self.now = Arc::new(now);
+        self
+    }
+
+    /// Enables the deferred `mail.llm` job (without it no such jobs are queued).
+    pub fn with_llm(mut self, llm: Option<Arc<fa_llm::Provider>>) -> Self {
+        self.llm = llm;
         self
     }
 
@@ -246,6 +260,7 @@ impl ProcessService {
         let mut category = msg.category.clone();
         let mut time_sensitive = msg.time_sensitive;
         let mut is_bill = msg.is_bill;
+        let mut pending_llm = false;
         let mut members: Vec<MemberId> = MessageRepo::members(&mut tx, msg.id)
             .await?
             .into_iter()
@@ -261,6 +276,7 @@ impl ProcessService {
                 &eval,
             )
             .await?;
+            pending_llm |= d.pending_llm;
             let key = d
                 .values
                 .first()
@@ -283,6 +299,7 @@ impl ProcessService {
                 &eval,
             )
             .await?;
+            pending_llm |= d.pending_llm;
             time_sensitive = d
                 .values
                 .first()
@@ -298,6 +315,7 @@ impl ProcessService {
                 &eval,
             )
             .await?;
+            pending_llm |= d.pending_llm;
             is_bill = d.values.first().and_then(|c| c.value.as_bool()).or(is_bill);
         }
         if steps.member_link {
@@ -309,6 +327,7 @@ impl ProcessService {
                 &eval,
             )
             .await?;
+            pending_llm |= d.pending_llm;
             let links = resolve_members(&pc, &d);
             members = links.iter().map(|l| l.0).collect();
             MessageRepo::set_members(&mut tx, msg.id, &links).await?;
@@ -357,6 +376,7 @@ impl ProcessService {
 
         let extractable =
             cat.filter(|c| c.behaviour == CategoryBehaviour::Extract && c.key != "junk");
+        let mut rules_strong = false;
         if let Some(cat) = extractable
             && (steps.events || steps.bills || steps.tasks || steps.contacts)
         {
@@ -371,6 +391,7 @@ impl ProcessService {
                 is_bill,
                 members: &members,
                 attachments: self.attachments.as_ref(),
+                strong: false,
             };
             if steps.events {
                 ex.events((self.now)(), &mut out).await?;
@@ -383,6 +404,34 @@ impl ProcessService {
             }
             if steps.contacts {
                 ex.contacts(&mut out).await?;
+            }
+            rules_strong = ex.strong;
+        }
+
+        if let Some(llm) = &self.llm {
+            let wants_extract = extractable.is_some()
+                && (steps.events || steps.bills || steps.tasks)
+                && match AiSettingsRepo::get_or_default(&mut tx, household)
+                    .await?
+                    .mail_extract_mode
+                {
+                    MailExtractMode::Off => false,
+                    MailExtractMode::Always => true,
+                    MailExtractMode::Fallback => !rules_strong,
+                };
+            if (pending_llm || wants_extract)
+                && llm.client_for(household).await.ok().flatten().is_some()
+            {
+                let mut job = NewJob::new("mail.llm");
+                job.household_id = Some(household);
+                job.payload = serde_json::json!({
+                    "message_id": msg.id,
+                    "household": household,
+                    "rules_strong": rules_strong,
+                });
+                job.idempotency_key = Some(format!("mail.llm:{}", msg.id));
+                job.max_attempts = 12;
+                JobRepo::enqueue(&mut tx, &job).await?;
             }
         }
 
@@ -488,19 +537,23 @@ impl JobHandler for ExpireJob {
 
 /// A `ProcessService` that can re-fetch PDF parts through the message's source.
 pub fn process_service(deps: &Arc<MailDeps>) -> ProcessService {
-    ProcessService::new(deps.store.clone()).with_attachments(Arc::new(
-        crate::attachments::ProviderAttachments::new(deps.clone()),
-    ))
+    ProcessService::new(deps.store.clone())
+        .with_llm(deps.llm.clone())
+        .with_attachments(Arc::new(crate::attachments::ProviderAttachments::new(
+            deps.clone(),
+        )))
 }
 
 pub fn handlers(deps: &Arc<MailDeps>) -> Vec<Arc<dyn JobHandler>> {
     vec![
         Arc::new(ProcessJob(process_service(deps))),
+        Arc::new(llm::LlmJob(process_service(deps))),
+        Arc::new(llm::PruneJob),
         Arc::new(ExpireJob),
     ]
 }
 
 /// `(job kind, cron)`; `mail.process` is only ever enqueued.
 pub fn default_schedules() -> Vec<(&'static str, &'static str)> {
-    vec![("inbox.expire", "7 * * * *")]
+    vec![("inbox.expire", "7 * * * *"), ("llm.prune", "0 4 * * *")]
 }

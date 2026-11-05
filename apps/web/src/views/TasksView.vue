@@ -1,13 +1,9 @@
 <script setup lang="ts">
-import Tabs from '../components/Tabs.vue'
-import PageHeader from '../components/PageHeader.vue'
-import StateBlock from '../components/StateBlock.vue'
-import ErrorBanner from '../components/ErrorBanner.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import type { TaskView } from '../api/client'
 import TaskItem from '../components/tasks/TaskItem.vue'
-import UndoToast from '../components/tasks/UndoToast.vue'
+import ResponsiveItems from '../app/ResponsiveItems.vue'
 import { useClock } from '../composables/useClock'
 import { useHouseholdStore } from '../stores/household'
 import { useListsStore } from '../stores/lists'
@@ -15,6 +11,19 @@ import { useMembersStore } from '../stores/members'
 import { useSessionStore } from '../stores/session'
 import { addableLists, memberRefs, toTaskItem, type Viewer } from '../stores/taskMap'
 import { useTasksStore, type TaskTab } from '../stores/tasks'
+import {
+  UiButton,
+  UiEmptyState,
+  UiErrorState,
+  UiFab,
+  UiPage,
+  UiSection,
+  UiSegmented,
+  UiSheet,
+  UiSkeleton,
+  UiTopAppBar,
+  useSnackbar,
+} from '../ui'
 import { describeError } from './shared'
 import TaskAddForm from './parts/TaskAddForm.vue'
 
@@ -30,7 +39,7 @@ const now = useClock(30_000)
 
 const tab = ref<Tab>('now')
 const adding = ref(false)
-const error = ref('')
+const snackbar = useSnackbar()
 
 const viewer = computed<Viewer | null>(() => {
   const m = session.member
@@ -74,159 +83,188 @@ const model = (t: TaskView) => toTaskItem(t, refs.value)
 const open = (id: string) => router.push({ name: 'task-detail', params: { id } })
 
 async function act(fn: () => Promise<unknown>) {
-  error.value = ''
   try {
     await fn()
   } catch (e) {
-    error.value = describeError(e, 'That did not work.')
+    snackbar.show({ text: describeError(e, 'That did not work.') })
   }
 }
 const complete = (t: TaskView) => act(() => tasks.complete(t))
 const claimedByMe = (t: TaskView) => !!viewer.value && t.claimed_by === viewer.value.id
 const undo = () => act(() => tasks.undoLast())
+
+// Completing is instant (D-096): the store arms a 10-second undo (§3a) and the snackbar offers it.
+const UNDO_MS = 10_000
+watch(
+  () => tasks.undo,
+  (u) => {
+    if (!u) return
+    snackbar.show({
+      text: `Completed “${u.title}”`,
+      timeoutMs: UNDO_MS,
+      action: { label: 'Undo', run: undo },
+    })
+    setTimeout(() => {
+      if (tasks.undo?.id === u.id) tasks.expireUndo()
+    }, UNDO_MS)
+  },
+)
+const tabOptions = computed(() => tabItems.value.map((x) => ({ value: x.key, label: x.label })))
+const loadingFirst = computed(() => tasks.loading && !tasks.tabs[dataTab.value])
 </script>
 
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader title="Tasks">
-      <template #actions>
-        <button v-if="canAdd && !adding" type="button" class="btn-primary" @click="adding = true">
-          + Task
-        </button>
-      </template>
-    </PageHeader>
-    <TaskAddForm
-      v-if="adding"
-      :lists="lists.items"
-      :members="members.items"
-      :viewer="viewer"
-      :tz="household.tz"
-      @done="adding = false"
+  <UiPage>
+    <template #top>
+      <UiTopAppBar title="Tasks" />
+    </template>
+
+    <UiSegmented
+      :model-value="tab"
+      :options="tabOptions"
+      label="Tasks"
+      @update:model-value="tab = $event as Tab"
     />
 
-    <Tabs v-model="tab" :tabs="tabItems" label="Tasks" />
+    <UiSkeleton v-if="loadingFirst" :lines="5" />
+    <UiErrorState v-else-if="tasks.error" :message="tasks.error" @retry="load" />
 
-    <StateBlock :error="tasks.error" :loading="tasks.loading && !tasks.tabs[dataTab]" />
-    <ErrorBanner v-if="error" :message="error" />
-
-    <template v-if="tab === 'now'">
-      <h2>Mine</h2>
-      <p v-if="nowMine.length === 0" class="muted">Nothing for you right now.</p>
-      <div class="rows">
-        <TaskItem
-          v-for="t in nowMine"
-          :key="t.id"
-          :task="model(t)"
-          :now="now"
-          :tz="household.tz"
-          @complete="complete(t)"
-          @open="open"
-          @claim="act(() => tasks.claim(t.id))"
-        >
-          <template v-if="claimedByMe(t)" #claim>
-            <button type="button" class="btn-sm" @click="act(() => tasks.release(t.id))">
-              Release
-            </button>
+    <template v-else-if="tab === 'now'">
+      <UiSection heading="Mine">
+        <UiEmptyState v-if="nowMine.length === 0" icon="check" title="Nothing for you right now" />
+        <ResponsiveItems :items="nowMine">
+          <template #item="{ item }">
+            <TaskItem
+              :task="model(item)"
+              :now="now"
+              :tz="household.tz"
+              @complete="complete(item)"
+              @open="open"
+              @claim="act(() => tasks.claim(item.id))"
+            >
+              <template v-if="claimedByMe(item)" #claim>
+                <UiButton variant="text" @click="act(() => tasks.release(item.id))"
+                  >Release</UiButton
+                >
+              </template>
+            </TaskItem>
           </template>
-        </TaskItem>
-      </div>
-      <h2>Household</h2>
-      <p v-if="nowHousehold.length === 0" class="muted">Nothing else is due.</p>
-      <div class="rows">
-        <TaskItem
-          v-for="t in nowHousehold"
-          :key="t.id"
-          :task="model(t)"
-          :now="now"
-          :tz="household.tz"
-          @complete="complete(t)"
-          @open="open"
-          @claim="act(() => tasks.claim(t.id))"
-        />
-      </div>
+        </ResponsiveItems>
+      </UiSection>
+      <UiSection heading="Household">
+        <UiEmptyState v-if="nowHousehold.length === 0" icon="check" title="Nothing else is due" />
+        <ResponsiveItems :items="nowHousehold">
+          <template #item="{ item }">
+            <TaskItem
+              :task="model(item)"
+              :now="now"
+              :tz="household.tz"
+              @complete="complete(item)"
+              @open="open"
+              @claim="act(() => tasks.claim(item.id))"
+            />
+          </template>
+        </ResponsiveItems>
+      </UiSection>
     </template>
 
     <template v-else-if="tab === 'mine'">
-      <p v-if="current.length === 0" class="muted">You have no open tasks.</p>
-      <div class="rows">
-        <TaskItem
-          v-for="t in current"
-          :key="t.id"
-          :task="model(t)"
-          :now="now"
-          :tz="household.tz"
-          @complete="complete(t)"
-          @open="open"
-          @claim="act(() => tasks.claim(t.id))"
-        >
-          <template v-if="claimedByMe(t)" #claim>
-            <button type="button" class="btn-sm" @click="act(() => tasks.release(t.id))">
-              Release
-            </button>
-          </template>
-        </TaskItem>
-      </div>
+      <UiEmptyState v-if="current.length === 0" icon="check" title="You have no open tasks" />
+      <ResponsiveItems :items="current">
+        <template #item="{ item }">
+          <TaskItem
+            :task="model(item)"
+            :now="now"
+            :tz="household.tz"
+            @complete="complete(item)"
+            @open="open"
+            @claim="act(() => tasks.claim(item.id))"
+          >
+            <template v-if="claimedByMe(item)" #claim>
+              <UiButton variant="text" @click="act(() => tasks.release(item.id))">Release</UiButton>
+            </template>
+          </TaskItem>
+        </template>
+      </ResponsiveItems>
     </template>
 
     <template v-else-if="tab === 'lists'">
-      <p v-if="byList.length === 0" class="muted">No open tasks in any list.</p>
-      <section v-for="g in byList" :key="g.list.id">
-        <h2>{{ g.list.name }}</h2>
-        <div class="rows">
-          <TaskItem
-            v-for="t in g.items"
-            :key="t.id"
-            :task="model(t)"
-            :now="now"
-            :tz="household.tz"
-            @complete="complete(t)"
-            @open="open"
-            @claim="act(() => tasks.claim(t.id))"
-          />
-        </div>
-      </section>
+      <UiEmptyState v-if="byList.length === 0" icon="tasks" title="No open tasks in any list" />
+      <UiSection v-for="g in byList" :key="g.list.id" :heading="g.list.name">
+        <ResponsiveItems :items="g.items">
+          <template #item="{ item }">
+            <TaskItem
+              :task="model(item)"
+              :now="now"
+              :tz="household.tz"
+              @complete="complete(item)"
+              @open="open"
+              @claim="act(() => tasks.claim(item.id))"
+            />
+          </template>
+        </ResponsiveItems>
+      </UiSection>
     </template>
 
     <template v-else>
-      <p v-if="current.length === 0" class="muted">No suggestions waiting.</p>
-      <ul class="card-list">
-        <li v-for="t in current" :key="t.id">
-          <strong>{{ t.title }}</strong>
-          <span class="muted"> suggested by the weather</span>
-          <div class="row">
-            <button type="button" class="btn-primary" @click="act(() => tasks.accept(t.id))">
-              Accept
-            </button>
-            <button type="button" class="btn-ghost" @click="act(() => tasks.skip(t.id))">
-              Dismiss
-            </button>
+      <UiEmptyState v-if="current.length === 0" icon="ai" title="No suggestions waiting" />
+      <ResponsiveItems :items="current">
+        <template #item="{ item }">
+          <div class="suggestion">
+            <strong>{{ item.title }}</strong>
+            <span class="suggestion__by"> suggested by the weather</span>
+            <div class="suggestion__actions">
+              <UiButton variant="text" @click="act(() => tasks.skip(item.id))">Dismiss</UiButton>
+              <UiButton variant="tonal" @click="act(() => tasks.accept(item.id))">Accept</UiButton>
+            </div>
           </div>
-        </li>
-      </ul>
+        </template>
+      </ResponsiveItems>
     </template>
 
-    <button
+    <UiButton
       v-if="tab !== 'now' && tasks.nextBefore[dataTab]"
-      type="button"
-      :disabled="tasks.loading"
+      variant="text"
+      :loading="tasks.loading"
       @click="tasks.loadMore(dataTab)"
     >
       Load more
-    </button>
+    </UiButton>
 
-    <UndoToast
-      v-if="tasks.undo"
-      :key="tasks.undo.id"
-      :message="`Completed “${tasks.undo.title}”`"
-      @undo="undo"
-      @expire="tasks.expireUndo()"
-    />
-  </section>
+    <div v-if="canAdd" class="fab">
+      <UiFab icon="add" label="New task" extended @click="adding = true" />
+    </div>
+    <UiSheet v-model="adding" title="New task">
+      <TaskAddForm
+        :lists="lists.items"
+        :members="members.items"
+        :viewer="viewer"
+        :tz="household.tz"
+        @done="adding = false"
+      />
+    </UiSheet>
+  </UiPage>
 </template>
 
 <style scoped>
-.rows {
+.fab {
+  position: fixed;
+  right: calc(var(--ui-space-4) + env(safe-area-inset-right));
+  bottom: calc(var(--ui-bottom-offset, 0px) + var(--ui-space-4) + env(safe-area-inset-bottom));
+  z-index: 15;
+}
+.suggestion {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--ui-space-2);
+  padding: var(--ui-space-3) var(--ui-space-4);
+}
+.suggestion__by {
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
+}
+.suggestion__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ui-space-2);
 }
 </style>

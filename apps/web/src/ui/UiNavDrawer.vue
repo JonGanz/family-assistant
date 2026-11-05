@@ -3,11 +3,15 @@ import { computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import UiBadge from './UiBadge.vue'
 import UiIcon from './UiIcon.vue'
+import { navGlyph } from './icons'
 import type { NavDestination } from './nav'
 import { useActivePath } from './navItem'
 
 const props = defineProps<{ destinations: NavDestination[]; label?: string; activePath?: string }>()
-const active = useActivePath(() => props.activePath)
+const path = useActivePath(() => props.activePath)
+const active = (d: NavDestination) => (d.action ? !!d.current : path(d.to))
+const linkAttrs = (d: NavDestination) =>
+  d.action ? { type: 'button', onClick: d.action } : { to: d.to }
 const groups = computed(() => {
   const out: { name: string; items: NavDestination[] }[] = []
   for (const d of props.destinations) {
@@ -24,18 +28,19 @@ const groups = computed(() => {
   <nav class="ui-drawer" :aria-label="label ?? 'Primary'">
     <section v-for="g in groups" :key="g.name">
       <h2 v-if="g.name" class="ui-drawer__group">{{ g.name }}</h2>
-      <RouterLink
+      <component
+        :is="d.action ? 'button' : RouterLink"
         v-for="d in g.items"
         :key="d.id"
-        :to="d.to"
+        v-bind="linkAttrs(d)"
         class="ui-drawer__item"
-        :class="{ 'is-active': active(d.to) }"
-        :aria-current="active(d.to) ? 'page' : undefined"
+        :class="{ 'is-active': active(d) }"
+        :aria-current="active(d) ? 'page' : undefined"
       >
-        <UiIcon :name="d.icon" />
+        <UiIcon :name="navGlyph(d.icon, active(d))" />
         <span class="ui-drawer__label">{{ d.label }}</span>
         <UiBadge v-if="d.badge" :count="d.badge" />
-      </RouterLink>
+      </component>
     </section>
   </nav>
 </template>
@@ -58,6 +63,11 @@ const groups = computed(() => {
   color: var(--ui-on-surface-variant);
 }
 .ui-drawer__item {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  cursor: pointer;
   position: relative;
   display: flex;
   align-items: center;

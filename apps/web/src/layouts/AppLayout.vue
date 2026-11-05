@@ -1,17 +1,31 @@
 <script setup lang="ts">
-import { watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useNavigation } from '../app/navigation'
 import { useInboxStore } from '../stores/inbox'
 import { useSessionStore } from '../stores/session'
+import {
+  UiBottomSheet,
+  UiButton,
+  UiIconButton,
+  UiList,
+  UiListItem,
+  UiNavBar,
+  UiNavDrawer,
+  UiNavRail,
+  UiSnackbarHost,
+  isActivePath,
+  useBreakpoint,
+  type NavDestination,
+} from '../ui'
 
 const session = useSessionStore()
 const router = useRouter()
 const route = useRoute()
 const inbox = useInboxStore()
-
-/** A nav item is active for its own path and everything below it (`/tasks/:id` marks Tasks). */
-const under = (p: string) =>
-  p === '/' ? route.path === '/' : route.path === p || route.path.startsWith(`${p}/`)
+const bp = useBreakpoint()
+const nav = useNavigation()
+const moreOpen = ref(false)
 
 // Adults only: the inbox badge loads once and then follows SSE `inbox.updated` (stores/live.ts).
 watch(
@@ -21,112 +35,123 @@ watch(
   },
   { immediate: true },
 )
+watch(
+  () => route.path,
+  () => (moreOpen.value = false),
+)
+
+/** The bar: the primary destinations plus a More button that opens the sheet. */
+const barItems = computed<NavDestination[]>(() => [
+  ...nav.value.primary,
+  {
+    id: 'more',
+    label: 'More',
+    icon: 'more',
+    to: route.path,
+    action: () => (moreOpen.value = true),
+    current: moreOpen.value || nav.value.more.some((d) => isActivePath(route.path, d.to)),
+  },
+])
+/** The drawer groups the destinations the way the bar and More do. */
+const drawerItems = computed<NavDestination[]>(() =>
+  nav.value.all.map((d) => ({ ...d, group: d.primary ? '' : 'More' })),
+)
 
 async function logout() {
+  moreOpen.value = false
   await session.logout()
   await router.replace({ name: 'login' })
 }
+
+const withNav = computed(() => session.isUser)
 </script>
 
 <template>
-  <div class="app-layout">
+  <div class="app-layout" :class="[`is-${bp}`, { 'has-nav': withNav }]">
     <a class="skip-link" href="#main">Skip to content</a>
-    <header class="app-header">
-      <strong>Family Assistant</strong>
-      <nav v-if="session.isUser" aria-label="Primary" class="nav-primary">
-        <RouterLink to="/" :class="{ 'router-link-active': under('/') }">Today</RouterLink>
-        <RouterLink to="/calendar" :class="{ 'router-link-active': under('/calendar') }"
-          >Calendar</RouterLink
-        >
-        <RouterLink to="/tasks" :class="{ 'router-link-active': under('/tasks') }"
-          >Tasks</RouterLink
-        >
-        <RouterLink to="/routines" :class="{ 'router-link-active': under('/routines') }"
-          >Routines</RouterLink
-        >
-        <template v-if="session.isAdult">
-          <RouterLink to="/mail" :class="{ 'router-link-active': under('/mail') }">Mail</RouterLink>
-          <RouterLink to="/inbox" :class="{ 'router-link-active': under('/inbox') }">
-            Inbox
-            <span v-if="inbox.total > 0" class="nav-badge" :aria-label="`${inbox.total} waiting`">{{
-              inbox.total
-            }}</span>
-          </RouterLink>
-          <RouterLink to="/bills" :class="{ 'router-link-active': under('/bills') }"
-            >Bills</RouterLink
-          >
-        </template>
-      </nav>
-      <div v-if="session.isUser" class="header-end">
-        <RouterLink
-          class="settings-link"
-          to="/settings"
-          :class="{ 'router-link-active': under('/settings') }"
-          >Settings</RouterLink
-        >
-        <button class="logout" @click="logout">Log out</button>
-      </div>
-    </header>
-    <main id="main" class="app-main"><slot /></main>
+    <aside v-if="withNav && bp === 'medium'" class="app-side">
+      <UiNavRail :destinations="nav.all" />
+      <UiIconButton icon="logout" label="Log out" @click="logout" />
+    </aside>
+    <aside v-else-if="withNav && bp === 'expanded'" class="app-side">
+      <UiNavDrawer :destinations="drawerItems" />
+      <UiButton variant="text" icon="logout" class="app-logout" @click="logout">Log out</UiButton>
+    </aside>
+    <div id="main" class="app-main" tabindex="-1"><slot /></div>
+    <footer v-if="withNav && bp === 'compact'" class="app-bar">
+      <UiNavBar :destinations="barItems" />
+    </footer>
+    <UiBottomSheet v-model="moreOpen" title="More">
+      <UiList>
+        <UiListItem
+          v-for="d in nav.more"
+          :key="d.id"
+          :headline="d.label"
+          :to="d.to"
+          @click="moreOpen = false"
+        />
+        <UiListItem headline="Log out" @click="logout" />
+      </UiList>
+    </UiBottomSheet>
+    <UiSnackbarHost />
   </div>
 </template>
 
 <style scoped>
-.app-header {
+.app-layout {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem 1.5rem;
-  align-items: center;
-  padding: 0.5rem 1rem;
-  border-bottom: 1px solid var(--color-border);
+  flex-direction: column;
+  min-height: 100dvh;
+  background: var(--ui-surface);
+  color: var(--ui-on-surface);
+  --ui-bottom-offset: 0px;
 }
-.header-end {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-  margin-left: auto;
+.app-layout.is-compact.has-nav {
+  /* The bar is 80 px plus the safe area; snackbars and the Save bar sit above it. */
+  --ui-bottom-offset: calc(80px + env(safe-area-inset-bottom));
 }
-.settings-link {
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: 0 0.9rem;
-  text-decoration: none;
-}
-.settings-link.router-link-active {
-  border-color: var(--color-accent);
-}
-.header-end button {
-  min-height: 40px;
-}
-@media (max-width: 40rem) {
-  .app-header {
-    gap: 0.25rem 0.75rem;
-  }
-  .header-end {
-    order: 1;
-  }
-  .nav-primary {
-    order: 2;
-    flex: 1 0 100%;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    white-space: nowrap;
-    scrollbar-width: thin;
-  }
-}
-.nav-badge {
-  display: inline-block;
-  min-width: 1.4em;
-  padding: 0 0.4em;
-  border-radius: 0;
-  background: var(--color-accent);
-  color: var(--color-bg);
-  font-size: 0.8em;
-  text-align: center;
+.app-layout.is-medium,
+.app-layout.is-expanded {
+  flex-direction: row;
 }
 .app-main {
-  padding: 1rem;
+  flex: 1;
+  min-width: 0;
+  outline: none;
+}
+/* Views not yet on UiPage keep the old padding and width until they are migrated. */
+.app-main > :deep(:not(.ui-page, .settings-layout)) {
+  box-sizing: border-box;
   max-width: 64rem;
   margin: 0 auto;
+  padding: 1rem;
+}
+.app-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+}
+.app-side {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: none;
+  height: 100dvh;
+  padding-left: env(safe-area-inset-left);
+  overflow-y: auto;
+  background: var(--ui-surface-container-low);
+}
+.app-side > :first-child {
+  flex: none;
+}
+.app-side > :last-child {
+  margin: auto 0 var(--ui-space-4);
+}
+.is-expanded .app-side {
+  align-items: stretch;
+  padding-right: var(--ui-space-3);
 }
 </style>

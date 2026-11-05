@@ -268,3 +268,127 @@ fn validate_version_cases() {
     only_off.enabled = false;
     assert!(validate_version(&[only_off]).is_err());
 }
+
+async fn stage_kinds(store: &Store, h: HouseholdId, dp: DecisionPointKey) -> (i32, Vec<StageKind>) {
+    let mut tx = store.tx_for(h).await.unwrap();
+    let p = DecisionPointRepo::get_by_key(&mut tx, dp)
+        .await
+        .unwrap()
+        .unwrap();
+    let (v, st) = PipelineRepo::active_version(&mut tx, p.id)
+        .await
+        .unwrap()
+        .unwrap();
+    (v.version, st.iter().map(|s| s.kind).collect())
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn llm_stage_versions_and_pending(pool: PgPool) {
+    let (store, h) = setup(pool).await;
+    let dp = DecisionPointKey::EmailCategory;
+    let mut tx = store.tx_for(h).await.unwrap();
+    // Disabling a stage that is not there changes nothing.
+    let v1 = Pipeline::set_llm_stage(&mut tx, h, dp, false, 0.7)
+        .await
+        .unwrap();
+    let v2 = Pipeline::set_llm_stage(&mut tx, h, dp, true, 0.7)
+        .await
+        .unwrap();
+    assert_ne!(v1, v2);
+    tx.commit().await.unwrap();
+    let mut tx = store.tx_for(h).await.unwrap();
+    assert_eq!(
+        stage_kinds(&store, h, dp).await.1,
+        vec![StageKind::Rules, StageKind::Llm, StageKind::Human]
+    );
+    // Same settings: same version; a new threshold: a new version.
+    assert_eq!(
+        Pipeline::set_llm_stage(&mut tx, h, dp, true, 0.7)
+            .await
+            .unwrap(),
+        v2
+    );
+    let v3 = Pipeline::set_llm_stage(&mut tx, h, dp, true, 0.9)
+        .await
+        .unwrap();
+    assert_ne!(v2, v3);
+    assert!(
+        Pipeline::set_llm_stage(&mut tx, h, dp, true, 1.5)
+            .await
+            .is_err()
+    );
+    // Rules below the threshold with an enabled llm stage: pending, default recorded.
+    let s = subject();
+    let low = Fixed(vec![cand(json!("school"), 0.5, "a")]);
+    let out = Pipeline::run(&mut tx, h, dp, s, &low).await.unwrap();
+    assert!(out.pending_llm && !out.is_final);
+    assert_eq!(out.stage, StageKind::Human);
+    // Rules at the threshold: no pending.
+    let high = Fixed(vec![cand(json!("school"), 0.9, "a")]);
+    let out = Pipeline::run(&mut tx, h, dp, subject(), &high)
+        .await
+        .unwrap();
+    assert!(!out.pending_llm && out.stage == StageKind::Rules);
+    // The LLM stage: at or above its threshold (0.9) is recorded, below falls to the default.
+    let o = Pipeline::record_stage(
+        &mut tx,
+        s,
+        dp,
+        StageKind::Llm,
+        vec![cand(json!("bills"), 0.85, "llm")],
+        out.version,
+    )
+    .await
+    .unwrap();
+    assert_eq!(o.stage, StageKind::Human);
+    assert!(
+        Pipeline::current(&mut tx, dp, s)
+            .await
+            .unwrap()
+            .is_some_and(|d| d.stage_kind == StageKind::Human)
+    );
+    let o = Pipeline::record_stage(
+        &mut tx,
+        s,
+        dp,
+        StageKind::Llm,
+        vec![cand(json!("bills"), 0.95, "llm")],
+        out.version,
+    )
+    .await
+    .unwrap();
+    assert!(o.is_final && o.stage == StageKind::Llm);
+    let cur = Pipeline::current(&mut tx, dp, s).await.unwrap().unwrap();
+    assert_eq!(cur.stage_kind, StageKind::Llm);
+    assert_eq!(cur.value, json!("bills"));
+    // Disabling keeps the stage row but the last enabled stage stays human.
+    Pipeline::set_llm_stage(&mut tx, h, dp, false, 0.9)
+        .await
+        .unwrap();
+    let out = Pipeline::run(&mut tx, h, dp, subject(), &low)
+        .await
+        .unwrap();
+    assert!(!out.pending_llm);
+    let mut stages = {
+        let p = DecisionPointRepo::get_by_key(&mut tx, dp)
+            .await
+            .unwrap()
+            .unwrap();
+        PipelineRepo::active_version(&mut tx, p.id)
+            .await
+            .unwrap()
+            .unwrap()
+            .1
+    };
+    assert!(validate_version(&stages).is_ok());
+    // An llm stage cannot be the last enabled one.
+    stages.retain(|s| s.kind != StageKind::Human);
+    for s in &mut stages {
+        s.enabled = s.kind == StageKind::Llm;
+    }
+    stages.push(stage(h, 9, StageKind::Llm, 0.5));
+    stages
+        .iter_mut()
+        .for_each(|s| s.enabled = s.kind == StageKind::Llm);
+    assert!(stages.is_empty() || validate_version(&stages).is_err());
+}

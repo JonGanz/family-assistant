@@ -51,7 +51,9 @@ A home-grown Vue component library in `apps/web/src/ui/`, modelled on Material 3
 - **Tokens** (`ui/tokens.css`), loaded after `styles/base.css`:
   - **Colour** is never a literal. Every colour token is a `color-mix()` of the theme variables from §3d: surface and five container tones (`--ui-surface-container-{lowest,low,mid,high,highest}` mix `--color-surface` toward `--color-text`), on-surface and its variant, outline and its variant, primary (the `blue` hue), on-primary, primary container, error, and the state layers (hover 8 %, focus and pressed 12 %). Every theme in the catalogue therefore gets the same tonal structure.
   - **Spacing** is a 4 px grid (`--ui-space-1..8`).
-  - **Shape** is `--ui-radius-xs..xl` plus `full` (4, 8, 12, 16, 28 px, pill).
+  - **Shape** is `--ui-radius-xs..xl` plus `full` (4, 8, 12, 16, 28 px, pill), with `none` (0) for **events inside calendar grids, which are square** (R1 review, 2026-11-04). Cards default to `filled`.
+  - **Density** is per device (`data-density` on `<html>`, `localStorage` `fa.density`), with **comfortable** (Material 3 sizes) as the default and **compact** as the option (R1). It is set in Appearance next to the theme.
+  - **Icons** are Material Symbols Rounded; the active navigation destination shows the filled glyph (R1).
   - **Elevation** is `--ui-elev-0..3`: shadows plus a surface tint, readable in dark themes.
   - **Type scale** has display, headline, title, body and label, each in lg, md and sm.
   - **Motion** has short and medium durations with one easing; the durations drop to 0 under `prefers-reduced-motion`.
@@ -73,17 +75,17 @@ A home-grown Vue component library in `apps/web/src/ui/`, modelled on Material 3
 The destinations are data in `app/navigation.ts` (`id`, label, icon key, route, optional badge, adult-only, primary). Each navigation component renders that one list:
 | Window class | Navigation |
 |---|---|
-| compact | **bottom bar** with up to five primary destinations: Today, Calendar, Tasks, Inbox (adults, count badge), **More**. More opens a bottom sheet with Routines, Mail, Bills, Settings |
+| compact | **top app bar with a menu button** (hamburger) that opens a **modal navigation drawer** with every destination, grouped as on expanded. There is no bottom bar, so the top bar carries each screen's **contextual actions** (R2 review, 2026-11-04) |
 | medium | **navigation rail** on the left with the primary destinations; More becomes a menu; Settings sits at the rail's foot |
-| expanded | **navigation drawer** (standard, always visible) with every destination, grouped: Plan (Today, Calendar, Tasks, Routines), Mail (Inbox, Mail, Bills), Settings |
+| expanded | **navigation drawer** (standard) with every destination, grouped: Plan (Today, Calendar, Tasks, Routines), Mail (Inbox, Mail, Bills), Settings. The user can **collapse it to the rail** (a toggle at the drawer's top), which is remembered per device (`localStorage` `fa.nav.collapsed`) (R2) |
 - Children see only the destinations their guards allow (no Inbox, Mail or Bills; D-063).
-- Each screen has a `UiTopAppBar` with its title, a back arrow on nested pages (`/tasks/:id`, `/settings/*` on compact), and its actions. The primary create action of a list screen is a `UiFab` on compact and a top-bar button otherwise.
+- Each screen has a `UiTopAppBar` with its title, a back arrow on nested pages (`/tasks/:id`, `/settings/*` on compact), and its actions. On compact, the menu button sits at the start of every top-level screen's top bar, and a nested screen shows a back arrow instead. The primary create action of a list screen is a `UiFab` on compact and a top-bar button otherwise.
 - A parent destination is active for its nested paths (§2).
 
 ### 1.4 Applying changes (D-096)
 One rule everywhere outside the dashboard:
 - **A single control applies instantly.** A switch, a stand-alone single choice (radio group, segmented button, select) and a checkbox in a list save on change through `useInstantSave`: an optimistic update, then a snackbar "Saved" with **Undo** (about 5 s), which saves the old value. A failure reverts the control and shows the error in the snackbar.
-- **A multi-field form saves together.** It edits a draft from `useFormDraft` (`draft`, `dirty`, `save`, `discard`). While it is dirty, a sticky `UiSaveBar` (Discard, Save) shows: at the bottom on compact, at the top of the card otherwise. Leaving the page asks first (router guard and `beforeunload`). Success shows a snackbar; field errors from the server show under their fields, and a 409 shows "changed elsewhere, reload" in the bar.
+- **A multi-field form saves together.** It edits a draft from `useFormDraft` (`draft`, `dirty`, `save`, `discard`). While it is dirty, a `UiSaveBar` (Discard, Save) shows, **sticky at the bottom of the viewport on every window class** (R2). Leaving the page asks first (router guard and `beforeunload`). Success shows a snackbar; field errors from the server show under their fields, and a 409 shows "changed elsewhere, reload" in the bar.
 - **Creating** something (a task, a source, a member) is a form in a `UiSheet` with its own Save, never instant.
 - **Destructive** actions confirm in a dialog unless they offer Undo (task completion keeps its Undo snackbar, §3a).
 

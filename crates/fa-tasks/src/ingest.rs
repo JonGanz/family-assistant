@@ -4,7 +4,8 @@ use chrono::{DateTime, Duration, NaiveTime, Utc};
 use fa_domain::tasks::due_instant;
 use fa_domain::*;
 use fa_store::{
-    BillRepo, MemberRepo, MessageRepo, NewTaskRow, NotificationRepo, TaskListRepo, TaskRepo,
+    BillRepo, ExtractTarget, ExtractedByRepo, MemberRepo, MessageRepo, NewTaskRow,
+    NotificationRepo, TaskListRepo, TaskRepo,
 };
 use serde::Deserialize;
 
@@ -28,6 +29,9 @@ pub struct MailTaskRequest {
     pub mode: MailTaskMode,
     #[serde(default)]
     pub external_url: Option<String>,
+    /// `"llm"` when the `mail.llm` job proposed the task (M4); absent means rules.
+    #[serde(default)]
+    pub extracted_by: Option<String>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
@@ -144,6 +148,9 @@ impl TaskService {
             return Ok(None);
         };
         TaskRepo::set_created_at(&mut tx, id, now).await?;
+        if req.extracted_by.as_deref() == Some("llm") {
+            ExtractedByRepo::set(&mut tx, ExtractTarget::Task, id.0, ExtractOrigin::Llm).await?;
+        }
         if suggest {
             let source = MessageRepo::get(&mut tx, req.message)
                 .await?

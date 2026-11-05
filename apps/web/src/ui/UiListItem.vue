@@ -52,7 +52,7 @@ const lines = computed(() => 1 + (props.supporting ? 1 : 0) + (props.overline ? 
   align-items: center;
   gap: var(--ui-space-4);
   width: 100%;
-  min-height: 56px;
+  min-height: var(--ui-row-height);
   padding: var(--ui-space-2) var(--ui-space-4);
   border: 0;
   background: transparent;
@@ -63,10 +63,10 @@ const lines = computed(() => 1 + (props.supporting ? 1 : 0) + (props.overline ? 
   isolation: isolate;
 }
 .lines-2 .ui-li__row {
-  min-height: 72px;
+  min-height: calc(var(--ui-row-height) + 16px);
 }
 .lines-3 .ui-li__row {
-  min-height: 88px;
+  min-height: calc(var(--ui-row-height) + 32px);
 }
 .is-interactive {
   cursor: pointer;

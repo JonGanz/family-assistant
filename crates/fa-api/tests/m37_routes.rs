@@ -52,6 +52,7 @@ fn member(h: HouseholdId, name: &str, role: Role) -> Member {
 
 fn mail_services(store: &Store, oauth: &fa_auth::OAuthService) -> fa_api::MailServices {
     fa_api::MailServices::new(std::sync::Arc::new(fa_mail::MailDeps {
+        llm: None,
         store: store.clone(),
         http: fa_connectors::Http::new(true).unwrap(),
         tokens: std::sync::Arc::new(oauth.clone()),

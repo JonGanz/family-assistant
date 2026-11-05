@@ -61,6 +61,8 @@ pub struct MailDeps {
     pub tokens: Arc<dyn AccessTokenProvider>,
     pub key: Arc<MasterKey>,
     pub cfg: MailConfig,
+    /// `None`: the LLM is off and no `mail.llm` jobs are queued.
+    pub llm: Option<Arc<fa_llm::Provider>>,
 }
 
 /// All fa-mail job handlers.

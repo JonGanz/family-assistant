@@ -6,7 +6,7 @@ wave: 3
 depends_on: [T-05]
 agent: {model: sonnet, effort: medium}
 status: todo
-owns: ["apps/web/src/views/TasksView.vue", "apps/web/src/views/TaskDetailView.vue", "apps/web/src/components/tasks/**", "apps/web/src/stores/tasks.ts", "apps/web/src/stores/tasks.test.ts", "apps/web/src/stores/lists.ts", "apps/web/src/stores/definitions.ts", "apps/web/src/stores/taskMap.ts", "apps/web/src/stores/taskMap.test.ts", "apps/web/src/stores/away.ts", "apps/web/src/views/tasks.test.ts"]
+owns: ["apps/web/src/views/TasksView.vue", "apps/web/src/views/TaskDetailView.vue", "apps/web/src/components/tasks/**", "apps/web/src/stores/tasks.ts", "apps/web/src/stores/tasks.test.ts", "apps/web/src/stores/lists.ts", "apps/web/src/stores/definitions.ts", "apps/web/src/stores/taskMap.ts", "apps/web/src/stores/taskMap.test.ts", "apps/web/src/stores/away.ts", "apps/web/src/views/tasks.test.ts", "apps/web/src/views/parts/TaskAddForm.vue", "apps/web/src/views/parts/dateInput.ts", "apps/web/e2e/ui-shots.routes/tasks.ts"]
 decisions: [D-095, D-096, D-042, D-045, D-046]
 ---
 
