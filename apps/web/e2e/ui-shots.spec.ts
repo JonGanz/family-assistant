@@ -1,6 +1,9 @@
 import { mkdirSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 
+// 2x pixel density so the review images stay sharp on high-DPI screens.
+test.use({ deviceScaleFactor: 2 })
+
 // Review screenshots (M4). Run through scripts/ui-shots.sh, never in the default e2e run.
 // Output: apps/web/test-results/ui-shots/<page>-<width>-<light|dark>.png
 
