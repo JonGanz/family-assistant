@@ -5,7 +5,7 @@ milestone: M4
 wave: 3
 depends_on: [T-03, T-06, T-07]
 agent: {model: sonnet, effort: medium}
-status: running
+status: done
 owns: ["crates/fa-api/**", "bins/fa-server/**"]
 decisions: [D-093, D-094, D-029, D-006]
 ---
@@ -70,3 +70,25 @@ You are a sub-agent implementing one task of milestone M4 of the Family Assistan
   - the error codes;
   - "list what outside your paths needs changing";
   - README changes needed: none beyond T-17's AI section.
+
+## Outcome (T-08 report)
+- **Built:** `crates/fa-api/src/ai.rs` holds every route in the plan's API table, adult-only through `Action::ManageHouseholdSettings`, registered in `lib.rs` and `openapi.rs`. `tests/ai.rs` has 5 tests.
+- **Wiring:**
+  - `MailServices` carries `llm` and `key` from `MailDeps`.
+  - `bins/fa-server/src/wiring.rs` adds `llm_provider(cfg, store)`.
+  - `mail_deps`, `build_services` and `feature_handlers` take `&Arc<Provider>`.
+  - `MailDeps.llm = Some(provider)`, so `mail.llm` and `llm.prune` are registered.
+- **DTOs (in fa-api, exported to `gen/types`):** `LlmEndpointPut`, `LlmEndpointTest`, `LlmEndpointTestResult`, `LlmModels`, `AiSettingsPut`, `AiPipelinePoint`, `AiPipelinePut`, `AiStats`, `RecipeExtractReq`.
+- **Error codes:**
+  - `not_configured`: 404.
+  - `bad_request`, `fetch_failed`, `no_recipe`: 422.
+  - `llm_unavailable`: 502, or 503 when only the LLM could help and it is off.
+  - `llm_failed`: 502.
+  - Field errors carry `field`.
+- **Deviations:**
+  - Recipe extraction is orchestrated in `ai.rs` so the `recipe.extract` `llm_call` is timed accurately.
+  - The recipe call and the test ping skip the Provider's per-household permit.
+  - `GET /ai/pipeline` calls `ensure_defaults`, so it writes.
+  - Audit entries record the API key only as kept, cleared or set.
+- **For T-09:** build the Provider with `wiring::llm_provider`.
+- **Integration (main session):** `gen` regenerated (8 `/api/v1/ai` paths); web lint, typecheck, test and build pass. CI exposed the `PoolTimedOut` flake (see log 2026-11-05); `scripts/ci-local.sh` now runs `cargo test` with `--test-threads=4` when nextest is missing.

@@ -41,7 +41,13 @@ The paths in `owns` above. `MemberChip`, `Avatar`, `EventCard` and `WeatherIcon`
 Calendar events **inside calendar grids** (month, week and day grids in `CalendarView` and its components) are square: use `--ui-radius-none` (added by T-05). Event cards in lists, such as the Today agenda, keep the normal card rounding. The kiosk `EventCard` look is unchanged.
 
 ## R2 feedback
-(filled by main session before launch)
+The user answered R2 on 2026-11-04 and 2026-11-05. These rules apply to every wave-3 page:
+- **Shell (T-18, done):** phones get a menu button in the top bar that opens a modal drawer, with no bottom bar. Put contextual actions in `UiTopAppBar`'s `#actions` slot (at most two icon buttons plus an overflow `UiMenu` at 360 px). The desktop drawer collapses to the rail. Your page must use `UiPage` + `UiTopAppBar` (Settings children: `SettingsPage`), or phones get no menu button.
+- **Save bar:** `UiSaveBar` is sticky at the bottom on every width. Use it for every multi-field form (D-096).
+- **Density:** comfortable is the default; build for it, and check the compact density in the gallery does not break your page.
+- **Collections on phones:** **cards on every width** (not a plain list on compact). `ResponsiveItems` should render a single-column card stack on compact.
+- **Log out** stays at the foot of the navigation drawer. Do not add it to Settings → Account.
+- Follow T-05's "rules of the house" and T-18's outcome (`plan/M4/T-05-app-shell.md`, `plan/M4/T-18-shell-r2.md`).
 
 ## Acceptance
 - [ ] In `apps/web`: `corepack pnpm@9 run lint`, `typecheck`, `test` and `build` pass; `corepack pnpm@9 run format` was run

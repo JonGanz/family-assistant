@@ -37,7 +37,19 @@ The paths in `owns` above. `TasksView.vue` is T-05's reference page: keep its st
 9. Run `scripts/ui-shots.sh --all` for your routes (add them to the route constant in `apps/web/e2e/ui-shots.spec.ts` only if the main session made it data-driven per area; otherwise list the routes in the report).
 
 ## R2 feedback
-(filled by main session before launch)
+The user answered R2 on 2026-11-04 and 2026-11-05. These rules apply to every wave-3 page:
+- **Shell (T-18, done):** phones get a menu button in the top bar that opens a modal drawer, with no bottom bar. Put contextual actions in `UiTopAppBar`'s `#actions` slot (at most two icon buttons plus an overflow `UiMenu` at 360 px). The desktop drawer collapses to the rail. Your page must use `UiPage` + `UiTopAppBar` (Settings children: `SettingsPage`), or phones get no menu button.
+- **Save bar:** `UiSaveBar` is sticky at the bottom on every width. Use it for every multi-field form (D-096).
+- **Density:** comfortable is the default; build for it, and check the compact density in the gallery does not break your page.
+- **Collections on phones:** **cards on every width** (not a plain list on compact). `ResponsiveItems` should render a single-column card stack on compact.
+- **Log out** stays at the foot of the navigation drawer. Do not add it to Settings → Account.
+- Follow T-05's "rules of the house" and T-18's outcome (`plan/M4/T-05-app-shell.md`, `plan/M4/T-18-shell-r2.md`).
+- **Tasks filter (user, 2026-11-05):**
+  - **Chips:** a row of filter chips under the top bar: **All**, **Mine**, then one chip per member (`MemberChip` colour dot plus name, in member order). It is single-select and scrolls horizontally on phones.
+  - **Default is Mine.** Mine means the signed-in member. On an elevated device it is the elevating adult; with no actor member, the default falls back to All.
+  - **Server-side:** the filter is applied by the server. `GET /api/v1/tasks` already takes `member=<uuid>` (`TaskListQuery.member` in `crates/fa-api/src/tasks.rs`), so no API change is needed. Pass it from `stores/tasks.ts` and reset paging (`next_before`) when the chip changes.
+  - **Per device:** the choice is remembered per device in `localStorage` key `fa.tasks.filter` (`"all"`, `"mine"` or a member id), with try/catch. An unknown member id falls back to Mine.
+  - **Tests:** the default is Mine; picking a member sends `member=`; All sends none; the choice persists.
 
 ## Acceptance
 - [ ] In `apps/web`: `corepack pnpm@9 run lint`, `typecheck`, `test` and `build` pass; `corepack pnpm@9 run format` was run
