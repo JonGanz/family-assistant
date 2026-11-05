@@ -7,6 +7,7 @@ import { dayKey, formatDayHeading } from '../../lib/time'
 import type { UnitSystem } from '../../lib/types'
 import { weatherInfo } from '../../lib/weatherCodes'
 import { columns, num, row } from '../../stores/weather'
+import { UiCard } from '../../ui'
 
 const props = defineProps<{ weather: WeatherView; tz: string; units: UnitSystem }>()
 const u = useUnits(computed(() => props.units))
@@ -35,7 +36,7 @@ const temp = (v: number | undefined) => (v === undefined ? '–' : u.format(v, '
 </script>
 
 <template>
-  <section class="weather-card" aria-label="Weather">
+  <UiCard variant="filled" class="weather-card" role="region" aria-label="Weather">
     <div class="now">
       <WeatherIcon :code="code" :night="isNight" size="3rem" />
       <div>
@@ -57,41 +58,38 @@ const temp = (v: number | undefined) => (v === undefined ? '–' : u.format(v, '
         <span v-if="d.rain !== undefined" class="muted">{{ Math.round(d.rain) }}%</span>
       </li>
     </ol>
-  </section>
+  </UiCard>
 </template>
 
 <style scoped>
-.weather-card {
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
-}
 .now {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--ui-space-3);
 }
 .temp {
-  font-size: var(--font-size-lg);
-  font-weight: 600;
+  font: var(--ui-type-headline-sm);
 }
 .muted {
-  color: var(--color-muted);
-  font-size: var(--font-size-sm);
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-md);
 }
 .strip {
   display: flex;
-  gap: var(--space-3);
+  gap: var(--ui-space-2);
   list-style: none;
-  padding: 0;
-  margin: var(--space-3) 0 0;
+  padding: 0 0 var(--ui-space-1);
+  margin: var(--ui-space-3) 0 0;
   overflow-x: auto;
 }
 .strip li {
   display: grid;
   justify-items: center;
-  gap: var(--space-1);
-  min-width: 4rem;
+  gap: var(--ui-space-1);
+  min-width: 4.5rem;
+  padding: var(--ui-space-2);
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-surface-container-high);
+  font: var(--ui-type-body-md);
 }
 </style>

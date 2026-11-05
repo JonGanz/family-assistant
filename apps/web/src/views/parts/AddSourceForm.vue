@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue'
 import { api, type NewSource, type OAuthAccountView, type SourceTestResult } from '../../api/client'
-import ErrorBanner from '../../components/ErrorBanner.vue'
 import { formatRange } from '../../lib/time'
 import { GOOGLE_NEEDS_HTTPS, isSecure } from '../../lib/secure'
 import { useSourcesStore } from '../../stores/sources'
+import { UiButton, UiCard, UiSegmented, UiSelect, UiTextField } from '../../ui'
 import { describeError } from '../shared'
 
 const props = defineProps<{
@@ -22,6 +22,17 @@ const secure = isSecure()
 const kind = ref<Kind>(props.googleEnabled && secure ? 'google' : 'ics')
 const form = reactive({ name: '', url: '', username: '', password: '', account: '' })
 const result = ref<SourceTestResult | null>(null)
+const kindOptions = computed(() => [
+  ...(props.googleEnabled && secure ? [{ value: 'google', label: 'Google' }] : []),
+  { value: 'caldav', label: 'CalDAV' },
+  { value: 'ics', label: 'ICS link' },
+])
+const accountOptions = computed(() => [
+  { value: '', label: 'Choose an account', disabled: true },
+  ...usableAccounts.value.map((a) => ({ value: a.id, label: a.email })),
+])
+const addDisabled = computed(() => busy.value || (kind.value === 'google' && !form.account))
+const goGoogle = () => (window.location.href = googleStart.value)
 const error = ref('')
 const busy = ref(false)
 
@@ -43,8 +54,8 @@ function body(): NewSource | null {
   }
 }
 
-function pick(k: Kind) {
-  kind.value = k
+function pick(k: string) {
+  kind.value = k as Kind
   result.value = null
   error.value = ''
 }
@@ -84,80 +95,63 @@ async function add() {
 </script>
 
 <template>
-  <section>
-    <h2>Add a calendar source</h2>
-    <div class="kinds" role="group" aria-label="Source type">
-      <button
-        v-if="googleEnabled && secure"
-        type="button"
-        :aria-pressed="kind === 'google'"
-        @click="pick('google')"
-      >
-        Google
-      </button>
-      <button type="button" :aria-pressed="kind === 'caldav'" @click="pick('caldav')">
-        CalDAV
-      </button>
-      <button type="button" :aria-pressed="kind === 'ics'" @click="pick('ics')">ICS link</button>
-    </div>
+  <section class="add">
+    <UiSegmented
+      :model-value="kind"
+      label="Source type"
+      :options="kindOptions"
+      @update:model-value="pick"
+    />
 
     <p v-if="!secure" class="muted" data-testid="google-needs-https">
       Google: {{ GOOGLE_NEEDS_HTTPS }}. CalDAV and ICS links work over plain HTTP.
     </p>
 
-    <form class="form" autocomplete="off" @submit.prevent="add">
-      <label>Name <input v-model="form.name" name="source_name" placeholder="Family" /></label>
+    <form class="add__form" autocomplete="off" @submit.prevent="add">
+      <UiTextField v-model="form.name" label="Name" name="source_name" />
 
       <template v-if="kind === 'google'">
-        <label>
-          Google account
-          <select v-model="form.account" name="oauth_account">
-            <option value="" disabled>Choose an account</option>
-            <option v-for="a in usableAccounts" :key="a.id" :value="a.id">{{ a.email }}</option>
-          </select>
-        </label>
-        <a class="button" :href="googleStart">Connect a Google account</a>
+        <UiSelect v-model="form.account" label="Google account" :options="accountOptions" />
+        <UiButton variant="tonal" @click="goGoogle">Connect a Google account</UiButton>
       </template>
 
       <template v-else>
-        <label>
-          {{ kind === 'ics' ? 'Calendar link (https://…)' : 'CalDAV server URL' }}
-          <input v-model="form.url" name="source_url" type="url" required autocomplete="off" />
-        </label>
+        <UiTextField
+          v-model="form.url"
+          :label="kind === 'ics' ? 'Calendar link (https://…)' : 'CalDAV server URL'"
+          name="source_url"
+          type="url"
+          required
+          supporting="The link or password is stored encrypted and is never shown again."
+        />
         <template v-if="kind === 'caldav'">
-          <label>
-            Username
-            <input v-model="form.username" name="source_user" required autocomplete="off" />
-          </label>
-          <label>
-            Password
-            <input
-              v-model="form.password"
-              name="source_password"
-              type="password"
-              required
-              autocomplete="new-password"
-            />
-          </label>
+          <UiTextField v-model="form.username" label="Username" name="source_user" required />
+          <UiTextField
+            v-model="form.password"
+            label="Password"
+            name="source_password"
+            type="password"
+            required
+            autocomplete="new-password"
+          />
         </template>
-        <p class="muted">The link or password is stored encrypted and is never shown again.</p>
       </template>
 
-      <div class="row">
-        <button v-if="kind !== 'google'" type="button" :disabled="busy" @click="test">
+      <div class="add__row">
+        <UiButton v-if="kind !== 'google'" variant="tonal" :disabled="busy" @click="test">
           {{ kind === 'ics' ? 'Test' : 'Test & discover' }}
-        </button>
-        <button type="submit" :disabled="busy || (kind === 'google' && !form.account)">Add</button>
+        </UiButton>
+        <UiButton type="submit" :disabled="addDisabled">Add</UiButton>
       </div>
-      <ErrorBanner v-if="error" :message="error" />
+      <UiCard v-if="error" variant="outlined" role="alert">{{ error }}</UiCard>
     </form>
 
-    <div v-if="result" class="result" data-testid="test-result">
-      <p v-if="result.ok" class="text-success">
+    <UiCard v-if="result" variant="outlined" data-testid="test-result">
+      <p v-if="result.ok">
         It works. Found {{ result.calendars.length }}
         {{ result.calendars.length === 1 ? 'calendar' : 'calendars' }}.
       </p>
-      <p v-else class="text-danger" role="alert">{{ result.error ?? 'The test failed.' }}</p>
+      <p v-else role="alert">{{ result.error ?? 'The test failed.' }}</p>
       <ul v-if="result.ok">
         <li v-for="c in result.calendars" :key="c.remote_id">{{ c.name }}</li>
       </ul>
@@ -169,22 +163,23 @@ async function add() {
           </li>
         </ul>
       </template>
-    </div>
+    </UiCard>
   </section>
 </template>
 
 <style scoped>
-.kinds,
-.row {
+.add,
+.add__form {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+.add__row {
   display: flex;
-  gap: var(--space-2);
-  margin-bottom: var(--space-3);
+  gap: var(--ui-space-2);
 }
-button[aria-pressed='true'] {
-  background: var(--color-accent);
-  color: var(--color-bg);
-}
-.result {
-  margin-top: var(--space-3);
+.muted {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
 }
 </style>

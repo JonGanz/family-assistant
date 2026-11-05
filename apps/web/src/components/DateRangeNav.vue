@@ -1,26 +1,30 @@
 <script setup lang="ts">
+import { UiButton, UiIconButton, UiSegmented } from '../ui'
 import type { RangeMode } from '../lib/types'
+
 defineProps<{ label: string; mode?: RangeMode }>()
 defineEmits<{ prev: []; next: []; today: []; 'update:mode': [mode: RangeMode] }>()
+const MODES = [
+  { value: 'day', label: 'Day' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+]
 </script>
 
 <template>
   <nav class="range-nav" aria-label="Date range">
-    <button type="button" aria-label="Previous" @click="$emit('prev')">‹</button>
-    <button type="button" @click="$emit('today')">Today</button>
-    <button type="button" aria-label="Next" @click="$emit('next')">›</button>
+    <UiIconButton icon="back" label="Previous" @click="$emit('prev')" />
+    <UiIconButton icon="chevron_right" label="Next" @click="$emit('next')" />
+    <UiButton variant="tonal" @click="$emit('today')">Today</UiButton>
     <strong class="label" aria-live="polite">{{ label }}</strong>
-    <span v-if="mode" class="modes" role="group" aria-label="View">
-      <button
-        v-for="m in ['day', 'week', 'month'] as RangeMode[]"
-        :key="m"
-        type="button"
-        :aria-pressed="m === mode"
-        @click="$emit('update:mode', m)"
-      >
-        {{ m }}
-      </button>
-    </span>
+    <UiSegmented
+      v-if="mode"
+      class="modes"
+      :model-value="mode"
+      :options="MODES"
+      label="View"
+      @update:model-value="$emit('update:mode', $event as RangeMode)"
+    />
   </nav>
 </template>
 
@@ -29,18 +33,14 @@ defineEmits<{ prev: []; next: []; today: []; 'update:mode': [mode: RangeMode] }>
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--ui-space-2);
 }
 .label {
-  margin: 0 var(--space-2);
+  margin: 0 var(--ui-space-2);
+  font: var(--ui-type-title-md);
+  flex: 1 1 auto;
 }
 .modes {
   margin-left: auto;
-  display: flex;
-  gap: var(--space-1);
-}
-button[aria-pressed='true'] {
-  background: var(--color-accent);
-  color: var(--color-bg);
 }
 </style>

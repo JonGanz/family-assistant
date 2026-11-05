@@ -13,6 +13,7 @@ import { addableLists, memberRefs, toTaskItem, type Viewer } from '../stores/tas
 import { useTasksStore, type TaskTab } from '../stores/tasks'
 import {
   UiButton,
+  UiChip,
   UiEmptyState,
   UiErrorState,
   UiFab,
@@ -27,7 +28,7 @@ import {
 import { describeError } from './shared'
 import TaskAddForm from './parts/TaskAddForm.vue'
 
-type Tab = 'now' | 'mine' | 'lists' | 'suggested'
+type Tab = 'now' | 'lists' | 'suggested'
 
 const session = useSessionStore()
 const household = useHouseholdStore()
@@ -45,34 +46,37 @@ const viewer = computed<Viewer | null>(() => {
   const m = session.member
   return m ? { id: m.id, role: m.role === 'adult' ? 'adult' : 'child' } : null
 })
-const tabs = computed<Tab[]>(() =>
-  session.isAdult ? ['now', 'mine', 'lists', 'suggested'] : ['now', 'mine', 'lists'],
+const TAB_LABELS: Record<Tab, string> = { now: 'Now', lists: 'Lists', suggested: 'Suggested' }
+const tabOptions = computed(() =>
+  (session.isAdult ? (['now', 'lists', 'suggested'] as Tab[]) : (['now', 'lists'] as Tab[])).map(
+    (key) => ({ value: key, label: TAB_LABELS[key] }),
+  ),
 )
-const TAB_LABELS: Record<Tab, string> = {
-  now: 'Now',
-  mine: 'Mine',
-  lists: 'Lists',
-  suggested: 'Suggested',
-}
-const tabItems = computed(() => tabs.value.map((key) => ({ key, label: TAB_LABELS[key] })))
 const refs = computed(() => memberRefs(members.items))
 const canAdd = computed(() => addableLists(lists.items, viewer.value).length > 0)
+
+// The filter chips (R2): All, Mine, then each member. Applied by the server (`member=`).
+const hasMe = computed(() => !!session.member)
+const activeFilter = computed(() =>
+  tasks.filter === 'mine' && !hasMe.value ? 'all' : tasks.filter,
+)
+const showFilter = computed(() => tab.value !== 'suggested')
+function pick(f: string) {
+  if (f !== activeFilter.value) void tasks.setFilter(f)
+}
 
 const dataTab = computed<TaskTab>(() => (tab.value === 'lists' ? 'all' : tab.value))
 function load() {
   void tasks.load(dataTab.value)
 }
-onMounted(() => {
-  void members.load()
-  void lists.load()
+onMounted(async () => {
+  await Promise.all([members.load(), lists.load()])
+  tasks.validateFilter(members.items.map((m) => m.id))
   load()
 })
 watch(tab, load)
 
 const current = computed(() => tasks.tabs[dataTab.value] ?? [])
-const isMine = (t: TaskView) => !!viewer.value && t.assignees.includes(viewer.value.id)
-const nowMine = computed(() => current.value.filter(isMine))
-const nowHousehold = computed(() => current.value.filter((t) => !isMine(t)))
 const byList = computed(() =>
   lists.items
     .map((l) => ({ list: l, items: current.value.filter((t) => t.list === l.id) }))
@@ -109,7 +113,6 @@ watch(
     }, UNDO_MS)
   },
 )
-const tabOptions = computed(() => tabItems.value.map((x) => ({ value: x.key, label: x.label })))
 const loadingFirst = computed(() => tasks.loading && !tasks.tabs[dataTab.value])
 </script>
 
@@ -126,50 +129,39 @@ const loadingFirst = computed(() => tasks.loading && !tasks.tabs[dataTab.value])
       @update:model-value="tab = $event as Tab"
     />
 
+    <div v-if="showFilter" class="filter" role="group" aria-label="Show tasks for">
+      <UiChip variant="filter" :selected="activeFilter === 'all'" @click="pick('all')">
+        All
+      </UiChip>
+      <UiChip
+        v-if="hasMe"
+        variant="filter"
+        :selected="activeFilter === 'mine'"
+        @click="pick('mine')"
+      >
+        Mine
+      </UiChip>
+      <UiChip
+        v-for="m in members.items"
+        :key="m.id"
+        variant="filter"
+        :selected="activeFilter === m.id"
+        @click="pick(m.id)"
+      >
+        <span
+          class="filter__dot"
+          :style="{ background: refs.get(m.id)?.color }"
+          aria-hidden="true"
+        />
+        {{ m.display_name }}
+      </UiChip>
+    </div>
+
     <UiSkeleton v-if="loadingFirst" :lines="5" />
     <UiErrorState v-else-if="tasks.error" :message="tasks.error" @retry="load" />
 
     <template v-else-if="tab === 'now'">
-      <UiSection heading="Mine">
-        <UiEmptyState v-if="nowMine.length === 0" icon="check" title="Nothing for you right now" />
-        <ResponsiveItems :items="nowMine">
-          <template #item="{ item }">
-            <TaskItem
-              :task="model(item)"
-              :now="now"
-              :tz="household.tz"
-              @complete="complete(item)"
-              @open="open"
-              @claim="act(() => tasks.claim(item.id))"
-            >
-              <template v-if="claimedByMe(item)" #claim>
-                <UiButton variant="text" @click="act(() => tasks.release(item.id))"
-                  >Release</UiButton
-                >
-              </template>
-            </TaskItem>
-          </template>
-        </ResponsiveItems>
-      </UiSection>
-      <UiSection heading="Household">
-        <UiEmptyState v-if="nowHousehold.length === 0" icon="check" title="Nothing else is due" />
-        <ResponsiveItems :items="nowHousehold">
-          <template #item="{ item }">
-            <TaskItem
-              :task="model(item)"
-              :now="now"
-              :tz="household.tz"
-              @complete="complete(item)"
-              @open="open"
-              @claim="act(() => tasks.claim(item.id))"
-            />
-          </template>
-        </ResponsiveItems>
-      </UiSection>
-    </template>
-
-    <template v-else-if="tab === 'mine'">
-      <UiEmptyState v-if="current.length === 0" icon="check" title="You have no open tasks" />
+      <UiEmptyState v-if="current.length === 0" icon="check" title="Nothing due right now" />
       <ResponsiveItems :items="current">
         <template #item="{ item }">
           <TaskItem
@@ -252,6 +244,22 @@ const loadingFirst = computed(() => tasks.loading && !tasks.tabs[dataTab.value])
   right: calc(var(--ui-space-4) + env(safe-area-inset-right));
   bottom: calc(var(--ui-bottom-offset, 0px) + var(--ui-space-4) + env(safe-area-inset-bottom));
   z-index: 15;
+}
+.filter {
+  display: flex;
+  gap: var(--ui-space-2);
+  overflow-x: auto;
+  padding-bottom: var(--ui-space-1);
+  scrollbar-width: none;
+}
+.filter > * {
+  flex: none;
+}
+.filter__dot {
+  display: inline-block;
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: var(--ui-radius-full);
 }
 .suggestion {
   display: grid;

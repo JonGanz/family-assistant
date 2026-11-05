@@ -12,10 +12,12 @@ export const useRulesStore = defineStore('rules', () => {
   const items = ref<WeatherRuleView[]>([])
   const error = ref<string | null>(null)
   const conflict = ref(false)
+  const loaded = ref(false)
 
   async function load(): Promise<void> {
     try {
       items.value = await api.rules()
+      loaded.value = true
       error.value = null
       conflict.value = false
     } catch (e) {
@@ -47,5 +49,5 @@ export const useRulesStore = defineStore('rules', () => {
     await load()
   }
 
-  return { items, error, conflict, load, create, patch, remove }
+  return { items, loaded, error, conflict, load, create, patch, remove }
 })

@@ -37,49 +37,48 @@ const emit = defineEmits<{ pick: [memberId: string]; cancel: [] }>()
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-4);
-  padding: var(--space-5);
-  background: var(--color-bg);
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
+  gap: var(--ui-space-4);
+  padding: var(--ui-space-5);
+  background: var(--ui-surface-container-high);
+  color: var(--ui-on-surface);
+  border-radius: var(--ui-radius-lg);
 }
 h2 {
   margin: 0;
-  font-size: var(--font-size-xl);
+  font: var(--ui-type-headline-sm);
 }
 .grid {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: var(--space-3);
+  gap: var(--ui-space-3);
 }
 .member {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: var(--space-2);
-  min-width: var(--min-touch, 48px);
-  min-height: var(--min-touch, 48px);
-  padding: var(--space-3);
-  background: var(--color-surface);
+  gap: var(--ui-space-2);
+  min-width: var(--ui-touch);
+  min-height: var(--ui-touch);
+  padding: var(--ui-space-3);
+  background: var(--ui-surface-container-low);
   border: 2px solid transparent;
-  border-radius: var(--radius-md);
+  border-radius: var(--ui-radius-md);
   color: inherit;
-  font: inherit;
+  font: var(--ui-type-label-lg);
   cursor: pointer;
 }
 .member.pre {
-  border-color: var(--color-accent);
+  border-color: var(--ui-primary);
 }
 .cancel {
-  min-height: var(--min-touch, 48px);
-  padding: 0 var(--space-5);
+  min-height: var(--ui-touch);
+  padding: 0 var(--ui-space-5);
   background: none;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: var(--color-muted);
-  font: inherit;
+  border: 1px solid var(--ui-outline);
+  border-radius: var(--ui-radius-full);
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-label-lg);
   cursor: pointer;
 }
 .kiosk h2 {

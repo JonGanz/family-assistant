@@ -7,6 +7,7 @@ import type {
   Member,
   SourceViewExt,
 } from '../../../api/client'
+import { UiButton, UiCard, UiSelect, UiTextField } from '../../../ui'
 import { fmt, fromLocalInput, toLocalInput } from '../../../components/mail/format'
 
 const props = defineProps<{
@@ -23,6 +24,10 @@ const writable = computed(() => {
   const ok = new Set(props.sources.filter((s) => s.writable).map((s) => s.id))
   return props.calendars.filter((c) => c.enabled && ok.has(c.source))
 })
+const calendarOptions = computed(() => [
+  { value: '', label: 'Default' },
+  ...writable.value.map((c) => ({ value: c.id, label: c.name })),
+])
 const form = reactive({
   title: props.ev.title,
   start: toLocalInput(props.ev.start_at, props.tz),
@@ -48,55 +53,85 @@ function approve() {
 </script>
 
 <template>
-  <li class="form item">
-    <p v-if="ev.pending_cancel" class="muted">
-      Cancellation: remove <strong>{{ ev.title }}</strong> ({{ fmt(ev.start_at, tz) }}) from the
-      calendar.
-    </p>
-    <template v-else>
-      <label>Title <input v-model="form.title" /></label>
-      <template v-if="!ev.all_day">
-        <label>Starts <input v-model="form.start" type="datetime-local" /></label>
-        <label>Ends <input v-model="form.end" type="datetime-local" /></label>
+  <li class="item">
+    <UiCard variant="filled">
+      <template #header>
+        <div class="head">
+          <span>{{ ev.pending_cancel ? 'Cancellation' : 'New event' }}</span>
+          <slot name="header-trailing" />
+        </div>
       </template>
-      <p v-else class="muted">All day, {{ fmt(ev.start_at, tz).split(',')[0] }}</p>
-      <label>
-        Calendar
-        <select v-model="form.calendar">
-          <option value="">Default</option>
-          <option v-for="c in writable" :key="c.id" :value="c.id">{{ c.name }}</option>
-        </select>
-      </label>
-    </template>
-    <p class="muted">
-      <span v-if="ev.from_label">From {{ ev.from_label }}. </span>
-      <span v-if="who.length">For {{ who.join(', ') }}. </span>
-      Confidence {{ Math.round(ev.confidence * 100) }}%.
-      <RouterLink v-if="ev.message" :to="{ name: 'mail-detail', params: { id: ev.message } }"
-        >Open message</RouterLink
-      >
-    </p>
-    <p v-if="ev.write_error" class="text-danger" role="alert">
-      Writing to the calendar failed: {{ ev.write_error }}. Approve to retry or reject to drop it.
-    </p>
-    <div class="actions">
-      <button type="button" :disabled="busy" @click="approve">
-        {{ ev.write_error ? 'Retry' : ev.pending_cancel ? 'Approve removal' : 'Approve' }}
-      </button>
-      <button type="button" :disabled="busy" @click="emit('reject')">Reject</button>
-    </div>
+      <div class="fields">
+        <p v-if="ev.pending_cancel" class="note">
+          Cancellation: remove <strong>{{ ev.title }}</strong> ({{ fmt(ev.start_at, tz) }}) from the
+          calendar.
+        </p>
+        <template v-else>
+          <UiTextField v-model="form.title" label="Title" />
+          <template v-if="!ev.all_day">
+            <UiTextField v-model="form.start" label="Starts" type="datetime-local" />
+            <UiTextField v-model="form.end" label="Ends" type="datetime-local" />
+          </template>
+          <p v-else class="note">All day, {{ fmt(ev.start_at, tz).split(',')[0] }}</p>
+          <UiSelect v-model="form.calendar" label="Calendar" :options="calendarOptions" />
+        </template>
+        <p class="note">
+          <span v-if="ev.from_label">From {{ ev.from_label }}. </span>
+          <span v-if="who.length">For {{ who.join(', ') }}. </span>
+          Confidence {{ Math.round(ev.confidence * 100) }}%.
+          <RouterLink v-if="ev.message" :to="{ name: 'mail-detail', params: { id: ev.message } }"
+            >Open message</RouterLink
+          >
+        </p>
+        <p v-if="ev.write_error" class="err" role="alert">
+          Writing to the calendar failed: {{ ev.write_error }}. Approve to retry or reject to drop
+          it.
+        </p>
+      </div>
+      <template #actions>
+        <UiButton variant="text" :disabled="busy" @click="emit('reject')">Reject</UiButton>
+        <UiButton :disabled="busy" @click="approve">{{
+          ev.write_error ? 'Retry' : ev.pending_cancel ? 'Approve removal' : 'Approve'
+        }}</UiButton>
+      </template>
+    </UiCard>
   </li>
 </template>
 
 <style scoped>
 .item {
-  max-width: none;
+  list-style: none;
 }
-.actions {
+.head {
   display: flex;
-  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-2);
+  font: var(--ui-type-title-sm);
 }
-.actions button {
-  min-height: 44px;
+.fields {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+.note {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
+}
+.err {
+  margin: 0;
+  color: var(--ui-error);
+  font: var(--ui-type-body-md);
+}
+.checks {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.checks legend {
+  padding: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-label-md);
 }
 </style>

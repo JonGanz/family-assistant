@@ -5,7 +5,7 @@ milestone: M4
 wave: 4
 depends_on: [T-08]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["README.md", "deploy/**", "docs/**"]
 decisions: [D-093, D-094, D-095, D-096, D-097]
 ---
@@ -59,3 +59,11 @@ You are a sub-agent implementing one task of milestone M4 of the Family Assistan
   - each command and how it was verified;
   - unverified items;
   - "list what outside your paths needs changing" (for example, an arch doc that disagrees).
+
+## Outcome (T-17 report)
+- Built:
+  - README: 'Local AI (optional)' section, `eval` row, `ui-shots.sh` row, the nextest note on `ci-local`, layout, M4 and M4.1 roadmap rows.
+  - `deploy/README.md` §8.5 and profiles: native Ollama is the default, the `gpu` profile is an option, `ai-cpu` is M4.1.
+  - `compose.yaml` comments.
+- The main session fixed the 'stub until M4' notes, which now say M4.1.
+- Unverified: the Ollama install steps were not run on this machine; re-check the Settings → AI wording against T-15.

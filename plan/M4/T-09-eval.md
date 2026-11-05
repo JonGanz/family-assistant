@@ -2,10 +2,10 @@
 id: T-09
 title: "fa-eval (basic) and the eval subcommand"
 milestone: M4
-wave: 4
+wave: 3
 depends_on: [T-06, T-08]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-eval/**", "bins/fa-server/src/eval.rs", "bins/fa-server/src/cli.rs (the Eval variant only)", "bins/fa-server/src/main.rs (the Eval dispatch arm only)"]
 decisions: [D-028, D-094, D-024]
 ---
@@ -53,3 +53,8 @@ You are a sub-agent implementing one task of milestone M4 of the Family Assistan
   - the prompt-builder function you reused and whether it had to become `pub`;
   - "list what outside your paths needs changing";
   - README changes needed (the `eval` command line, for T-17).
+
+## Outcome (T-09 report)
+- Built: `fa-eval` (`run`, `EvalReport` with `undecided` and `llm_errors`, `to_table`), 2 tests (rules-only and with-LLM accuracy and coverage, no writes, `llm_call` purpose `eval`); `fa-server eval` (`--decision-point`, `--with-llm`, `--limit`, `--json`; `--with-llm` without an endpoint exits 2).
+- Deviation: public wrappers in fa-mail (`eval_request`, `llm_candidates`, `rules_candidates`) so eval reuses the `mail.llm` prompt; rules acceptance duplicated in fa-eval.
+- Defaults applied: the stored llm threshold even when the stage is disabled, else 0.7; a failed LLM call counts as undecided.

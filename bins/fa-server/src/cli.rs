@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 
 use clap::{Parser, Subcommand, ValueEnum};
-use fa_domain::{CalendarSourceId, DeviceId, HouseholdId};
+use fa_domain::{CalendarSourceId, DecisionPointKey, DeviceId, HouseholdId};
 
 #[derive(Debug, Parser)]
 #[command(
@@ -81,6 +81,22 @@ pub enum Command {
     Mail {
         #[command(subcommand)]
         action: MailAction,
+    },
+    /// Replay the labelled eval sample through the pipeline (rules, optionally plus the LLM).
+    /// Reads decisions and messages only; writes nothing. Run it on real data yourself.
+    Eval {
+        /// Decision point: email.category, email.time_sensitive, email.member_link or email.is_bill.
+        #[arg(long)]
+        decision_point: DecisionPointKey,
+        /// Also call the household's LLM endpoint for what the rules leave open.
+        #[arg(long)]
+        with_llm: bool,
+        /// Evaluate at most this many messages.
+        #[arg(long)]
+        limit: Option<u32>,
+        /// Print the report as JSON.
+        #[arg(long)]
+        json: bool,
     },
     /// Write the OpenAPI document.
     GenOpenapi {

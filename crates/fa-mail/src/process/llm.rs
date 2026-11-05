@@ -148,6 +148,65 @@ fn cand(value: serde_json::Value, confidence: f32) -> Candidate {
     }
 }
 
+/// The candidates the model's answer holds for one decision point (the `llm` stage input).
+pub fn llm_candidates(
+    pc: &ProcessCtx,
+    res: &MailLlmResult,
+    dp: DecisionPointKey,
+) -> Vec<Candidate> {
+    match dp {
+        DecisionPointKey::EmailCategory => res
+            .category
+            .iter()
+            .filter(|c| pc.categories.contains_key(&c.value))
+            .map(|c| cand(c.value.clone().into(), c.confidence))
+            .collect(),
+        DecisionPointKey::EmailTimeSensitive => res
+            .time_sensitive
+            .iter()
+            .map(|c| cand(c.value.into(), c.confidence))
+            .collect(),
+        DecisionPointKey::EmailIsBill => res
+            .is_bill
+            .iter()
+            .map(|c| cand(c.value.into(), c.confidence))
+            .collect(),
+        DecisionPointKey::EmailMemberLink => res
+            .member_link
+            .iter()
+            .flatten()
+            .filter(|m| m.member.parse().is_ok_and(|id| pc.member(id).is_some()))
+            .map(|m| cand(m.member.clone().into(), m.confidence))
+            .collect(),
+        _ => Vec::new(),
+    }
+}
+
+/// The request the `mail.llm` job would send for `msg`, limited to `dp` and without extraction
+/// (used by the eval, so it shares the prompt with the job).
+pub fn eval_request(
+    pc: &ProcessCtx,
+    msg: &fa_domain::Message,
+    dp: DecisionPointKey,
+    max_chars: usize,
+) -> ExtractRequest {
+    let asks = [Ask {
+        dp,
+        version: PipelineVersionId::new(),
+    }];
+    ProcessService::llm_request(pc, &OwnedFacts::new(msg), &asks, false, max_chars)
+}
+
+/// Rules-stage candidates for `dp` (before the stage threshold).
+pub fn rules_candidates(
+    pc: &ProcessCtx,
+    msg: &fa_domain::Message,
+    dp: DecisionPointKey,
+) -> Vec<Candidate> {
+    let of = OwnedFacts::new(msg);
+    fa_rules::evaluate(dp, &of.facts(), &pc.rules)
+}
+
 /// An RFC 3339 instant, `YYYY-MM-DD` (all-day, local midnight) or a zone-less local date-time.
 fn parse_when(s: &str, tz: Tz) -> Option<(DateTime<Utc>, bool)> {
     let s = s.trim();
@@ -348,32 +407,7 @@ impl ProcessService {
         let mut recorded = 0usize;
         let mut tx = self.store.tx_for(household).await?;
         for ask in &asks {
-            let cands: Vec<Candidate> = match ask.dp {
-                DecisionPointKey::EmailCategory => res
-                    .category
-                    .iter()
-                    .filter(|c| pc.categories.contains_key(&c.value))
-                    .map(|c| cand(c.value.clone().into(), c.confidence))
-                    .collect(),
-                DecisionPointKey::EmailTimeSensitive => res
-                    .time_sensitive
-                    .iter()
-                    .map(|c| cand(c.value.into(), c.confidence))
-                    .collect(),
-                DecisionPointKey::EmailIsBill => res
-                    .is_bill
-                    .iter()
-                    .map(|c| cand(c.value.into(), c.confidence))
-                    .collect(),
-                DecisionPointKey::EmailMemberLink => res
-                    .member_link
-                    .iter()
-                    .flatten()
-                    .filter(|m| m.member.parse().is_ok_and(|id| pc.member(id).is_some()))
-                    .map(|m| cand(m.member.clone().into(), m.confidence))
-                    .collect(),
-                _ => Vec::new(),
-            };
+            let cands = llm_candidates(&pc, &res, ask.dp);
             if cands.is_empty() {
                 continue;
             }

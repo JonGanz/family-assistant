@@ -23,6 +23,7 @@ import { api } from '../api/client'
 const m = vi.mocked(api)
 
 beforeEach(() => {
+  localStorage.clear()
   setActivePinia(createPinia())
   vi.resetAllMocks()
 })
@@ -105,5 +106,45 @@ describe('live events', () => {
     m.routinesToday.mockClear()
     await dispatchLive('routines.updated')
     expect(m.routinesToday).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('tasks filter', () => {
+  it('defaults to All with no signed-in member, and sends no member', async () => {
+    m.tasks.mockResolvedValue({ items: [] })
+    const s = useTasksStore()
+    expect(s.filter).toBe('all')
+    await s.load('all')
+    expect(m.tasks).toHaveBeenCalledWith({ view: 'all', status: 'open' })
+  })
+
+  it('setFilter remembers the choice, restarts paging and reloads with member=', async () => {
+    m.tasks.mockResolvedValue({
+      items: [{ id: 't1' }],
+      next_before: '2026-01-01T00:00:00Z',
+    } as never)
+    const s = useTasksStore()
+    await s.load('all')
+    expect(s.nextBefore.all).toBeTruthy()
+    m.tasks.mockClear()
+    m.tasks.mockResolvedValue({ items: [] })
+    await s.setFilter('k')
+    expect(m.tasks).toHaveBeenCalledWith({ view: 'all', status: 'open', member: 'k' })
+    expect(s.nextBefore.all).toBeUndefined()
+    expect(localStorage.getItem('fa.tasks.filter')).toBe('k')
+  })
+
+  it('does not filter suggestions and survives a throwing localStorage', async () => {
+    m.tasks.mockResolvedValue({ items: [] })
+    const s = useTasksStore()
+    await s.setFilter('k')
+    m.tasks.mockClear()
+    await s.load('suggested')
+    expect(m.tasks).toHaveBeenCalledWith({ view: 'all', status: 'suggested' })
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('blocked')
+    })
+    await expect(s.setFilter('all')).resolves.toBeUndefined()
+    spy.mockRestore()
   })
 })

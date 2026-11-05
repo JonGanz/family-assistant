@@ -2,14 +2,19 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import type { TaskDefinitionView } from '../../api/client'
-import ErrorBanner from '../../components/ErrorBanner.vue'
+import ResponsiveItems from '../../app/ResponsiveItems.vue'
 import { scheduleSummary } from '../../lib/tasks'
 import { dayKey } from '../../lib/time'
 import { useDefinitionsStore } from '../../stores/definitions'
 import { useHouseholdStore } from '../../stores/household'
 import { useListsStore } from '../../stores/lists'
 import { useMembersStore } from '../../stores/members'
+import { UiButton, UiChip, UiEmptyState, UiSheet, UiSkeleton } from '../../ui'
 import { describeError } from '../shared'
+import ConfirmDialog from './settings-mail/ConfirmDialog.vue'
+import PageFab from './settings-mail/PageFab.vue'
+import PageNotices from './settings-mail/PageNotices.vue'
+import { useConfirm } from './settings-mail/useConfirm'
 import DefinitionEditor from './DefinitionEditor.vue'
 import { formFromView, toPatch } from './definitionForm'
 
@@ -20,6 +25,8 @@ const members = useMembersStore()
 const household = useHouseholdStore()
 const editing = ref<string | null>(typeof route.query.def === 'string' ? route.query.def : null)
 const error = ref('')
+const confirm = useConfirm()
+const current = () => defs.items.find((d) => d.id === editing.value) ?? null
 const today = computed(() => dayKey(new Date(), household.tz))
 
 onMounted(() => {
@@ -39,56 +46,97 @@ async function act(fn: () => Promise<unknown>) {
 }
 const togglePause = (d: TaskDefinitionView) =>
   act(() => defs.patch(d, { ...toPatch(formFromView(d)), paused: !d.paused }))
-const remove = (d: TaskDefinitionView) => {
-  if (confirm(`Delete “${d.title}”? Open tasks already made from it stay.`))
-    void act(() => defs.remove(d.id))
-}
+const remove = (d: TaskDefinitionView) =>
+  confirm.ask(`Delete “${d.title}”?`, 'Open tasks already made from it stay.', () =>
+    act(() => defs.remove(d.id)),
+  )
 </script>
 
 <template>
-  <div>
-    <ErrorBanner v-if="defs.error" :message="defs.error" />
-    <ErrorBanner v-if="defs.conflict && editing === null" conflict @reload="defs.load()" />
-    <ErrorBanner v-if="error" :message="error" />
-    <p v-if="lists.loaded && lists.items.length === 0" class="muted">
-      Create a list first (Lists tab).
+  <div class="panel">
+    <PageNotices
+      :load-error="defs.error"
+      :conflict="defs.conflict && editing === null"
+      :error="error"
+      @reload="defs.load()"
+    />
+    <p v-if="lists.loaded && lists.items.length === 0" class="meta">
+      Create a list first (Lists section).
     </p>
-    <ul class="card-list">
-      <li v-for="d in defs.items" :key="d.id" :data-testid="`def-${d.title}`">
-        <template v-if="editing !== d.id">
-          <strong>{{ d.title }}</strong>
-          <span v-if="d.paused" class="badge needs_reauth">paused</span>
-          <span v-if="d.condition_ok === false" class="badge">waiting for weather</span>
-          <p class="muted">
+    <UiSkeleton v-if="!defs.loaded && !defs.error" :lines="3" />
+    <UiEmptyState
+      v-else-if="defs.loaded && !defs.items.length"
+      icon="routines"
+      title="No chores or schedules yet."
+    />
+    <ResponsiveItems :items="defs.items">
+      <template #item="{ item: d }">
+        <div class="item" :data-testid="`def-${d.title}`">
+          <div class="item__head">
+            <strong class="item__name">{{ d.title }}</strong>
+            <UiChip v-if="d.paused" icon="info">paused</UiChip>
+            <UiChip v-if="d.condition_ok === false" icon="weather">waiting for weather</UiChip>
+          </div>
+          <p class="meta">
             {{ listName(d.list) }} · {{ scheduleSummary(d.schedule) }} · {{ d.strategy }}
             <template v-if="d.next_due_at"> · next {{ d.next_due_at.slice(0, 10) }}</template>
           </p>
-          <div class="actions">
-            <button type="button" @click="editing = d.id">Edit</button>
-            <button type="button" @click="togglePause(d)">
+          <div class="item__row">
+            <UiButton variant="text" @click="editing = d.id">Edit</UiButton>
+            <UiButton variant="text" @click="togglePause(d)">
               {{ d.paused ? 'Resume' : 'Pause' }}
-            </button>
-            <button type="button" @click="remove(d)">Delete</button>
+            </UiButton>
+            <UiButton variant="text" @click="remove(d)">Delete</UiButton>
           </div>
-        </template>
-        <DefinitionEditor v-else :definition="d" :today="today" @done="editing = null" />
-      </li>
-    </ul>
-    <DefinitionEditor
-      v-if="editing === 'new'"
-      :definition="null"
-      :today="today"
-      @done="editing = null"
+        </div>
+      </template>
+    </ResponsiveItems>
+
+    <PageFab v-if="lists.items.length" label="Add a chore or schedule" @click="editing = 'new'" />
+    <UiSheet
+      :model-value="editing !== null"
+      :title="editing === 'new' ? 'New chore or schedule' : 'Edit chore or schedule'"
+      @update:model-value="editing = null"
+    >
+      <DefinitionEditor
+        v-if="editing !== null"
+        :key="editing"
+        :definition="current()"
+        :today="today"
+        @done="editing = null"
+      />
+    </UiSheet>
+    <ConfirmDialog
+      :pending="confirm.pending.value"
+      @accept="confirm.accept"
+      @cancel="confirm.cancel"
     />
-    <button v-else-if="lists.items.length" type="button" @click="editing = 'new'">
-      Add a chore or schedule
-    </button>
   </div>
 </template>
 
 <style scoped>
-.actions {
+.panel,
+.item {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+.item {
+  gap: var(--ui-space-2);
+}
+.item__head,
+.item__row {
   display: flex;
-  gap: var(--space-2);
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+}
+.item__name {
+  flex: 1;
+  font: var(--ui-type-title-md);
+}
+.meta {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
 }
 </style>

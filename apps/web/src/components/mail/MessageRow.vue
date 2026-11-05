@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CategoryView, Member, MessageSummary } from '../../api/client'
+import { UiCard, UiIcon, UiList, UiListItem } from '../../ui'
 import { fmt } from './format'
 
 const props = defineProps<{
@@ -14,49 +15,52 @@ const cat = computed(() => props.categories.find((c) => c.key === props.msg.cate
 const people = computed(() =>
   props.members.filter((m) => props.msg.members.includes(m.id)).map((m) => m.display_name),
 )
+// The third line: category and members, then the snippet (the chips of the old row).
+const supporting = computed(() => {
+  const parts = [
+    cat.value?.label ?? props.msg.category ?? '',
+    ...people.value,
+    props.msg.is_bill ? 'Bill' : '',
+    props.msg.has_attachments ? 'Attachment' : '',
+  ].filter(Boolean)
+  const meta = parts.join(' · ')
+  const snippet = props.msg.snippet?.trim() ?? ''
+  return [meta, snippet].filter(Boolean).join(' — ')
+})
 </script>
 
 <template>
-  <RouterLink class="row" :to="{ name: 'mail-detail', params: { id: msg.id } }">
-    <div class="top">
-      <strong class="from">{{ msg.from_name || msg.from_addr }}</strong>
-      <time class="muted" :datetime="msg.received_at">{{ fmt(msg.received_at, tz) }}</time>
-    </div>
-    <div class="subject">{{ msg.subject }}</div>
-    <div class="meta">
-      <span v-if="cat" class="badge">{{ cat.label }}</span>
-      <span v-else-if="msg.category" class="badge">{{ msg.category }}</span>
-      <span v-for="p in people" :key="p" class="badge">{{ p }}</span>
-      <span v-if="msg.time_sensitive" class="badge needs_reauth">Time-sensitive</span>
-      <span v-if="msg.is_bill" class="badge">Bill</span>
-      <span v-if="msg.has_attachments" class="muted">Attachment</span>
-    </div>
-  </RouterLink>
+  <li class="mail-row">
+    <UiCard variant="filled">
+      <UiList>
+        <UiListItem
+          :to="`/mail/${msg.id}`"
+          :overline="msg.from_name || msg.from_addr"
+          :headline="msg.subject"
+          :supporting="supporting || undefined"
+        >
+          <template #trailing>
+            <span class="mail-row__trail">
+              <UiIcon v-if="msg.time_sensitive" name="warning" :size="20" label="Time-sensitive" />
+              <time :datetime="msg.received_at">{{ fmt(msg.received_at, tz) }}</time>
+            </span>
+          </template>
+        </UiListItem>
+      </UiList>
+    </UiCard>
+  </li>
 </template>
 
 <style scoped>
-.row {
-  display: grid;
-  gap: var(--space-1);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  color: inherit;
-  text-decoration: none;
+.mail-row {
+  list-style: none;
 }
-.top {
-  display: flex;
-  justify-content: space-between;
-  gap: var(--space-3);
-}
-.from {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
+.mail-row__trail {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-label-sm);
+  text-align: right;
 }
 </style>

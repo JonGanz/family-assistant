@@ -109,12 +109,17 @@ test('you: the first adult, who is signed in', async () => {
 
 test('family: add a child with a login; leaving and coming back resumes the step', async () => {
   await expect(page.getByTestId('member-Pat')).toBeVisible()
+  await page.getByRole('button', { name: 'Add member' }).click()
   const form = page.getByTestId('add-member')
   await form.getByLabel('Name', { exact: true }).fill('Robin')
   await form.getByLabel('Role').selectOption('child')
   await form.getByLabel('Username').fill('robin@example.com')
   await form.getByLabel('Password', { exact: true }).fill('dino1234')
+  // The member is created first and its login second; reloading before that second request
+  // finishes would leave a child without a login.
+  const account = page.waitForResponse((r) => r.url().endsWith('/account') && r.status() === 201)
   await form.getByRole('button', { name: 'Add' }).click()
+  await account
   await expect(page.getByTestId('member-Robin')).toBeVisible()
 
   // The step is remembered (localStorage fa.setup.step) and the server decides how far back to go.
@@ -186,7 +191,7 @@ test('the new household has members, the child can sign in, and no household fil
     data: { username: 'robin@example.com', password: 'dino1234' },
     headers: { 'X-FA-Request': '1' },
   })
-  expect(login.ok()).toBeTruthy()
+  expect(login.status(), await login.text()).toBe(200)
   await kid.close()
 })
 

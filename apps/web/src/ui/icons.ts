@@ -43,6 +43,9 @@ import I_sync from '~icons/material-symbols/sync-rounded'
 import I_lock from '~icons/material-symbols/lock-rounded'
 import I_key from '~icons/material-symbols/key-rounded'
 import I_logout from '~icons/material-symbols/logout-rounded'
+import I_arrow_upward from '~icons/material-symbols/arrow-upward-rounded'
+import I_arrow_downward from '~icons/material-symbols/arrow-downward-rounded'
+import I_menu_open from '~icons/material-symbols/menu-open-rounded'
 import I_visibility from '~icons/material-symbols/visibility-rounded'
 import I_visibility_off from '~icons/material-symbols/visibility-off-rounded'
 
@@ -101,6 +104,9 @@ export const icons = {
   lock: I_lock,
   key: I_key,
   logout: I_logout,
+  arrow_upward: I_arrow_upward,
+  arrow_downward: I_arrow_downward,
+  menu_open: I_menu_open,
   visibility: I_visibility,
   visibility_off: I_visibility_off,
   home_outline: I_home_outline,

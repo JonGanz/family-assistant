@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue'
+import { UiButton, UiCard, UiSelect, UiTextField } from '../../../ui'
 import type { ContactApproval, ContactSuggestionView, Member } from '../../../api/client'
 
 const props = defineProps<{ contact: ContactSuggestionView; members: Member[]; busy?: boolean }>()
 const emit = defineEmits<{ approve: [ContactApproval]; reject: [] }>()
 
 const children = computed(() => props.members.filter((m) => m.role === 'child'))
+const childOptions = computed(() => [
+  { value: '', label: 'None' },
+  ...children.value.map((m) => ({ value: m.id, label: m.display_name })),
+])
 const form = reactive({ name: props.contact.name ?? '', member: props.contact.member ?? '' })
 
 function approve() {
@@ -17,39 +22,65 @@ function approve() {
 </script>
 
 <template>
-  <li class="form item">
-    <p>
-      <strong>{{ contact.email }}</strong> at {{ contact.org_name }}
-    </p>
-    <label>Name <input v-model="form.name" /></label>
-    <label>
-      Child
-      <select v-model="form.member">
-        <option value="">None</option>
-        <option v-for="m in children" :key="m.id" :value="m.id">{{ m.display_name }}</option>
-      </select>
-    </label>
-    <p v-if="contact.message" class="muted">
-      <RouterLink :to="{ name: 'mail-detail', params: { id: contact.message } }"
-        >Open the message that suggested this</RouterLink
-      >
-    </p>
-    <div class="actions">
-      <button type="button" :disabled="busy" @click="approve">Approve</button>
-      <button type="button" :disabled="busy" @click="emit('reject')">Reject</button>
-    </div>
+  <li class="item">
+    <UiCard variant="filled">
+      <template #header>
+        <div class="head">
+          <span>{{ contact.email }} at {{ contact.org_name }}</span>
+          <slot name="header-trailing" />
+        </div>
+      </template>
+      <div class="fields">
+        <UiTextField v-model="form.name" label="Name" />
+        <UiSelect v-model="form.member" label="Child" :options="childOptions" />
+        <p v-if="contact.message" class="note">
+          <RouterLink :to="{ name: 'mail-detail', params: { id: contact.message } }"
+            >Open the message that suggested this</RouterLink
+          >
+        </p>
+      </div>
+      <template #actions>
+        <UiButton variant="text" :disabled="busy" @click="emit('reject')">Reject</UiButton>
+        <UiButton :disabled="busy" @click="approve">Approve</UiButton>
+      </template>
+    </UiCard>
   </li>
 </template>
 
 <style scoped>
 .item {
-  max-width: none;
+  list-style: none;
 }
-.actions {
+.head {
   display: flex;
-  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-2);
+  font: var(--ui-type-title-sm);
 }
-.actions button {
-  min-height: 44px;
+.fields {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+.note {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
+}
+.err {
+  margin: 0;
+  color: var(--ui-error);
+  font: var(--ui-type-body-md);
+}
+.checks {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.checks legend {
+  padding: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-label-md);
 }
 </style>

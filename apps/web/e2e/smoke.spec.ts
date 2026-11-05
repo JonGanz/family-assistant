@@ -28,8 +28,10 @@ test('login, members, pair a device, dashboard shows it is connected', async ({
   await expect(page.locator('ul.members li').first()).toBeVisible()
 
   await settingsNav.getByRole('link', { name: 'Devices' }).click()
-  await page.getByLabel('Device name').fill(`e2e-${Date.now()}`)
   await page.getByRole('button', { name: 'Pair a device' }).click()
+  const sheet = page.getByRole('dialog', { name: 'Pair a device' })
+  await sheet.getByLabel('Device name').fill(`e2e-${Date.now()}`)
+  await sheet.getByRole('button', { name: 'Pair', exact: true }).click()
   await expect(page.getByAltText('QR code for the pair URL')).toBeVisible()
   const pairUrl = (await page.getByTestId('pair-url').textContent())?.trim()
   expect(pairUrl).toContain('/dashboard?device=')

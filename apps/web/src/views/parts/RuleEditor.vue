@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import type { WeatherRuleView } from '../../api/client'
-import ErrorBanner from '../../components/ErrorBanner.vue'
 import { ApiError } from '../../api/http'
 import { useDefinitionsStore } from '../../stores/definitions'
 import { useRulesStore } from '../../stores/rules'
+import { UiButton, UiCard, UiChip, UiSelect, UiTextField } from '../../ui'
 import { describeError } from '../shared'
 import { useRuleValidation } from './useRuleValidation'
 
@@ -23,7 +23,7 @@ const taskDef = ref(
   ((props.rule?.task_definition ?? null) as { definition?: string } | null)?.definition ?? '',
 )
 const saveError = ref('')
-const conditionEl = ref<HTMLInputElement | null>(null)
+const conditionBox = ref<HTMLElement | null>(null)
 
 onMounted(() => void defs.load())
 
@@ -43,6 +43,23 @@ const FIELDS = [
 const WINDOWS = ['next 12h', 'next 24h', 'today', 'tonight', 'tomorrow']
 const AGGS = ['min', 'max', 'sum', 'avg', 'any']
 
+const severityOptions = [
+  { value: 'info', label: 'Info' },
+  { value: 'warning', label: 'Warning' },
+  { value: 'severe', label: 'Severe' },
+]
+const actionOptions = [
+  { value: 'alert', label: 'Show an advisory' },
+  { value: 'task', label: 'Create a task' },
+]
+const modeOptions = [
+  { value: 'create', label: 'Create the task right away' },
+  { value: 'suggest', label: 'Suggest it (an adult accepts or dismisses)' },
+]
+const defOptions = computed(() => [
+  { value: '', label: 'Pick a chore or schedule', disabled: true },
+  ...defs.items.map((d) => ({ value: d.id, label: d.title })),
+])
 const error = computed(() => result.value?.error ?? null)
 /** Marker line: spaces up to the error position, then a caret. */
 const marker = computed(() =>
@@ -51,7 +68,7 @@ const marker = computed(() =>
 const preview = computed(() => (result.value?.ok ? result.value.preview : null))
 
 function insert(text: string) {
-  const el = conditionEl.value
+  const el = conditionBox.value?.querySelector('input') ?? null
   const v = condition.value
   const at = el?.selectionStart ?? v.length
   const end = el?.selectionEnd ?? at
@@ -109,110 +126,114 @@ async function save() {
 </script>
 
 <template>
-  <form class="form editor" @submit.prevent="save">
-    <label>Name <input v-model="name" name="rule_name" required /></label>
-    <label>
-      Condition
-      <input
-        ref="conditionEl"
+  <form class="editor" @submit.prevent="save">
+    <UiTextField v-model="name" label="Name" name="rule_name" required />
+    <div ref="conditionBox">
+      <UiTextField
         v-model="condition"
-        class="mono"
+        label="Condition"
+        class="rule-mono"
         name="condition"
         spellcheck="false"
         autocomplete="off"
-        required
         :aria-invalid="!!error"
         aria-describedby="rule-feedback"
       />
-    </label>
+    </div>
     <div class="chips" role="group" aria-label="Insert into the condition">
-      <button v-for="a in AGGS" :key="a" type="button" @click="insert(`${a}(`)">{{ a }}</button>
-      <button v-for="f in FIELDS" :key="f" type="button" @click="insert(f)">{{ f }}</button>
-      <button v-for="w in WINDOWS" :key="w" type="button" @click="insert(w)">{{ w }}</button>
+      <UiChip v-for="a in AGGS" :key="a" @click="insert(`${a}(`)">{{ a }}</UiChip>
+      <UiChip v-for="f in FIELDS" :key="f" @click="insert(f)">{{ f }}</UiChip>
+      <UiChip v-for="w in WINDOWS" :key="w" @click="insert(w)">{{ w }}</UiChip>
     </div>
     <div id="rule-feedback" aria-live="polite">
-      <pre v-if="error" class="text-danger mono" data-testid="rule-error"
+      <pre v-if="error" class="fb fb--error" data-testid="rule-error"
         >{{ condition }}
 {{ marker }}
 {{ error.message }}</pre>
-      <p v-else-if="pending" class="muted">Checking…</p>
-      <p v-else-if="failure" class="text-danger">{{ failure }}</p>
-      <p v-else-if="preview" class="text-success" data-testid="rule-preview">
+      <p v-else-if="pending" class="fb">Checking…</p>
+      <p v-else-if="failure" class="fb fb--error">{{ failure }}</p>
+      <p v-else-if="preview" class="fb" data-testid="rule-preview">
         With the latest forecast this rule
         <strong>{{ preview.matches ? 'would fire' : 'would not fire' }}</strong>
         <template v-if="preview.value != null"> (value {{ preview.value }})</template>
         <template v-if="preview.when"> in the {{ preview.when }}</template
         >.
       </p>
-      <p v-else-if="result?.ok" class="text-success">The rule is valid.</p>
+      <p v-else-if="result?.ok" class="fb">The rule is valid.</p>
     </div>
-    <label>
-      Message
-      <input v-model="message" name="message" required />
-      <span class="muted">Use {value}, {when} and {field}.</span>
-    </label>
-    <label>
-      Severity
-      <select v-model="severity" name="severity">
-        <option value="info">Info</option>
-        <option value="warning">Warning</option>
-        <option value="severe">Severe</option>
-      </select>
-    </label>
-    <label>
-      Action
-      <select v-model="action" name="action">
-        <option value="alert">Show an advisory</option>
-        <option value="task">Create a task</option>
-      </select>
-    </label>
+    <UiTextField
+      v-model="message"
+      label="Message"
+      name="message"
+      required
+      supporting="Use {value}, {when} and {field}."
+    />
+    <UiSelect
+      :model-value="severity"
+      label="Severity"
+      :options="severityOptions"
+      @update:model-value="severity = $event as typeof severity"
+    />
+    <UiSelect
+      :model-value="action"
+      label="Action"
+      :options="actionOptions"
+      @update:model-value="action = $event as typeof action"
+    />
     <template v-if="action === 'task'">
-      <label>
-        Task to create
-        <select v-model="taskDef" name="task_definition" required>
-          <option value="" disabled>Pick a chore or schedule</option>
-          <option v-for="d in defs.items" :key="d.id" :value="d.id">{{ d.title }}</option>
-        </select>
-        <span class="muted">
-          Pick from the chores in Settings → Tasks. It is made once per day the rule fires.
-        </span>
-      </label>
-      <label>
-        What happens
-        <select v-model="taskMode" name="task_mode">
-          <option value="create">Create the task right away</option>
-          <option value="suggest">Suggest it (an adult accepts or dismisses)</option>
-        </select>
-      </label>
+      <UiSelect
+        v-model="taskDef"
+        label="Task to create"
+        :options="defOptions"
+        supporting="Pick from the chores in Settings → Tasks. It is made once per day the rule fires."
+      />
+      <UiSelect
+        :model-value="taskMode"
+        label="What happens"
+        :options="modeOptions"
+        @update:model-value="taskMode = $event as 'create' | 'suggest'"
+      />
     </template>
-    <ErrorBanner v-if="rules.conflict" conflict @reload="rules.load()" />
-    <ErrorBanner v-if="saveError" :message="saveError" />
+    <UiCard v-if="rules.conflict" variant="outlined" role="alert">
+      <p>This page changed elsewhere. Reload to see the latest.</p>
+      <template #actions
+        ><UiButton variant="tonal" @click="rules.load()">Reload</UiButton></template
+      >
+    </UiCard>
+    <UiCard v-if="saveError" variant="outlined" role="alert">{{ saveError }}</UiCard>
     <div class="row">
-      <button type="submit" :disabled="!!error">Save</button>
-      <button type="button" @click="emit('done')">Cancel</button>
+      <UiButton variant="text" @click="emit('done')">Cancel</UiButton>
+      <UiButton type="submit" :disabled="!!error || !condition.trim()">Save</UiButton>
     </div>
   </form>
 </template>
 
 <style scoped>
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+.editor {
+  display: grid;
+  gap: var(--ui-space-3);
 }
 .chips,
 .row {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
+  gap: var(--ui-space-2);
 }
-.chips button {
-  font-family: ui-monospace, monospace;
-  font-size: var(--font-size-sm);
+.row {
+  justify-content: flex-end;
 }
-pre {
+.fb {
   margin: 0;
+  font: var(--ui-type-body-sm);
+}
+.fb--error {
+  color: var(--ui-error);
+}
+pre.fb {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   white-space: pre-wrap;
 }
-.editor {
-  max-width: 40rem;
+.editor :deep(.rule-mono) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 </style>

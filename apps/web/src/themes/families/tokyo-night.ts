@@ -21,7 +21,7 @@ const family: ThemeFamily = {
         border: '#b4b5b9', // border
         muted: '#475380', // fg_dark - derived (published #6172b0 is 2.79:1)
         text: '#2e51a0', // fg - derived (published #3760bf is 3.54:1)
-        onAccent: '#141414', // white (not in palette) - derived (published #ffffff is 4.02:1 on blue)
+        onAccent: '#ffffff', // white (the published value) - blue darkened below to reach 4.5:1 with it
       },
       hues: {
         red: '#f52a65', // red
@@ -29,7 +29,7 @@ const family: ThemeFamily = {
         yellow: '#8c6c3e', // yellow
         green: '#587539', // green
         cyan: '#007197', // cyan
-        blue: '#2e7de9', // blue
+        blue: '#1f549c', // blue - derived (published #2e7de9 is 3.11:1 as text on the surface)
         purple: '#9854f1', // magenta
         pink: '#d20065', // magenta2
       },

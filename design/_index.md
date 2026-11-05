@@ -36,6 +36,21 @@ decisions: []
 | [Q-081](Q-081-max-message-size.md) | What happens to a mail message over the size limit | ingest |
 | [Q-082](Q-082-ntfy-generic-text.md) | A generic-text mode for notifications sent through ntfy | notify |
 
+## Batch 23, open
+| ID | Title | Area |
+|---|---|---|
+| [Q-087](Q-087-calendar-view-switch.md) | Where the Calendar's view switch goes, and the default view | frontend |
+| [Q-088](Q-088-today-now-card.md) | A 'Now' card on the Today page | frontend |
+| [Q-089](Q-089-inbox-approve-reject.md) | How Inbox approve and reject apply | frontend |
+| [Q-090](Q-090-bills-grouping.md) | Bills: grouped by state, and a state filter | frontend |
+| [Q-091](Q-091-tasks-tabs-after-filter.md) | Tasks tabs once the member filter exists | frontend |
+| [Q-092](Q-092-theme-accent-contrast.md) | Darker accents in three light themes for AA contrast | frontend |
+| [Q-093](Q-093-member-editor-and-password.md) | Member editor as a sheet; password change through the Save bar | frontend |
+| [Q-094](Q-094-system-settings-apply.md) | How Settings → System applies switches | frontend |
+| [Q-095](Q-095-eval-threshold.md) | Which threshold the eval uses when the llm stage is off | tech |
+| [Q-096](Q-096-ai-settings-placement.md) | Where Settings → AI lives, and whether a new endpoint starts enabled | frontend |
+| [Q-097](Q-097-ai-chip-details.md) | How the inbox shows AI-made items | frontend |
+
 ## Resolved
 | ID | Title | Decisions |
 |---|---|---|

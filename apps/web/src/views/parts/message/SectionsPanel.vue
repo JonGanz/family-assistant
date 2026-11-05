@@ -12,11 +12,11 @@ const rest = computed(() =>
 </script>
 
 <template>
-  <div>
+  <div class="sections">
     <div v-for="(s, i) in first" :key="i" class="sec">
       <h3 v-if="s.title">
         {{ s.title }}
-        <span v-if="s.relevance" class="badge">{{ s.relevance }}</span>
+        <span v-if="s.relevance" class="rel">{{ s.relevance }}</span>
       </h3>
       <p class="text">{{ s.text }}</p>
     </div>
@@ -31,8 +31,31 @@ const rest = computed(() =>
 </template>
 
 <style scoped>
+.sections {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+h3 {
+  margin: 0;
+  font: var(--ui-type-title-sm);
+}
+.rel {
+  margin-left: var(--ui-space-2);
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-label-sm);
+}
 .text {
+  margin: 0;
+  font: var(--ui-type-body-md);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+summary {
+  min-height: var(--ui-touch);
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: var(--ui-primary);
+  font: var(--ui-type-label-lg);
 }
 </style>

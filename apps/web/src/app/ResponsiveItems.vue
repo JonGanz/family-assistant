@@ -1,17 +1,13 @@
 <script setup lang="ts" generic="T extends { id: string }">
-// Rule of the house: a collection is a UiList on compact and a grid of cards on medium and
-// expanded. The row or card content comes from the `item` slot.
-import { UiCard, UiList, useBreakpoint } from '../ui'
+// Rule of the house (R2, 2026-11-05): a collection is a stack of cards on every width. On
+// compact the grid collapses to one column. The card content comes from the `item` slot.
+import { UiCard } from '../ui'
 
 defineProps<{ items: T[] }>()
-const bp = useBreakpoint()
 </script>
 
 <template>
-  <UiList v-if="bp === 'compact'" class="ri-list">
-    <li v-for="it in items" :key="it.id" class="ri-row"><slot name="item" :item="it" /></li>
-  </UiList>
-  <ul v-else class="ri-grid">
+  <ul class="ri-grid">
     <li v-for="it in items" :key="it.id">
       <UiCard variant="filled"><slot name="item" :item="it" /></UiCard>
     </li>
@@ -19,15 +15,17 @@ const bp = useBreakpoint()
 </template>
 
 <style scoped>
-.ri-list .ri-row + .ri-row {
-  border-top: 1px solid var(--ui-outline-variant);
-}
 .ri-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  grid-template-columns: 1fr;
   gap: var(--ui-space-3);
   margin: 0;
   padding: 0;
   list-style: none;
+}
+@media (min-width: 600px) {
+  .ri-grid {
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  }
 }
 </style>

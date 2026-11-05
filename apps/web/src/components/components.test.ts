@@ -2,7 +2,6 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import Avatar from './Avatar.vue'
 import DateRangeNav from './DateRangeNav.vue'
-import ErrorBanner from './ErrorBanner.vue'
 import EventCard from './EventCard.vue'
 import MemberChip from './MemberChip.vue'
 import WeatherIcon from './WeatherIcon.vue'
@@ -26,6 +25,25 @@ describe('components', () => {
     const w = mount(MemberChip, { props: { name: 'Alex', color: '#ffeb3b' } })
     expect(w.text()).toBe('Alex')
     expect(w.attributes('style')).toContain('color: rgb(0, 0, 0)')
+  })
+  it('MemberChip and Avatar keep the kiosk look unless asked for the app variant', () => {
+    expect(mount(MemberChip, { props: { name: 'A', color: 'red' } }).classes()).not.toContain(
+      'member-chip--app',
+    )
+    expect(
+      mount(MemberChip, { props: { name: 'A', color: 'red', variant: 'app' } }).classes(),
+    ).toContain('member-chip--app')
+    expect(mount(Avatar, { props: { name: 'A', color: 'red' } }).classes()).not.toContain(
+      'avatar--app',
+    )
+  })
+  it('EventCard is square in a grid and emits select when selectable', async () => {
+    const w = mount(EventCard, {
+      props: { event, tz: 'UTC', members, square: true, selectable: true },
+    })
+    expect(w.classes()).toContain('square')
+    await w.trigger('click')
+    expect(w.emitted('select')).toHaveLength(1)
   })
   it('Avatar falls back to initials and uses image when given', () => {
     expect(mount(Avatar, { props: { name: 'Alex Example', color: '#336699' } }).text()).toBe('AE')
@@ -63,20 +81,11 @@ describe('components', () => {
     await w.get('[aria-label=Next]').trigger('click')
     await w.get('[aria-label=Previous]').trigger('click')
     await w
-      .findAll('button')
-      .find((b) => b.text() === 'month')!
+      .findAll('[role=radio]')
+      .find((b) => b.text() === 'Month')!
       .trigger('click')
     expect(w.emitted('next')).toHaveLength(1)
     expect(w.emitted('prev')).toHaveLength(1)
     expect(w.emitted('update:mode')).toEqual([['month']])
-  })
-  it('ErrorBanner conflict variant offers reload', async () => {
-    const plain = mount(ErrorBanner, { props: { message: 'Boom' } })
-    expect(plain.text()).toContain('Boom')
-    expect(plain.find('button').exists()).toBe(false)
-    const w = mount(ErrorBanner, { props: { conflict: true } })
-    expect(w.text()).toContain('changed elsewhere')
-    await w.get('button').trigger('click')
-    expect(w.emitted('reload')).toHaveLength(1)
   })
 })

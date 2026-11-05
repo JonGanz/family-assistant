@@ -7,6 +7,14 @@ export default [
   { route: '/settings/appearance' },
   { route: '/settings/household' },
   { route: '/settings/members' },
+  {
+    route: '/settings/members',
+    name: 'settings-members-add-sheet',
+    before: async (page) => {
+      await page.getByRole('button', { name: 'Add member' }).click()
+      await page.waitForTimeout(400)
+    },
+  },
   { route: '/settings/devices' },
   { route: '/settings/about' },
 ] satisfies ShotRoute[]

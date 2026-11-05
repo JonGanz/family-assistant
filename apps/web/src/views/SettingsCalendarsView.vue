@@ -1,27 +1,43 @@
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { api } from '../api/client'
-import { mailApi, type CalendarViewExt, type SourceViewExt } from '../api/mailSettings'
 import { ApiError } from '../api/http'
-import ErrorBanner from '../components/ErrorBanner.vue'
-import PageHeader from '../components/PageHeader.vue'
-import StateBlock from '../components/StateBlock.vue'
+import { mailApi, type CalendarViewExt, type SourceViewExt } from '../api/mailSettings'
+import ResponsiveItems from '../app/ResponsiveItems.vue'
+import SettingsPage from '../app/SettingsPage.vue'
 import { formatTime } from '../lib/time'
 import { useHouseholdStore } from '../stores/household'
 import { useMembersStore } from '../stores/members'
 import { useSourcesStore } from '../stores/sources'
+import {
+  UiButton,
+  UiChip,
+  UiEmptyState,
+  UiIconButton,
+  UiMenu,
+  UiSheet,
+  UiSkeleton,
+  type MenuItem,
+} from '../ui'
 import AddSourceForm from './parts/AddSourceForm.vue'
+import ConfirmDialog from './parts/settings-mail/ConfirmDialog.vue'
+import InstantCheck from './parts/settings-mail/InstantCheck.vue'
+import PageFab from './parts/settings-mail/PageFab.vue'
+import PageNotices from './parts/settings-mail/PageNotices.vue'
+import { stateIcon } from './parts/settings-mail/stateIcon'
+import { useConfirm } from './parts/settings-mail/useConfirm'
 import SourceCredentials from './parts/SourceCredentials.vue'
 import { describeError } from './shared'
-import { reactive, ref } from 'vue'
 
 const sources = useSourcesStore()
 const household = useHouseholdStore()
 const members = useMembersStore()
+const confirm = useConfirm()
 const error = ref('')
 const note = reactive<Record<string, string>>({})
 const needsWriteAccess = reactive<Record<string, boolean>>({})
-const editing = ref<string | null>(null)
+const editing = ref<SourceViewExt | null>(null)
+const adding = ref(false)
 
 const googleEnabled = computed(() => household.view?.google_oauth_enabled ?? false)
 const calendarsOf = (s: SourceViewExt) => sources.calendars.filter((c) => c.source === s.id)
@@ -35,7 +51,7 @@ onMounted(() => {
 async function run(fn: () => Promise<unknown>, fallback: string) {
   error.value = ''
   try {
-    await fn()
+    return await fn()
   } catch (e) {
     error.value = describeError(e, fallback)
   }
@@ -48,172 +64,214 @@ async function syncNow(s: SourceViewExt) {
   }, 'Could not start a sync.')
 }
 
-async function remove(s: SourceViewExt) {
-  if (!confirm(`Remove "${s.name}" and its events?`)) return
-  await run(() => sources.remove(s.id), 'Could not remove the source.')
+const patchCal = (c: CalendarViewExt, p: Parameters<typeof sources.patchCalendar>[1]) =>
+  sources.patchCalendar(c, p)
+function memberPatch(c: CalendarViewExt, id: string, on: boolean) {
+  const next = on ? [...c.members, id] : c.members.filter((m) => m !== id)
+  return patchCal(c, { members: next })
+}
+const go = (url: string) => (window.location.href = url)
+const connectWrite = () => go(mailApi.googleStartUrl('calendar_write', '/settings/calendars'))
+
+async function setWritable(s: SourceViewExt, v: boolean): Promise<boolean> {
+  try {
+    return await sources.patchSource(s, { writable: v })
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 422) {
+      needsWriteAccess[s.id] = true
+      throw new Error('Reconnect with calendar write access first.', { cause: e })
+    }
+    throw e
+  }
 }
 
-const toggleEnabled = (c: CalendarViewExt, v: boolean) =>
-  run(() => sources.patchCalendar(c, { enabled: v }), 'Could not save.')
-function toggleMember(c: CalendarViewExt, id: string, on: boolean) {
-  const next = on ? [...c.members, id] : c.members.filter((m) => m !== id)
-  return run(() => sources.patchCalendar(c, { members: next }), 'Could not save.')
-}
-const googleReconnect = () => api.googleStartUrl('/settings/calendars')
-const connectWrite = () => mailApi.googleStartUrl('calendar_write', '/settings/calendars')
-const toggleDefault = (c: CalendarViewExt, v: boolean) =>
-  run(() => sources.patchCalendar(c, { is_default_target: v }), 'Could not save.')
-async function toggleWritable(s: SourceViewExt, v: boolean) {
-  await run(async () => {
-    try {
-      await sources.patchSource(s, { writable: v })
-    } catch (e) {
-      if (e instanceof ApiError && e.status === 422) needsWriteAccess[s.id] = true
-      else throw e
-    }
-  }, 'Could not save.')
-}
 const synced = (s: SourceViewExt) =>
   s.last_synced_at ? formatTime(s.last_synced_at, household.tz) : 'never'
+
+function menuItems(s: SourceViewExt): MenuItem[] {
+  const items: MenuItem[] = [{ id: 'sync', label: 'Sync now' }]
+  if (s.kind === 'google') {
+    if (s.state === 'needs_reauth') items.push({ id: 'reconnect', label: 'Reconnect' })
+  } else {
+    items.push({
+      id: 'credentials',
+      label: s.state === 'needs_reauth' ? 'Reconnect' : 'Change link or password',
+    })
+  }
+  items.push({ id: 'remove', label: 'Remove', danger: true })
+  return items
+}
+function onMenu(s: SourceViewExt, id: string) {
+  if (id === 'sync') void syncNow(s)
+  else if (id === 'credentials') editing.value = s
+  else if (id === 'reconnect') go(api.googleStartUrl('/settings/calendars'))
+  else if (id === 'remove')
+    confirm.ask(
+      `Remove “${s.name}”?`,
+      'Its events are removed from the app too.',
+      () => run(() => sources.remove(s.id), 'Could not remove the source.'),
+      'Remove',
+    )
+}
 </script>
 
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader eyebrow="Settings" title="Calendars" />
-    <ErrorBanner v-if="sources.error" :message="sources.error" />
-    <ErrorBanner v-if="sources.conflict" conflict @reload="sources.load()" />
-    <ErrorBanner v-if="error" :message="error" />
+  <SettingsPage title="Calendars">
+    <PageNotices
+      :load-error="sources.error"
+      :conflict="sources.conflict"
+      :error="error"
+      @reload="sources.load()"
+    />
+    <UiSkeleton v-if="!sources.loaded && !sources.error" :lines="4" />
+    <UiEmptyState
+      v-else-if="sources.loaded && !sources.sources.length"
+      icon="calendar"
+      title="No calendar sources yet."
+      text="Add a Google, CalDAV or ICS calendar."
+    >
+      <UiButton icon="add" @click="adding = true">Add a source</UiButton>
+    </UiEmptyState>
 
-    <ul class="card-list">
-      <li v-for="s in sources.sources" :key="s.id" :data-testid="`source-${s.name}`">
-        <div class="row">
-          <strong>{{ s.name }}</strong>
-          <span class="badge" :class="s.state" data-testid="state">{{ s.state }}</span>
-          <span class="muted">
+    <ResponsiveItems :items="sources.sources">
+      <template #item="{ item: s }">
+        <div class="src" :data-testid="`source-${s.name}`">
+          <div class="src__head">
+            <strong class="src__name">{{ s.name }}</strong>
+            <UiChip :icon="stateIcon(s.state)" data-testid="state">{{ s.state }}</UiChip>
+            <UiMenu
+              :items="menuItems(s)"
+              :label="`Actions for ${s.name}`"
+              @select="onMenu(s, $event)"
+            >
+              <template #activator="{ toggle, attrs }">
+                <UiIconButton
+                  icon="more"
+                  :label="`Actions for ${s.name}`"
+                  v-bind="attrs"
+                  @click="toggle"
+                />
+              </template>
+            </UiMenu>
+          </div>
+          <p class="src__meta">
             {{ s.kind }}<template v-if="s.masked_url"> · {{ s.masked_url }}</template> · last sync
             {{ synced(s) }}
-          </span>
-        </div>
-        <p v-if="s.last_error" class="text-danger">{{ s.last_error }}</p>
-        <div class="row">
-          <button type="button" class="btn-sm" @click="syncNow(s)">Sync now</button>
-          <a
-            v-if="s.kind === 'google' && s.state === 'needs_reauth'"
-            class="btn btn-sm"
-            :href="googleReconnect()"
-          >
-            Reconnect
-          </a>
-          <button
-            v-else-if="s.kind !== 'google'"
-            type="button"
-            class="btn-sm"
-            @click="editing = editing === s.id ? null : s.id"
-          >
-            {{ s.state === 'needs_reauth' ? 'Reconnect' : 'Change link or password' }}
-          </button>
-          <button type="button" class="btn-danger btn-sm" @click="remove(s)">Remove</button>
-          <span v-if="note[s.id]" class="text-success" role="status">{{ note[s.id] }}</span>
-        </div>
-        <div v-if="s.kind !== 'ics'" class="row">
-          <label class="field-inline">
-            <input
-              type="checkbox"
-              :checked="s.writable"
-              :aria-label="`Allow writing approved events to ${s.name}`"
-              @change="toggleWritable(s, ($event.target as HTMLInputElement).checked)"
-            />
-            Allow writing (approved events)
-          </label>
-          <a
-            v-if="s.kind === 'google' && (needsWriteAccess[s.id] || (!s.writable && googleEnabled))"
-            class="btn btn-sm"
-            :href="connectWrite()"
-          >
-            Connect for writing
-          </a>
-          <span v-if="needsWriteAccess[s.id]" class="text-danger" role="alert">
-            Reconnect with calendar write access first.
-          </span>
-        </div>
-        <SourceCredentials v-if="editing === s.id" :source="s" @done="editing = null" />
+          </p>
+          <p v-if="s.last_error" class="src__error">{{ s.last_error }}</p>
+          <p v-if="note[s.id]" role="status">{{ note[s.id] }}</p>
 
-        <ul class="calendars">
-          <li v-for="c in calendarsOf(s)" :key="c.id">
-            <label class="field-inline">
-              <input
-                type="checkbox"
-                :checked="c.enabled"
-                :aria-label="`Show ${c.name}`"
-                @change="toggleEnabled(c, ($event.target as HTMLInputElement).checked)"
-              />
-              <strong>{{ c.name }}</strong>
-            </label>
-            <label v-if="s.writable" class="field-inline">
-              <input
-                type="checkbox"
-                :checked="c.is_default_target"
-                @change="toggleDefault(c, ($event.target as HTMLInputElement).checked)"
-              />
-              Default target
-            </label>
+          <template v-if="s.kind !== 'ics'">
+            <InstantCheck
+              :model-value="s.writable"
+              :label="`Allow writing approved events to ${s.name}`"
+              :save="(v: boolean) => setWritable(s, v)"
+            />
+            <UiButton
+              v-if="
+                s.kind === 'google' && (needsWriteAccess[s.id] || (!s.writable && googleEnabled))
+              "
+              variant="tonal"
+              @click="connectWrite"
+              >Connect for writing</UiButton
+            >
+            <p v-if="needsWriteAccess[s.id]" role="alert">
+              Reconnect with calendar write access first.
+            </p>
+          </template>
+
+          <section v-for="c in calendarsOf(s)" :key="c.id" class="cal">
+            <InstantCheck
+              :model-value="c.enabled"
+              :label="`Show ${c.name}`"
+              :save="(v: boolean) => patchCal(c, { enabled: v })"
+            />
+            <InstantCheck
+              v-if="s.writable"
+              :model-value="c.is_default_target"
+              :label="`Default target for ${c.name}`"
+              :save="(v: boolean) => patchCal(c, { is_default_target: v })"
+            />
             <fieldset class="who">
               <legend>Whose calendar (none means the whole household)</legend>
-              <label v-for="m in members.items" :key="m.id" class="field-inline">
-                <input
-                  type="checkbox"
-                  :checked="c.members.includes(m.id)"
-                  @change="toggleMember(c, m.id, ($event.target as HTMLInputElement).checked)"
-                />
-                {{ m.display_name }}
-              </label>
+              <InstantCheck
+                v-for="m in members.items"
+                :key="m.id"
+                :model-value="c.members.includes(m.id)"
+                :label="m.display_name"
+                :save="(v: boolean) => memberPatch(c, m.id, v)"
+              />
             </fieldset>
-          </li>
-          <li v-if="!calendarsOf(s).length" class="muted">No calendars found yet.</li>
-        </ul>
-      </li>
-    </ul>
-    <StateBlock
-      :loading="!sources.loaded && !sources.error"
-      :empty="sources.loaded && !sources.sources.length"
-      empty-text="No calendar sources yet."
-    />
+          </section>
+          <p v-if="!calendarsOf(s).length" class="src__meta">No calendars found yet.</p>
+        </div>
+      </template>
+    </ResponsiveItems>
 
-    <AddSourceForm
-      :google-enabled="googleEnabled"
-      :accounts="sources.accounts"
-      :tz="household.tz"
-      return-to="/settings/calendars"
+    <PageFab label="Add a source" @click="adding = true" />
+    <UiSheet v-model="adding" title="Add a calendar source">
+      <AddSourceForm
+        :google-enabled="googleEnabled"
+        :accounts="sources.accounts"
+        :tz="household.tz"
+        return-to="/settings/calendars"
+        @created="adding = false"
+      />
+    </UiSheet>
+    <SourceCredentials
+      v-if="editing"
+      :model-value="true"
+      :source="editing"
+      @update:model-value="editing = null"
+      @done="editing = null"
     />
-  </section>
+    <ConfirmDialog
+      :pending="confirm.pending.value"
+      @accept="confirm.accept"
+      @cancel="confirm.cancel"
+    />
+  </SettingsPage>
 </template>
 
 <style scoped>
-.row {
-  margin-bottom: var(--space-2);
-}
-.calendars {
-  list-style: none;
-  padding: 0;
-  margin: var(--space-3) 0 0;
+.src {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--ui-space-2);
 }
-.calendars > li {
+.src__head {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--ui-space-2);
+}
+.src__name {
+  flex: 1;
+  font: var(--ui-type-title-md);
+}
+.src__meta {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
+}
+.src__error {
+  margin: 0;
+  color: var(--ui-error);
+}
+.cal {
+  display: grid;
+  gap: var(--ui-space-1);
+  padding-top: var(--ui-space-2);
+  border-top: 1px solid var(--ui-outline-variant);
 }
 .who {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
+  display: grid;
+  gap: var(--ui-space-1);
   border: 0;
   padding: 0;
+  margin: 0;
 }
 .who legend {
-  font-size: var(--font-size-sm);
-  color: var(--color-muted);
+  padding: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
 }
 </style>

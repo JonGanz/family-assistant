@@ -152,7 +152,8 @@ async fn start_pass(
     mode: ServeMode,
     parent: &CancellationToken,
 ) -> Result<Pass> {
-    let services = wiring::build_services(cfg, store)?;
+    let llm = wiring::llm_provider(cfg, store)?;
+    let services = wiring::build_services(cfg, store, &llm)?;
     let cancel = parent.child_token();
     let mut pass = Pass {
         cancel: cancel.clone(),
@@ -269,7 +270,7 @@ async fn start_pass(
     if run_worker {
         let mut handlers: Vec<Arc<dyn JobHandler>> =
             vec![Arc::new(SessionCleanup), Arc::new(BackupVerify)];
-        handlers.extend(wiring::feature_handlers(cfg, store, &services)?);
+        handlers.extend(wiring::feature_handlers(cfg, store, &services, &llm)?);
         let ctx = JobContext {
             store: store.clone(),
             backup_dir: cfg.backup_dir.clone(),

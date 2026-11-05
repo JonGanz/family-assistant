@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted } from 'vue'
-import PageHeader from '../components/PageHeader.vue'
 import { STEPS, useSetupStore } from '../stores/setup'
+import { UiProgress, UiSkeleton } from '../ui'
 import AccessStep from './setup/AccessStep.vue'
 import FamilyStep from './setup/FamilyStep.vue'
 import HouseholdStep from './setup/HouseholdStep.vue'
@@ -20,6 +20,7 @@ const STEP_COMPONENTS = [
   KeyStep,
   StartStep,
 ]
+const total = STEPS.length
 const current = computed(() => STEP_COMPONENTS[setup.step - 1] ?? WelcomeStep)
 
 onMounted(async () => {
@@ -29,45 +30,35 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader title="Set up Family Assistant" />
-    <ol class="stepper" aria-label="Setup steps">
-      <li
-        v-for="(name, i) in STEPS"
-        :key="name"
-        :aria-current="setup.step === i + 1 ? 'step' : undefined"
-        :class="{ on: setup.step === i + 1, done: setup.step > i + 1 }"
-      >
-        {{ i + 1 }}. {{ name }}
-      </li>
-    </ol>
+  <section class="setup" aria-labelledby="page-title">
+    <h1 id="page-title" class="setup__title">Set up Family Assistant</h1>
+    <div class="setup__progress" aria-label="Setup steps">
+      <p class="setup__step" data-testid="step-count">
+        Step {{ setup.step }} of {{ total }}: {{ STEPS[setup.step - 1] }}
+      </p>
+      <UiProgress :value="(setup.step / total) * 100" :label="`Step ${setup.step} of ${total}`" />
+    </div>
     <component :is="current" v-if="setup.status" :key="setup.step" />
-    <p v-else class="muted" role="status">Loading…</p>
+    <UiSkeleton v-else :lines="4" />
   </section>
 </template>
 
 <style scoped>
-.stepper {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  list-style: none;
-  padding: 0;
-  margin: 0 0 var(--space-4);
-  font-size: var(--font-size-sm);
+.setup {
+  display: grid;
+  gap: var(--ui-space-4);
 }
-.stepper li {
-  padding: 0 var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: 0;
-  color: var(--color-muted);
+.setup__title {
+  margin: 0;
+  font: var(--ui-type-headline-sm);
 }
-.stepper li.on {
-  color: var(--color-accent);
-  border-color: var(--color-accent);
-  font-weight: 600;
+.setup__progress {
+  display: grid;
+  gap: var(--ui-space-2);
 }
-.stepper li.done {
-  color: var(--color-text);
+.setup__step {
+  margin: 0;
+  font: var(--ui-type-label-lg);
+  color: var(--ui-on-surface-variant);
 }
 </style>

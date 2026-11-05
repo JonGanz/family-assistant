@@ -2,11 +2,19 @@
 import { computed, reactive, ref, toRef } from 'vue'
 import type { TaskDefinitionView } from '../../api/client'
 import { ApiError } from '../../api/http'
-import ErrorBanner from '../../components/ErrorBanner.vue'
 import RruleBuilder from '../../components/tasks/RruleBuilder.vue'
 import { useDefinitionsStore } from '../../stores/definitions'
 import { useListsStore } from '../../stores/lists'
 import { useMembersStore } from '../../stores/members'
+import {
+  UiButton,
+  UiCard,
+  UiCheckbox,
+  UiIconButton,
+  UiRadioGroup,
+  UiSelect,
+  UiTextField,
+} from '../../ui'
 import { describeError } from '../shared'
 import {
   emptyForm,
@@ -37,6 +45,30 @@ const form = reactive(
 )
 const onMissedTouched = ref(!!props.definition)
 const saveError = ref('')
+
+const kindOptions = [
+  { value: 'after_done', label: "Every N days after it's done" },
+  { value: 'rrule', label: 'Repeats' },
+]
+const missedOptions = (['roll_over', 'auto_skip', 'pile_up'] as OnMissed[]).map((k) => ({
+  value: k,
+  label: { roll_over: 'Roll over', auto_skip: 'Skip it', pile_up: 'Pile up' }[k],
+}))
+const strategyOptions = [
+  { value: 'fixed', label: 'Fixed person' },
+  { value: 'rotation', label: 'Rotation' },
+  { value: 'pool', label: 'Pool' },
+]
+const advanceOptions = [
+  { value: 'any_completion', label: 'anyone does it' },
+  { value: 'assignee_completion', label: 'only the person whose turn it is does it' },
+]
+const priorityOptions = [
+  { value: 'normal', label: 'Normal' },
+  { value: 'high', label: 'High' },
+]
+const listOptions = computed(() => lists.items.map((l) => ({ value: l.id, label: l.name })))
+const num = (v: string) => Number(v)
 
 const rruleRef = computed(() => (form.scheduleKind === 'rrule' ? form.rrule : null))
 const { result, failure, pending } = useDefinitionValidation(
@@ -96,79 +128,59 @@ async function save() {
 </script>
 
 <template>
-  <form class="form editor" @submit.prevent="save">
-    <label>Title <input v-model="form.title" name="title" required /></label>
-    <label>
-      List
-      <select v-model="form.list" name="list" required>
-        <option v-for="l in lists.items" :key="l.id" :value="l.id">{{ l.name }}</option>
-      </select>
-    </label>
-    <label>Notes <textarea v-model="form.notes" name="notes" rows="2" /></label>
-    <label>
-      Steps (one per line)
-      <textarea v-model="form.steps" name="steps" rows="3" />
-    </label>
+  <form class="editor" @submit.prevent="save">
+    <UiTextField v-model="form.title" label="Title" name="title" required />
+    <UiSelect v-model="form.list" label="List" :options="listOptions" />
+    <UiTextField v-model="form.notes" label="Notes" name="notes" multiline />
+    <UiTextField v-model="form.steps" label="Steps (one per line)" name="steps" multiline />
 
     <fieldset>
       <legend>Schedule</legend>
-      <label class="field-inline">
-        <input
-          type="radio"
-          name="schedule_kind"
-          :checked="form.scheduleKind === 'after_done'"
-          @change="setKind('after_done')"
-        />
-        Every N days after it's done
-      </label>
-      <label class="field-inline">
-        <input
-          type="radio"
-          name="schedule_kind"
-          :checked="form.scheduleKind === 'rrule'"
-          @change="setKind('rrule')"
-        />
-        Repeats
-      </label>
-      <label v-if="form.scheduleKind === 'after_done'">
-        Days
-        <input
-          v-model.number="form.intervalDays"
-          name="interval_days"
-          type="number"
-          min="1"
-          max="3650"
-        />
-      </label>
+      <UiRadioGroup
+        :model-value="form.scheduleKind"
+        legend="Schedule kind"
+        :options="kindOptions"
+        @update:model-value="setKind($event as ScheduleKind)"
+      />
+      <UiTextField
+        v-if="form.scheduleKind === 'after_done'"
+        :model-value="String(form.intervalDays)"
+        label="Days"
+        name="interval_days"
+        type="number"
+        min="1"
+        max="3650"
+        @update:model-value="form.intervalDays = num($event)"
+      />
       <template v-else>
         <RruleBuilder v-model="form.rrule" />
-        <p v-if="rruleError" class="text-danger" data-testid="rrule-error">
-          {{ rruleError.message }}
-        </p>
+        <p v-if="rruleError" class="err" data-testid="rrule-error">{{ rruleError.message }}</p>
       </template>
-      <label
-        >Start date <input v-model="form.startDate" name="start_date" type="date" required
-      /></label>
-      <label
-        >Due time (optional) <input v-model="form.dueTime" name="due_time" type="time"
-      /></label>
-      <label>
-        Show it this many days before it's due
-        <input v-model.number="form.leadDays" name="lead_days" type="number" min="0" max="60" />
-      </label>
-      <label>
-        If it's missed
-        <select v-model="form.onMissed" name="on_missed" @change="onMissedTouched = true">
-          <option
-            v-for="k in ['roll_over', 'auto_skip', 'pile_up'] as OnMissed[]"
-            :key="k"
-            :value="k"
-          >
-            {{ { roll_over: 'Roll over', auto_skip: 'Skip it', pile_up: 'Pile up' }[k] }}
-          </option>
-        </select>
-        <span class="muted" data-testid="on-missed-help">{{ ON_MISSED_HELP[form.onMissed] }}</span>
-      </label>
+      <UiTextField
+        v-model="form.startDate"
+        label="Start date"
+        name="start_date"
+        type="date"
+        required
+      />
+      <UiTextField v-model="form.dueTime" label="Due time (optional)" name="due_time" type="time" />
+      <UiTextField
+        :model-value="String(form.leadDays)"
+        label="Show it this many days before it's due"
+        name="lead_days"
+        type="number"
+        min="0"
+        max="60"
+        @update:model-value="form.leadDays = num($event)"
+      />
+      <UiSelect
+        :model-value="form.onMissed"
+        label="If it's missed"
+        :options="missedOptions"
+        :supporting="ON_MISSED_HELP[form.onMissed]"
+        data-testid="on-missed"
+        @update:model-value="((form.onMissed = $event as OnMissed), (onMissedTouched = true))"
+      />
       <div v-if="result?.next_dates.length" data-testid="next-dates">
         <span class="muted">Next dates:</span>
         <ul class="dates">
@@ -179,154 +191,162 @@ async function save() {
 
     <fieldset>
       <legend>Who</legend>
-      <label>
-        Strategy
-        <select
-          :value="form.strategy"
-          name="strategy"
-          @change="setStrategy(($event.target as HTMLSelectElement).value as Strategy)"
-        >
-          <option value="fixed">Fixed person</option>
-          <option value="rotation">Rotation</option>
-          <option value="pool">Pool</option>
-        </select>
-        <span class="muted">{{ STRATEGY_HELP[form.strategy] }}</span>
-      </label>
-      <label v-for="m in members.items" :key="m.id" class="field-inline">
-        <input
-          type="checkbox"
-          :checked="form.candidates.includes(m.id)"
-          @change="toggleCandidate(m.id)"
-        />
-        {{ m.display_name }}
-      </label>
+      <UiSelect
+        :model-value="form.strategy"
+        label="Strategy"
+        :options="strategyOptions"
+        :supporting="STRATEGY_HELP[form.strategy]"
+        @update:model-value="setStrategy($event as Strategy)"
+      />
+      <UiCheckbox
+        v-for="m in members.items"
+        :key="m.id"
+        :model-value="form.candidates.includes(m.id)"
+        :label="m.display_name"
+        @update:model-value="toggleCandidate(m.id)"
+      />
       <ol v-if="form.strategy === 'rotation' && form.candidates.length > 1" class="order">
         <li v-for="(c, i) in form.candidates" :key="c">
-          {{ nameOf(c) }}
-          <button type="button" :disabled="i === 0" aria-label="Move up" @click="move(i, -1)">
-            ↑
-          </button>
-          <button
-            type="button"
+          <span>{{ nameOf(c) }}</span>
+          <UiIconButton icon="collapse" label="Move up" :disabled="i === 0" @click="move(i, -1)" />
+          <UiIconButton
+            icon="expand"
+            label="Move down"
             :disabled="i === form.candidates.length - 1"
-            aria-label="Move down"
             @click="move(i, 1)"
-          >
-            ↓
-          </button>
+          />
         </li>
       </ol>
       <template v-if="form.strategy === 'rotation'">
-        <label>
-          The turn moves on when
-          <select v-model="form.advanceOn" name="advance_on">
-            <option value="any_completion">anyone does it</option>
-            <option value="assignee_completion">only the person whose turn it is does it</option>
-          </select>
-        </label>
-        <label class="field-inline">
-          <input v-model="form.skipAdvances" type="checkbox" name="skip_advances" />
-          Skipping it also moves the turn on
-        </label>
+        <UiSelect
+          :model-value="form.advanceOn ?? 'any_completion'"
+          label="The turn moves on when"
+          :options="advanceOptions"
+          @update:model-value="form.advanceOn = $event as typeof form.advanceOn"
+        />
+        <UiCheckbox v-model="form.skipAdvances" label="Skipping it also moves the turn on" />
       </template>
     </fieldset>
 
-    <label>
-      Priority
-      <select v-model="form.priority" name="priority">
-        <option value="normal">Normal</option>
-        <option value="high">High</option>
-      </select>
-    </label>
+    <UiSelect
+      :model-value="form.priority ?? 'normal'"
+      label="Priority"
+      :options="priorityOptions"
+      @update:model-value="form.priority = $event as typeof form.priority"
+    />
 
     <fieldset>
       <legend>Season (optional)</legend>
-      <label class="field-inline">
-        <input v-model="form.seasonOn" type="checkbox" name="season_on" /> Only in part of the year
-      </label>
+      <UiCheckbox v-model="form.seasonOn" label="Only in part of the year" />
       <template v-if="form.seasonOn">
-        <label
-          >From (month-day)
-          <input
-            v-model="form.seasonFrom"
-            name="season_from"
-            placeholder="04-01"
-            pattern="\d{2}-\d{2}"
-        /></label>
-        <label
-          >Until (month-day)
-          <input
-            v-model="form.seasonUntil"
-            name="season_until"
-            placeholder="10-31"
-            pattern="\d{2}-\d{2}"
-        /></label>
+        <UiTextField
+          v-model="form.seasonFrom"
+          label="From (month-day)"
+          name="season_from"
+          placeholder="04-01"
+          pattern="\d{2}-\d{2}"
+        />
+        <UiTextField
+          v-model="form.seasonUntil"
+          label="Until (month-day)"
+          name="season_until"
+          placeholder="10-31"
+          pattern="\d{2}-\d{2}"
+        />
       </template>
-      <label>
-        Only when the weather says so (optional)
-        <input
+      <div class="cond">
+        <UiTextField
           v-model="form.condition"
+          label="Only when the weather says so (optional)"
+          class="def-mono"
           name="season_condition"
-          class="mono"
           spellcheck="false"
           autocomplete="off"
           placeholder="sum(precip_mm, today) < 5"
           :aria-invalid="!!conditionError"
         />
-      </label>
+      </div>
       <div aria-live="polite">
-        <pre v-if="conditionError" class="text-danger mono" data-testid="condition-error"
+        <pre v-if="conditionError" class="err" data-testid="condition-error"
           >{{ form.condition }}
 {{ marker }}
 {{ conditionError.message }}</pre>
         <p v-else-if="pending" class="muted">Checking…</p>
-        <p v-else-if="failure" class="text-danger">{{ failure }}</p>
-        <p v-else-if="form.condition.trim() && result?.ok" class="text-success">
-          The condition is valid.
-        </p>
+        <p v-else-if="failure" class="err">{{ failure }}</p>
+        <p v-else-if="form.condition.trim() && result?.ok" class="muted">The condition is valid.</p>
       </div>
     </fieldset>
 
-    <label class="field-inline"
-      ><input v-model="form.paused" type="checkbox" name="paused" /> Paused</label
-    >
+    <UiCheckbox v-model="form.paused" label="Paused" />
 
     <ul v-if="problems.length" class="muted">
       <li v-for="p in problems" :key="p">{{ p }}</li>
     </ul>
-    <ErrorBanner v-if="defs.conflict" conflict @reload="defs.load()" />
-    <ErrorBanner v-if="saveError" :message="saveError" />
+    <UiCard v-if="defs.conflict" variant="outlined" role="alert">
+      <p>This page changed elsewhere. Reload to see the latest.</p>
+      <template #actions><UiButton variant="tonal" @click="defs.load()">Reload</UiButton></template>
+    </UiCard>
+    <UiCard v-if="saveError" variant="outlined" role="alert">{{ saveError }}</UiCard>
     <div class="row">
-      <button type="submit" :disabled="!!blocked">Save</button>
-      <button type="button" @click="emit('done')">Cancel</button>
+      <UiButton variant="text" @click="emit('done')">Cancel</UiButton>
+      <UiButton type="submit" :disabled="!!blocked">Save</UiButton>
     </div>
   </form>
 </template>
 
 <style scoped>
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+.editor,
+fieldset {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+fieldset {
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+legend {
+  padding: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-label-lg);
 }
 .row {
   display: flex;
-  gap: var(--space-2);
+  justify-content: flex-end;
+  gap: var(--ui-space-2);
+}
+.muted {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
+}
+.err {
+  margin: 0;
+  color: var(--ui-error);
+  font: var(--ui-type-body-sm);
+  white-space: pre-wrap;
+}
+pre.err {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+.cond :deep(.def-mono) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 .dates {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--ui-space-2);
   list-style: none;
   padding: 0;
   margin: 0;
 }
 .order {
-  padding-left: var(--space-5);
-}
-pre {
+  display: grid;
+  gap: var(--ui-space-1);
   margin: 0;
-  white-space: pre-wrap;
+  padding-left: var(--ui-space-5);
 }
-.editor {
-  max-width: 40rem;
+.order li {
+  display: list-item;
 }
 </style>

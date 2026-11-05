@@ -1,15 +1,26 @@
 <script setup lang="ts">
-import PageHeader from '../components/PageHeader.vue'
-import StateBlock from '../components/StateBlock.vue'
 import { onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import MessageRow from '../components/mail/MessageRow.vue'
 import { useHouseholdStore } from '../stores/household'
 import { useMailStore } from '../stores/mail'
 import { useMembersStore } from '../stores/members'
+import {
+  UiButton,
+  UiChip,
+  UiEmptyState,
+  UiErrorState,
+  UiIconButton,
+  UiPage,
+  UiSkeleton,
+  UiTextField,
+  UiTopAppBar,
+} from '../ui'
 
 const mail = useMailStore()
 const household = useHouseholdStore()
 const members = useMembersStore()
+const router = useRouter()
 
 onMounted(() => {
   void members.load()
@@ -25,80 +36,115 @@ watch(
   ],
   () => void mail.load(),
 )
+
+/** Single choice per row: tapping the selected chip clears it. */
+function pick(key: 'category' | 'member' | 'source', value: string) {
+  mail.filters[key] = mail.filters[key] === value ? '' : value
+}
 </script>
 
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader title="Mail">
-      <template #actions><RouterLink to="/mail/label">Label mail</RouterLink></template>
-    </PageHeader>
-    <form class="form form-wide filters" @submit.prevent="mail.load()">
-      <label>
-        Search
-        <input v-model="mail.filters.q" type="search" placeholder="Sender or subject" />
-      </label>
-      <label>
-        Category
-        <select v-model="mail.filters.category">
-          <option value="">All</option>
-          <option v-for="c in mail.categories" :key="c.id" :value="c.key">{{ c.label }}</option>
-        </select>
-      </label>
-      <label>
-        Member
-        <select v-model="mail.filters.member">
-          <option value="">Everyone</option>
-          <option v-for="m in members.items" :key="m.id" :value="m.id">{{ m.display_name }}</option>
-        </select>
-      </label>
-      <label>
-        Source
-        <select v-model="mail.filters.source">
-          <option value="">All</option>
-          <option v-for="s in mail.sources" :key="s.id" :value="s.id">{{ s.name }}</option>
-        </select>
-      </label>
-      <label class="field-inline">
-        <input v-model="mail.filters.includeIgnored" type="checkbox" /> Show ignored categories
-      </label>
-      <div>
-        <button type="submit" class="btn-primary">Search</button>
-      </div>
+  <UiPage>
+    <template #top>
+      <UiTopAppBar title="Mail">
+        <template #actions>
+          <UiIconButton icon="label" label="Label mail" @click="router.push('/mail/label')" />
+        </template>
+      </UiTopAppBar>
+    </template>
+
+    <form class="search" role="search" @submit.prevent="mail.load()">
+      <UiTextField v-model="mail.filters.q" label="Search" type="search" />
+      <UiButton type="submit" variant="tonal" icon="search">Search</UiButton>
     </form>
-    <StateBlock
-      :loading="mail.loading && !mail.items.length"
-      :error="mail.error"
-      :empty="!mail.loading && !mail.items.length"
-      empty-text="No messages."
+
+    <div class="chips" role="group" aria-label="Category">
+      <UiChip
+        v-for="c in mail.categories"
+        :key="c.id"
+        variant="filter"
+        :selected="mail.filters.category === c.key"
+        @click="pick('category', c.key)"
+        >{{ c.label }}</UiChip
+      >
+    </div>
+    <div class="chips" role="group" aria-label="Member">
+      <UiChip
+        v-for="m in members.items"
+        :key="m.id"
+        variant="filter"
+        :selected="mail.filters.member === m.id"
+        @click="pick('member', m.id)"
+        >{{ m.display_name }}</UiChip
+      >
+    </div>
+    <div class="chips" role="group" aria-label="Source">
+      <UiChip
+        v-for="s in mail.sources"
+        :key="s.id"
+        variant="filter"
+        :selected="mail.filters.source === s.id"
+        @click="pick('source', s.id)"
+        >{{ s.name }}</UiChip
+      >
+      <UiChip
+        variant="filter"
+        :selected="mail.filters.includeIgnored"
+        @click="mail.filters.includeIgnored = !mail.filters.includeIgnored"
+        >Show ignored categories</UiChip
+      >
+    </div>
+
+    <UiSkeleton v-if="mail.loading && !mail.items.length" :lines="5" />
+    <UiErrorState v-else-if="mail.error" :message="mail.error" @retry="mail.load()" />
+    <UiEmptyState
+      v-else-if="!mail.loading && !mail.items.length"
+      icon="mail"
+      title="No messages."
     />
-    <ul class="card-list plain">
-      <li v-for="m in mail.items" :key="m.id">
-        <MessageRow
-          :msg="m"
-          :tz="household.tz"
-          :categories="mail.categories"
-          :members="members.items"
-        />
-      </li>
+
+    <ul class="stack">
+      <MessageRow
+        v-for="m in mail.items"
+        :key="m.id"
+        :msg="m"
+        :tz="household.tz"
+        :categories="mail.categories"
+        :members="members.items"
+      />
     </ul>
-    <button v-if="mail.nextBefore" type="button" :disabled="mail.loading" @click="mail.more()">
+    <UiButton v-if="mail.nextBefore" variant="text" :loading="mail.loading" @click="mail.more()">
       Load more
-    </button>
-  </section>
+    </UiButton>
+  </UiPage>
 </template>
 
 <style scoped>
-.filters {
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
-  align-items: end;
-  margin-bottom: var(--space-3);
+.search {
+  display: flex;
+  gap: var(--ui-space-3);
+  align-items: flex-start;
 }
-.filters > label:not(.field-inline) {
+.search > :first-child {
+  flex: 1;
+}
+.chips {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: var(--ui-space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.stack {
   display: grid;
-  gap: var(--space-1);
-}
-.plain > li {
+  grid-template-columns: 1fr;
+  gap: var(--ui-space-3);
+  margin: 0;
   padding: 0;
-  border: 0;
+}
+@media (min-width: 840px) {
+  .stack {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 </style>

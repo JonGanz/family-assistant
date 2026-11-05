@@ -5,7 +5,7 @@ milestone: M4
 wave: 3
 depends_on: [T-05]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/views/HomeView.vue", "apps/web/src/views/CalendarView.vue", "apps/web/src/views/RoutinesView.vue", "apps/web/src/components/EventCard.vue", "apps/web/src/components/DateRangeNav.vue", "apps/web/src/components/MemberChip.vue", "apps/web/src/components/Avatar.vue", "apps/web/src/components/WeatherIcon.vue", "apps/web/src/components/icons/**", "apps/web/src/components/components.test.ts", "apps/web/src/stores/calendar.ts", "apps/web/src/stores/calendar.test.ts", "apps/web/src/stores/routines.ts", "apps/web/src/stores/weather.ts", "apps/web/src/views/today.test.ts", "apps/web/src/views/parts/AdvisoryList.vue", "apps/web/src/views/parts/AgendaList.vue", "apps/web/src/views/parts/WeatherCard.vue", "apps/web/e2e/ui-shots.routes/today.ts"]
 decisions: [D-095, D-096, D-086, D-080, D-046, D-041]
 ---
@@ -60,3 +60,8 @@ The user answered R2 on 2026-11-04 and 2026-11-05. These rules apply to every wa
   - store changes made;
   - questions for the user's R3 review;
   - "list what outside your paths needs changing"
+
+## Outcome (T-10 report)
+- Built: Today (new 'Now' card of the viewer's tasks, instant complete with Undo), Calendar (agenda/week/month in a segmented row under the top bar, member chips, square grid events, a details sheet), Routines; restyled EventCard, DateRangeNav, MemberChip and Avatar (variant `app`, kiosk default unchanged); `views/today.test.ts`.
+- Defaults applied (recorded as unverified questions): view switch below the top bar; agenda on phones, week on wider screens; Now card on Today.
+- e2e: m1 agenda button → radio 'Agenda' (T-19).

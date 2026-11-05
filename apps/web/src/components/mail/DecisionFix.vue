@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import type { CategoryView, DecisionPointKey, DecisionView, Member } from '../../api/client'
+import { UiChip } from '../../ui'
+import AiChip from './AiChip.vue'
 import { currentDecision, describeValue, memberLinkIds, POINT_TITLES } from './decisions'
 
 const props = defineProps<{
@@ -40,55 +42,34 @@ function toggleMember(id: string) {
     <div class="head">
       <strong>{{ POINT_TITLES[point] }}</strong>
       <span class="val">{{ text }}</span>
+      <AiChip v-if="decision?.stage === 'llm'" :confidence="decision.confidence" />
       <span v-if="decision?.is_final && decision.decided_by" class="muted">(confirmed)</span>
       <span v-else-if="decision" class="muted">{{ Math.round(decision.confidence * 100) }}%</span>
     </div>
-    <div class="choices">
+    <div class="choices" role="group" :aria-label="POINT_TITLES[point]">
       <template v-if="point === 'email.category'">
-        <button
+        <UiChip
           v-for="c in categories.filter((x) => !x.archived)"
           :key="c.id"
-          type="button"
-          class="chip"
-          :class="{ on: value === c.key }"
-          :aria-pressed="value === c.key"
+          variant="filter"
+          :selected="value === c.key"
           @click="emit('fix', c.key)"
+          >{{ c.label }}</UiChip
         >
-          {{ c.label }}
-        </button>
       </template>
       <template v-else-if="point === 'email.member_link'">
-        <button
+        <UiChip
           v-for="m in members"
           :key="m.id"
-          type="button"
-          class="chip"
-          :class="{ on: selectedMembers.includes(m.id) }"
-          :aria-pressed="selectedMembers.includes(m.id)"
+          variant="filter"
+          :selected="selectedMembers.includes(m.id)"
           @click="toggleMember(m.id)"
+          >{{ m.display_name }}</UiChip
         >
-          {{ m.display_name }}
-        </button>
       </template>
       <template v-else>
-        <button
-          type="button"
-          class="chip"
-          :class="{ on: value === true }"
-          :aria-pressed="value === true"
-          @click="emit('fix', true)"
-        >
-          Yes
-        </button>
-        <button
-          type="button"
-          class="chip"
-          :class="{ on: value === false }"
-          :aria-pressed="value === false"
-          @click="emit('fix', false)"
-        >
-          No
-        </button>
+        <UiChip variant="filter" :selected="value === true" @click="emit('fix', true)">Yes</UiChip>
+        <UiChip variant="filter" :selected="value === false" @click="emit('fix', false)">No</UiChip>
       </template>
     </div>
   </div>
@@ -97,33 +78,21 @@ function toggleMember(id: string) {
 <style scoped>
 .decision {
   display: grid;
-  gap: var(--space-2);
-  padding: var(--space-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  gap: var(--ui-space-1);
 }
 .head {
   display: flex;
-  gap: var(--space-2);
+  gap: var(--ui-space-2);
   align-items: baseline;
   flex-wrap: wrap;
+  font: var(--ui-type-body-md);
+}
+.muted {
+  color: var(--ui-on-surface-variant);
 }
 .choices {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-}
-.chip {
-  min-height: 44px;
-  padding: 0 var(--space-3);
-  border-radius: 0;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  color: inherit;
-}
-.chip.on {
-  border-color: var(--color-accent, currentColor);
-  font-weight: 600;
-  outline: 2px solid var(--color-accent, currentColor);
+  column-gap: var(--ui-space-2);
 }
 </style>

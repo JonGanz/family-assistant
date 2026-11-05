@@ -20,6 +20,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/llm-endpoint": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_endpoint"];
+        put: operations["put_endpoint"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/llm-endpoint/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_models"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/llm-endpoint/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["test_endpoint"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/pipeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_pipeline"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/pipeline/{decision_point}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["put_pipeline"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/recipes/extract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["extract_recipe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_settings"];
+        put: operations["put_settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/stats": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_stats"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/login": {
         parameters: {
             query?: never;
@@ -1645,6 +1773,47 @@ export interface components {
             /** Format: date-time */
             valid_until: string;
         };
+        /** @description The `llm` stage of one email decision point. */
+        AiPipelinePoint: {
+            decision_point: string;
+            llm_enabled: boolean;
+            /** Format: float */
+            llm_threshold: number;
+            /** @description The active pipeline version (uuid). */
+            version_id: string;
+        };
+        AiPipelinePut: {
+            llm_enabled: boolean;
+            /**
+             * Format: float
+             * @description 0 to 1.
+             */
+            llm_threshold: number;
+        };
+        AiSettings: {
+            mail_extract_mode: components["schemas"]["MailExtractMode"];
+            /** Format: int32 */
+            max_input_chars: number;
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            updated_at: string;
+        };
+        AiSettingsPut: {
+            mail_extract_mode: components["schemas"]["MailExtractMode"];
+            /** Format: int32 */
+            max_input_chars: number;
+        };
+        AiStats: {
+            calls: components["schemas"]["LlmCallStat"][];
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            since: string;
+            stages: components["schemas"]["StageCount"][];
+        };
         /** @enum {string} */
         AllMarker: "all";
         /** @enum {string} */
@@ -1919,6 +2088,8 @@ export interface components {
             position?: number | null;
         };
         DerivedEvent: {
+            /** @description `llm` when the `mail.llm` job proposed it (M4). */
+            extracted_by: components["schemas"]["ExtractOrigin"];
             id: components["schemas"]["EventId"];
             /**
              * Format: date-time
@@ -1929,6 +2100,8 @@ export interface components {
             title: string;
         };
         DerivedTask: {
+            /** @description `llm` when the `mail.llm` job proposed it (M4). */
+            extracted_by: components["schemas"]["ExtractOrigin"];
             id: components["schemas"]["TaskId"];
             status: components["schemas"]["TaskStatus"];
             title: string;
@@ -2310,6 +2483,67 @@ export interface components {
         };
         /** @enum {string} */
         ListCompletionPolicy: "assignee" | "adult_only";
+        LlmCallStat: {
+            /** Format: int64 */
+            ok: number;
+            /** Format: int64 */
+            p50_ms?: number | null;
+            /** Format: int64 */
+            p95_ms?: number | null;
+            purpose: string;
+            /** Format: int64 */
+            total: number;
+        };
+        /** @enum {string} */
+        LlmDialect: "openai_chat" | "ollama_native";
+        /**
+         * @description Body of `PUT /ai/llm-endpoint`. `api_key`: absent keeps the stored key, `null` clears it, a
+         *     string sets it.
+         */
+        LlmEndpointPut: {
+            api_key?: string | null;
+            base_url: string;
+            dialect: components["schemas"]["LlmDialect"];
+            enabled: boolean;
+            model: string;
+            /** Format: int32 */
+            timeout_ms: number;
+        };
+        /** @description Body of `POST /ai/llm-endpoint/test`: unsaved values; a missing field uses the stored one. */
+        LlmEndpointTest: {
+            /** @description Absent: the stored key. `null`: no key. A string: that key. */
+            api_key?: string | null;
+            base_url?: string | null;
+            dialect?: null | components["schemas"]["LlmDialect"];
+            model?: string | null;
+            /** Format: int32 */
+            timeout_ms?: number | null;
+        };
+        LlmEndpointTestResult: {
+            /** @description An `LlmError` kind: `unavailable`, `timeout`, `http`, `bad_json`, `schema` or `config`. */
+            error?: string | null;
+            /** Format: int32 */
+            latency_ms?: number | null;
+            model_found?: boolean | null;
+            ok: boolean;
+        };
+        LlmEndpointView: {
+            base_url: string;
+            dialect: components["schemas"]["LlmDialect"];
+            enabled: boolean;
+            has_api_key: boolean;
+            model: string;
+            /** Format: int32 */
+            timeout_ms: number;
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            updated_at: string;
+        };
+        LlmModels: {
+            models: string[];
+        };
         Location: {
             label: string;
             /** Format: double */
@@ -2362,6 +2596,8 @@ export interface components {
             /** Format: date-time */
             undone_at?: string | null;
         };
+        /** @enum {string} */
+        MailExtractMode: "off" | "fallback" | "always";
         /** @enum {string} */
         MailProvider: "gmail" | "imap";
         MailRetention: {
@@ -2904,6 +3140,40 @@ export interface components {
             /** Format: int64 */
             running: number;
         };
+        /** @description A recipe extracted from a page. Minutes are integers; `source_url` is an absolute URL. */
+        RecipeDraft: {
+            /** Format: int32 */
+            cook_minutes?: number | null;
+            image_url?: string | null;
+            ingredients: components["schemas"]["RecipeIngredient"][];
+            name: string;
+            origin: components["schemas"]["RecipeOrigin"];
+            /** Format: int32 */
+            prep_minutes?: number | null;
+            /** Format: int32 */
+            servings?: number | null;
+            source_url?: string | null;
+            steps: string[];
+            tags: string[];
+            /** Format: int32 */
+            total_minutes?: number | null;
+            yield_text?: string | null;
+        };
+        /** @description Exactly one of `url` and `html`. */
+        RecipeExtractReq: {
+            html?: string | null;
+            url?: string | null;
+        };
+        RecipeIngredient: {
+            item?: string | null;
+            /** Format: double */
+            quantity?: number | null;
+            /** @description The source line, always present. */
+            text: string;
+            unit?: string | null;
+        };
+        /** @enum {string} */
+        RecipeOrigin: "jsonld" | "llm";
         /** @enum {string} */
         Relevance: "relevant" | "general" | "other";
         RemoteCalendar: {
@@ -3208,6 +3478,15 @@ export interface components {
         SourceViewExt: components["schemas"]["SourceView"] & {
             /** @description Extracted events may be written to this source's calendars. */
             writable: boolean;
+        };
+        StageCount: {
+            decision_point: string;
+            /** Format: int64 */
+            human: number;
+            /** Format: int64 */
+            llm: number;
+            /** Format: int64 */
+            rules: number;
         };
         /** @enum {string} */
         StageKind: "rules" | "human" | "knn" | "system_one" | "llm";
@@ -3577,6 +3856,396 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdvisoryView"][];
+                };
+            };
+        };
+    };
+    get_endpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LlmEndpointView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description code `not_configured` */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_endpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LlmEndpointPut"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LlmEndpointView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_models: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LlmModels"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description code `llm_unavailable` */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    test_endpoint: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description unsaved values; an empty body tests the stored ones */
+        requestBody?: {
+            content: {
+                "application/json": null | components["schemas"]["LlmEndpointTest"];
+            };
+        };
+        responses: {
+            /** @description `ok: false` when the server is unreachable */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LlmEndpointTestResult"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_pipeline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiPipelinePoint"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_pipeline: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description one of the four email decision points */
+                decision_point: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiPipelinePut"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiPipelinePoint"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    extract_recipe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeExtractReq"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeDraft"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description codes `bad_request`, `fetch_failed`, `no_recipe` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description code `llm_unavailable` */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiSettings"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiSettingsPut"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiSettings"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_stats: {
+        parameters: {
+            query?: {
+                /** @description default 7, 1 to 90 */
+                days?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiStats"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };

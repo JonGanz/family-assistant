@@ -30,7 +30,7 @@ pub(crate) use extract::{
     create_contact, enqueue, enqueue_pay_task, link_to_enrollments, local_part,
 };
 pub(crate) use facts::{OwnedFacts, RulesEvaluator, short_hash, truncate};
-pub use llm::MailLlmResult;
+pub use llm::{MailLlmResult, eval_request, llm_candidates, rules_candidates};
 
 use crate::context::{self, ProcessCtx};
 use crate::{MailDeps, MailError, Result};

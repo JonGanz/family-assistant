@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useId } from 'vue'
+import { computed, useAttrs, useId } from 'vue'
 
 defineOptions({ inheritAttrs: false })
 const props = defineProps<{
@@ -15,15 +15,29 @@ const props = defineProps<{
   required?: boolean
 }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
-const id = useId()
-const descId = computed(() => (props.error || props.supporting ? `${id}-d` : undefined))
+const attrs = useAttrs()
+// class and style stay on the wrapper; everything else goes to the native control.
+const isWrapperAttr = (k: string) => k === 'class' || k === 'style'
+const wrapperAttrs = computed(() =>
+  Object.fromEntries(Object.entries(attrs).filter(([k]) => isWrapperAttr(k))),
+)
+const inputAttrs = computed(() =>
+  Object.fromEntries(Object.entries(attrs).filter(([k]) => !isWrapperAttr(k))),
+)
+const uid = useId()
+const id = computed(() => (attrs.id as string | undefined) ?? uid)
+const descId = computed(() => (props.error || props.supporting ? `${id.value}-d` : undefined))
 function onInput(e: Event) {
   emit('update:modelValue', (e.target as HTMLInputElement | HTMLTextAreaElement).value)
 }
 </script>
 
 <template>
-  <div class="ui-field" :class="{ 'has-error': error, 'is-disabled': disabled }">
+  <div
+    class="ui-field"
+    :class="{ 'has-error': error, 'is-disabled': disabled }"
+    v-bind="wrapperAttrs"
+  >
     <label :for="id" class="ui-field__label"
       >{{ label }}<span v-if="required" aria-hidden="true"> *</span></label
     >
@@ -39,7 +53,7 @@ function onInput(e: Event) {
         :required="required"
         :aria-invalid="error ? true : undefined"
         :aria-describedby="descId"
-        v-bind="$attrs"
+        v-bind="inputAttrs"
         @input="onInput"
       />
       <input
@@ -52,7 +66,7 @@ function onInput(e: Event) {
         :required="required"
         :aria-invalid="error ? true : undefined"
         :aria-describedby="descId"
-        v-bind="$attrs"
+        v-bind="inputAttrs"
         @input="onInput"
       />
       <span v-if="suffix" class="ui-field__fix">{{ suffix }}</span>

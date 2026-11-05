@@ -2,9 +2,9 @@
 import { reactive, ref } from 'vue'
 import { api } from '../../api/client'
 import { problemCode } from '../../api/http'
-import ErrorBanner from '../../components/ErrorBanner.vue'
 import { searchCities, type GeoResult } from '../../lib/geocode'
 import { useSetupStore } from '../../stores/setup'
+import { UiButton, UiCard, UiSelect, UiTextField } from '../../ui'
 import { describeError } from '../shared'
 import StepButtons from './StepButtons.vue'
 import { validateHousehold } from './validate'
@@ -20,6 +20,10 @@ const searchNote = ref('')
 const zones: string[] =
   typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('timeZone') : []
 const pending = reactive({ searching: false })
+const unitOptions = [
+  { value: 'metric', label: 'Metric (°C, km/h, mm)' },
+  { value: 'imperial', label: 'Imperial (°F, mph, in)' },
+]
 
 async function search() {
   searchNote.value = ''
@@ -76,57 +80,120 @@ async function next() {
 </script>
 
 <template>
-  <form class="form" data-testid="step-household" @submit.prevent="next">
-    <h2>Household</h2>
-    <label class="field">
-      Household name
-      <input v-model="f.name" name="name" required />
-    </label>
-    <p v-if="errors.name" class="text-danger" role="alert">{{ errors.name }}</p>
-    <label class="field">
-      Time zone
-      <input v-model="f.tz" name="tz" list="setup-tz" required />
-      <datalist id="setup-tz">
-        <option v-for="z in zones" :key="z" :value="z" />
-      </datalist>
-    </label>
-    <p v-if="errors.tz" class="text-danger" role="alert">{{ errors.tz }}</p>
-    <fieldset>
-      <legend>Location (for weather)</legend>
-      <div class="row">
-        <label class="field grow">
-          Search for a city
-          <input v-model="city" name="city" @keydown.enter.prevent="search" />
-        </label>
-        <button type="button" :disabled="pending.searching" @click="search">Search</button>
+  <form class="step" data-testid="step-household" @submit.prevent="next">
+    <UiCard>
+      <template #header>Household</template>
+      <div class="stack">
+        <UiTextField
+          v-model="f.name"
+          label="Household name"
+          name="name"
+          :error="errors.name"
+          required
+        />
+        <UiTextField
+          v-model="f.tz"
+          label="Time zone"
+          name="tz"
+          list="setup-tz"
+          :error="errors.tz"
+          required
+        />
+        <datalist id="setup-tz">
+          <option v-for="z in zones" :key="z" :value="z" />
+        </datalist>
       </div>
-      <p v-if="searchNote" class="muted" role="status">{{ searchNote }}</p>
-      <ul v-if="hits.length" class="card-list" data-testid="city-hits">
-        <li v-for="h in hits" :key="`${h.lat},${h.lon}`">
-          <button type="button" class="btn-ghost" @click="pick(h)">{{ h.label }}</button>
-        </li>
-      </ul>
-      <label class="field">Label <input v-model="f.label" name="label" placeholder="Home" /></label>
-      <label class="field">Latitude <input v-model="f.lat" name="lat" inputmode="decimal" /></label>
-      <label class="field"
-        >Longitude <input v-model="f.lon" name="lon" inputmode="decimal"
-      /></label>
-      <p v-if="errors.lat" class="text-danger" role="alert">{{ errors.lat }}</p>
-      <p v-if="errors.lon" class="text-danger" role="alert">{{ errors.lon }}</p>
-    </fieldset>
-    <label class="field">
-      Units
-      <select v-model="f.units" name="units">
-        <option value="metric">Metric (°C, km/h, mm)</option>
-        <option value="imperial">Imperial (°F, mph, in)</option>
-      </select>
-    </label>
-    <label class="field">
-      Currency (ISO code)
-      <input v-model="f.currency" name="currency" maxlength="3" required />
-    </label>
-    <p v-if="errors.currency" class="text-danger" role="alert">{{ errors.currency }}</p>
-    <ErrorBanner v-if="error" :message="error" />
+    </UiCard>
+
+    <UiCard>
+      <template #header>Location (for weather)</template>
+      <div class="stack">
+        <div class="search">
+          <UiTextField
+            v-model="city"
+            label="Search for a city"
+            name="city"
+            @keydown.enter.prevent="search"
+          />
+          <UiButton variant="tonal" icon="search" :loading="pending.searching" @click="search"
+            >Search</UiButton
+          >
+        </div>
+        <p v-if="searchNote" class="muted" role="status">{{ searchNote }}</p>
+        <ul v-if="hits.length" class="hits" data-testid="city-hits">
+          <li v-for="h in hits" :key="`${h.lat},${h.lon}`">
+            <UiButton variant="text" @click="pick(h)">{{ h.label }}</UiButton>
+          </li>
+        </ul>
+        <UiTextField v-model="f.label" label="Label" name="label" supporting="For example Home" />
+        <UiTextField
+          v-model="f.lat"
+          label="Latitude"
+          name="lat"
+          inputmode="decimal"
+          :error="errors.lat"
+        />
+        <UiTextField
+          v-model="f.lon"
+          label="Longitude"
+          name="lon"
+          inputmode="decimal"
+          :error="errors.lon"
+        />
+      </div>
+    </UiCard>
+
+    <UiCard>
+      <template #header>Units and currency</template>
+      <div class="stack">
+        <UiSelect v-model="f.units" label="Units" :options="unitOptions" />
+        <UiTextField
+          v-model="f.currency"
+          label="Currency (ISO code)"
+          name="currency"
+          maxlength="3"
+          :error="errors.currency"
+          required
+        />
+      </div>
+    </UiCard>
+
+    <p v-if="error" class="err" role="alert">{{ error }}</p>
     <StepButtons :busy="busy" @back="setup.goto(1)" />
   </form>
 </template>
+
+<style scoped>
+.step {
+  display: grid;
+  gap: var(--ui-space-4);
+}
+.stack {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+.search {
+  display: flex;
+  align-items: end;
+  gap: var(--ui-space-2);
+}
+.search :first-child {
+  flex: 1;
+}
+.hits {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-1);
+}
+.muted {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+}
+.err {
+  margin: 0;
+  color: var(--ui-error);
+}
+</style>

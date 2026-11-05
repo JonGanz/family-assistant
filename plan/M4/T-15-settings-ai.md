@@ -5,7 +5,7 @@ milestone: M4
 wave: 4
 depends_on: [T-08, T-13, T-05]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/views/SettingsAiView.vue", "apps/web/src/views/settingsAi.test.ts", "apps/web/src/stores/ai.ts", "apps/web/src/stores/ai.test.ts", "apps/web/src/views/settingsNav.ts", "apps/web/src/views/settingsNav.test.ts", "apps/web/src/router/index.ts"]
 decisions: [D-093, D-094, D-095, D-096, D-097]
 ---
@@ -62,3 +62,10 @@ The paths in `owns` above. In `router/index.ts` you add only the `/settings/ai` 
   - e2e coverage suggested for the main session (one spec: configure an endpoint against a stub, toggle a stage);
   - questions for the final review R4;
   - "list what outside your paths needs changing"
+
+## Outcome (T-15 report)
+- Built:
+  - `SettingsAiView`: endpoint card (Set up, Save bar, write-only key, instant Enabled switch, Test connection, model select from `/models`); email decisions (per-point LLM switch plus 50–95 % threshold slider, Undo); extraction mode (instant) and max input (form); activity card.
+  - `stores/ai.ts` and the `settings-ai` route; AI is listed under Sources and rules.
+  - 562 web tests pass.
+- Defaults applied: placed after Mail; a new endpoint starts enabled; native range slider (no `UiSlider`).

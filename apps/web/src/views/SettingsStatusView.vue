@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { api, type StatusView } from '../api/client'
-import ErrorBanner from '../components/ErrorBanner.vue'
-import PageHeader from '../components/PageHeader.vue'
+import SettingsPage from '../app/SettingsPage.vue'
 import { formatTime } from '../lib/time'
 import { useHouseholdStore } from '../stores/household'
+import { UiCard, UiChip, UiEmptyState, UiErrorState, UiIconButton, UiSkeleton } from '../ui'
+import { stateIcon } from './parts/settings-mail/stateIcon'
 import { describeError } from './shared'
 
 const household = useHouseholdStore()
@@ -31,45 +32,74 @@ function when(iso: string | null | undefined): string {
 </script>
 
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader eyebrow="Settings" title="Status">
-      <template #actions>
-        <button type="button" @click="load">Refresh</button>
-      </template>
-    </PageHeader>
-    <ErrorBanner v-if="error" :message="error" />
-    <template v-if="status">
-      <h2>Calendar sources</h2>
-      <ul class="card-list">
-        <li v-for="s in status.sources" :key="s.id">
-          <strong>{{ s.name }}</strong>
-          <span class="badge" :class="s.state">{{ s.state }}</span>
-          <span class="muted"> {{ s.kind }} · last sync {{ when(s.last_synced_at) }}</span>
-          <p v-if="s.last_error" class="text-danger">{{ s.last_error }}</p>
-        </li>
-        <li v-if="!status.sources.length" class="muted">No sources.</li>
-      </ul>
-      <h2>Weather</h2>
-      <p>
-        <span class="badge" :class="status.weather.ok ? 'ok' : 'error'">
-          {{ status.weather.ok ? 'ok' : 'failing' }}
-        </span>
-        last fetch {{ when(status.weather.fetched_at) }}
-      </p>
-      <h2>Backup</h2>
-      <p>
-        <span class="badge" :class="status.backup.ok ? 'ok' : 'error'">
-          {{ status.backup.ok ? 'ok' : 'attention' }}
-        </span>
-        last backup {{ when(status.backup.last_at) }}
-      </p>
-      <h2>Background jobs</h2>
-      <p data-testid="queue">
-        {{ status.queue.ready }} waiting, {{ status.queue.running }} running,
-        <span :class="{ 'text-danger': status.queue.dead > 0 }"
-          >{{ status.queue.dead }} failed</span
-        >
-      </p>
+  <SettingsPage title="Status">
+    <template #actions>
+      <UiIconButton icon="refresh" label="Refresh" @click="load" />
     </template>
-  </section>
+    <UiErrorState v-if="error" :message="error" @retry="load" />
+    <UiSkeleton v-else-if="!status" :lines="4" />
+    <template v-else>
+      <UiCard>
+        <template #header>Calendar sources</template>
+        <UiEmptyState v-if="!status.sources.length" icon="calendar" title="No sources." />
+        <div v-for="s in status.sources" :key="s.id" class="row">
+          <div class="row__head">
+            <strong class="row__name">{{ s.name }}</strong>
+            <UiChip :icon="stateIcon(s.state)">{{ s.state }}</UiChip>
+          </div>
+          <p class="meta">{{ s.kind }} · last sync {{ when(s.last_synced_at) }}</p>
+          <p v-if="s.last_error" class="err">{{ s.last_error }}</p>
+        </div>
+      </UiCard>
+      <UiCard>
+        <template #header>Weather</template>
+        <div class="row__head">
+          <UiChip :icon="status.weather.ok ? 'success' : 'error'">{{
+            status.weather.ok ? 'ok' : 'failing'
+          }}</UiChip>
+          <span>last fetch {{ when(status.weather.fetched_at) }}</span>
+        </div>
+      </UiCard>
+      <UiCard>
+        <template #header>Backup</template>
+        <div class="row__head">
+          <UiChip :icon="status.backup.ok ? 'success' : 'warning'">{{
+            status.backup.ok ? 'ok' : 'attention'
+          }}</UiChip>
+          <span>last backup {{ when(status.backup.last_at) }}</span>
+        </div>
+      </UiCard>
+      <UiCard>
+        <template #header>Background jobs</template>
+        <p data-testid="queue">
+          {{ status.queue.ready }} waiting, {{ status.queue.running }} running,
+          <span :class="{ err: status.queue.dead > 0 }">{{ status.queue.dead }} failed</span>
+        </p>
+      </UiCard>
+    </template>
+  </SettingsPage>
 </template>
+
+<style scoped>
+.row {
+  display: grid;
+  gap: var(--ui-space-1);
+}
+.row__head {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+}
+.row__name {
+  flex: 1;
+}
+.meta {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
+}
+.err {
+  margin: 0;
+  color: var(--ui-error);
+}
+</style>

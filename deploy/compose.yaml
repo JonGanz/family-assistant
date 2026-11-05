@@ -5,7 +5,7 @@
 #
 #   Core node (default):          docker compose up -d
 #   With Tailscale HTTPS:         docker compose --profile tailscale up -d
-#   CPU sidecars (M4):            docker compose --profile ai-cpu up -d
+#   CPU sidecars (M4.1, not yet functional):            docker compose --profile ai-cpu up -d
 #   GPU node or single machine:   docker compose --profile gpu up -d
 #   Build from a checkout:        docker compose -f compose.yaml -f compose.build.yaml up -d --build
 
@@ -139,7 +139,7 @@ services:
     depends_on:
       - app
 
-  # ---- profile ai-cpu (M4): placeholders, not functional yet --------------------
+  # ---- profile ai-cpu (M4.1): placeholders, not functional yet --------------------
   # s1-small:
   #   profiles: ["ai-cpu"]
   #   image: <pinned System One sidecar image@sha256:...>   # D-025, D-026

@@ -1,54 +1,74 @@
 <script setup lang="ts">
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 import MemberAccess from './MemberAccess.vue'
 import { validateNewMember } from './memberForm'
 import { api, type Member, type PatchMemberReq } from '../../api/client'
 import type { Gender } from '../../api/mailSettings'
-import ChipInput from './settings-mail/ChipInput.vue'
 import HuePicker from '../../components/HuePicker.vue'
 import Avatar from '../../components/Avatar.vue'
-import ErrorBanner from '../../components/ErrorBanner.vue'
-import StateBlock from '../../components/StateBlock.vue'
+import ResponsiveItems from '../../app/ResponsiveItems.vue'
 import { hueVar, type Hue } from '../../lib/hues'
 import { describeError } from '../shared'
 import { useMembersStore } from '../../stores/members'
 import { useSessionStore } from '../../stores/session'
+import {
+  UiButton,
+  UiCard,
+  UiChip,
+  UiEmptyState,
+  UiErrorState,
+  UiFab,
+  UiSaveBar,
+  UiSelect,
+  UiSheet,
+  UiSkeleton,
+  UiTextField,
+  useFormDraft,
+  useSnackbar,
+} from '../../ui'
+
+const props = withDefaults(defineProps<{ fab?: boolean }>(), { fab: true })
 
 const members = useMembersStore()
+const session = useSessionStore()
+const snackbar = useSnackbar()
+
+interface EditForm {
+  display_name: string
+  color: Hue
+  avatar: string
+  grade: string
+  interests: string
+  hobbies: string
+  responsibilities: string
+  aliases: string[]
+  gender: Gender | ''
+  tags: string[]
+  /** Name of the picture waiting to be uploaded; the file itself is in `pending`. */
+  file: string
+}
 
 const editing = ref<string | null>(null)
-const form = reactive({
-  display_name: '',
-  color: 'blue' as Hue,
-  avatar: '',
-  grade: '',
-  interests: '',
-  hobbies: '',
-  responsibilities: '',
-  aliases: [] as string[],
-  gender: '' as Gender | '',
-  tags: [] as string[],
+const member = computed(() => members.items.find((x) => x.id === editing.value) ?? null)
+const error = ref('')
+
+const toForm = (m: Member | null): EditForm => ({
+  display_name: m?.display_name ?? '',
+  color: m?.color ?? 'blue',
+  avatar: m?.avatar ?? '',
+  grade: m?.grade ?? '',
+  interests: (m?.interests ?? []).join(', '),
+  hobbies: (m?.hobbies ?? []).join(', '),
+  responsibilities: (m?.responsibilities ?? []).join(', '),
+  aliases: [...(m?.aliases ?? [])],
+  gender: m?.gender ?? '',
+  tags: [...(m?.relevance_tags ?? [])],
+  file: '',
 })
+
 const preview = ref<string | null>(null)
 const pending = ref<File | null>(null)
-const creating = reactive({
-  display_name: '',
-  role: 'child',
-  color: 'blue' as Hue,
-  grade: '',
-  aliases: [] as string[],
-  username: '',
-  password: '',
-  pin: '',
-})
-const createErrors = ref<Record<string, string>>({})
-const error = ref('')
-const createdNote = ref('')
-
-const session = useSessionStore()
-/** A claimed adult other than the signed-in one cannot be edited (D-006). */
-const claimedByOther = (m: Member) =>
-  m.role === 'adult' && m.id !== session.member?.id && m.has_account && !m.initial_password
+const chipText = reactive({ aliases: '', tags: '' })
 
 const csv = (s: string) =>
   s
@@ -56,24 +76,36 @@ const csv = (s: string) =>
     .map((x) => x.trim())
     .filter(Boolean)
 
-onMounted(() => members.load())
+/** A claimed adult other than the signed-in one cannot be edited (D-006). */
+const claimedByOther = (m: Member) =>
+  m.role === 'adult' && m.id !== session.member?.id && m.has_account && !m.initial_password
 
-function startEdit(m: Member) {
-  editing.value = m.id
-  members.conflictId = null
-  error.value = ''
-  form.display_name = m.display_name
-  form.color = m.color ?? 'blue'
-  clearPending()
-  form.avatar = m.avatar ?? ''
-  form.grade = m.grade ?? ''
-  form.interests = (m.interests ?? []).join(', ')
-  form.hobbies = (m.hobbies ?? []).join(', ')
-  form.responsibilities = (m.responsibilities ?? []).join(', ')
-  form.aliases = [...(m.aliases ?? [])]
-  form.gender = m.gender ?? ''
-  form.tags = [...(m.relevance_tags ?? [])]
-}
+const form = useFormDraft(
+  () => toForm(member.value),
+  async (d) => {
+    const m = member.value
+    if (!m) return
+    error.value = ''
+    const ok = await members.update(m, {
+      display_name: d.display_name,
+      color: d.color,
+      avatar: d.avatar || null,
+      grade: m.role === 'child' ? d.grade || null : null,
+      interests: csv(d.interests),
+      hobbies: csv(d.hobbies),
+      responsibilities: csv(d.responsibilities),
+      // M3 fields; the generated patch type does not list them yet.
+      aliases: d.aliases,
+      ...(m.role === 'child' ? { gender: d.gender || null, relevance_tags: d.tags } : {}),
+    } as PatchMemberReq)
+    if (!ok) throw new Error('Changed elsewhere. Reload to see the latest, then try again.')
+    if (pending.value) await members.uploadAvatar(m.id, pending.value)
+    clearPending()
+  },
+)
+const d = form.draft
+
+onMounted(() => members.load())
 
 function clearPending() {
   if (preview.value) URL.revokeObjectURL(preview.value)
@@ -81,9 +113,29 @@ function clearPending() {
   pending.value = null
 }
 
+function startEdit(m: Member) {
+  members.conflictId = null
+  error.value = ''
+  clearPending()
+  editing.value = m.id
+  form.discard()
+}
+
+async function saveEdit() {
+  if (await form.save()) editing.value = null
+}
+
+function closeEditor() {
+  if (form.dirty.value && !window.confirm('Discard unsaved changes?')) return
+  form.discard()
+  clearPending()
+  editing.value = null
+}
+
 function pickFile(ev: Event) {
   const file = (ev.target as HTMLInputElement).files?.[0]
   clearPending()
+  d.value.file = ''
   if (!file) return
   const problem = members.checkAvatar(file)
   if (problem) {
@@ -94,50 +146,78 @@ function pickFile(ev: Event) {
   error.value = ''
   pending.value = file
   preview.value = URL.createObjectURL(file)
-}
-
-async function save(m: Member) {
-  error.value = ''
-  try {
-    const ok = await members.update(m, {
-      display_name: form.display_name,
-      color: form.color,
-      avatar: form.avatar || null,
-      grade: m.role === 'child' ? form.grade || null : null,
-      interests: csv(form.interests),
-      hobbies: csv(form.hobbies),
-      responsibilities: csv(form.responsibilities),
-      // M3 fields; the generated patch type does not list them yet.
-      aliases: form.aliases,
-      ...(m.role === 'child' ? { gender: form.gender || null, relevance_tags: form.tags } : {}),
-    } as PatchMemberReq)
-    if (ok) {
-      if (pending.value) await members.uploadAvatar(m.id, pending.value)
-      clearPending()
-      editing.value = null
-    }
-  } catch (e) {
-    error.value = describeError(e, 'Save failed.')
-  }
+  d.value.file = file.name
 }
 
 async function removeAvatar(m: Member) {
   error.value = ''
   try {
     await members.removeAvatar(m.id)
+    snackbar.show({ text: 'Picture removed' })
   } catch (e) {
     error.value = describeError(e, 'Could not remove the picture.')
   }
 }
 
 async function reload() {
+  form.discard()
   await members.load()
-  const m = members.items.find((x) => x.id === editing.value)
-  if (m) startEdit(m)
+  form.discard()
+}
+
+function addChip(key: 'aliases' | 'tags') {
+  const v = chipText[key].trim()
+  chipText[key] = ''
+  if (v && !d.value[key].includes(v)) d.value[key].push(v)
+}
+function removeChip(key: 'aliases' | 'tags', v: string) {
+  d.value[key] = d.value[key].filter((x) => x !== v)
+}
+
+const genderOptions = [
+  { value: '', label: 'Not set' },
+  { value: 'female', label: 'Female' },
+  { value: 'male', label: 'Male' },
+  { value: 'other', label: 'Other' },
+]
+
+// Adding a member: a form in a sheet.
+const adding = ref(false)
+const blankCreate = () => ({
+  display_name: '',
+  role: 'child',
+  color: 'blue' as Hue,
+  grade: '',
+  username: '',
+  password: '',
+  pin: '',
+})
+const creating = reactive(blankCreate())
+const createAliases = ref<string[]>([])
+const createAliasText = ref('')
+const createErrors = ref<Record<string, string>>({})
+const createError = ref('')
+const createdNote = ref('')
+const roleOptions = [
+  { value: 'child', label: 'child' },
+  { value: 'adult', label: 'adult' },
+]
+
+function openAdd() {
+  createdNote.value = ''
+  createError.value = ''
+  createErrors.value = {}
+  adding.value = true
+}
+
+function addCreateAlias() {
+  const v = createAliasText.value.trim()
+  createAliasText.value = ''
+  if (v && !createAliases.value.includes(v)) createAliases.value.push(v)
 }
 
 async function create() {
-  error.value = ''
+  createError.value = ''
   createdNote.value = ''
   createErrors.value = validateNewMember({
     ...creating,
@@ -150,7 +230,7 @@ async function create() {
       role: creating.role,
       color: creating.color,
       grade: creating.role === 'child' ? creating.grade.trim() || null : null,
-      aliases: creating.aliases,
+      aliases: createAliases.value,
     })
     const user = creating.username.trim()
     if (user) await api.createAccount(made.id, user, creating.password)
@@ -158,17 +238,13 @@ async function create() {
     await members.load()
     createdNote.value =
       user && creating.role === 'adult' ? 'They must change this password at first sign-in.' : ''
-    if (!createdNote.value)
-      Object.assign(creating, {
-        display_name: '',
-        grade: '',
-        aliases: [],
-        username: '',
-        password: '',
-        pin: '',
-      })
+    if (!createdNote.value) {
+      Object.assign(creating, { ...blankCreate(), role: creating.role, color: creating.color })
+      createAliases.value = []
+      snackbar.show({ text: 'Member added' })
+    }
   } catch (e) {
-    error.value = describeError(e, 'Create failed.')
+    createError.value = describeError(e, 'Create failed.')
     await members.load()
   }
 }
@@ -176,189 +252,342 @@ async function create() {
 
 <template>
   <div class="members-manager">
-    <StateBlock
-      :error="members.error"
-      :loading="members.loading && !members.items.length"
-      :empty="!members.loading && !members.items.length"
-      empty-text="No members yet."
+    <UiErrorState v-if="members.error" :message="members.error" @retry="members.load()" />
+    <UiSkeleton v-else-if="members.loading && !members.items.length" :lines="4" />
+    <UiEmptyState
+      v-else-if="!members.loading && !members.items.length"
+      icon="group"
+      title="No members yet"
     />
-    <ul class="members card-list">
-      <li v-for="m in members.items" :key="m.id" :data-testid="`member-${m.display_name}`">
-        <template v-if="editing !== m.id">
+    <ResponsiveItems v-else :items="members.items" class="members">
+      <template #item="{ item: m }">
+        <div class="member" :data-testid="`member-${m.display_name}`">
           <Avatar
             :name="m.display_name"
             :color="hueVar(m.color)"
             :src="m.avatar_url"
             size="2.5rem"
           />
-          <strong>{{ m.display_name }}</strong>
-          <em>{{ m.role }}</em>
-          <button
+          <div class="member__text">
+            <strong>{{ m.display_name }}</strong>
+            <UiChip>{{ m.role }}</UiChip>
+          </div>
+          <UiButton
             v-if="m.version !== undefined && !claimedByOther(m)"
-            class="btn-sm"
+            variant="tonal"
+            icon="edit"
             @click="startEdit(m)"
           >
             Edit
-          </button>
+          </UiButton>
           <span v-else-if="claimedByOther(m)" class="muted">Manages their own profile</span>
-        </template>
-        <form v-else class="form form-wide" @submit.prevent="save(m)">
-          <label class="field"
-            >Name <input v-model="form.display_name" name="display_name" required
-          /></label>
-          <HuePicker v-model="form.color" name="color" />
-          <div class="avatar-edit">
-            <Avatar
-              :name="form.display_name || m.display_name"
-              :color="hueVar(form.color)"
-              :src="preview ?? m.avatar_url"
-              size="4rem"
-            />
-            <label class="field">
-              Picture (PNG, JPEG or WebP, up to 512 KB)
-              <input
-                type="file"
-                name="avatar_file"
-                accept="image/png,image/jpeg,image/webp"
-                @change="pickFile"
-              />
-            </label>
-            <button
-              v-if="m.avatar_url && !preview"
-              type="button"
-              class="btn-sm"
-              @click="removeAvatar(m)"
-            >
-              Remove picture
-            </button>
-          </div>
-          <label class="field"
-            >Initials or emoji <input v-model="form.avatar" name="avatar" maxlength="4"
-          /></label>
-          <label v-if="m.role === 'child'" class="field"
-            >Grade <input v-model="form.grade" name="grade" />
-          </label>
-          <label class="field">
-            Interests (comma separated)
-            <input v-model="form.interests" name="interests" />
-          </label>
-          <label class="field">
-            Hobbies (comma separated)
-            <input v-model="form.hobbies" name="hobbies" />
-          </label>
-          <label class="field">
-            Responsibilities (comma separated)
-            <input v-model="form.responsibilities" name="responsibilities" />
-          </label>
-          <ChipInput v-model="form.aliases" label="Also known as (names used in mail)" />
-          <template v-if="m.role === 'child'">
-            <label class="field">
-              Gender (helps match girls' or boys' groups; optional)
-              <select v-model="form.gender" name="gender">
-                <option value="">Not set</option>
-                <option value="female">Female</option>
-                <option value="male">Male</option>
-                <option value="other">Other</option>
-              </select>
-            </label>
-            <ChipInput
-              v-model="form.tags"
-              label="Relevance tags (for example a sport or a class)"
-            />
-          </template>
-          <ErrorBanner v-if="members.conflictId === m.id" conflict @reload="reload" />
-          <ErrorBanner v-if="error" :message="error" />
-          <MemberAccess v-if="m.has_account !== undefined" :member="m" />
-          <div class="row">
-            <button type="submit" class="btn-primary">Save</button>
-            <button type="button" class="btn-ghost" @click="editing = null">Cancel</button>
-          </div>
-        </form>
-      </li>
-    </ul>
+        </div>
+      </template>
+    </ResponsiveItems>
 
-    <ErrorBanner v-if="error && editing === null" :message="error" />
-    <form class="form create" data-testid="add-member" @submit.prevent="create">
-      <h2>Add member</h2>
-      <label class="field"
-        >Name <input v-model="creating.display_name" name="new_name" required
-      /></label>
-      <p v-if="createErrors.display_name" class="text-danger" role="alert">
-        {{ createErrors.display_name }}
-      </p>
-      <label class="field">
-        Role
-        <select v-model="creating.role" name="new_role">
-          <option value="child">child</option>
-          <option value="adult">adult</option>
-        </select>
-      </label>
-      <HuePicker v-model="creating.color" name="new_color" />
-      <label v-if="creating.role === 'child'" class="field"
-        >Grade (optional) <input v-model="creating.grade" name="new_grade"
-      /></label>
-      <ChipInput v-model="creating.aliases" label="Also known as (names used in mail)" />
-      <fieldset>
-        <legend>
-          {{ creating.role === 'adult' ? 'Login (optional)' : 'Login and PIN (optional)' }}
-        </legend>
-        <label class="field"
-          >Username <input v-model="creating.username" name="new_username" autocomplete="off"
-        /></label>
-        <p v-if="createErrors.username" class="text-danger" role="alert">
-          {{ createErrors.username }}
-        </p>
-        <label class="field"
-          >Password
-          <input
+    <p v-if="error && !member" class="err" role="alert">{{ error }}</p>
+
+    <div v-if="props.fab" class="fab">
+      <UiFab icon="add" label="Add member" extended @click="openAdd" />
+    </div>
+    <UiButton v-else variant="tonal" icon="add" @click="openAdd">Add member</UiButton>
+
+    <UiSheet
+      :model-value="!!member"
+      :title="member ? `Edit ${member.display_name}` : 'Edit member'"
+      @update:model-value="!$event && closeEditor()"
+    >
+      <div v-if="member" class="editor" data-testid="member-editor">
+        <UiCard v-if="members.conflictId === member.id" variant="outlined" role="alert">
+          This member changed elsewhere. Reload to see the latest.
+          <template #actions><UiButton variant="tonal" @click="reload">Reload</UiButton></template>
+        </UiCard>
+
+        <UiCard variant="outlined">
+          <template #header>Profile</template>
+          <div class="stack">
+            <UiTextField v-model="d.display_name" label="Name" name="display_name" required />
+            <HuePicker v-model="d.color" name="color" />
+            <div class="avatar-edit">
+              <Avatar
+                :name="d.display_name || member.display_name"
+                :color="hueVar(d.color)"
+                :src="preview ?? member.avatar_url"
+                size="4rem"
+              />
+              <label class="file">
+                <span>Picture (PNG, JPEG or WebP, up to 512 KB)</span>
+                <input
+                  type="file"
+                  name="avatar_file"
+                  accept="image/png,image/jpeg,image/webp"
+                  @change="pickFile"
+                />
+              </label>
+              <UiButton
+                v-if="member.avatar_url && !preview"
+                variant="text"
+                @click="removeAvatar(member)"
+              >
+                Remove picture
+              </UiButton>
+            </div>
+            <UiTextField v-model="d.avatar" label="Initials or emoji" name="avatar" maxlength="4" />
+            <UiTextField
+              v-if="member.role === 'child'"
+              v-model="d.grade"
+              label="Grade"
+              name="grade"
+            />
+          </div>
+        </UiCard>
+
+        <UiCard variant="outlined">
+          <template #header>Aliases and tags</template>
+          <div class="stack">
+            <div class="chips">
+              <span class="chips__label">Also known as (names used in mail)</span>
+              <div class="chips__row">
+                <UiChip
+                  v-for="v in d.aliases"
+                  :key="v"
+                  variant="input"
+                  @remove="removeChip('aliases', v)"
+                >
+                  {{ v }}
+                </UiChip>
+              </div>
+              <UiTextField
+                v-model="chipText.aliases"
+                label="Add an alias"
+                supporting="Press Enter to add"
+                @keydown.enter.prevent="addChip('aliases')"
+                @blur="addChip('aliases')"
+              />
+            </div>
+            <template v-if="member.role === 'child'">
+              <UiSelect
+                v-model="d.gender"
+                label="Gender (helps match girls' or boys' groups; optional)"
+                :options="genderOptions"
+              />
+              <div class="chips">
+                <span class="chips__label">Relevance tags (for example a sport or a class)</span>
+                <div class="chips__row">
+                  <UiChip
+                    v-for="v in d.tags"
+                    :key="v"
+                    variant="input"
+                    @remove="removeChip('tags', v)"
+                  >
+                    {{ v }}
+                  </UiChip>
+                </div>
+                <UiTextField
+                  v-model="chipText.tags"
+                  label="Add a tag"
+                  supporting="Press Enter to add"
+                  @keydown.enter.prevent="addChip('tags')"
+                  @blur="addChip('tags')"
+                />
+              </div>
+            </template>
+          </div>
+        </UiCard>
+
+        <UiCard variant="outlined">
+          <template #header>Interests</template>
+          <div class="stack">
+            <UiTextField
+              v-model="d.interests"
+              label="Interests (comma separated)"
+              name="interests"
+            />
+            <UiTextField v-model="d.hobbies" label="Hobbies (comma separated)" name="hobbies" />
+            <UiTextField
+              v-model="d.responsibilities"
+              label="Responsibilities (comma separated)"
+              name="responsibilities"
+            />
+          </div>
+        </UiCard>
+
+        <MemberAccess v-if="member.has_account !== undefined" :member="member" />
+
+        <p v-if="error" class="err" role="alert">{{ error }}</p>
+        <UiSaveBar
+          :dirty="form.dirty.value"
+          :saving="form.saving.value"
+          :error="form.error.value"
+          @save="saveEdit"
+          @discard="form.discard"
+        />
+      </div>
+    </UiSheet>
+
+    <UiSheet v-model="adding" title="Add member">
+      <form class="stack" data-testid="add-member" @submit.prevent="create">
+        <UiTextField
+          v-model="creating.display_name"
+          label="Name"
+          name="new_name"
+          :error="createErrors.display_name"
+        />
+        <UiSelect v-model="creating.role" label="Role" :options="roleOptions" />
+        <HuePicker v-model="creating.color" name="new_color" />
+        <UiTextField
+          v-if="creating.role === 'child'"
+          v-model="creating.grade"
+          label="Grade (optional)"
+          name="new_grade"
+        />
+        <div class="chips">
+          <span class="chips__label">Also known as (names used in mail)</span>
+          <div class="chips__row">
+            <UiChip
+              v-for="v in createAliases"
+              :key="v"
+              variant="input"
+              @remove="createAliases = createAliases.filter((x) => x !== v)"
+            >
+              {{ v }}
+            </UiChip>
+          </div>
+          <UiTextField
+            v-model="createAliasText"
+            label="Add an alias"
+            supporting="Press Enter to add"
+            @keydown.enter.prevent="addCreateAlias"
+            @blur="addCreateAlias"
+          />
+        </div>
+        <fieldset class="login">
+          <legend>
+            {{ creating.role === 'adult' ? 'Login (optional)' : 'Login and PIN (optional)' }}
+          </legend>
+          <UiTextField
+            v-model="creating.username"
+            label="Username"
+            name="new_username"
+            autocomplete="off"
+            :error="createErrors.username"
+          />
+          <UiTextField
             v-model="creating.password"
+            label="Password"
             name="new_password"
             type="password"
             autocomplete="new-password"
-        /></label>
-        <p v-if="createErrors.password" class="text-danger" role="alert">
-          {{ createErrors.password }}
-        </p>
-        <p v-if="creating.role === 'adult'" class="muted">
-          The adult sets their own PIN after signing in, and must change this password at first
-          sign-in.
-        </p>
-        <label v-if="creating.role === 'child'" class="field"
-          >PIN (4 to 6 digits)
-          <input
+            :error="createErrors.password"
+          />
+          <p v-if="creating.role === 'adult'" class="muted">
+            The adult sets their own PIN after signing in, and must change this password at first
+            sign-in.
+          </p>
+          <UiTextField
+            v-if="creating.role === 'child'"
             v-model="creating.pin"
+            label="PIN (4 to 6 digits)"
             name="new_pin"
             inputmode="numeric"
             autocomplete="off"
             maxlength="6"
-        /></label>
-        <p v-if="createErrors.pin" class="text-danger" role="alert">{{ createErrors.pin }}</p>
-      </fieldset>
-      <button type="submit" class="btn-primary">Add</button>
-      <p v-if="createdNote" class="text-success" role="status" data-testid="created-note">
-        {{ createdNote }}
-      </p>
-    </form>
+            :error="createErrors.pin"
+          />
+        </fieldset>
+        <p v-if="createError" class="err" role="alert">{{ createError }}</p>
+        <p v-if="createdNote" class="muted" role="status" data-testid="created-note">
+          {{ createdNote }}
+        </p>
+        <div class="actions">
+          <UiButton variant="text" @click="adding = false">Close</UiButton>
+          <UiButton type="submit">Add</UiButton>
+        </div>
+      </form>
+    </UiSheet>
   </div>
 </template>
 
 <style scoped>
-.members > li {
+.members-manager {
+  display: grid;
+  gap: var(--ui-space-4);
+}
+.member {
   display: flex;
-  gap: var(--space-3);
   align-items: center;
+  gap: var(--ui-space-3);
+}
+.member__text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+}
+.fab {
+  position: fixed;
+  right: calc(var(--ui-space-4) + env(safe-area-inset-right));
+  bottom: calc(var(--ui-bottom-offset, 0px) + var(--ui-space-4) + env(safe-area-inset-bottom));
+  z-index: 15;
+}
+.editor,
+.stack {
+  display: grid;
+  gap: var(--ui-space-3);
 }
 .avatar-edit {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--ui-space-3);
   flex-wrap: wrap;
 }
-form {
-  width: 100%;
+.file {
+  display: grid;
+  gap: var(--ui-space-1);
+  font: var(--ui-type-body-md);
+  color: var(--ui-on-surface-variant);
+  min-width: 0;
 }
-.create {
-  margin-top: 2rem;
-  max-width: 22rem;
+.chips {
+  display: grid;
+  gap: var(--ui-space-2);
+}
+.chips__label {
+  font: var(--ui-type-label-lg);
+  color: var(--ui-on-surface-variant);
+}
+.chips__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+}
+.login {
+  display: grid;
+  gap: var(--ui-space-3);
+  border: 1px solid var(--ui-outline-variant);
+  border-radius: var(--ui-radius-md);
+  padding: var(--ui-space-3);
+  margin: 0;
+}
+.login legend {
+  font: var(--ui-type-label-lg);
+  color: var(--ui-on-surface-variant);
+  padding: 0 var(--ui-space-1);
+}
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ui-space-2);
+}
+.muted {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-md);
+}
+.err {
+  margin: 0;
+  color: var(--ui-error);
 }
 </style>

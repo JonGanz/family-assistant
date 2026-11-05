@@ -40,7 +40,8 @@ describe('Appearance page', () => {
   it('shows the mode control for a two-mode family and saves the choice', async () => {
     const w = mount(SettingsAppearanceView)
     expect(w.find('[data-testid="mode"]').exists()).toBe(true)
-    await w.find('[data-testid="mode"]').setValue('dark')
+    const dark = w.findAll('[data-testid="mode"] [role="radio"]').find((b) => b.text() === 'Dark')!
+    await dark.trigger('click')
     await w.vm.$nextTick()
     expect(JSON.parse(localStorage.getItem('fa.theme')!)).toMatchObject({ mode: 'dark' })
     expect(document.documentElement.getAttribute('data-theme-mode')).toBe('dark')
@@ -59,7 +60,7 @@ describe('Appearance page', () => {
     const w = mount(SettingsAppearanceView)
     await w.find('[data-family="twodark"] button').trigger('click')
     expect(w.find('[data-testid="mode"]').exists()).toBe(false)
-    await w.find('[data-testid="variant"]').setValue('d2')
+    await w.find('[data-testid="variant"] select').setValue('d2')
     await w.vm.$nextTick()
     expect(JSON.parse(localStorage.getItem('fa.theme')!)).toMatchObject({
       family: 'twodark',

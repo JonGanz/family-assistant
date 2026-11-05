@@ -1,5 +1,6 @@
 import { mkdirSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
+import ai from './ui-shots.routes/ai'
 import mail from './ui-shots.routes/mail'
 import settings1 from './ui-shots.routes/settings1'
 import settings2 from './ui-shots.routes/settings2'
@@ -37,7 +38,7 @@ test.use({ deviceScaleFactor: 2 })
 
 /** App routes captured with `--all` (UI_SHOTS_ALL=1), one file per area so wave-3 tasks own their own list.
  *  UI_SHOTS_AREAS=tasks,mail narrows the run. */
-const AREAS: Record<string, ShotRoute[]> = { today, tasks, mail, settings1, settings2, shell }
+const AREAS: Record<string, ShotRoute[]> = { today, tasks, mail, settings1, settings2, shell, ai }
 const areaFilter = (process.env.UI_SHOTS_AREAS ?? '').split(',').filter(Boolean)
 const APP_ROUTES: ShotRoute[] = Object.entries(AREAS)
   .filter(([a]) => areaFilter.length === 0 || areaFilter.includes(a))
@@ -82,12 +83,15 @@ test.describe('app routes', () => {
         )
         await page.setViewportSize({ width, height: 900 })
         await page.goto('/login')
+        await page.getByLabel('Username').waitFor()
+        await page.screenshot({ path: `${OUT}/login-${width}-${mode}.png`, fullPage: true })
         await page.getByLabel('Username').fill(process.env.E2E_USERNAME ?? 'alex@example.com')
         await page.getByLabel('Password').fill(process.env.E2E_PASSWORD ?? '')
         await page.getByRole('button', { name: 'Log in' }).click()
         await expect(page).toHaveURL(/\/$/)
         for (const shot of APP_ROUTES) {
           if (shot.widths && !shot.widths.includes(width)) continue
+          if (shot.setup) await shot.setup(page)
           await page.goto(shot.route)
           // Not 'networkidle': the live update stream keeps a request open forever.
           await page.waitForLoadState('load')
@@ -102,6 +106,8 @@ test.describe('app routes', () => {
             path: `${OUT}/${shot.name ?? slug(shot.route)}-${width}-${mode}.png`,
             fullPage: true,
           })
+          // Drop any mocks so later shots see the real API.
+          if (shot.setup) await page.unrouteAll({ behavior: 'ignoreErrors' })
         }
       })
     }

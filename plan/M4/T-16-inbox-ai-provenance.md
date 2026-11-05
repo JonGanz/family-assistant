@@ -5,7 +5,7 @@ milestone: M4
 wave: 4
 depends_on: [T-12, T-08]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/views/InboxView.vue", "apps/web/src/views/MessageView.vue", "apps/web/src/components/mail/**", "apps/web/src/stores/inbox.ts", "apps/web/src/stores/inbox.test.ts", "apps/web/src/views/mail.test.ts"]
 decisions: [D-094, D-095, D-057, D-060, D-078]
 ---
@@ -53,3 +53,7 @@ The paths in `owns` above. **Not yours:** `ui/**` (if a chip variant is missing,
   - the e2e seed suggestion;
   - questions for the final review R4;
   - "list what outside your paths needs changing"
+
+## Outcome (T-16 report)
+- Built: `components/mail/AiChip.vue` ('AI · 82%', a tooltip on wide screens, a sheet on phones), the chip on inbox event, bill and task cards and on LLM decisions (`DecisionFix`), on derived bills in Message, and a non-persisted 'AI only' inbox filter; 3 tests.
+- Gap closed by the main session: `extracted_by` added to `DerivedEvent` and `DerivedTask` (T-19 shows the chips). `TaskView` has no confidence, so task chips show 'AI'.

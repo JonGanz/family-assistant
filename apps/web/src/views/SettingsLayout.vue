@@ -5,8 +5,7 @@ import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useSessionStore } from '../stores/session'
 import { UiList, UiListItem, UiIcon, UiSection, UiTopAppBar, useBreakpoint } from '../ui'
-import type { IconName } from '../ui'
-import { visibleGroups, type SettingsPage } from './settingsNav'
+import { visibleGroups } from './settingsNav'
 
 const session = useSessionStore()
 const route = useRoute()
@@ -15,8 +14,6 @@ const groups = computed(() => visibleGroups(session.isAdult))
 const expanded = computed(() => bp.value === 'expanded')
 const isIndex = computed(() => route.path === '/settings' || route.path === '/settings/')
 
-// Until settingsNav.ts carries an icon per page (T-13), every row gets the settings glyph.
-const iconFor = (p: SettingsPage): IconName => (p as { icon?: IconName }).icon ?? 'settings'
 const showList = computed(() => expanded.value || isIndex.value)
 const showPage = computed(() => expanded.value || !isIndex.value)
 const isActive = (to: string) => route.path === to || route.path.startsWith(`${to}/`)
@@ -33,11 +30,11 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
               v-for="p in g.pages"
               :key="p.to"
               :headline="p.label"
-              :supporting="expanded ? undefined : p.blurb"
+              :supporting="expanded ? undefined : p.summary"
               :to="p.to"
               :class="{ 'is-current': expanded && isActive(p.to) }"
             >
-              <template #leading><UiIcon :name="iconFor(p)" /></template>
+              <template #leading><UiIcon :name="p.icon" /></template>
             </UiListItem>
           </UiList>
         </UiSection>
@@ -67,13 +64,6 @@ const isActive = (to: string) => route.path === to || route.path.startsWith(`${t
 }
 .is-split .settings-nav {
   padding-top: var(--ui-space-4);
-}
-/* Pages not yet on SettingsPage keep the old padding until they are migrated. */
-.settings-page > :deep(:not(.ui-page)) {
-  box-sizing: border-box;
-  max-width: 64rem;
-  margin: 0 auto;
-  padding: 1rem;
 }
 .is-current :deep(.ui-li__row) {
   background: var(--ui-primary-container);

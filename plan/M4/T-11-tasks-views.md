@@ -5,7 +5,7 @@ milestone: M4
 wave: 3
 depends_on: [T-05]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/views/TasksView.vue", "apps/web/src/views/TaskDetailView.vue", "apps/web/src/components/tasks/**", "apps/web/src/stores/tasks.ts", "apps/web/src/stores/tasks.test.ts", "apps/web/src/stores/lists.ts", "apps/web/src/stores/definitions.ts", "apps/web/src/stores/taskMap.ts", "apps/web/src/stores/taskMap.test.ts", "apps/web/src/stores/away.ts", "apps/web/src/views/tasks.test.ts", "apps/web/src/views/parts/TaskAddForm.vue", "apps/web/src/views/parts/dateInput.ts", "apps/web/e2e/ui-shots.routes/tasks.ts"]
 decisions: [D-095, D-096, D-042, D-045, D-046]
 ---
@@ -62,3 +62,8 @@ The user answered R2 on 2026-11-04 and 2026-11-05. These rules apply to every wa
   - store changes made;
   - questions for the user's R3 review;
   - "list what outside your paths needs changing"
+
+## Outcome (T-11 report)
+- Built: Tasks with the R2 filter (All, Mine, members; default Mine; `fa.tasks.filter`; `member=` server-side), tabs Now, Lists and Suggested (the Mine tab is dropped); TaskDetail on `useFormDraft` + Save bar, with priority and display instant; TaskAddForm sheet; restyled `components/tasks/*`, new `StepEditor`; the store gains filter.
+- Defaults applied: Mine tab dropped; up/down step reorder; separate create and edit forms.
+- e2e: m2 tabs → radio (T-19). UndoToast stays for the kiosk.

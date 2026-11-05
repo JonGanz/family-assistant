@@ -12,3 +12,20 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+fa-domain.workspace = true
+fa-store.workspace = true
+fa-mail.workspace = true
+fa-llm.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+sqlx.workspace = true
+tracing.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+fa-pipeline.workspace = true
+fa-rules.workspace = true
+tokio.workspace = true
+axum.workspace = true
+chrono.workspace = true

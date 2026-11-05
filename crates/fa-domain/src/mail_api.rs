@@ -308,6 +308,8 @@ dto!(
         /// RFC 3339.
         pub start_at: DateTime<Utc>,
         pub status: EventStatus,
+        /// `llm` when the `mail.llm` job proposed it (M4).
+        pub extracted_by: crate::ExtractOrigin,
     }
 );
 
@@ -316,6 +318,8 @@ dto!(
         pub id: TaskId,
         pub title: String,
         pub status: TaskStatus,
+        /// `llm` when the `mail.llm` job proposed it (M4).
+        pub extracted_by: crate::ExtractOrigin,
     }
 );
 

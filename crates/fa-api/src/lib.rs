@@ -1,5 +1,6 @@
 //! fa-api: the axum HTTP API (v1), SSE hub, OpenAPI document and static web serving.
 
+mod ai;
 mod bridge;
 mod conn;
 mod error;
@@ -211,6 +212,17 @@ pub fn router(state: AppState) -> Router {
             "/household",
             get(feeds::get_household).patch(feeds::patch_household),
         )
+        .route(
+            "/ai/llm-endpoint",
+            get(ai::get_endpoint).put(ai::put_endpoint),
+        )
+        .route("/ai/llm-endpoint/test", post(ai::test_endpoint))
+        .route("/ai/llm-endpoint/models", get(ai::list_models))
+        .route("/ai/settings", get(ai::get_settings).put(ai::put_settings))
+        .route("/ai/pipeline", get(ai::get_pipeline))
+        .route("/ai/pipeline/{decision_point}", put(ai::put_pipeline))
+        .route("/ai/stats", get(ai::get_stats))
+        .route("/ai/recipes/extract", post(ai::extract_recipe))
         .route("/oauth/google/start", get(feeds::oauth_start))
         .route("/oauth/google/callback", get(feeds::oauth_callback))
         .route(

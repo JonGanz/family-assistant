@@ -91,7 +91,8 @@ describe('MembersManager', () => {
     ] as never)
     const w = mount(MembersManager, { global: { stubs: { RouterLink } } })
     await flushPromises()
-    const edit = (n: string) => w.find(`[data-testid="member-${n}"] button`).exists()
+    const edit = (n: string) =>
+      w.findAll(`[data-testid="member-${n}"] button`).some((b) => b.text() === 'Edit')
     expect(edit('Me')).toBe(true)
     expect(edit('Fresh')).toBe(true)
     expect(edit('Claimed')).toBe(false)
@@ -101,17 +102,31 @@ describe('MembersManager', () => {
     m.members.mockResolvedValue([] as never)
     m.createMember.mockResolvedValue({ id: 'n', version: 1 } as never)
     m.createAccount.mockResolvedValue({} as never)
-    const w = mount(MembersManager, { global: { stubs: { RouterLink } } })
+    const w = mount(MembersManager, { attachTo: document.body, global: { stubs: { RouterLink } } })
     await flushPromises()
-    await w.find('input[name=new_name]').setValue('Bo')
-    await w.find('select[name=new_role]').setValue('adult')
-    expect(w.find('input[name=new_pin]').exists()).toBe(false)
-    await w.find('input[name=new_username]').setValue('bo')
-    await w.find('input[name=new_password]').setValue('a long enough pw')
-    await w.find('[data-testid=add-member]').trigger('submit')
+    // Adding is a form in a sheet, opened from the FAB.
+    await w.get('button[aria-label="Add member"], button.ui-fab').trigger('click')
+    const q = <T extends HTMLElement>(sel: string) => document.body.querySelector<T>(sel)!
+    const type = async (sel: string, value: string) => {
+      const el = q<HTMLInputElement>(sel)
+      el.value = value
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+      await flushPromises()
+    }
+    await type('input[name=new_name]', 'Bo')
+    const role = document.body.querySelector<HTMLSelectElement>('[data-testid=add-member] select')!
+    role.value = 'adult'
+    role.dispatchEvent(new Event('change', { bubbles: true }))
+    await flushPromises()
+    expect(document.body.querySelector('input[name=new_pin]')).toBeNull()
+    await type('input[name=new_username]', 'bo')
+    await type('input[name=new_password]', 'a long enough pw')
+    q('[data-testid=add-member]').dispatchEvent(new Event('submit', { cancelable: true }))
     await flushPromises()
     expect(m.createAccount).toHaveBeenCalledWith('n', 'bo', 'a long enough pw')
     expect(m.setPin).not.toHaveBeenCalled()
-    expect(w.find('[data-testid=created-note]').text()).toContain('first sign-in')
+    expect(q('[data-testid=created-note]').textContent).toContain('first sign-in')
+    w.unmount()
+    document.body.innerHTML = ''
   })
 })

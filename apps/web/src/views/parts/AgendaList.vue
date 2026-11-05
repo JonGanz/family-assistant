@@ -3,7 +3,8 @@ import { computed } from 'vue'
 import type { EventView } from '../../api/client'
 import EventCard from '../../components/EventCard.vue'
 import { dayKey, formatDayHeading, groupByDay } from '../../lib/time'
-import type { MemberLike } from '../../lib/types'
+import type { EventLike, MemberLike } from '../../lib/types'
+import { UiSection } from '../../ui'
 import { toEventLike } from '../shared'
 
 const props = defineProps<{
@@ -14,7 +15,9 @@ const props = defineProps<{
   days: number
   members: MemberLike[]
   hideEmpty?: boolean
+  selectable?: boolean
 }>()
+defineEmits<{ select: [event: EventLike] }>()
 
 const grouped = computed(() => {
   const likes = props.events.map((e) => toEventLike(e, props.members))
@@ -28,26 +31,35 @@ const grouped = computed(() => {
 
 <template>
   <div class="agenda">
-    <section v-for="g in grouped" :key="g.key" :data-day="g.key">
-      <h3>{{ g.heading }}</h3>
+    <UiSection v-for="g in grouped" :key="g.key" :heading="g.heading" :data-day="g.key">
       <p v-if="!g.list.length" class="empty">Nothing planned.</p>
       <div v-else class="list">
-        <EventCard v-for="e in g.list" :key="e.id" :event="e" :tz="tz" :members="members" />
+        <EventCard
+          v-for="e in g.list"
+          :key="e.id"
+          :event="e"
+          :tz="tz"
+          :members="members"
+          :selectable="selectable"
+          @select="$emit('select', $event)"
+        />
       </div>
-    </section>
+    </UiSection>
   </div>
 </template>
 
 <style scoped>
-h3 {
-  margin: var(--space-4) 0 var(--space-2);
+.agenda {
+  display: grid;
+  gap: var(--ui-space-4);
 }
 .list {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--ui-space-2);
 }
 .empty {
-  color: var(--color-muted);
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-md);
   margin: 0;
 }
 </style>

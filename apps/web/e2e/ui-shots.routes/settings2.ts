@@ -5,6 +5,14 @@ export default [
   { route: '/settings/notifications' },
   { route: '/settings/tasks' },
   { route: '/settings/calendars' },
+  {
+    route: '/settings/calendars',
+    name: 'settings-calendars-add-source',
+    before: async (page) => {
+      await page.getByRole('button', { name: 'Add a source' }).last().click()
+      await page.waitForTimeout(400)
+    },
+  },
   { route: '/settings/weather' },
   { route: '/settings/mail' },
   { route: '/settings/orgs' },

@@ -1,9 +1,15 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
+import { ApiError } from '../../api/http'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import SettingsSystemView from '../SettingsSystemView.vue'
 import { buildPatch, connectionText, draftFrom } from './settingsModel'
 
+vi.mock('vue-router', () => ({
+  useRouter: () => ({ push: vi.fn() }),
+  useRoute: () => ({ path: '/settings/system', query: {} }),
+  onBeforeRouteLeave: vi.fn(),
+}))
 vi.mock('../../api/client', () => ({
   api: { systemSettings: vi.fn(), patchSystemSettings: vi.fn(), readyz: vi.fn() },
 }))
@@ -126,10 +132,31 @@ describe('System view', () => {
     const w = mount(SettingsSystemView, { global: { stubs: { RouterLink: true } } })
     await flushPromises()
     await w.get('input[name=public_base_url]').setValue('http://new.lan')
-    await w.get('form[aria-label="Runtime settings"]').trigger('submit')
+    expect(w.find('.ui-savebar').exists()).toBe(true)
+    await w.get('.ui-savebar button:last-child').trigger('click')
     await flushPromises()
     expect(m.patchSystemSettings).toHaveBeenCalledWith({ public_base_url: 'http://new.lan' })
     expect(m.readyz).toHaveBeenCalled()
     expect(w.text()).toContain('Saved.')
+    expect(w.find('.ui-savebar').exists()).toBe(false)
+  })
+
+  it('a refused value is named under its field and kept in the draft', async () => {
+    m.systemSettings.mockResolvedValue(view())
+    m.patchSystemSettings.mockRejectedValue(
+      new ApiError(422, {
+        code: 'invalid_setting',
+        field: 'public_base_url',
+        detail: 'Not a URL',
+      } as never),
+    )
+    const w = mount(SettingsSystemView, { global: { stubs: { RouterLink: true } } })
+    await flushPromises()
+    await w.get('input[name=public_base_url]').setValue('nope')
+    await w.get('.ui-savebar button:last-child').trigger('click')
+    await flushPromises()
+    expect(w.get('[data-testid="setting-public_base_url"]').text()).toContain('Not a URL')
+    expect((w.get('input[name=public_base_url]').element as HTMLInputElement).value).toBe('nope')
+    expect(w.find('.ui-savebar').exists()).toBe(true)
   })
 })

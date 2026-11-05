@@ -3,9 +3,9 @@ import { ref } from 'vue'
 import { api } from '../../api/client'
 import { problemCode } from '../../api/http'
 import HuePicker from '../../components/HuePicker.vue'
-import ErrorBanner from '../../components/ErrorBanner.vue'
 import { useSessionStore } from '../../stores/session'
 import { useSetupStore } from '../../stores/setup'
+import { UiCard, UiTextField } from '../../ui'
 import { describeError } from '../shared'
 import StepButtons from './StepButtons.vue'
 import { validateOwner } from './validate'
@@ -51,56 +51,88 @@ async function next() {
 <template>
   <form
     v-if="setup.status?.owner_needed"
-    class="form"
+    class="step"
     data-testid="step-owner"
     @submit.prevent="next"
   >
-    <h2>You</h2>
-    <p class="muted">The first adult. You will be signed in and finish the rest as this person.</p>
-    <label class="field">
-      Your name
-      <input v-model="f.display_name" name="display_name" autocomplete="name" required />
-    </label>
-    <p v-if="errors.display_name" class="text-danger" role="alert">{{ errors.display_name }}</p>
-    <HuePicker v-model="f.color" name="color" />
-    <label class="field">
-      Username
-      <input v-model="f.username" name="username" autocomplete="username" required />
-    </label>
-    <p v-if="errors.username" class="text-danger" role="alert">{{ errors.username }}</p>
-    <label class="field">
-      Password (12 characters or more)
-      <input
-        v-model="f.password"
-        name="password"
-        type="password"
-        autocomplete="new-password"
-        required
-      />
-    </label>
-    <p v-if="errors.password" class="text-danger" role="alert">{{ errors.password }}</p>
-    <label class="field">
-      Password again
-      <input
-        v-model="f.again"
-        name="password_again"
-        type="password"
-        autocomplete="new-password"
-        required
-      />
-    </label>
-    <p v-if="errors.again" class="text-danger" role="alert">{{ errors.again }}</p>
-    <label class="field">
-      PIN for the wall screen (optional, 4 to 6 digits)
-      <input v-model="f.pin" name="pin" inputmode="numeric" autocomplete="off" maxlength="6" />
-    </label>
-    <p v-if="errors.pin" class="text-danger" role="alert">{{ errors.pin }}</p>
-    <ErrorBanner v-if="error" :message="error" />
-    <StepButtons :busy="busy" :back="!!setup.status?.needed" @back="setup.goto(2)" />
+    <UiCard>
+      <template #header>You</template>
+      <div class="stack">
+        <p class="muted">
+          The first adult. You will be signed in and finish the rest as this person.
+        </p>
+        <UiTextField
+          v-model="f.display_name"
+          label="Your name"
+          name="display_name"
+          autocomplete="name"
+          :error="errors.display_name"
+          required
+        />
+        <HuePicker v-model="f.color" name="color" />
+        <UiTextField
+          v-model="f.username"
+          label="Username"
+          name="username"
+          autocomplete="username"
+          :error="errors.username"
+          required
+        />
+        <UiTextField
+          v-model="f.password"
+          label="Password (12 characters or more)"
+          name="password"
+          type="password"
+          autocomplete="new-password"
+          :error="errors.password"
+          required
+        />
+        <UiTextField
+          v-model="f.again"
+          label="Password again"
+          name="password_again"
+          type="password"
+          autocomplete="new-password"
+          :error="errors.again"
+          required
+        />
+        <UiTextField
+          v-model="f.pin"
+          label="PIN for the wall screen (optional, 4 to 6 digits)"
+          name="pin"
+          inputmode="numeric"
+          autocomplete="off"
+          maxlength="6"
+          :error="errors.pin"
+        />
+        <p v-if="error" class="err" role="alert">{{ error }}</p>
+      </div>
+      <template #actions>
+        <StepButtons :busy="busy" :back="!!setup.status?.needed" @back="setup.goto(2)" />
+      </template>
+    </UiCard>
   </form>
-  <form v-else class="form" @submit.prevent="setup.goto(4)">
-    <h2>You</h2>
-    <p>Your account is ready.</p>
-    <StepButtons :back="false" />
+  <form v-else class="step" @submit.prevent="setup.goto(4)">
+    <UiCard>
+      <template #header>You</template>
+      <p class="muted">Your account is ready.</p>
+      <template #actions><StepButtons :back="false" /></template>
+    </UiCard>
   </form>
 </template>
+
+<style scoped>
+.stack {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+p {
+  margin: 0;
+}
+.muted {
+  color: var(--ui-on-surface-variant);
+}
+.err {
+  color: var(--ui-error);
+}
+</style>

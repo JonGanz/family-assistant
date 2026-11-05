@@ -15,6 +15,10 @@ const clickable = !!getCurrentInstance()?.vnode.props?.onClick
 const tag = computed(() =>
   props.to ? RouterLink : props.href ? 'a' : clickable ? 'button' : 'div',
 )
+// An undefined href passed to RouterLink would replace the one it computes.
+const linkAttrs = computed(() =>
+  props.to ? { to: props.to } : props.href ? { href: props.href } : {},
+)
 const interactive = computed(() => tag.value !== 'div')
 const lines = computed(() => 1 + (props.supporting ? 1 : 0) + (props.overline ? 1 : 0))
 </script>
@@ -25,8 +29,7 @@ const lines = computed(() => 1 + (props.supporting ? 1 : 0) + (props.overline ? 
       :is="tag"
       class="ui-li__row"
       :class="{ 'is-interactive': interactive }"
-      :to="to"
-      :href="href"
+      v-bind="linkAttrs"
       :type="tag === 'button' ? 'button' : undefined"
       :disabled="tag === 'button' ? disabled : undefined"
       @click="$emit('click', $event)"

@@ -236,7 +236,8 @@ pub async fn calendar(
     action: CalendarAction,
 ) -> Result<()> {
     let CalendarAction::Sync { source } = action;
-    let services = wiring::build_services(cfg, store)?;
+    let llm = wiring::llm_provider(cfg, store)?;
+    let services = wiring::build_services(cfg, store, &llm)?;
     let (hid, name) = source_household(store, household, source).await?;
     let before = window_event_count(&services, store, hid).await?;
     services
@@ -410,10 +411,11 @@ pub async fn mail(
     action: MailAction,
 ) -> Result<()> {
     let hid = require_household(store, household).await?;
-    let services = wiring::build_services(cfg, store)?;
+    let llm = wiring::llm_provider(cfg, store)?;
+    let services = wiring::build_services(cfg, store, &llm)?;
     crate::mail::run(
         store,
-        wiring::mail_deps(cfg, store, &services.oauth)?,
+        wiring::mail_deps(cfg, store, &services.oauth, &llm)?,
         hid,
         action,
     )

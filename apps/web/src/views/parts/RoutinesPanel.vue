@@ -1,10 +1,24 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { api, type CalendarView, type RoutineView } from '../../api/client'
-import ErrorBanner from '../../components/ErrorBanner.vue'
+import ResponsiveItems from '../../app/ResponsiveItems.vue'
 import { useMembersStore } from '../../stores/members'
 import { useRoutinesStore } from '../../stores/routines'
+import {
+  UiButton,
+  UiCheckbox,
+  UiEmptyState,
+  UiIconButton,
+  UiSelect,
+  UiSkeleton,
+  UiTextField,
+} from '../../ui'
 import { describeError } from '../shared'
+import ConfirmDialog from './settings-mail/ConfirmDialog.vue'
+import PageFab from './settings-mail/PageFab.vue'
+import PageNotices from './settings-mail/PageNotices.vue'
+import SheetForm from './settings-mail/SheetForm.vue'
+import { useConfirm } from './settings-mail/useConfirm'
 import {
   emptyRoutineForm,
   routineFormFrom,
@@ -20,6 +34,17 @@ const editing = ref<string | null>(null)
 const form = reactive<RoutineForm>(emptyRoutineForm())
 const calendars = ref<CalendarView[]>([])
 const error = ref('')
+const confirm = useConfirm()
+const dayOptions = [
+  { value: 'daily', label: 'Every day' },
+  { value: 'weekdays', label: 'Weekdays' },
+  { value: 'weekends', label: 'Weekends' },
+  { value: 'school_days', label: 'School days' },
+]
+const calendarOptions = computed(() => [
+  { value: '', label: 'None (acts like weekdays)' },
+  ...calendars.value.map((c) => ({ value: c.id, label: c.name })),
+])
 const problems = computed(() => routineProblems(form))
 
 onMounted(async () => {
@@ -63,118 +88,169 @@ async function save() {
     error.value = describeError(e, 'Save failed.')
   }
 }
-async function remove(r: RoutineView) {
-  if (!confirm(`Delete the routine “${r.name}”?`)) return
-  try {
-    await routines.remove(r.id)
-  } catch (e) {
-    error.value = describeError(e, 'Could not delete the routine.')
-  }
-}
+const remove = (r: RoutineView) =>
+  confirm.ask(`Delete the routine “${r.name}”?`, 'Its steps and history go with it.', async () => {
+    try {
+      await routines.remove(r.id)
+    } catch (e) {
+      error.value = describeError(e, 'Could not delete the routine.')
+    }
+  })
 </script>
 
 <template>
-  <div>
-    <ErrorBanner v-if="routines.error" :message="routines.error" />
-    <ErrorBanner v-if="error && editing === null" :message="error" />
-    <ul class="card-list">
-      <li v-for="r in routines.items" :key="r.id" :data-testid="`routine-${r.name}`">
-        <strong>{{ r.name }}</strong>
-        <p class="muted">
-          {{ r.members.map(nameOf).join(', ') }} · {{ r.starts_at.slice(0, 5) }}–{{
-            r.done_by.slice(0, 5)
-          }}
-          · {{ r.steps.length }} steps · {{ r.day_filter.replace('_', ' ') }}
-        </p>
-        <button type="button" @click="open(r)">Edit</button>
-        <button type="button" @click="remove(r)">Delete</button>
-      </li>
-    </ul>
+  <div class="panel">
+    <PageNotices
+      :load-error="routines.error"
+      :conflict="routines.conflict && !editing"
+      :error="editing ? '' : error"
+      @reload="routines.load()"
+    />
+    <UiSkeleton v-if="!routines.loaded && !routines.error" :lines="3" />
+    <UiEmptyState
+      v-else-if="routines.loaded && !routines.items.length"
+      icon="routines"
+      title="No routines yet."
+    />
+    <ResponsiveItems :items="routines.items">
+      <template #item="{ item: r }">
+        <div class="item" :data-testid="`routine-${r.name}`">
+          <strong class="item__name">{{ r.name }}</strong>
+          <p class="meta">
+            {{ r.members.map(nameOf).join(', ') }} · {{ r.starts_at.slice(0, 5) }}–{{
+              r.done_by.slice(0, 5)
+            }}
+            · {{ r.steps.length }} steps · {{ r.day_filter.replace('_', ' ') }}
+          </p>
+          <div class="item__row">
+            <UiButton variant="text" @click="open(r)">Edit</UiButton>
+            <UiButton variant="text" @click="remove(r)">Delete</UiButton>
+          </div>
+        </div>
+      </template>
+    </ResponsiveItems>
 
-    <form v-if="editing" class="form" @submit.prevent="save">
-      <h2>{{ editing === 'new' ? 'New routine' : 'Edit routine' }}</h2>
-      <label>Name <input v-model="form.name" name="name" required /></label>
+    <PageFab label="Add a routine" @click="open(null)" />
+    <SheetForm
+      :model-value="!!editing"
+      :title="editing === 'new' ? 'New routine' : 'Edit routine'"
+      :save-disabled="problems.length > 0"
+      @update:model-value="editing = null"
+      @save="save"
+    >
+      <UiTextField v-model="form.name" label="Name" name="name" required />
       <fieldset>
         <legend>Who</legend>
-        <label v-for="m in members.items" :key="m.id" class="field-inline">
-          <input
-            type="checkbox"
-            :checked="form.members.includes(m.id)"
-            @change="toggleMember(m.id)"
-          />
-          {{ m.display_name }}
-        </label>
+        <UiCheckbox
+          v-for="m in members.items"
+          :key="m.id"
+          :model-value="form.members.includes(m.id)"
+          :label="m.display_name"
+          @update:model-value="toggleMember(m.id)"
+        />
       </fieldset>
-      <label>Starts <input v-model="form.startsAt" name="starts_at" type="time" required /></label>
-      <label>Done by <input v-model="form.doneBy" name="done_by" type="time" required /></label>
+      <UiTextField v-model="form.startsAt" label="Starts" name="starts_at" type="time" required />
+      <UiTextField v-model="form.doneBy" label="Done by" name="done_by" type="time" required />
       <fieldset>
         <legend>Steps</legend>
         <div v-for="(s, i) in form.steps" :key="i" class="step">
-          <input v-model="s.text" :aria-label="`Step ${i + 1}`" placeholder="Brush teeth" />
-          <input v-model="s.target" type="time" :aria-label="`Target time for step ${i + 1}`" />
-          <button type="button" :disabled="i === 0" aria-label="Move up" @click="move(i, -1)">
-            ↑
-          </button>
-          <button
-            type="button"
-            :disabled="i === form.steps.length - 1"
-            aria-label="Move down"
-            @click="move(i, 1)"
-          >
-            ↓
-          </button>
-          <button type="button" aria-label="Remove step" @click="form.steps.splice(i, 1)">✕</button>
+          <UiTextField v-model="s.text" :label="`Step ${i + 1}`" placeholder="Brush teeth" />
+          <UiTextField v-model="s.target" type="time" :label="`Target time for step ${i + 1}`" />
+          <div class="step__btns">
+            <UiIconButton
+              icon="collapse"
+              label="Move up"
+              :disabled="i === 0"
+              @click="move(i, -1)"
+            />
+            <UiIconButton
+              icon="expand"
+              label="Move down"
+              :disabled="i === form.steps.length - 1"
+              @click="move(i, 1)"
+            />
+            <UiIconButton icon="close" label="Remove step" @click="form.steps.splice(i, 1)" />
+          </div>
         </div>
-        <button type="button" @click="form.steps.push({ text: '', target: '' })">Add step</button>
+        <div>
+          <UiButton variant="tonal" icon="add" @click="form.steps.push({ text: '', target: '' })"
+            >Add step</UiButton
+          >
+        </div>
       </fieldset>
-      <label>
-        Days
-        <select v-model="form.dayFilter" name="day_filter">
-          <option value="daily">Every day</option>
-          <option value="weekdays">Weekdays</option>
-          <option value="weekends">Weekends</option>
-          <option value="school_days">School days</option>
-        </select>
-      </label>
+      <UiSelect
+        :model-value="form.dayFilter ?? 'daily'"
+        label="Days"
+        :options="dayOptions"
+        @update:model-value="form.dayFilter = $event as typeof form.dayFilter"
+      />
       <template v-if="form.dayFilter === 'school_days'">
-        <label>
-          School calendar
-          <select v-model="form.schoolCalendar" name="school_calendar">
-            <option value="">None (acts like weekdays)</option>
-            <option v-for="c in calendars" :key="c.id" :value="c.id">{{ c.name }}</option>
-          </select>
-        </label>
-        <label>
-          A day is off when an all-day event contains (comma separated)
-          <input v-model="form.keywords" name="keywords" />
-        </label>
+        <UiSelect
+          v-model="form.schoolCalendar"
+          label="School calendar"
+          :options="calendarOptions"
+        />
+        <UiTextField
+          v-model="form.keywords"
+          label="A day is off when an all-day event contains (comma separated)"
+          name="keywords"
+        />
       </template>
-      <label class="field-inline">
-        <input v-model="form.showOnDashboard" type="checkbox" name="show_on_dashboard" />
-        Show on the dashboard
-      </label>
-      <ul v-if="problems.length" class="muted">
+      <UiCheckbox v-model="form.showOnDashboard" label="Show on the dashboard" />
+      <ul v-if="problems.length" class="meta">
         <li v-for="p in problems" :key="p">{{ p }}</li>
       </ul>
-      <ErrorBanner v-if="routines.conflict" conflict @reload="routines.load()" />
-      <ErrorBanner v-if="error" :message="error" />
-      <div class="row">
-        <button type="submit" :disabled="problems.length > 0">Save</button>
-        <button type="button" @click="editing = null">Cancel</button>
-      </div>
-    </form>
-    <button v-else type="button" @click="open(null)">Add a routine</button>
+      <p v-if="error" role="alert">{{ error }}</p>
+    </SheetForm>
+    <ConfirmDialog
+      :pending="confirm.pending.value"
+      @accept="confirm.accept"
+      @cancel="confirm.cancel"
+    />
   </div>
 </template>
 
 <style scoped>
-.step,
-.row {
-  display: flex;
-  gap: var(--space-2);
-  align-items: center;
+.panel,
+.item {
+  display: grid;
+  gap: var(--ui-space-3);
 }
-.step input:first-child {
-  flex: 1;
+.item {
+  gap: var(--ui-space-2);
+}
+.item__row {
+  display: flex;
+  gap: var(--ui-space-2);
+}
+.item__name {
+  font: var(--ui-type-title-md);
+}
+.meta {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
+}
+fieldset {
+  display: grid;
+  gap: var(--ui-space-3);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+legend {
+  padding: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-label-lg);
+}
+.step {
+  display: grid;
+  gap: var(--ui-space-2);
+  padding-bottom: var(--ui-space-3);
+  border-bottom: 1px solid var(--ui-outline-variant);
+}
+.step__btns {
+  display: flex;
+  gap: var(--ui-space-1);
 }
 </style>

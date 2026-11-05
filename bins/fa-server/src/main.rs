@@ -1,6 +1,7 @@
 //! fa-server: the Family Assistant server and its operator CLI.
 
 mod cli;
+mod eval;
 mod init;
 mod mail;
 mod ops;
@@ -52,6 +53,15 @@ async fn main() -> Result<()> {
                 }
                 Command::Tasks { action } => ops::tasks(&store, cli.household, action).await,
                 Command::Mail { action } => ops::mail(&cfg, &store, cli.household, action).await,
+                Command::Eval {
+                    decision_point,
+                    with_llm,
+                    limit,
+                    json,
+                } => {
+                    let opts = fa_eval::EvalOpts { with_llm, limit };
+                    eval::run(&cfg, &store, cli.household, decision_point, opts, json).await
+                }
                 Command::GenOpenapi { .. } | Command::Init { .. } => {
                     unreachable!("handled above")
                 }

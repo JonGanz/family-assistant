@@ -1,36 +1,80 @@
 <script setup lang="ts">
+// System settings (D-052, D-075). Runtime values are one draft with one Save bar: saving makes the
+// server re-read its settings, so the page waits for /readyz and then shows the stored state.
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue'
 import { api, type SettingView, type SystemSettingsView } from '../api/client'
 import { ApiError, problemCode } from '../api/http'
-import ErrorBanner from '../components/ErrorBanner.vue'
-import PageHeader from '../components/PageHeader.vue'
+import SettingsPage from '../app/SettingsPage.vue'
+import {
+  UiButton,
+  UiCard,
+  UiCheckbox,
+  UiChip,
+  UiErrorState,
+  UiIcon,
+  UiSaveBar,
+  UiSkeleton,
+  UiTextField,
+  useFormDraft,
+} from '../ui'
 import { describeError } from './shared'
 import MasterKeyBackup from './system/MasterKeyBackup.vue'
-import { buildPatch, connectionText, draftFrom, metaFor, type Draft } from './system/settingsModel'
+import {
+  buildPatch,
+  connectionText,
+  draftFrom,
+  groupSettings,
+  metaFor,
+  type Draft,
+} from './system/settingsModel'
 
 const view = ref<SystemSettingsView | null>(null)
-const drafts = reactive<Record<string, Draft>>({})
 const errors = reactive<Record<string, string>>({})
 const loadError = ref('')
-const error = ref('')
 const message = ref('')
-const applying = ref(false)
 const restartNote = ref(false)
 const backupOpen = ref(false)
 let timer: ReturnType<typeof setTimeout> | undefined
 let gone = false
 
 const settings = computed(() => view.value?.settings ?? [])
+const groups = computed(() => groupSettings(settings.value))
 const needsBackup = computed(() => !!view.value && !view.value.key_backup_confirmed_at)
 
-function fill(v: SystemSettingsView) {
-  view.value = v
-  for (const s of v.settings) drafts[s.key] = draftFrom(s)
-}
+const form = useFormDraft<Record<string, Draft>>(
+  () => Object.fromEntries(settings.value.map((s) => [s.key, draftFrom(s)])),
+  async (drafts) => {
+    message.value = ''
+    for (const k of Object.keys(errors)) delete errors[k]
+    const patch = buildPatch(settings.value, drafts)
+    try {
+      const next = await api.patchSystemSettings(patch as never)
+      restartNote.value = Object.keys(patch).some((k) => metaFor(k).restart)
+      await waitReady()
+      view.value = next
+      message.value = 'Saved.'
+    } catch (e) {
+      const code = problemCode(e)
+      if (code === 'invalid_setting' && e instanceof ApiError) {
+        const field = e.problem.field
+        if (typeof field === 'string') errors[field] = e.message
+        throw new Error(e.message, { cause: e })
+      }
+      if (code === 'setting_locked') {
+        await load()
+        throw new Error('One of those settings is set by the server and cannot be changed here.', {
+          cause: e,
+        })
+      }
+      throw new Error(describeError(e, 'Save failed.'), { cause: e })
+    }
+  },
+)
+const drafts = form.draft
 
 async function load() {
   try {
-    fill(await api.systemSettings())
+    view.value = await api.systemSettings()
     loadError.value = ''
   } catch (e) {
     loadError.value = describeError(e, 'Could not load the system settings.')
@@ -44,6 +88,7 @@ onUnmounted(() => {
 
 const hint = (s: SettingView) =>
   s.locked ? 'Set by the server (an environment variable), so it cannot be changed here.' : ''
+const field = (key: string) => drafts.value[key]!
 
 /** After a save the server re-reads its settings; wait until it answers /readyz again. */
 async function waitReady(tries = 20): Promise<void> {
@@ -57,39 +102,6 @@ async function waitReady(tries = 20): Promise<void> {
   }
 }
 
-async function save() {
-  error.value = ''
-  message.value = ''
-  for (const k of Object.keys(errors)) delete errors[k]
-  const patch = buildPatch(settings.value, drafts)
-  if (Object.keys(patch).length === 0) {
-    message.value = 'Nothing changed.'
-    return
-  }
-  applying.value = true
-  try {
-    const next = await api.patchSystemSettings(patch as never)
-    restartNote.value = Object.keys(patch).some((k) => metaFor(k).restart)
-    await waitReady()
-    fill(next)
-    message.value = 'Saved.'
-  } catch (e) {
-    const code = problemCode(e)
-    if (code === 'invalid_setting' && e instanceof ApiError) {
-      const field = e.problem.field
-      if (typeof field === 'string') errors[field] = e.message
-      else error.value = e.message
-    } else if (code === 'setting_locked') {
-      error.value = 'One of those settings is set by the server and cannot be changed here.'
-      await load()
-    } else {
-      error.value = describeError(e, 'Save failed.')
-    }
-  } finally {
-    applying.value = false
-  }
-}
-
 function backedUp() {
   backupOpen.value = false
   void load()
@@ -97,117 +109,153 @@ function backedUp() {
 </script>
 
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader eyebrow="System" title="System" />
-    <ErrorBanner v-if="loadError" :message="loadError" />
+  <SettingsPage title="System">
+    <UiErrorState v-if="loadError" :message="loadError" @retry="load" />
+    <UiSkeleton v-else-if="!view" :lines="5" />
 
     <template v-if="view">
-      <section class="card" aria-label="Connection" data-testid="connection">
-        <h2>Connection</h2>
+      <UiCard variant="outlined" aria-label="Connection" data-testid="connection">
+        <template #header>Connection</template>
         <p data-testid="connection-text">{{ connectionText(view.connection) }}</p>
-      </section>
+      </UiCard>
 
-      <section
+      <UiCard
         v-if="needsBackup || backupOpen"
-        class="card backup"
+        variant="outlined"
         aria-label="Master key backup"
         data-testid="backup-warning"
       >
-        <h2>Master key backup</h2>
+        <template #header
+          ><span class="warn"><UiIcon name="warning" /> Master key backup</span></template
+        >
         <template v-if="!backupOpen">
           <p>
             You have not confirmed a backup of the master key yet. Without it, stored secrets are
             lost if this server's disk is.
           </p>
-          <button type="button" class="btn-primary" @click="backupOpen = true">Back up now</button>
         </template>
         <MasterKeyBackup v-else @confirmed="backedUp" />
-      </section>
-      <p v-else class="muted" data-testid="backup-done">
-        Master key backup confirmed.
-        <button type="button" class="btn-sm" @click="backupOpen = true">Show the key again</button>
-      </p>
+        <template v-if="!backupOpen" #actions>
+          <UiButton @click="backupOpen = true">Back up now</UiButton>
+        </template>
+      </UiCard>
+      <UiCard v-else data-testid="backup-done">
+        <p>Master key backup confirmed.</p>
+        <template #actions>
+          <UiButton variant="text" @click="backupOpen = true">Show the key again</UiButton>
+        </template>
+      </UiCard>
 
-      <form class="form form-wide" aria-label="Runtime settings" @submit.prevent="save">
-        <h2>Runtime settings</h2>
-        <div v-for="s in settings" :key="s.key" class="setting" :data-testid="`setting-${s.key}`">
-          <template v-if="drafts[s.key]">
-            <label v-if="s.kind === 'bool'" class="field-inline">
-              <input
-                v-model="drafts[s.key]!.value"
-                type="checkbox"
-                :name="s.key"
-                :disabled="s.locked || applying"
+      <form class="runtime" aria-label="Runtime settings" @submit.prevent="form.save()">
+        <UiCard v-for="g in groups" :key="g.title">
+          <template #header>{{ g.title }}</template>
+          <div v-for="s in g.items" :key="s.key" class="setting" :data-testid="`setting-${s.key}`">
+            <template v-if="drafts[s.key]">
+              <UiCheckbox
+                v-if="s.kind === 'bool'"
+                :model-value="field(s.key).value as boolean"
+                :label="metaFor(s.key).label"
+                :disabled="s.locked || form.saving.value"
+                @update:model-value="field(s.key).value = $event"
               />
-              {{ metaFor(s.key).label }}
-            </label>
-            <label v-else-if="s.kind === 'cidrs'" class="field">
-              {{ metaFor(s.key).label }}
-              <textarea
-                v-model="drafts[s.key]!.value as string"
+              <UiTextField
+                v-else-if="s.kind === 'cidrs'"
+                :model-value="field(s.key).value as string"
+                :label="metaFor(s.key).label"
                 :name="s.key"
-                rows="3"
-                :disabled="s.locked || applying"
+                multiline
+                :disabled="s.locked || form.saving.value"
+                :error="errors[s.key]"
+                @update:model-value="field(s.key).value = $event"
               />
-            </label>
-            <template v-else-if="s.kind === 'secret'">
-              <label class="field">
-                {{ metaFor(s.key).label }}
-                <span class="muted" :data-testid="`secret-state-${s.key}`">{{
-                  s.is_set ? 'set' : 'not set'
-                }}</span>
-                <input
-                  v-model="drafts[s.key]!.value as string"
+              <template v-else-if="s.kind === 'secret'">
+                <div class="secret">
+                  <span>{{ metaFor(s.key).label }}</span>
+                  <UiChip
+                    :icon="s.is_set ? 'success' : 'info'"
+                    :data-testid="`secret-state-${s.key}`"
+                    >{{ s.is_set ? 'set' : 'not set' }}</UiChip
+                  >
+                </div>
+                <UiTextField
+                  :model-value="field(s.key).value as string"
+                  :label="s.is_set ? 'Replace with' : 'Value'"
                   :name="s.key"
                   type="password"
                   autocomplete="new-password"
                   :placeholder="s.is_set ? 'Type to replace' : 'Not set'"
-                  :disabled="s.locked || applying"
+                  :disabled="s.locked || form.saving.value"
+                  :error="errors[s.key]"
+                  @update:model-value="field(s.key).value = $event"
                 />
-              </label>
-              <label v-if="s.is_set && !s.locked" class="field-inline">
-                <input v-model="drafts[s.key]!.clear" type="checkbox" :disabled="applying" />
-                Clear the stored value
-              </label>
-            </template>
-            <label v-else class="field">
-              {{ metaFor(s.key).label }}
-              <input
-                v-model="drafts[s.key]!.value as string"
+                <UiCheckbox
+                  v-if="s.is_set && !s.locked"
+                  :model-value="field(s.key).clear"
+                  label="Clear the stored value"
+                  :disabled="form.saving.value"
+                  @update:model-value="field(s.key).clear = $event"
+                />
+              </template>
+              <UiTextField
+                v-else
+                :model-value="field(s.key).value as string"
+                :label="metaFor(s.key).label"
                 :name="s.key"
                 :type="s.kind === 'url' ? 'url' : 'text'"
-                :disabled="s.locked || applying"
+                :disabled="s.locked || form.saving.value"
+                :error="errors[s.key]"
+                @update:model-value="field(s.key).value = $event"
               />
-            </label>
-            <p v-if="metaFor(s.key).help" class="muted">{{ metaFor(s.key).help }}</p>
-            <p v-if="metaFor(s.key).restart && !s.locked" class="muted">
-              A change here needs a server restart to take effect.
-            </p>
-            <p v-if="s.locked" class="muted" data-testid="locked-note">{{ hint(s) }}</p>
-            <p v-if="errors[s.key]" class="text-danger" role="alert">{{ errors[s.key] }}</p>
-          </template>
-        </div>
-        <ErrorBanner v-if="error" :message="error" />
-        <p v-if="applying" role="status" data-testid="applying">Applying…</p>
-        <p v-else-if="message" class="text-success" role="status">{{ message }}</p>
-        <p v-if="restartNote && !applying" class="muted">
+              <p v-if="metaFor(s.key).help" class="note">{{ metaFor(s.key).help }}</p>
+              <p v-if="metaFor(s.key).restart && !s.locked" class="note">
+                A change here needs a server restart to take effect.
+              </p>
+              <p v-if="s.locked" class="note" data-testid="locked-note">
+                <UiIcon name="lock" :size="20" /> {{ hint(s) }}
+              </p>
+            </template>
+          </div>
+        </UiCard>
+        <p v-if="form.saving.value" role="status" data-testid="applying">Applying…</p>
+        <p v-else-if="message" role="status">{{ message }}</p>
+        <p v-if="restartNote && !form.saving.value" class="note">
           Some of these changes take effect after the server restarts.
         </p>
-        <button type="submit" class="btn-primary" :disabled="applying">Save</button>
+        <UiSaveBar
+          :dirty="form.dirty.value"
+          :saving="form.saving.value"
+          :error="form.error.value"
+          @save="form.save()"
+          @discard="form.discard()"
+        />
       </form>
     </template>
-  </section>
+  </SettingsPage>
 </template>
 
 <style scoped>
-.card {
-  margin-bottom: var(--space-4);
+.runtime {
+  display: grid;
+  gap: var(--ui-space-3);
 }
 .setting {
   display: grid;
-  gap: var(--space-1);
+  gap: var(--ui-space-2);
 }
-.backup {
-  border-color: var(--color-warning);
+.secret {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+}
+.note {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
+}
+.warn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  color: var(--ui-warning);
 }
 </style>

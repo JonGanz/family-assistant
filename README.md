@@ -13,7 +13,7 @@ where rules can't decide.
 > recurring chores, routines, the "Now" list, weather tasks, ntfy push notifications) it reads
 > email (Gmail API or IMAP), sorts it with deterministic rules, links it to family members, and
 > proposes events, bills and tasks that wait for your approval in an inbox. Smart assistance with
-> local AI models comes next (see [Roadmap](#roadmap)).
+> local AI models is optional (see [Local AI](#local-ai-optional)).
 
 ## Contents
 - [Run it locally](#run-it-locally)
@@ -21,6 +21,7 @@ where rules can't decide.
 - [Weather and the household location](#weather-and-the-household-location)
 - [Tasks, routines and notifications](#tasks-routines-and-notifications)
 - [Mail, inbox and bills](#mail-inbox-and-bills)
+- [Local AI (optional)](#local-ai-optional)
 - [The dashboard layout](#the-dashboard-layout)
 - [Configuration reference](#configuration-reference)
 - [Day-to-day development](#day-to-day-development)
@@ -344,8 +345,8 @@ quiet hours. Tapping a notification opens the app (the link uses the public addr
 ## Mail, inbox and bills
 Mail ingest turns the household's email into a short list of things that need a decision. The
 M3 pipeline is **rules only**: deterministic rules, headers, parsers and schema.org data decide,
-nothing is sent to a cloud service, and no AI model runs yet (M4 adds those, and what you label now
-becomes their evaluation set).
+nothing is sent to a cloud service. Since M4 an optional local LLM can handle what the rules cannot
+([Local AI](#local-ai-optional)); it is off until you set it up, and what you label becomes the evaluation set.
 
 ### Sources
 **Settings, Mail** adds mailboxes: **Gmail** (Google sign-in with the Gmail API) or **IMAP** (any
@@ -426,6 +427,45 @@ decisions as chips: category, time-sensitive, who it is about and is-it-a-bill. 
 records your confirmation, and fixing a chip records your answer as a human decision. Tick *In the
 evaluation sample* to count a message toward the held-out set; the progress bar counts labelled
 messages of that sample (200 by default).
+
+## Local AI (optional)
+With a local LLM enabled, mail the rules can't settle gets a second opinion (category, time-sensitive, member
+link, is it a bill), and the LLM extracts events, bills and tasks for the approval inbox. **Nothing is applied
+without approval**: AI items wait in the inbox with an "AI" chip. Without the LLM, or while it is unreachable,
+everything works as before. Any OpenAI-compatible server works (D-093); the default is
+[Ollama](https://ollama.com/) on a GPU PC (about 7 to 8B models at Q4 fit an 8 GB card).
+
+**Set up Ollama on the GPU PC**
+1. Install Ollama with the official installer from [ollama.com/download](https://ollama.com/download).
+2. Bind it to the PC's **LAN or tailnet address**, not the default loopback. On Linux:
+   `sudo systemctl edit ollama`, add
+   ```ini
+   [Service]
+   Environment="OLLAMA_HOST=192.168.1.20:11434"
+   ```
+   then `sudo systemctl restart ollama`. (Use your PC's own address, or its tailnet name such as `gpu-pc.example.ts.net`.)
+3. `ollama pull qwen3:8b`
+
+> **Security:** Ollama has no authentication. Never bind it to a public address and never forward its port.
+> LAN or tailnet only.
+
+**Connect the app:** Settings, AI. Enter the base URL (`http://192.168.1.20:11434/v1`) and the model, press
+**Test connection** (it reports latency and whether the model exists), then enable the endpoint and the AI stage
+of each decision point you want. If the server needs a key, add it there; it is stored encrypted and never shown again.
+Alternatively, `docker compose --profile gpu up -d ollama` runs Ollama as a container ([deploy guide](deploy/README.md#85-other-profiles));
+a natively installed Ollama is the default.
+
+**When the PC is off or asleep:** AI jobs wait and retry for about a day, and the rules keep working. Items appear
+once the PC is back.
+
+**Measure it.** `fa-server eval` replays your labelled mail through the pipeline and prints accuracy, coverage and
+latency. It only reads (decisions and messages) and writes nothing; run it yourself on your own data:
+```bash
+cargo run -p fa-server -- eval --decision-point email.category            # rules only
+cargo run -p fa-server -- eval --decision-point email.category --with-llm --limit 100 --json
+```
+Decision points: `email.category`, `email.time_sensitive`, `email.member_link`, `email.is_bill`. Add
+`--household <uuid>` if the database holds several. `--with-llm` without an enabled endpoint exits with code 2.
 
 ## The dashboard layout
 Each paired device has its own layout: **Settings, Devices, Edit layout** lets you pick a preset,
@@ -527,6 +567,7 @@ value. Saving a changed setting restarts the app by itself in about a second, on
 | `mail process-now` | Process the household's pending messages in this process |
 | `calendar sync <source-id>` | Sync one calendar source now, in this process, and print what changed |
 | `weather fetch` | Fetch the forecast now, evaluate the rules and print the result |
+| `eval --decision-point <dp> [--with-llm] [--limit N] [--json]` | Read-only replay of the labelled mail sample, see [Local AI](#local-ai-optional). `--with-llm` without an enabled endpoint exits 2 |
 | `gen-openapi` | Write the OpenAPI document |
 
 ## Day-to-day development
@@ -577,7 +618,8 @@ scripts/e2e.sh
 | `python3 tools/fa.py check` | Lints the design tree (`arch/`, `design/`, `decisions/`, `log/`, `plan/`, `research/`): front-matter keys, status values, id/filename parity, duplicate numbers, index ⇄ file parity. CI runs it |
 | `python3 tools/fa.py <subcommand> --flags` | The design-workflow CLI (`--help` lists everything; keyword flags only, long text as `@path`; tested by `python3 tools/test_fa.py`, which `scripts/ci-local.sh` runs). Subcommands: `check`, `check-yaml`, `next-id --kind q\|d`, `answered`, `new-q`, `new-d`, `resolve`, `supersede`, `annotate`, `log`, `status`, `rebuild-design-index`. Every writer stamps `updated:` in the index it touches. Set `FA_ROOT` or `--root` to run against another tree |
 | [`STATUS.md`](STATUS.md) | **Generated** by `python3 tools/fa.py status`, do not edit: open questions, open human steps, unfinished tasks of plans that are not closed, and the newest log. Re-run it after changing any of those |
-| [`scripts/ci-local.sh`](scripts/ci-local.sh) | Mirrors `.github/workflows/ci.yml` (manual-dispatch only; GitHub runs just the tagged release builds): fmt, clippy, tests against a **fresh throwaway Postgres** with `SQLX_OFFLINE=true`, the GreenMail-gated IMAP tests (a throwaway GreenMail), cargo-deny (if installed), the example-data hygiene check, and web lint, typecheck, test and build. `--no-web` skips the web part |
+| [`scripts/ci-local.sh`](scripts/ci-local.sh) | Mirrors `.github/workflows/ci.yml` (manual-dispatch only; GitHub runs just the tagged release builds): fmt, clippy, tests against a **fresh throwaway Postgres** with `SQLX_OFFLINE=true`, the GreenMail-gated IMAP tests (a throwaway GreenMail), cargo-deny (if installed), the example-data hygiene check, and web lint, typecheck, test and build. `--no-web` skips the web part. Without `cargo-nextest` it runs `cargo test` with `--test-threads=4`; `cargo install cargo-nextest` matches GitHub CI |
+| [`scripts/ui-shots.sh`](scripts/ui-shots.sh) | Review screenshots of the UI into `apps/web/test-results/ui-shots/`. `--gallery` (default) shoots the dev-only `/ui-gallery` on a Vite dev server, no backend; `--all` also shoots every app route against the e2e stack (needs Docker). It sets `UI_SHOTS=1`, which enables the `@shots` Playwright specs; `UI_SHOTS_AREAS=tasks,mail` narrows the run |
 | [`scripts/e2e.sh`](scripts/e2e.sh) | The end-to-end suite. Starts a throwaway Postgres, `serve api` and `serve worker` as **separate processes**, a fixture server (ICS calendars and an Open-Meteo stub, [`e2e/stubs/`](e2e/stubs/) and [`e2e/fixtures/`](e2e/fixtures/)), Radicale (CalDAV, `tomsquest/docker-radicale`, also the writable calendar for approved events), a real ntfy (`binwiederhier/ntfy`) and a GreenMail (`greenmail/standalone`, fictional fixture mails from [`e2e/fixtures/mail/`](e2e/fixtures/mail/)), seeds the example household, sources, a device, task lists, chores, a routine, a weather rule and an IMAP mailbox through the API, runs `tasks run-now` and `mail sync-now`, then runs the Playwright API specs (`e2e/`) and UI specs (`apps/web/e2e/`). Everything is torn down on exit. It also starts two empty-database instances for the setup API and wizard specs; the wizard one is browsed through the host's LAN address so it is a plain-HTTP, non-secure context. `FA_E2E_HOLD=<seconds>` keeps the seeded stack up for debugging |
 | [`scripts/compose-smoke.sh`](scripts/compose-smoke.sh) | Builds the image, starts `deploy/compose.yaml` (with the build overlay) with **no `.env`**, checks the generated secrets and their idempotence, runs setup through the API over plain HTTP (no `Secure` cookie), takes an on-demand backup and checks that `down -v` leaves no volumes. `FA_SMOKE_IMAGE` (optional) tests a prebuilt image instead. CI runs it as the `compose-smoke` job |
 | [`scripts/restore-rehearsal.sh`](scripts/restore-rehearsal.sh) | Restores a backup dump into a fresh Postgres and checks the app comes up with the same data |
@@ -616,7 +658,7 @@ notification settings and shows the master key to back up. Until the first relea
 
 **Never expose the app to the public internet.** The default services are `init`, `postgres`, `app` (the API,
 the web app and the jobs in one container), `ntfy` and `backup`; profiles add `tailscale`, `gpu` (Ollama) and
-`ai-cpu` (a placeholder until M4). Settings that belong to the installation live in **Settings, System** (see the
+`ai-cpu` (a placeholder until M4.1; a natively installed Ollama is the default LLM server). Settings that belong to the installation live in **Settings, System** (see the
 [Configuration reference](#configuration-reference)). The runbooks for restoring a backup and rotating the key
 are in [`deploy/runbooks/`](deploy/runbooks/).
 
@@ -630,9 +672,11 @@ crates/          Rust libraries: fa-domain (types and permissions), fa-store (DB
                  hours, batching, ntfy delivery), fa-rules (pure mail rules: parsing, signals,
                  extractors), fa-pipeline (the decision pipeline engine and its decision log),
                  fa-mail (sources, Gmail and IMAP sync, processing, the inbox, bills and
-                 actions, labelling)
-bins/            fa-server (server and operator CLI), fa-gpu-agent (GPU node helper, M4)
-apps/web/        Vue 3 + TypeScript PWA, including the /dashboard kiosk view
+                 actions, labelling), fa-llm (OpenAI-compatible client, the call log), fa-recipe
+                 (recipe extraction: schema.org first, LLM fallback), fa-eval (replay of the labelled sample)
+bins/            fa-server (server and operator CLI), fa-gpu-agent (optional GPU node helper, M4.1)
+apps/web/        Vue 3 + TypeScript PWA, including the /dashboard kiosk view; src/ui is the component library
+                 (dev-only gallery at /ui-gallery)
 e2e/             Playwright API specs, the fixture server, ICS and mail fixtures (e2e/stubs, e2e/fixtures),
                  the mail sender (e2e/mail-send.ts, e2e/send-mail.mjs)
 apps/web/e2e/    Playwright UI specs
@@ -669,8 +713,8 @@ repository**. Examples use `example.com`.
 | M3 | Email ingest (Gmail API or IMAP), rules pipeline, bills, school and teacher linking, event approvals | ✅ code-complete ([plan](plan/M3.md)) |
 | M3.5 | Onboarding (one compose file, optional Tailscale sidecar, optional HTTPS, first-run wizard) and a real-hardware shakedown (D-065, D-066) | ✅ code-complete; the shakedown on the real server (H-12 to H-14, then H-02 to H-11) is pending ([plan](plan/M3.5.md), [human steps](plan/human-steps.md)) |
 | M3.6 | Themes: eight palette families, a per-device choice, a named hue per member, the kiosk on the same catalogue (D-079 to D-081) | code-complete; integration (CI, e2e, compose smoke) is pending ([plan](plan/M3.6.md)) |
-| M4 | AI, minimal slice: one System One model and one local LLM behind the pipeline (D-067) | |
-| M4.1 | AI platform: backend registry, hardware probe, GPU node wake and gaming detection, eval harness | |
+| M4 | Two tracks (D-094, D-097): UI revamp (component library, navigation, one apply-changes model) and the LLM extraction slice (OpenAI-compatible endpoint, `llm` stage for email, recipe extraction for M5, basic eval) | |
+| M4.1 | System One sidecar, kNN, backend registry, optional GPU agent with WoL, full eval | |
 | M5 | Recipes, meal plan, grocery list | |
 | M6 | Smart assignment, learned calendar routing | |
 | M7 | Goals with progress (count or quantity, weekly cadence) | |

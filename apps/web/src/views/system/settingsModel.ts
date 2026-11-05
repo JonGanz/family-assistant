@@ -55,6 +55,36 @@ export const SETTING_META: Record<string, SettingMeta> = {
   },
 }
 
+/** Settings cards: one per group; a key not listed here falls into the last group. */
+export const SETTING_GROUPS: { title: string; keys: string[] }[] = [
+  { title: 'Addresses', keys: ['public_base_url', 'tailnet_base_url', 'lan_dashboard_url'] },
+  { title: 'Notifications', keys: ['ntfy_url', 'ntfy_token', 'ntfy_public_url'] },
+  { title: 'Google sign-in', keys: ['google_client_id', 'google_client_secret'] },
+  {
+    title: 'Network and feeds',
+    keys: [
+      'allow_http_feeds',
+      'allow_private_hosts',
+      'trusted_proxies',
+      'lan_allowed_cidrs',
+      'lan_allow_pin',
+    ],
+  },
+]
+
+/** The settings of each group, in the group's order; unknown keys go to an "Other" group. */
+export function groupSettings<T extends { key: string }>(
+  settings: T[],
+): { title: string; items: T[] }[] {
+  const known = new Set(SETTING_GROUPS.flatMap((g) => g.keys))
+  const groups = SETTING_GROUPS.map((g) => ({
+    title: g.title,
+    items: g.keys.map((k) => settings.find((s) => s.key === k)).filter((x): x is T => !!x),
+  }))
+  groups.push({ title: 'Other', items: settings.filter((s) => !known.has(s.key)) })
+  return groups.filter((g) => g.items.length > 0)
+}
+
 export const metaFor = (key: string): SettingMeta => SETTING_META[key] ?? { label: key, help: '' }
 
 export interface Draft {

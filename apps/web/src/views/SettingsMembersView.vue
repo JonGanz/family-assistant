@@ -1,11 +1,10 @@
 <script setup lang="ts">
-import PageHeader from '../components/PageHeader.vue'
+import SettingsPage from '../app/SettingsPage.vue'
 import MembersManager from './parts/MembersManager.vue'
 </script>
 
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader eyebrow="Household" title="Members" />
+  <SettingsPage title="Members">
     <MembersManager />
-  </section>
+  </SettingsPage>
 </template>

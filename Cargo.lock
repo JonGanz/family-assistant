@@ -1082,13 +1082,17 @@ dependencies = [
  "fa-config",
  "fa-connectors",
  "fa-domain",
+ "fa-llm",
  "fa-mail",
  "fa-notify",
+ "fa-pipeline",
+ "fa-recipe",
  "fa-store",
  "fa-tasks",
  "fa-weather",
  "figment",
  "futures",
+ "reqwest",
  "serde",
  "serde_json",
  "sha2",
@@ -1099,6 +1103,7 @@ dependencies = [
  "tower",
  "tower-http",
  "tracing",
+ "ts-rs",
  "url",
  "utoipa 5.5.0",
  "utoipa-swagger-ui",
@@ -1216,6 +1221,23 @@ dependencies = [
 [[package]]
 name = "fa-eval"
 version = "0.1.0"
+dependencies = [
+ "axum",
+ "chrono",
+ "fa-domain",
+ "fa-llm",
+ "fa-mail",
+ "fa-pipeline",
+ "fa-rules",
+ "fa-store",
+ "serde",
+ "serde_json",
+ "sqlx",
+ "thiserror 2.0.21",
+ "tokio",
+ "tracing",
+ "uuid",
+]
 
 [[package]]
 name = "fa-gpu-agent"
@@ -1377,7 +1399,9 @@ dependencies = [
  "fa-config",
  "fa-connectors",
  "fa-domain",
+ "fa-eval",
  "fa-jobs",
+ "fa-llm",
  "fa-mail",
  "fa-notify",
  "fa-rules",

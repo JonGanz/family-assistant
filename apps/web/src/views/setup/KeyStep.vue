@@ -2,6 +2,7 @@
 import { onMounted, ref } from 'vue'
 import { api } from '../../api/client'
 import { useSetupStore } from '../../stores/setup'
+import { UiCard } from '../../ui'
 import MasterKeyBackup from '../system/MasterKeyBackup.vue'
 import StepButtons from './StepButtons.vue'
 
@@ -18,12 +19,27 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div data-testid="step-key">
-    <h2>Master key backup</h2>
-    <p v-if="confirmed" class="text-success" role="status">The backup is confirmed.</p>
-    <MasterKeyBackup v-else @confirmed="confirmed = true" />
-    <form class="form" @submit.prevent="setup.goto(7)">
+  <div class="step" data-testid="step-key">
+    <UiCard>
+      <template #header>Master key backup</template>
+      <p v-if="confirmed" class="ok" role="status">The backup is confirmed.</p>
+      <MasterKeyBackup v-else @confirmed="confirmed = true" />
+    </UiCard>
+    <form @submit.prevent="setup.goto(7)">
       <StepButtons :disabled="!confirmed" @back="setup.goto(5)" />
     </form>
   </div>
 </template>
+
+<style scoped>
+.step {
+  display: grid;
+  gap: var(--ui-space-4);
+}
+p {
+  margin: 0;
+}
+.ok {
+  color: var(--ui-success);
+}
+</style>

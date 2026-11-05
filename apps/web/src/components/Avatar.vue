@@ -2,7 +2,17 @@
 import { computed } from 'vue'
 import { textOn } from '../lib/hues'
 
-const props = defineProps<{ name: string; color: string; src?: string | null; size?: string }>()
+/** `kiosk` (default) keeps the square wall-display look; the app passes `variant="app"` (round). */
+const props = withDefaults(
+  defineProps<{
+    name: string
+    color: string
+    src?: string | null
+    size?: string
+    variant?: 'kiosk' | 'app'
+  }>(),
+  { variant: 'kiosk' },
+)
 const initials = computed(() =>
   props.name
     .split(/\s+/)
@@ -17,6 +27,7 @@ const fg = computed(() => textOn(props.color))
 <template>
   <span
     class="avatar"
+    :class="{ 'avatar--app': variant === 'app' }"
     :style="{ borderColor: color, width: size ?? '2.5em', height: size ?? '2.5em' }"
     :title="name"
   >
@@ -34,6 +45,10 @@ const fg = computed(() => textOn(props.color))
   border-radius: 0;
   overflow: hidden;
   vertical-align: middle;
+}
+.avatar--app {
+  border-width: 2px;
+  border-radius: var(--ui-radius-full);
 }
 .avatar img,
 .initials {

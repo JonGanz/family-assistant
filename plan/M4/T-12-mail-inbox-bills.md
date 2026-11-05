@@ -5,7 +5,7 @@ milestone: M4
 wave: 3
 depends_on: [T-05]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/views/MailView.vue", "apps/web/src/views/MessageView.vue", "apps/web/src/views/InboxView.vue", "apps/web/src/views/LabelView.vue", "apps/web/src/views/BillsView.vue", "apps/web/src/components/mail/**", "apps/web/src/stores/mail.ts", "apps/web/src/stores/mail.test.ts", "apps/web/src/stores/inbox.ts", "apps/web/src/stores/inbox.test.ts", "apps/web/src/stores/bills.ts", "apps/web/src/stores/bills.test.ts", "apps/web/src/views/mail.test.ts", "apps/web/src/views/parts/inbox/**", "apps/web/src/views/parts/message/**", "apps/web/e2e/ui-shots.routes/mail.ts"]
 decisions: [D-095, D-096, D-057, D-060, D-062, D-063, D-078]
 ---
@@ -58,3 +58,8 @@ The user answered R2 on 2026-11-04 and 2026-11-05. These rules apply to every wa
   - store changes made;
   - questions for the user's R3 review;
   - "list what outside your paths needs changing"
+
+## Outcome (T-12 report)
+- Built: Mail (chip filters, card stack), Message (cards, actions menu, DecisionFix chips), Inbox (segmented with counts, cards, approve instant and reject confirmed, empty `header-trailing` slot for T-16), Labelling (eval switch instant with Undo), Bills (state groups plus filter chips, Undo on dismiss and reopen); `views/mail.test.ts`.
+- Defaults applied: approve instant and reject confirmed; keep the bills filter; `warning` icon for time-sensitive.
+- e2e: m3 selectors (T-19).

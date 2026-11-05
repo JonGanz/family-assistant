@@ -10,6 +10,7 @@ use fa_config::ProcessConfig;
 use fa_connectors::Http;
 use fa_connectors::google::oauth::GoogleOAuth;
 use fa_jobs::JobHandler;
+use fa_llm::Provider;
 use fa_mail::{MailConfig, MailDeps};
 use fa_store::{HouseholdRepo, MasterKey, ScheduleRepo, Store};
 use fa_weather::{WeatherConfig, WeatherService};
@@ -75,6 +76,7 @@ pub fn mail_deps(
     cfg: &ProcessConfig,
     store: &Store,
     oauth: &OAuthService,
+    llm: &Arc<Provider>,
 ) -> Result<Arc<MailDeps>> {
     let stub = cfg
         .google_api_base
@@ -91,11 +93,20 @@ pub fn mail_deps(
             imap_tls_insecure: cfg.imap_tls_insecure,
             allow_private_hosts: cfg.allow_private_hosts,
         },
-        llm: None,
+        llm: Some(llm.clone()),
     }))
 }
 
-pub fn build_services(cfg: &ProcessConfig, store: &Store) -> Result<Services> {
+/// The one LLM provider of the process: the API invalidates its cache, the jobs call through it.
+pub fn llm_provider(cfg: &ProcessConfig, store: &Store) -> Result<Arc<Provider>> {
+    Ok(Arc::new(Provider::new(
+        store.clone(),
+        Arc::new(load_key(cfg)?),
+        fa_llm::default_http().context("llm http client")?,
+    )))
+}
+
+pub fn build_services(cfg: &ProcessConfig, store: &Store, llm: &Arc<Provider>) -> Result<Services> {
     let oauth = OAuthService::new(
         store.clone(),
         load_key(cfg)?,
@@ -114,7 +125,7 @@ pub fn build_services(cfg: &ProcessConfig, store: &Store) -> Result<Services> {
         Arc::new(oauth.clone()),
     )?;
     let weather = WeatherService::new(store.clone(), weather_config(cfg))?;
-    let mail = MailServices::new(mail_deps(cfg, store, &oauth)?);
+    let mail = MailServices::new(mail_deps(cfg, store, &oauth, llm)?);
     Ok(Services {
         mail,
         calendar: Arc::new(calendar),
@@ -130,6 +141,7 @@ pub fn feature_handlers(
     cfg: &ProcessConfig,
     store: &Store,
     services: &Services,
+    llm: &Arc<Provider>,
 ) -> Result<Vec<Arc<dyn JobHandler>>> {
     let mut all = fa_calendar::handlers(services.calendar.clone());
     all.extend(fa_weather::handlers(weather_config(cfg))?);
@@ -140,6 +152,7 @@ pub fn feature_handlers(
         cfg,
         store,
         &services.oauth,
+        llm,
     )?));
     Ok(all)
 }

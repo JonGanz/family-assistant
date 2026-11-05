@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { UiProgress } from '../../ui'
 import { progress } from '../../lib/tasks'
 
 const props = defineProps<{
@@ -13,17 +14,14 @@ const p = computed(() => progress(props.done, props.total))
 
 <template>
   <div class="progress" :class="[size ?? 'normal', { complete: p.complete }]">
-    <div
-      class="track"
-      role="progressbar"
-      :aria-label="label ?? 'Progress'"
-      aria-valuemin="0"
-      :aria-valuemax="total"
+    <UiProgress
+      class="bar"
+      :value="p.percent"
+      :label="label ?? 'Progress'"
       :aria-valuenow="done"
+      :aria-valuemax="total"
       :aria-valuetext="`${done} of ${total}`"
-    >
-      <div class="fill" :style="{ width: `${p.percent}%` }"></div>
-    </div>
+    />
     <span class="count" aria-hidden="true">{{ done }}/{{ total }}</span>
   </div>
 </template>
@@ -32,45 +30,24 @@ const p = computed(() => progress(props.done, props.total))
 .progress {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--ui-space-2);
 }
-.track {
+.bar {
   flex: 1;
-  height: 0.6rem;
-  background: var(--color-border);
-  border-radius: 0;
-  overflow: hidden;
-}
-.fill {
-  height: 100%;
-  min-width: 0;
-  background: var(--color-accent);
-  border-radius: 0;
-  transition:
-    width 0.4s ease,
-    background-color 0.3s ease;
-}
-.complete .fill {
-  background: var(--color-success);
 }
 .count {
-  font-size: var(--font-size-sm);
+  font: var(--ui-type-label-md);
   font-variant-numeric: tabular-nums;
-  color: var(--color-muted);
+  color: var(--ui-on-surface-variant);
 }
 .complete .count {
-  color: var(--color-success);
+  color: var(--ui-success);
   font-weight: 600;
 }
-.kiosk .track {
+.kiosk .bar {
   height: 1.4rem;
 }
 .kiosk .count {
   font-size: var(--kiosk-font-small);
-}
-@media (prefers-reduced-motion: reduce) {
-  .fill {
-    transition: none;
-  }
 }
 </style>

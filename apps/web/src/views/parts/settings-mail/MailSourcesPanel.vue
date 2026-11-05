@@ -1,16 +1,36 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
+import ResponsiveItems from '../../../app/ResponsiveItems.vue'
 import type { Member } from '../../../api/client'
 import type { MailSourceView, MailVisibility } from '../../../api/mailSettings'
 import { formatTime } from '../../../lib/time'
 import { useMailSettingsStore } from '../../../stores/mailSettings'
+import {
+  UiButton,
+  UiCard,
+  UiCheckbox,
+  UiChip,
+  UiEmptyState,
+  UiIconButton,
+  UiMenu,
+  UiSelect,
+  UiTextField,
+  type MenuItem,
+} from '../../../ui'
 import { describeError } from '../../shared'
+import ConfirmDialog from './ConfirmDialog.vue'
+import InstantCheck from './InstantCheck.vue'
+import SheetForm from './SheetForm.vue'
+import { stateIcon } from './stateIcon'
+import { toggleIn } from './toggle'
+import { useConfirm } from './useConfirm'
 
 const props = defineProps<{ members: Member[]; tz: string }>()
 const store = useMailSettingsStore()
 const error = ref('')
 const note = reactive<Record<string, string>>({})
-const editing = ref<string | null>(null)
+const editing = ref<MailSourceView | null>(null)
+const confirm = useConfirm()
 const draft = reactive({
   name: '',
   owners: [] as string[],
@@ -37,7 +57,7 @@ async function run(fn: () => Promise<unknown>, fallback: string) {
 }
 
 function startEdit(s: MailSourceView) {
-  editing.value = editing.value === s.id ? null : s.id
+  editing.value = s
   draft.name = s.name
   draft.owners = [...s.owners]
   draft.visibility = s.visibility
@@ -48,7 +68,9 @@ function startEdit(s: MailSourceView) {
   draft.password = ''
 }
 
-async function save(s: MailSourceView) {
+async function save() {
+  const s = editing.value
+  if (!s) return
   await run(async () => {
     const imap =
       s.provider === 'imap' && s.imap_host && s.imap_username
@@ -77,8 +99,7 @@ async function save(s: MailSourceView) {
   }, 'Could not save the source.')
 }
 
-const toggleReadOnly = (s: MailSourceView, v: boolean) =>
-  run(() => store.patchSource(s, { read_only: v }), 'Could not save.')
+const setReadOnly = (s: MailSourceView, v: boolean) => store.patchSource(s, { read_only: v })
 
 async function syncNow(s: MailSourceView) {
   await run(async () => {
@@ -87,108 +108,172 @@ async function syncNow(s: MailSourceView) {
   }, 'Could not start a sync.')
 }
 
-async function archive(s: MailSourceView) {
-  if (
-    !confirm(
-      `Archive "${s.name}"? Its mail is removed from the app (nothing changes in the mailbox).`,
-    )
+function archive(s: MailSourceView) {
+  confirm.ask(
+    `Archive “${s.name}”?`,
+    'Its mail is removed from the app (nothing changes in the mailbox).',
+    () => run(() => store.removeSource(s.id), 'Could not archive the source.'),
+    'Archive',
   )
-    return
-  await run(() => store.removeSource(s.id), 'Could not archive the source.')
 }
+
+const menu = (): MenuItem[] => [
+  { id: 'sync', label: 'Sync now' },
+  { id: 'edit', label: 'Edit' },
+  { id: 'archive', label: 'Archive', danger: true },
+]
+function onMenu(s: MailSourceView, id: string) {
+  if (id === 'sync') void syncNow(s)
+  else if (id === 'edit') startEdit(s)
+  else if (id === 'archive') archive(s)
+}
+const visibilityOptions = [
+  { value: 'owners', label: 'Owners only' },
+  { value: 'household', label: 'All adults' },
+]
 </script>
 
 <template>
-  <div>
-    <p v-if="error" class="text-danger" role="alert">{{ error }}</p>
-    <ul class="card-list">
-      <li v-for="s in store.sources" :key="s.id" :data-testid="`mail-source-${s.name}`">
-        <div class="head">
-          <strong>{{ s.name }}</strong>
-          <span class="badge" :class="s.state" data-testid="state">{{ s.state }}</span>
-          <span class="muted">
+  <div class="panel">
+    <UiCard v-if="error" variant="outlined" role="alert">{{ error }}</UiCard>
+    <ResponsiveItems :items="store.sources">
+      <template #item="{ item: s }">
+        <div class="src" :data-testid="`mail-source-${s.name}`">
+          <div class="src__head">
+            <strong class="src__name">{{ s.name }}</strong>
+            <UiChip :icon="stateIcon(s.state)" data-testid="state">{{ s.state }}</UiChip>
+            <UiMenu
+              v-if="s.can_manage"
+              :items="menu()"
+              :label="`Actions for ${s.name}`"
+              @select="onMenu(s, $event)"
+            >
+              <template #activator="{ toggle, attrs }">
+                <UiIconButton
+                  icon="more"
+                  :label="`Actions for ${s.name}`"
+                  v-bind="attrs"
+                  @click="toggle"
+                />
+              </template>
+            </UiMenu>
+          </div>
+          <p class="src__meta">
             {{ s.provider }} · {{ s.address }} · owners {{ ownerNames(s) }} · {{ s.visibility }} ·
             last sync {{ synced(s) }} · {{ s.message_count }} messages
-          </span>
-        </div>
-        <p v-if="s.last_error" class="text-danger">{{ s.last_error }}</p>
-        <div v-if="s.can_manage" class="actions">
-          <label class="field-inline">
-            <input
-              type="checkbox"
-              :checked="s.read_only"
-              @change="toggleReadOnly(s, ($event.target as HTMLInputElement).checked)"
+          </p>
+          <p v-if="s.last_error" class="src__error">{{ s.last_error }}</p>
+          <p v-if="note[s.id]" role="status">{{ note[s.id] }}</p>
+          <template v-if="s.can_manage">
+            <InstantCheck
+              :model-value="s.read_only"
+              :label="`Read only (${s.name})`"
+              :save="(v: boolean) => setReadOnly(s, v)"
             />
-            Read only
-          </label>
-          <button type="button" @click="syncNow(s)">Sync now</button>
-          <button v-if="s.state !== 'paused'" type="button" @click="store.pause(s)">Pause</button>
-          <button v-else type="button" @click="store.resume(s)">Resume</button>
-          <button type="button" @click="startEdit(s)">Edit</button>
-          <button type="button" @click="archive(s)">Archive</button>
-          <span v-if="note[s.id]" class="text-success" role="status">{{ note[s.id] }}</span>
-        </div>
-        <form v-if="editing === s.id" class="form" @submit.prevent="save(s)">
-          <label>Name <input v-model="draft.name" name="name" required /></label>
-          <fieldset>
-            <legend>Owners</legend>
-            <label
-              v-for="m in members.filter((x) => x.role === 'adult')"
-              :key="m.id"
-              class="field-inline"
-            >
-              <input v-model="draft.owners" type="checkbox" :value="m.id" />
-              {{ m.display_name }}
-            </label>
-          </fieldset>
-          <label>
-            Who can see this mail
-            <select v-model="draft.visibility" name="visibility">
-              <option value="owners">Owners only</option>
-              <option value="household">All adults</option>
-            </select>
-          </label>
-          <label>
-            Days of history
-            <input v-model.number="draft.backfill" type="number" min="1" max="365" />
-          </label>
-          <label>
-            Check every (minutes)
-            <input v-model.number="draft.poll" type="number" min="1" max="1440" />
-          </label>
-          <label>Filter <input v-model="draft.query" name="query" /></label>
-          <template v-if="s.provider === 'imap'">
-            <label
-              >Folders (comma separated) <input v-model="draft.folders" name="folders"
-            /></label>
-            <label>
-              New app password (leave empty to keep)
-              <input v-model="draft.password" type="password" autocomplete="off" />
-            </label>
+            <div class="src__actions">
+              <UiButton v-if="s.state !== 'paused'" variant="tonal" @click="store.pause(s)"
+                >Pause</UiButton
+              >
+              <UiButton v-else variant="tonal" @click="store.resume(s)">Resume</UiButton>
+            </div>
           </template>
-          <div>
-            <button type="submit">Save</button>
-            <button type="button" @click="editing = null">Cancel</button>
-          </div>
-        </form>
-      </li>
-    </ul>
-    <p v-if="!store.sources.length && store.loaded" class="muted">No mail sources yet.</p>
+        </div>
+      </template>
+    </ResponsiveItems>
+    <UiEmptyState
+      v-if="!store.sources.length && store.loaded"
+      icon="mail"
+      title="No mail sources yet."
+    />
+
+    <SheetForm
+      :model-value="!!editing"
+      :title="`Edit ${editing?.name ?? ''}`"
+      @update:model-value="editing = null"
+      @save="save"
+    >
+      <UiTextField v-model="draft.name" label="Name" name="name" required />
+      <fieldset class="owners">
+        <legend>Owners</legend>
+        <UiCheckbox
+          v-for="m in members.filter((x) => x.role === 'adult')"
+          :key="m.id"
+          :model-value="draft.owners.includes(m.id)"
+          :label="m.display_name"
+          @update:model-value="toggleIn(draft.owners, m.id, $event)"
+        />
+      </fieldset>
+      <UiSelect
+        :model-value="draft.visibility"
+        label="Who can see this mail"
+        :options="visibilityOptions"
+        @update:model-value="draft.visibility = $event as MailVisibility"
+      />
+      <UiTextField
+        :model-value="String(draft.backfill)"
+        label="Days of history"
+        type="number"
+        min="1"
+        max="365"
+        @update:model-value="draft.backfill = Number($event)"
+      />
+      <UiTextField
+        :model-value="String(draft.poll)"
+        label="Check every (minutes)"
+        type="number"
+        min="1"
+        max="1440"
+        @update:model-value="draft.poll = Number($event)"
+      />
+      <UiTextField v-model="draft.query" label="Filter" name="query" />
+      <template v-if="editing?.provider === 'imap'">
+        <UiTextField v-model="draft.folders" label="Folders (comma separated)" name="folders" />
+        <UiTextField
+          v-model="draft.password"
+          label="New app password (leave empty to keep)"
+          type="password"
+          autocomplete="off"
+        />
+      </template>
+    </SheetForm>
+    <ConfirmDialog
+      :pending="confirm.pending.value"
+      @accept="confirm.accept"
+      @cancel="confirm.cancel"
+    />
   </div>
 </template>
 
 <style scoped>
-.head,
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
+.panel,
+.src {
+  display: grid;
+  gap: var(--ui-space-2);
 }
-.inline {
+.src__head,
+.src__actions {
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--ui-space-2);
+}
+.src__name {
+  flex: 1;
+  font: var(--ui-type-title-md);
+}
+.src__meta {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
+}
+.src__error {
+  margin: 0;
+  color: var(--ui-error);
+}
+.owners {
+  display: grid;
+  gap: var(--ui-space-1);
+  border: 0;
+  padding: 0;
+  margin: 0;
 }
 </style>

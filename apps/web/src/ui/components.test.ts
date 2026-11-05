@@ -9,12 +9,16 @@ import {
   UiNavBar,
   UiNavDrawer,
   UiNavRail,
+  UiButton,
+  UiSelect,
+  UiTextField,
   UiSegmented,
   UiSwitch,
   UiTopAppBar,
 } from './index'
 import type { Breakpoint } from './composables/useBreakpoint'
 import { icons } from './icons'
+import * as uiIndex from './index'
 import saveBarSrc from './UiSaveBar.vue?raw'
 import { isActivePath, navControlKey, type NavDestination } from './nav'
 
@@ -225,5 +229,53 @@ describe('save bar', () => {
     expect(src).not.toMatch(/@media/)
     expect(src).toContain('--ui-surface-container-high')
     expect(src).toContain('--ui-elev-2')
+  })
+})
+
+describe('ui gaps (T-19)', () => {
+  it('registers the arrow and menu_open icons and re-exports navControlKey', () => {
+    for (const n of ['arrow_upward', 'arrow_downward', 'menu_open']) expect(icons).toHaveProperty(n)
+    expect(uiIndex.navControlKey).toBe(navControlKey)
+  })
+  it('UiTextField forwards name and id to the input and class to the wrapper', () => {
+    const w = mount(UiTextField, {
+      props: { modelValue: '', label: 'Title' },
+      attrs: { name: 'title', id: 'x-title', class: 'wide', placeholder: 'p' },
+    })
+    expect(w.classes()).toContain('wide')
+    const input = w.get('input')
+    expect(input.attributes('name')).toBe('title')
+    expect(input.attributes('id')).toBe('x-title')
+    expect(w.get('label').attributes('for')).toBe('x-title')
+    expect(input.classes()).not.toContain('wide')
+  })
+  it('UiSelect forwards name and id to the select and class to the wrapper', () => {
+    const w = mount(UiSelect, {
+      props: { modelValue: 'a', label: 'Pick', options: [{ value: 'a', label: 'A' }] },
+      attrs: { name: 'pick', id: 'x-pick', class: 'wide' },
+    })
+    expect(w.classes()).toContain('wide')
+    expect(w.get('select').attributes('name')).toBe('pick')
+    expect(w.get('select').attributes('id')).toBe('x-pick')
+  })
+  it('UiButton renders a link for to and an anchor for href', () => {
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: '/', component: { template: '<i/>' } },
+        { path: '/t', component: { template: '<i/>' } },
+      ],
+    })
+    const a = mount(UiButton, {
+      props: { to: '/t' },
+      slots: { default: 'Go' },
+      global: { plugins: [router] },
+    })
+    expect(a.element.tagName).toBe('A')
+    expect(a.attributes('href')).toBe('/t')
+    const b = mount(UiButton, { props: { href: 'https://example.com' }, slots: { default: 'Out' } })
+    expect(b.element.tagName).toBe('A')
+    expect(b.attributes('href')).toBe('https://example.com')
+    expect(mount(UiButton).element.tagName).toBe('BUTTON')
   })
 })

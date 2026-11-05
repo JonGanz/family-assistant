@@ -30,13 +30,22 @@ const label = (h: string) => h.charAt(0).toUpperCase() + h.slice(1)
 </template>
 
 <style scoped>
+/* A swatch row (M4). The ring colour can be overridden with --swatch-glow, the size with --swatch-size
+   (the wall-screen whiteboard does both). */
 .hue-picker {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--ui-space-2);
   border: 0;
   padding: 0;
   margin: 0;
+  min-width: 0;
+}
+.hue-picker legend {
+  padding: 0;
+  margin-bottom: var(--ui-space-1);
+  font: var(--ui-type-label-lg);
+  color: var(--ui-on-surface-variant);
 }
 .swatch {
   position: relative;
@@ -50,19 +59,20 @@ const label = (h: string) => h.charAt(0).toUpperCase() + h.slice(1)
   cursor: pointer;
 }
 .dot {
-  width: var(--swatch-size, 2rem);
-  height: var(--swatch-size, 2rem);
-  border-radius: 50%;
-  border: 2px solid var(--color-border);
+  width: var(--swatch-size, 2.25rem);
+  height: var(--swatch-size, 2.25rem);
+  border-radius: var(--ui-radius-full);
+  border: 2px solid var(--ui-outline-variant);
+  box-sizing: border-box;
 }
 .swatch input:checked + .dot {
-  border-color: var(--swatch-glow, var(--color-text));
+  border-color: var(--swatch-glow, var(--ui-on-surface));
   box-shadow:
-    0 0 0 2px var(--color-bg) inset,
+    0 0 0 3px var(--ui-surface) inset,
     0 0 10px 3px var(--swatch-glow, transparent);
 }
 .swatch input:focus-visible + .dot {
-  outline: 2px solid var(--color-focus);
+  outline: var(--ui-focus-ring);
   outline-offset: 2px;
 }
 .sr-only {

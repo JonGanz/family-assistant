@@ -1,10 +1,25 @@
 <script setup lang="ts">
 import { onMounted, reactive, ref } from 'vue'
 import type { TaskListView } from '../../api/client'
-import ErrorBanner from '../../components/ErrorBanner.vue'
+import ResponsiveItems from '../../app/ResponsiveItems.vue'
 import { calendarDisplayLabel } from '../../lib/tasks'
 import { useListsStore } from '../../stores/lists'
+import {
+  UiButton,
+  UiCheckbox,
+  UiChip,
+  UiEmptyState,
+  UiRadioGroup,
+  UiSelect,
+  UiSkeleton,
+  UiTextField,
+} from '../../ui'
 import { describeError } from '../shared'
+import ConfirmDialog from './settings-mail/ConfirmDialog.vue'
+import PageFab from './settings-mail/PageFab.vue'
+import PageNotices from './settings-mail/PageNotices.vue'
+import SheetForm from './settings-mail/SheetForm.vue'
+import { useConfirm } from './settings-mail/useConfirm'
 import {
   emptyListForm,
   listDefaults,
@@ -19,6 +34,29 @@ const lists = useListsStore()
 const editing = ref<string | null>(null)
 const form = reactive<ListForm>(emptyListForm(0))
 const error = ref('')
+const confirm = useConfirm()
+const kindOptions = [
+  { value: 'chores', label: 'Chores' },
+  { value: 'homework', label: 'Homework' },
+  { value: 'general', label: 'General' },
+]
+const policyOptions = [
+  { value: 'assignee', label: "The person it's for (or anyone, if unassigned)" },
+  { value: 'adult_only', label: 'Adults only' },
+]
+const childOptions = [
+  { value: 'none', label: 'No' },
+  { value: 'own', label: 'Yes, for themselves' },
+]
+const calendarOptions = [
+  { value: 'hidden', label: 'Hidden' },
+  { value: 'until_done', label: 'Until done' },
+  { value: 'always', label: 'Key date' },
+]
+const claimOptions = [
+  { value: 'end_of_day', label: 'Until the end of the day' },
+  { value: 'minutes', label: 'For a number of minutes' },
+]
 
 onMounted(() => lists.load())
 
@@ -44,120 +82,141 @@ async function save() {
     error.value = describeError(e, 'Save failed.')
   }
 }
-async function remove(l: TaskListView) {
-  if (!confirm(`Delete the list “${l.name}”?`)) return
-  try {
-    await lists.remove(l.id)
-  } catch (e) {
-    error.value = describeError(e, 'Could not delete the list.')
-  }
-}
+const remove = (l: TaskListView) =>
+  confirm.ask(`Delete the list “${l.name}”?`, 'Tasks in it are removed too.', async () => {
+    try {
+      await lists.remove(l.id)
+    } catch (e) {
+      error.value = describeError(e, 'Could not delete the list.')
+    }
+  })
 </script>
 
 <template>
-  <div>
-    <ErrorBanner v-if="lists.error" :message="lists.error" />
-    <ErrorBanner v-if="error && editing === null" :message="error" />
-    <ul class="card-list">
-      <li v-for="l in lists.items" :key="l.id" :data-testid="`list-${l.name}`">
-        <template v-if="editing !== l.id">
-          <strong>{{ l.name }}</strong> <span class="badge">{{ l.kind }}</span>
-          <p class="muted">
+  <div class="panel">
+    <PageNotices
+      :load-error="lists.error"
+      :conflict="lists.conflict && !editing"
+      :error="editing ? '' : error"
+      @reload="lists.load()"
+    />
+    <UiSkeleton v-if="!lists.loaded && !lists.error" :lines="3" />
+    <UiEmptyState
+      v-else-if="lists.loaded && !lists.items.length"
+      icon="tasks"
+      title="No lists yet."
+    />
+    <ResponsiveItems :items="lists.items">
+      <template #item="{ item: l }">
+        <div class="item" :data-testid="`list-${l.name}`">
+          <div class="item__head">
+            <strong class="item__name">{{ l.name }}</strong>
+            <UiChip>{{ l.kind }}</UiChip>
+          </div>
+          <p class="meta">
             Children add: {{ l.child_can_add === 'own' ? 'their own' : 'no' }} · Calendar:
             {{ calendarDisplayLabel(l.calendar_default) }} ·
             {{ l.completion_policy === 'adult_only' ? 'adults complete' : 'assignee completes' }}
           </p>
-          <button type="button" @click="open(l)">Edit</button>
-          <button type="button" @click="remove(l)">Delete</button>
-        </template>
-      </li>
-    </ul>
+          <div class="item__row">
+            <UiButton variant="text" @click="open(l)">Edit</UiButton>
+            <UiButton variant="text" @click="remove(l)">Delete</UiButton>
+          </div>
+        </div>
+      </template>
+    </ResponsiveItems>
 
-    <form v-if="editing" class="form" @submit.prevent="save">
-      <h2>{{ editing === 'new' ? 'New list' : 'Edit list' }}</h2>
-      <label>Name <input v-model="form.name" name="name" required /></label>
-      <label>
-        Kind (sets the defaults below)
-        <select
-          :value="form.kind"
-          name="kind"
-          @change="setKind(($event.target as HTMLSelectElement).value as ListKind)"
-        >
-          <option value="chores">Chores</option>
-          <option value="homework">Homework</option>
-          <option value="general">General</option>
-        </select>
-      </label>
-      <label>
-        Who can complete a task
-        <select v-model="form.completion_policy" name="completion_policy">
-          <option value="assignee">The person it's for (or anyone, if unassigned)</option>
-          <option value="adult_only">Adults only</option>
-        </select>
-      </label>
-      <label>
-        Children can add tasks
-        <select v-model="form.child_can_add" name="child_can_add">
-          <option value="none">No</option>
-          <option value="own">Yes, for themselves</option>
-        </select>
-      </label>
-      <label class="field-inline">
-        <input v-model="form.dashboard_add" type="checkbox" name="dashboard_add" />
-        Allow adding from the wall dashboard
-      </label>
-      <label>
-        On the calendar by default
-        <select v-model="form.calendar_default" name="calendar_default">
-          <option value="hidden">Hidden</option>
-          <option value="until_done">Until done</option>
-          <option value="always">Key date</option>
-        </select>
-      </label>
-      <fieldset>
-        <legend>A claimed task is held</legend>
-        <label class="field-inline">
-          <input v-model="form.claim" type="radio" value="end_of_day" name="claim" /> until the end
-          of the day
-        </label>
-        <label class="field-inline">
-          <input v-model="form.claim" type="radio" value="minutes" name="claim" /> for a number of
-          minutes
-        </label>
-        <label v-if="form.claim === 'minutes'">
-          Minutes
-          <input
-            v-model.number="form.claimMinutes"
-            name="claim_minutes"
-            type="number"
-            min="1"
-            max="10080"
-          />
-        </label>
-      </fieldset>
-      <label class="field-inline">
-        <input v-model="form.visible_on_dashboard" type="checkbox" name="visible_on_dashboard" />
-        Show on the dashboard
-      </label>
-      <label class="field-inline">
-        <input v-model="form.useColor" type="checkbox" name="use_color" /> Colour
-        <input v-if="form.useColor" v-model="form.color" type="color" name="color" />
-      </label>
-      <label>Order <input v-model.number="form.sort" name="sort" type="number" /></label>
-      <ErrorBanner v-if="lists.conflict" conflict @reload="lists.load()" />
-      <ErrorBanner v-if="error" :message="error" />
-      <div class="row">
-        <button type="submit">Save</button>
-        <button type="button" @click="editing = null">Cancel</button>
-      </div>
-    </form>
-    <button v-else type="button" @click="open(null)">Add a list</button>
+    <PageFab label="Add a list" @click="open(null)" />
+    <SheetForm
+      :model-value="!!editing"
+      :title="editing === 'new' ? 'New list' : 'Edit list'"
+      @update:model-value="editing = null"
+      @save="save"
+    >
+      <UiTextField v-model="form.name" label="Name" name="name" required />
+      <UiSelect
+        :model-value="form.kind"
+        label="Kind (sets the defaults below)"
+        :options="kindOptions"
+        @update:model-value="setKind($event as ListKind)"
+      />
+      <UiSelect
+        :model-value="form.completion_policy"
+        label="Who can complete a task"
+        :options="policyOptions"
+        @update:model-value="form.completion_policy = $event as typeof form.completion_policy"
+      />
+      <UiSelect
+        :model-value="form.child_can_add"
+        label="Children can add tasks"
+        :options="childOptions"
+        @update:model-value="form.child_can_add = $event as typeof form.child_can_add"
+      />
+      <UiCheckbox v-model="form.dashboard_add" label="Allow adding from the wall dashboard" />
+      <UiSelect
+        :model-value="form.calendar_default"
+        label="On the calendar by default"
+        :options="calendarOptions"
+        @update:model-value="form.calendar_default = $event as typeof form.calendar_default"
+      />
+      <UiRadioGroup
+        :model-value="form.claim"
+        legend="A claimed task is held"
+        :options="claimOptions"
+        @update:model-value="form.claim = $event as typeof form.claim"
+      />
+      <UiTextField
+        v-if="form.claim === 'minutes'"
+        :model-value="String(form.claimMinutes)"
+        label="Minutes"
+        name="claim_minutes"
+        type="number"
+        min="1"
+        max="10080"
+        @update:model-value="form.claimMinutes = Number($event)"
+      />
+      <UiCheckbox v-model="form.visible_on_dashboard" label="Show on the dashboard" />
+      <UiCheckbox v-model="form.useColor" label="Colour" />
+      <UiTextField v-if="form.useColor" v-model="form.color" label="Colour value" type="color" />
+      <UiTextField
+        :model-value="String(form.sort)"
+        label="Order"
+        name="sort"
+        type="number"
+        @update:model-value="form.sort = Number($event)"
+      />
+      <p v-if="error" role="alert">{{ error }}</p>
+    </SheetForm>
+    <ConfirmDialog
+      :pending="confirm.pending.value"
+      @accept="confirm.accept"
+      @cancel="confirm.cancel"
+    />
   </div>
 </template>
 
 <style scoped>
-.row {
+.panel,
+.item {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+.item {
+  gap: var(--ui-space-2);
+}
+.item__head,
+.item__row {
   display: flex;
-  gap: var(--space-2);
+  align-items: center;
+  gap: var(--ui-space-2);
+}
+.item__name {
+  flex: 1;
+  font: var(--ui-type-title-md);
+}
+.meta {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
 }
 </style>

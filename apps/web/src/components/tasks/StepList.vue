@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { UiCheckbox, UiList } from '../../ui'
 import type { StepModel } from '../../lib/tasks'
 
 defineProps<{ steps: StepModel[]; disabled?: boolean }>()
@@ -6,19 +7,16 @@ const emit = defineEmits<{ tick: [stepId: string, done: boolean] }>()
 </script>
 
 <template>
-  <ul class="steps">
+  <UiList class="steps">
     <li v-for="s in steps" :key="s.id" :class="{ done: s.done }">
-      <label>
-        <input
-          type="checkbox"
-          :checked="s.done"
-          :disabled="disabled"
-          @change="emit('tick', s.id, ($event.target as HTMLInputElement).checked)"
-        />
-        <span class="text">{{ s.text }}</span>
-      </label>
+      <UiCheckbox
+        :model-value="s.done"
+        :disabled="disabled"
+        :label="s.text"
+        @update:model-value="emit('tick', s.id, $event)"
+      />
     </li>
-  </ul>
+  </UiList>
 </template>
 
 <style scoped>
@@ -27,20 +25,8 @@ const emit = defineEmits<{ tick: [stepId: string, done: boolean] }>()
   margin: 0;
   padding: 0;
 }
-label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  min-height: var(--min-touch, 48px);
-  cursor: pointer;
-}
-input {
-  width: 1.4rem;
-  height: 1.4rem;
-  accent-color: var(--color-success);
-}
-.done .text {
+.done :deep(span) {
   text-decoration: line-through;
-  color: var(--color-muted);
+  color: var(--ui-on-surface-variant);
 }
 </style>

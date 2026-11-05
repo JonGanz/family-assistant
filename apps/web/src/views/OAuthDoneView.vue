@@ -1,9 +1,8 @@
 <script setup lang="ts">
-import PageHeader from '../components/PageHeader.vue'
-import ErrorBanner from '../components/ErrorBanner.vue'
 import { computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useSourcesStore } from '../stores/sources'
+import { UiButton, UiCard, UiIcon, UiPage, UiTopAppBar } from '../ui'
 import { safeReturnTo } from './shared'
 
 const route = useRoute()
@@ -22,15 +21,36 @@ onMounted(async () => {
 </script>
 
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader title="Google account" />
-    <div v-if="error">
-      <ErrorBanner :message="`Google did not connect: ${error}.`" />
-      <RouterLink :to="target">Back</RouterLink>
-    </div>
-    <p v-else role="status">
-      Connected. Taking you back…
-      <RouterLink :to="target">Continue now</RouterLink>
-    </p>
-  </section>
+  <UiPage>
+    <template #top><UiTopAppBar title="Google account" /></template>
+    <UiCard v-if="error" variant="outlined" role="alert">
+      <template #header>
+        <span class="head"><UiIcon name="error" /> Google did not connect</span>
+      </template>
+      <p>{{ `Google did not connect: ${error}.` }}</p>
+      <template #actions>
+        <UiButton variant="tonal" @click="router.replace(target)">Back</UiButton>
+      </template>
+    </UiCard>
+    <UiCard v-else role="status">
+      <template #header>
+        <span class="head"><UiIcon name="success" /> Connected</span>
+      </template>
+      <p>Taking you back…</p>
+      <template #actions>
+        <UiButton variant="tonal" @click="router.replace(target)">Continue now</UiButton>
+      </template>
+    </UiCard>
+  </UiPage>
 </template>
+
+<style scoped>
+.head {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+}
+p {
+  margin: 0;
+}
+</style>

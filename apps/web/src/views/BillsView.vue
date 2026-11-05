@@ -1,11 +1,27 @@
 <script setup lang="ts">
-import PageHeader from '../components/PageHeader.vue'
-import StateBlock from '../components/StateBlock.vue'
-import { onMounted, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import type { BillView } from '../api/client'
+import ResponsiveItems from '../app/ResponsiveItems.vue'
 import { fmtDay } from '../components/mail/format'
 import { formatMoney, useBillsStore, type BillFilter } from '../stores/bills'
+import {
+  UiButton,
+  UiChip,
+  UiEmptyState,
+  UiErrorState,
+  UiPage,
+  UiSection,
+  UiSkeleton,
+  UiTopAppBar,
+  useSnackbar,
+} from '../ui'
+import { describeError } from './shared'
 
 const bills = useBillsStore()
+const router = useRouter()
+const snackbar = useSnackbar()
+
 const FILTERS: { v: BillFilter; label: string }[] = [
   { v: '', label: 'All' },
   { v: 'proposed', label: 'Proposed' },
@@ -13,80 +29,166 @@ const FILTERS: { v: BillFilter; label: string }[] = [
   { v: 'paid', label: 'Paid' },
   { v: 'dismissed', label: 'Dismissed' },
 ]
+const GROUPS: { status: string; heading: string }[] = [
+  { status: 'open', heading: 'Open' },
+  { status: 'proposed', heading: 'Proposed' },
+  { status: 'paid', heading: 'Paid' },
+  { status: 'dismissed', heading: 'Dismissed' },
+]
+const groups = computed(() =>
+  GROUPS.map((g) => ({ ...g, items: bills.items.filter((b) => b.status === g.status) })).filter(
+    (g) => g.items.length > 0,
+  ),
+)
+
 onMounted(() => void bills.load())
 watch(
   () => bills.filter,
   () => void bills.load(),
 )
+
+function openExternal(url?: string | null) {
+  if (url) window.open(url, '_blank', 'noopener,noreferrer')
+}
+
+/** Dismiss and mark-open are instant with an Undo that restores the previous state. */
+async function change(b: BillView, status: 'open' | 'dismissed') {
+  const before = b.status
+  const id = b.id
+  try {
+    await bills.patch(b, { status })
+  } catch (e) {
+    snackbar.show({ text: describeError(e) })
+    return
+  }
+  snackbar.show({
+    text: status === 'dismissed' ? 'Bill dismissed' : 'Bill marked open',
+    action: {
+      label: 'Undo',
+      run: async () => {
+        const fresh = bills.items.find((x) => x.id === id)
+        if (!fresh || (before !== 'open' && before !== 'proposed' && before !== 'dismissed')) return
+        try {
+          await bills.patch(fresh, { status: before as 'open' | 'dismissed' })
+        } catch (e) {
+          snackbar.show({ text: describeError(e) })
+        }
+      },
+    },
+  })
+}
 </script>
 
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader title="Bills">
-      <template #actions>
-        <label class="field-inline">
-          Show
-          <select v-model="bills.filter">
-            <option v-for="f in FILTERS" :key="f.v" :value="f.v">{{ f.label }}</option>
-          </select>
-        </label>
-      </template>
-    </PageHeader>
-    <StateBlock
-      :loading="bills.loading && !bills.items.length"
-      :error="bills.error"
-      :empty="!bills.loading && !bills.items.length"
-      empty-text="No bills."
+  <UiPage>
+    <template #top>
+      <UiTopAppBar title="Bills" />
+    </template>
+
+    <div class="chips" role="group" aria-label="Show">
+      <UiChip
+        v-for="f in FILTERS"
+        :key="f.v"
+        variant="filter"
+        :selected="bills.filter === f.v"
+        @click="bills.filter = f.v"
+        >{{ f.label }}</UiChip
+      >
+    </div>
+
+    <UiSkeleton v-if="bills.loading && !bills.items.length" :lines="5" />
+    <UiErrorState v-else-if="bills.error" :message="bills.error" @retry="bills.load()" />
+    <UiEmptyState
+      v-else-if="!bills.loading && !bills.items.length"
+      icon="bills"
+      title="No bills."
     />
-    <ul class="card-list">
-      <li v-for="b in bills.items" :key="b.id">
-        <strong>{{ b.payee }}</strong
-        >: {{ formatMoney(b.amount_minor, b.currency) }}
-        <span v-if="b.due_on">, due {{ fmtDay(b.due_on) }}</span>
-        <span class="badge">{{ b.status }}</span>
-        <div class="muted">
-          <template v-if="b.task">
-            Pay task:
-            <RouterLink :to="{ name: 'task-detail', params: { id: b.task } }">{{
-              b.task_done ? 'done' : 'open'
-            }}</RouterLink>
-          </template>
-          <template v-if="b.message">
-            <RouterLink :to="{ name: 'mail-detail', params: { id: b.message } }">
-              Message</RouterLink
-            >
-          </template>
-          <a v-if="b.external_url" :href="b.external_url" target="_blank" rel="noopener noreferrer">
-            Original ↗</a
-          >
-        </div>
-        <div v-if="b.status === 'proposed' || b.status === 'open'" class="row actions">
-          <button type="button" class="btn-ghost" @click="bills.patch(b, { status: 'dismissed' })">
-            Dismiss
-          </button>
-          <button
-            v-if="b.status === 'proposed'"
-            type="button"
-            @click="bills.patch(b, { status: 'open' })"
-          >
-            Mark open
-          </button>
-        </div>
-      </li>
-    </ul>
-    <button
+
+    <UiSection v-for="g in groups" :key="g.status" :heading="g.heading">
+      <ResponsiveItems :items="g.items">
+        <template #item="{ item: b }">
+          <div class="bill">
+            <div class="bill__top">
+              <strong>{{ b.payee }}</strong>
+              <span class="bill__amount">{{ formatMoney(b.amount_minor, b.currency) }}</span>
+            </div>
+            <p v-if="b.due_on" class="bill__due">due {{ fmtDay(b.due_on) }}</p>
+            <div class="bill__chips">
+              <UiChip
+                v-if="b.task"
+                icon="tasks"
+                @click="router.push({ name: 'task-detail', params: { id: b.task } })"
+                >Pay task: {{ b.task_done ? 'done' : 'open' }}</UiChip
+              >
+              <UiChip
+                v-if="b.message"
+                icon="mail"
+                @click="router.push({ name: 'mail-detail', params: { id: b.message } })"
+                >Message</UiChip
+              >
+              <UiChip
+                v-if="b.external_url"
+                icon="open_external"
+                @click="openExternal(b.external_url)"
+                >Original</UiChip
+              >
+            </div>
+            <div v-if="b.status === 'proposed' || b.status === 'open'" class="bill__actions">
+              <UiButton variant="text" @click="change(b, 'dismissed')">Dismiss</UiButton>
+              <UiButton v-if="b.status === 'proposed'" variant="tonal" @click="change(b, 'open')"
+                >Mark open</UiButton
+              >
+            </div>
+          </div>
+        </template>
+      </ResponsiveItems>
+    </UiSection>
+
+    <UiButton
       v-if="bills.nextBefore"
-      type="button"
-      :disabled="bills.loading"
+      variant="text"
+      :loading="bills.loading"
       @click="bills.loadMore()"
     >
       Load more
-    </button>
-  </section>
+    </UiButton>
+  </UiPage>
 </template>
 
 <style scoped>
-.actions {
-  margin-top: var(--space-2);
+.chips {
+  display: flex;
+  gap: var(--ui-space-2);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.bill {
+  display: grid;
+  gap: var(--ui-space-1);
+  padding: var(--ui-space-3) var(--ui-space-4);
+}
+.bill__top {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--ui-space-3);
+  font: var(--ui-type-title-sm);
+}
+.bill__amount {
+  font-variant-numeric: tabular-nums;
+}
+.bill__due {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-md);
+}
+.bill__chips {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: var(--ui-space-2);
+}
+.bill__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ui-space-2);
 }
 </style>

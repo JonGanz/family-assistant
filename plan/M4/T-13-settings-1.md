@@ -5,7 +5,7 @@ milestone: M4
 wave: 3
 depends_on: [T-05]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/views/SettingsIndexView.vue", "apps/web/src/views/settingsNav.ts", "apps/web/src/views/settingsNav.test.ts", "apps/web/src/views/SettingsAccountView.vue", "apps/web/src/views/SettingsAppearanceView.vue", "apps/web/src/views/appearance.test.ts", "apps/web/src/views/SettingsHouseholdView.vue", "apps/web/src/views/SettingsMembersView.vue", "apps/web/src/views/DevicesView.vue", "apps/web/src/views/SettingsAboutView.vue", "apps/web/src/views/aboutModel.ts", "apps/web/src/views/about.test.ts", "apps/web/src/views/LoginView.vue", "apps/web/src/views/SetupView.vue", "apps/web/src/layouts/SetupLayout.vue", "apps/web/src/views/OAuthDoneView.vue", "apps/web/src/components/PinPad.vue", "apps/web/src/components/PinPad.test.ts", "apps/web/src/components/HuePicker.vue", "apps/web/src/components/huePicker.test.ts", "apps/web/src/stores/household.ts", "apps/web/src/stores/members.ts", "apps/web/src/stores/session.ts", "apps/web/src/stores/setup.ts", "apps/web/src/views/settings1.test.ts", "apps/web/src/themes/**", "apps/web/src/views/setup/**", "apps/web/src/views/parts/MembersManager.vue", "apps/web/src/views/parts/MemberAccess.vue", "apps/web/src/views/parts/memberAccess.test.ts", "apps/web/src/views/parts/memberForm.ts", "apps/web/e2e/ui-shots.routes/settings1.ts"]
 decisions: [D-095, D-096, D-070, D-073, D-074, D-075, D-081, D-088]
 ---
@@ -62,3 +62,8 @@ The user answered R2 on 2026-11-04 and 2026-11-05. These rules apply to every wa
   - store changes made;
   - questions for the user's R3 review;
   - "list what outside your paths needs changing"
+
+## Outcome (T-13 report)
+- Built: settingsNav icons and summary; Account (password Save bar, sessions card with revoke); Appearance (theme cards, mode segmented, variant select, **Density** control, all instant with Undo); Members (cards, editor sheet, add sheet from a FAB); Devices (cards, pair FAB sheet); About; Login; OAuth done; the whole setup wizard; HuePicker; `views/settings1.test.ts`.
+- **Theme contrast:** the accent was darkened in Solarized light (#1e6ca4), Tokyo Night day (#1f549c) and Rosé Pine dawn (#417079), with onAccent restored. This goes beyond 'one step' and is flagged for review.
+- e2e: m35, m36, smoke, m1 and wizard selectors (T-19).

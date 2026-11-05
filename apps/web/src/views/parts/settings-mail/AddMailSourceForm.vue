@@ -4,7 +4,9 @@ import type { OAuthAccountView } from '../../../api/client'
 import { mailApi, type NewMailSource } from '../../../api/mailSettings'
 import type { Member } from '../../../api/client'
 import { GOOGLE_NEEDS_HTTPS, isSecure } from '../../../lib/secure'
+import { UiButton, UiCard, UiCheckbox, UiSelect, UiTextField } from '../../../ui'
 import { describeError } from '../../shared'
+import { toggleIn } from './toggle'
 
 const props = defineProps<{
   members: Member[]
@@ -31,6 +33,19 @@ const form = reactive({
   backfill: 30,
   query: '',
 })
+const typeOptions = computed(() => [
+  {
+    value: 'gmail',
+    label: secure ? 'Gmail (Google sign-in)' : `Gmail (${GOOGLE_NEEDS_HTTPS})`,
+    disabled: !secure,
+  },
+  { value: 'imap', label: 'IMAP (any provider, app password)' },
+])
+const accountOptions = computed(() => [
+  { value: '', label: 'Choose…', disabled: true },
+  ...gmailAccounts.value.map((a) => ({ value: a.id, label: a.email })),
+])
+const go = (url: string) => (window.location.href = url)
 const testNote = ref('')
 const testOk = ref(false)
 const error = ref('')
@@ -72,6 +87,14 @@ async function test() {
 
 function submit() {
   error.value = ''
+  if (!form.name.trim()) {
+    error.value = 'Give the source a name.'
+    return
+  }
+  if (provider.value === 'imap' && !(form.host.trim() && form.username.trim() && form.password)) {
+    error.value = 'Enter the server, the email address and the app password.'
+    return
+  }
   const owners = form.owners.length ? form.owners : props.meId ? [props.meId] : []
   if (!owners.length) {
     error.value = 'Pick at least one owner.'
@@ -109,111 +132,116 @@ function submit() {
 </script>
 
 <template>
-  <form class="form" data-testid="add-mail-source" @submit.prevent="submit">
-    <h2>Add a mail source</h2>
-    <label>
-      Type
-      <select v-model="provider" name="provider">
-        <option value="gmail" :disabled="!secure">
-          {{ secure ? 'Gmail (Google sign-in)' : `Gmail (${GOOGLE_NEEDS_HTTPS})` }}
-        </option>
-        <option value="imap">IMAP (any provider, app password)</option>
-      </select>
-    </label>
-    <label>Name <input v-model="form.name" name="name" required /></label>
+  <form class="add" data-testid="add-mail-source" @submit.prevent="submit">
+    <UiSelect
+      :model-value="provider"
+      label="Type"
+      name="provider"
+      :options="typeOptions"
+      @update:model-value="provider = $event as 'gmail' | 'imap'"
+    />
+    <UiTextField v-model="form.name" label="Name" name="name" />
 
     <template v-if="provider === 'gmail'">
-      <p v-if="needsScope" class="muted">
-        Your Google account has not been given Gmail access yet.
+      <template v-if="needsScope">
+        <p>Your Google account has not been given Gmail access yet.</p>
         <template v-if="googleEnabled">
-          <a
-            class="button"
-            :href="mailApi.googleStartUrl('gmail_read', RETURN_TO)"
+          <UiButton
+            variant="tonal"
             data-testid="connect-gmail-read"
-            >Connect Gmail (read only)</a
+            @click="go(mailApi.googleStartUrl('gmail_read', RETURN_TO))"
+            >Connect Gmail (read only)</UiButton
           >
-          <a class="button" :href="mailApi.googleStartUrl('gmail_modify', RETURN_TO)"
-            >Connect Gmail (read and archive)</a
+          <UiButton variant="tonal" @click="go(mailApi.googleStartUrl('gmail_modify', RETURN_TO))"
+            >Connect Gmail (read and archive)</UiButton
           >
         </template>
-        <template v-else>Google sign-in is not configured on this server.</template>
-      </p>
-      <label v-else>
-        Google account
-        <select v-model="form.account" name="account" required>
-          <option value="" disabled>Choose…</option>
-          <option v-for="a in gmailAccounts" :key="a.id" :value="a.id">{{ a.email }}</option>
-        </select>
-      </label>
+        <p v-else>Google sign-in is not configured on this server.</p>
+      </template>
+      <UiSelect v-else v-model="form.account" label="Google account" :options="accountOptions" />
     </template>
     <template v-else>
-      <label>
-        Email address (user name)
-        <input v-model="form.username" name="username" required @change="onUsername" />
-      </label>
-      <label
-        >Server <input v-model="form.host" name="host" placeholder="imap.example.com" required
-      /></label>
-      <label
-        >Port <input v-model.number="form.port" name="port" type="number" min="1" max="65535"
-      /></label>
-      <label>
-        App password
-        <input
-          v-model="form.password"
-          name="password"
-          type="password"
-          autocomplete="off"
-          required
-        />
-      </label>
-      <label>Folder to read <input v-model="form.folder" name="folder" /></label>
-      <label>
-        Archive folder (used when archiving from the app)
-        <input v-model="form.archive" name="archive" />
-      </label>
-      <div>
-        <button type="button" @click="test">Test connection</button>
-        <span
-          v-if="testNote"
-          :class="testOk ? 'text-success' : 'text-danger'"
-          role="status"
-          data-testid="imap-test"
-          >{{ testNote }}</span
-        >
+      <UiTextField
+        v-model="form.username"
+        label="Email address (user name)"
+        name="username"
+        @change="onUsername"
+      />
+      <UiTextField v-model="form.host" label="Server" name="host" placeholder="imap.example.com" />
+      <UiTextField
+        :model-value="String(form.port)"
+        label="Port"
+        name="port"
+        type="number"
+        min="1"
+        max="65535"
+        @update:model-value="form.port = Number($event)"
+      />
+      <UiTextField
+        v-model="form.password"
+        label="App password"
+        name="password"
+        type="password"
+        autocomplete="off"
+      />
+      <UiTextField v-model="form.folder" label="Folder to read" name="folder" />
+      <UiTextField
+        v-model="form.archive"
+        label="Archive folder (used when archiving from the app)"
+        name="archive"
+      />
+      <div class="add__row">
+        <UiButton variant="tonal" @click="test">Test connection</UiButton>
+        <span v-if="testNote" role="status" data-testid="imap-test">{{ testNote }}</span>
       </div>
     </template>
 
-    <fieldset>
+    <fieldset class="add__owners">
       <legend>Owners (whose mail this is)</legend>
-      <label v-for="m in adults" :key="m.id" class="field-inline">
-        <input v-model="form.owners" type="checkbox" :value="m.id" />
-        {{ m.display_name }}
-      </label>
+      <UiCheckbox
+        v-for="m in adults"
+        :key="m.id"
+        :model-value="form.owners.includes(m.id)"
+        :label="m.display_name"
+        @update:model-value="toggleIn(form.owners, m.id, $event)"
+      />
     </fieldset>
-    <label class="field-inline">
-      <input v-model="form.readOnly" type="checkbox" name="read_only" />
-      Read only (never archive, label or mark mail read)
-    </label>
-    <label>
-      Days of history to import
-      <input v-model.number="form.backfill" name="backfill" type="number" min="1" max="365" />
-    </label>
-    <label>
-      Filter (optional, Gmail search syntax)
-      <input v-model="form.query" name="query" />
-    </label>
-    <p v-if="error" class="text-danger" role="alert">{{ error }}</p>
-    <button type="submit" :disabled="needsScope">Add source</button>
+    <UiCheckbox
+      v-model="form.readOnly"
+      label="Read only (never archive, label or mark mail read)"
+    />
+    <UiTextField
+      :model-value="String(form.backfill)"
+      label="Days of history to import"
+      name="backfill"
+      type="number"
+      min="1"
+      max="365"
+      @update:model-value="form.backfill = Number($event)"
+    />
+    <UiTextField v-model="form.query" label="Filter (optional, Gmail search syntax)" name="query" />
+    <UiCard v-if="error" variant="outlined" role="alert" data-testid="add-error">{{
+      error
+    }}</UiCard>
+    <UiButton type="submit" :disabled="needsScope">Add source</UiButton>
   </form>
 </template>
 
 <style scoped>
-.button {
-  margin-left: var(--space-2);
-  padding: 0.1rem 0.5rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  text-decoration: none;
+.add {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+.add__row {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+}
+.add__owners {
+  display: grid;
+  gap: var(--ui-space-1);
+  border: 0;
+  padding: 0;
+  margin: 0;
 }
 </style>

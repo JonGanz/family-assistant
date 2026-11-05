@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, reactive } from 'vue'
 import type { Member, TaskApproval, TaskView } from '../../../api/client'
+import { UiButton, UiCard, UiCheckbox, UiTextField } from '../../../ui'
 import { fmt, fromLocalInput, toLocalInput } from '../../../components/mail/format'
 
 const props = defineProps<{
@@ -40,40 +41,78 @@ function approve() {
 </script>
 
 <template>
-  <li class="form item">
-    <label>Title <input v-model="form.title" /></label>
-    <label>Due <input v-model="form.due" type="datetime-local" /></label>
-    <fieldset>
-      <legend>Assignees</legend>
-      <label v-for="m in members" :key="m.id" class="field-inline">
-        <input type="checkbox" :checked="form.assignees.includes(m.id)" @change="toggle(m.id)" />
-        {{ m.display_name }}
-      </label>
-    </fieldset>
-    <p class="muted">
-      Suggested for {{ names.length ? names.join(', ') : 'nobody yet' }}
-      <span v-if="task.due_at">, due {{ fmt(task.due_at, tz) }}</span
-      >.
-      <RouterLink v-if="message" :to="{ name: 'mail-detail', params: { id: message } }"
-        >Open message</RouterLink
-      >
-    </p>
-    <div class="actions">
-      <button type="button" :disabled="busy" @click="approve">Approve</button>
-      <button type="button" :disabled="busy" @click="emit('reject')">Reject</button>
-    </div>
+  <li class="item">
+    <UiCard variant="filled">
+      <template #header>
+        <div class="head">
+          <span>New task</span>
+          <slot name="header-trailing" />
+        </div>
+      </template>
+      <div class="fields">
+        <UiTextField v-model="form.title" label="Title" />
+        <UiTextField v-model="form.due" label="Due" type="datetime-local" />
+        <fieldset class="checks">
+          <legend>Assignees</legend>
+          <UiCheckbox
+            v-for="m in members"
+            :key="m.id"
+            :model-value="form.assignees.includes(m.id)"
+            :label="m.display_name"
+            @update:model-value="toggle(m.id)"
+          />
+        </fieldset>
+        <p class="note">
+          Suggested for {{ names.length ? names.join(', ') : 'nobody yet' }}
+          <span v-if="task.due_at">, due {{ fmt(task.due_at, tz) }}</span
+          >.
+          <RouterLink v-if="message" :to="{ name: 'mail-detail', params: { id: message } }"
+            >Open message</RouterLink
+          >
+        </p>
+      </div>
+      <template #actions>
+        <UiButton variant="text" :disabled="busy" @click="emit('reject')">Reject</UiButton>
+        <UiButton :disabled="busy" @click="approve">Approve</UiButton>
+      </template>
+    </UiCard>
   </li>
 </template>
 
 <style scoped>
 .item {
-  max-width: none;
+  list-style: none;
 }
-.actions {
+.head {
   display: flex;
-  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-2);
+  font: var(--ui-type-title-sm);
 }
-.actions button {
-  min-height: 44px;
+.fields {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+.note {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
+}
+.err {
+  margin: 0;
+  color: var(--ui-error);
+  font: var(--ui-type-body-md);
+}
+.checks {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.checks legend {
+  padding: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-label-md);
 }
 </style>

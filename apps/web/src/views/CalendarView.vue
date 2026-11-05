@@ -1,21 +1,30 @@
 <script setup lang="ts">
-import PageHeader from '../components/PageHeader.vue'
-import StateBlock from '../components/StateBlock.vue'
 import { computed, onMounted, ref, watch } from 'vue'
 import DateRangeNav from '../components/DateRangeNav.vue'
 import EventCard from '../components/EventCard.vue'
-import UndoToast from '../components/tasks/UndoToast.vue'
 import { rangeFor, shiftAnchor } from '../composables/useRange'
 import { stripeStyle } from '../lib/eventColors'
 import { addDays, dayKey, formatDayHeading, groupByDay, startOfDay } from '../lib/time'
-import type { RangeMode } from '../lib/types'
+import type { EventLike, RangeMode } from '../lib/types'
 import { useCalendarStore } from '../stores/calendar'
 import { useHouseholdStore } from '../stores/household'
 import { useMembersStore } from '../stores/members'
 import { chipsByDay, memberRefs, type TaskChip } from '../stores/taskMap'
 import { useTasksStore } from '../stores/tasks'
+import {
+  UiCheckbox,
+  UiChip,
+  UiErrorState,
+  UiPage,
+  UiSegmented,
+  UiSheet,
+  UiSkeleton,
+  UiTopAppBar,
+  useBreakpoint,
+  useSnackbar,
+} from '../ui'
 import AgendaList from './parts/AgendaList.vue'
-import { memberLikes, toEventLike } from './shared'
+import { describeError, memberLikes, toEventLike } from './shared'
 
 type View = 'agenda' | 'week' | 'month'
 
@@ -23,13 +32,27 @@ const household = useHouseholdStore()
 const calendar = useCalendarStore()
 const members = useMembersStore()
 const tasks = useTasksStore()
+const snackbar = useSnackbar()
+const bp = useBreakpoint()
 
 const tz = computed(() => household.tz)
-const narrow = typeof matchMedia === 'function' && matchMedia('(max-width: 700px)').matches
-const view = ref<View>(narrow ? 'agenda' : 'week')
+// Agenda on phones, week on wider screens; the segmented control overrides.
+const view = ref<View>(bp.value === 'compact' ? 'agenda' : 'week')
 const anchor = ref(dayKey(new Date(), household.tz))
 const member = ref('')
+const detail = ref<EventLike | null>(null)
+const detailOpen = computed({
+  get: () => detail.value !== null,
+  set: (v) => {
+    if (!v) detail.value = null
+  },
+})
 
+const VIEWS = [
+  { value: 'agenda', label: 'Agenda' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+]
 const navMode = computed<RangeMode>(() => (view.value === 'month' ? 'month' : 'week'))
 const span = computed(() => rangeFor(navMode.value, anchor.value))
 /** Month view also shows the leading and trailing days of the boundary weeks. */
@@ -89,14 +112,39 @@ const chips = computed(() =>
 )
 const chipsOf = (k: string): TaskChip[] => chips.value.get(k) ?? []
 const allChips = computed(() => [...chips.value.entries()].sort(([a], [b]) => a.localeCompare(b)))
+// Completing a task chip is instant (D-096); the store arms a 10 s undo that the snackbar offers.
 async function toggleChip(c: TaskChip) {
   try {
     if (c.done) await tasks.reopenDone(c.taskId)
     else await tasks.complete({ id: c.taskId, title: c.title })
-  } catch {
-    /* the store keeps its last error; the chip stays as it was */
+  } catch (e) {
+    snackbar.show({ text: describeError(e, 'That did not work.') })
   }
 }
+const UNDO_MS = 10_000
+watch(
+  () => tasks.undo,
+  (u) => {
+    if (!u) return
+    snackbar.show({
+      text: `Completed “${u.title}”`,
+      timeoutMs: UNDO_MS,
+      action: {
+        label: 'Undo',
+        run: async () => {
+          try {
+            await tasks.undoLast()
+          } catch (e) {
+            snackbar.show({ text: describeError(e, 'That did not work.') })
+          }
+        },
+      },
+    })
+    setTimeout(() => {
+      if (tasks.undo?.id === u.id) tasks.expireUndo()
+    }, UNDO_MS)
+  },
+)
 
 function load() {
   void calendar.ensureRange(grid.value.from, grid.value.to, tz.value, member.value || undefined)
@@ -109,23 +157,15 @@ onMounted(() => {
 watch([() => grid.value.from, () => grid.value.to, member, tz], load)
 
 const dayNumber = (k: string) => Number(k.slice(8))
+const loadingFirst = computed(() => calendar.loading && events.value.length === 0)
 </script>
 
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader title="Calendar">
-      <template #actions>
-        <label class="field-inline">
-          Member
-          <select v-model="member" name="member">
-            <option value="">Everyone</option>
-            <option v-for="m in members.items" :key="m.id" :value="m.id">
-              {{ m.display_name }}
-            </option>
-          </select>
-        </label>
-      </template>
-    </PageHeader>
+  <UiPage wide>
+    <template #top>
+      <UiTopAppBar title="Calendar" />
+    </template>
+
     <div class="controls">
       <DateRangeNav
         :label="label"
@@ -133,190 +173,214 @@ const dayNumber = (k: string) => Number(k.slice(8))
         @next="anchor = shiftAnchor(navMode, anchor, 1)"
         @today="anchor = dayKey(new Date(), tz)"
       />
-      <span class="modes" role="group" aria-label="View">
-        <button
-          v-for="v in ['agenda', 'week', 'month'] as View[]"
-          :key="v"
-          type="button"
-          :aria-pressed="view === v"
-          @click="view = v"
+      <UiSegmented
+        :model-value="view"
+        :options="VIEWS"
+        label="View"
+        @update:model-value="view = $event as View"
+      />
+      <div class="members" role="group" aria-label="Member">
+        <UiChip variant="filter" :selected="member === ''" @click="member = ''">Everyone</UiChip>
+        <UiChip
+          v-for="m in members.items"
+          :key="m.id"
+          variant="filter"
+          :selected="member === m.id"
+          @click="member = member === m.id ? '' : m.id"
         >
-          {{ v }}
-        </button>
-      </span>
-    </div>
-    <StateBlock :error="calendar.error" :loading="calendar.loading" />
-
-    <AgendaList
-      v-if="view === 'agenda'"
-      :events="events"
-      :tz="tz"
-      :from="grid.from"
-      :days="days"
-      :members="likes"
-      hide-empty
-    />
-    <section v-if="view === 'agenda' && allChips.length" class="agenda-tasks">
-      <h3>Tasks</h3>
-      <div v-for="[k, list] in allChips" :key="k">
-        <strong>{{ formatDayHeading(k, tz, today) }}</strong>
-        <ul class="chips">
-          <li v-for="c in list" :key="c.id">
-            <label :class="{ done: c.done }" :style="{ borderLeftColor: c.color }">
-              <input type="checkbox" :checked="c.done" @change="toggleChip(c)" />
-              {{ c.title }}
-            </label>
-          </li>
-        </ul>
+          {{ m.display_name }}
+        </UiChip>
       </div>
-    </section>
+    </div>
+
+    <UiErrorState v-if="calendar.error" :message="calendar.error" @retry="load" />
+    <UiSkeleton v-else-if="loadingFirst" :lines="5" />
+
+    <template v-else-if="view === 'agenda'">
+      <AgendaList
+        :events="events"
+        :tz="tz"
+        :from="grid.from"
+        :days="days"
+        :members="likes"
+        hide-empty
+        selectable
+        @select="detail = $event"
+      />
+      <section v-if="allChips.length" class="agenda-tasks" aria-label="Tasks">
+        <h2>Tasks</h2>
+        <div v-for="[k, list] in allChips" :key="k">
+          <strong>{{ formatDayHeading(k, tz, today) }}</strong>
+          <ul class="chips">
+            <li v-for="c in list" :key="c.id" :style="{ borderLeftColor: c.color }">
+              <UiCheckbox
+                :model-value="c.done"
+                :label="c.title"
+                @update:model-value="toggleChip(c)"
+              />
+            </li>
+          </ul>
+        </div>
+      </section>
+    </template>
 
     <div v-else-if="view === 'week'" class="week">
-      <section v-for="[k, list] in byDay" :key="k" :class="{ today: k === today }">
-        <h3>{{ formatDayHeading(k, tz, today) }}</h3>
+      <section
+        v-for="[k, list] in byDay"
+        :key="k"
+        class="day"
+        :class="{ today: k === today }"
+        :data-day="k"
+      >
+        <h2>{{ formatDayHeading(k, tz, today) }}</h2>
         <div class="list">
-          <EventCard v-for="e in list" :key="e.id" :event="e" :tz="tz" :members="likes" />
+          <EventCard
+            v-for="e in list"
+            :key="e.id"
+            :event="e"
+            :tz="tz"
+            :members="likes"
+            square
+            selectable
+            @select="detail = $event"
+          />
           <ul v-if="chipsOf(k).length" class="chips">
-            <li v-for="c in chipsOf(k)" :key="c.id">
-              <label :class="{ done: c.done }" :style="{ borderLeftColor: c.color }">
-                <input type="checkbox" :checked="c.done" @change="toggleChip(c)" />
-                {{ c.title }}
-              </label>
+            <li v-for="c in chipsOf(k)" :key="c.id" :style="{ borderLeftColor: c.color }">
+              <UiCheckbox
+                :model-value="c.done"
+                :label="c.title"
+                @update:model-value="toggleChip(c)"
+              />
             </li>
           </ul>
         </div>
       </section>
     </div>
 
-    <div v-else class="month">
-      <div v-for="w in weekdays" :key="w" class="dow">{{ w }}</div>
-      <div
-        v-for="[k, list] in byDay"
-        :key="k"
-        class="cell"
-        :class="{ today: k === today, outside: k < span.from || k >= span.to }"
-      >
-        <div class="num">{{ dayNumber(k) }}</div>
-        <ul>
-          <li
-            v-for="e in list.slice(0, 3)"
-            :key="e.id"
-            :class="{ busy: e.visibility === 'busy' }"
-            :style="stripeStyle(e)"
-          >
-            {{ e.visibility === 'busy' ? 'Busy' : e.title }}
-          </li>
-          <li v-if="list.length > 3" class="more">+{{ list.length - 3 }} more</li>
-          <li
-            v-for="c in chipsOf(k)"
-            :key="c.id"
-            class="task-chip"
-            :class="{ done: c.done }"
-            :style="{ borderLeftColor: c.color }"
-          >
-            <label>
-              <input type="checkbox" :checked="c.done" @change="toggleChip(c)" />
-              {{ c.title }}
-            </label>
-          </li>
-        </ul>
+    <div v-else class="month-scroll">
+      <div class="month">
+        <div v-for="w in weekdays" :key="w" class="dow">{{ w }}</div>
+        <div
+          v-for="[k, list] in byDay"
+          :key="k"
+          class="cell"
+          :class="{ today: k === today, outside: k < span.from || k >= span.to }"
+        >
+          <div class="num">{{ dayNumber(k) }}</div>
+          <ul>
+            <li v-for="e in list.slice(0, 3)" :key="e.id">
+              <button
+                type="button"
+                class="ev"
+                :class="{ busy: e.visibility === 'busy' }"
+                :style="stripeStyle(e)"
+                @click="detail = e"
+              >
+                {{ e.visibility === 'busy' ? 'Busy' : e.title }}
+              </button>
+            </li>
+            <li v-if="list.length > 3" class="more">+{{ list.length - 3 }} more</li>
+            <li
+              v-for="c in chipsOf(k)"
+              :key="c.id"
+              class="task-chip"
+              :style="{ borderLeftColor: c.color }"
+            >
+              <UiCheckbox
+                :model-value="c.done"
+                :label="c.title"
+                @update:model-value="toggleChip(c)"
+              />
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
-    <UndoToast
-      v-if="tasks.undo"
-      :key="tasks.undo.id"
-      :message="`Completed “${tasks.undo.title}”`"
-      @undo="tasks.undoLast()"
-      @expire="tasks.expireUndo()"
-    />
-  </section>
+
+    <UiSheet
+      v-model="detailOpen"
+      :title="detail?.visibility === 'busy' ? 'Busy' : (detail?.title ?? '')"
+    >
+      <EventCard v-if="detail" :event="detail" :tz="tz" :members="likes" />
+    </UiSheet>
+  </UiPage>
 </template>
 
 <style scoped>
+.controls {
+  display: grid;
+  gap: var(--ui-space-3);
+  justify-items: start;
+}
+.controls > :first-child {
+  width: 100%;
+}
+.members {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+}
+h2 {
+  margin: 0 0 var(--ui-space-2);
+  font: var(--ui-type-title-md);
+}
 .chips {
   list-style: none;
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 2px;
+  gap: var(--ui-space-1);
 }
-.chips label,
-.task-chip label {
-  display: flex;
-  gap: var(--space-1);
-  align-items: center;
-  border-left: 4px solid var(--color-accent);
-  padding-left: var(--space-1);
-  font-size: var(--font-size-sm);
-}
+.chips li,
 .task-chip {
-  font-size: var(--font-size-xs);
-}
-label.done,
-.task-chip.done {
-  text-decoration: line-through;
-  color: var(--color-muted);
-}
-.controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
-}
-.modes {
-  display: flex;
-  gap: var(--space-1);
-}
-button[aria-pressed='true'] {
-  background: var(--color-accent);
-  color: var(--color-bg);
+  border-left: 4px solid var(--ui-primary);
+  padding-left: var(--ui-space-2);
+  border-radius: var(--ui-radius-none);
 }
 .week {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-  gap: var(--space-3);
+  gap: var(--ui-space-3);
 }
 .week .list {
   display: grid;
-  gap: var(--space-2);
+  gap: var(--ui-space-2);
 }
-.week h3 {
-  margin: 0 0 var(--space-2);
-  font-size: var(--font-size-base);
+.day.today > h2 {
+  color: var(--ui-primary);
 }
-.today > h3 {
-  color: var(--color-accent);
+.month-scroll {
+  overflow-x: auto;
 }
 .month {
   display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(5rem, 1fr));
   gap: 1px;
-  background: var(--color-border);
-  border: 1px solid var(--color-border);
+  background: var(--ui-outline-variant);
+  border: 1px solid var(--ui-outline-variant);
 }
 .dow {
-  background: var(--color-surface);
-  padding: var(--space-1) var(--space-2);
-  font-size: var(--font-size-sm);
+  background: var(--ui-surface-container-low);
+  padding: var(--ui-space-1) var(--ui-space-2);
+  font: var(--ui-type-label-md);
   text-align: center;
 }
 .cell {
-  background: var(--color-bg);
+  background: var(--ui-surface);
   min-height: 5.5rem;
-  padding: var(--space-1);
+  padding: var(--ui-space-1);
   min-width: 0;
 }
 .cell.outside {
-  background: var(--color-surface);
-  color: var(--color-muted);
+  background: var(--ui-surface-container-low);
+  color: var(--ui-on-surface-variant);
 }
 .cell.today .num {
-  color: var(--color-accent);
+  color: var(--ui-primary);
   font-weight: 700;
 }
 .num {
-  font-size: var(--font-size-sm);
+  font: var(--ui-type-label-md);
 }
 .cell ul {
   list-style: none;
@@ -325,26 +389,37 @@ button[aria-pressed='true'] {
   display: grid;
   gap: 2px;
 }
-.cell li {
-  font-size: var(--font-size-xs);
-  border-left: 4px solid var(--color-accent);
-  padding-left: var(--space-1);
+.ev {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: var(--ui-type-body-sm);
+  color: inherit;
+  background: var(--ui-surface-container-low);
+  border: 0;
+  border-left: 4px solid var(--ui-primary);
+  border-radius: var(--ui-radius-none);
+  padding: 0 var(--ui-space-1);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  cursor: pointer;
 }
-.cell li.busy {
+.ev:focus-visible {
+  outline: var(--ui-focus-ring);
+}
+.ev.busy {
   background: repeating-linear-gradient(
     45deg,
     transparent,
     transparent 4px,
-    var(--color-border) 4px,
-    var(--color-border) 6px
+    var(--ui-outline-variant) 4px,
+    var(--ui-outline-variant) 6px
   );
-  color: var(--color-muted);
+  color: var(--ui-on-surface-variant);
 }
-.cell li.more {
-  border-left: 0;
-  color: var(--color-muted);
+.more {
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
 }
 </style>

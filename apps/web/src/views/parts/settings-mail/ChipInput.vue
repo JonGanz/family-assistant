@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { UiChip, UiTextField } from '../../../ui'
 
 const props = defineProps<{ modelValue: string[]; label: string; placeholder?: string }>()
 const emit = defineEmits<{ 'update:modelValue': [v: string[]] }>()
@@ -20,16 +21,12 @@ function remove(v: string) {
 
 <template>
   <div class="chips">
-    <span class="label">{{ label }}</span>
-    <ul>
-      <li v-for="v in modelValue" :key="v">
-        {{ v }}
-        <button type="button" :aria-label="`Remove ${v}`" @click="remove(v)">✕</button>
-      </li>
-    </ul>
-    <input
+    <div v-if="modelValue.length" class="chips__row">
+      <UiChip v-for="v in modelValue" :key="v" variant="input" @remove="remove(v)">{{ v }}</UiChip>
+    </div>
+    <UiTextField
       v-model="draft"
-      :aria-label="label"
+      :label="label"
       :placeholder="placeholder ?? 'Type and press Enter'"
       @keydown.enter.prevent="add"
       @blur="add"
@@ -41,29 +38,11 @@ function remove(v: string) {
 <style scoped>
 .chips {
   display: grid;
-  gap: var(--space-1);
+  gap: var(--ui-space-2);
 }
-ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
+.chips__row {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-1);
-}
-li {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: 0 var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: 0;
-  font-size: var(--font-size-sm);
-}
-li button {
-  border: 0;
-  background: transparent;
-  cursor: pointer;
-  color: inherit;
+  gap: var(--ui-space-2);
 }
 </style>

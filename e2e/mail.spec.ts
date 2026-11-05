@@ -353,7 +353,7 @@ test("rejecting a proposal removes it and writes nothing", async () => {
 // ---- bills ----------------------------------------------------------------------------------
 
 test("a bill becomes a pay task on the adult pool; completing it pays the bill and reopening reopens it", async () => {
-  const bills: J[] = await (await alex.get(`${api}/bills`)).json();
+  const bills: J[] = (await (await alex.get(`${api}/bills`)).json()).items;
   expect(bills).toHaveLength(1);
   const bill = bills[0];
   expect(bill).toMatchObject({
@@ -382,17 +382,17 @@ test("a bill becomes a pay task on the adult pool; completing it pays the bill a
     data: {},
   });
   expect(done.ok()).toBeTruthy();
-  const paid = (await (
-    await alex.get(`${api}/bills?status=paid`)
-  ).json()) as J[];
+  const paid = (
+    await (await alex.get(`${api}/bills?status=paid`)).json()
+  ).items as J[];
   expect(paid.map((b) => b.id)).toContain(bill.id);
   expect(paid.find((b) => b.id === bill.id).task_done).toBe(true);
 
   const reopen = await alex.post(`${api}/tasks/${bill.task}/reopen`);
   expect(reopen.ok()).toBeTruthy();
-  const open = (await (
-    await alex.get(`${api}/bills?status=open`)
-  ).json()) as J[];
+  const open = (
+    await (await alex.get(`${api}/bills?status=open`)).json()
+  ).items as J[];
   expect(open.map((b) => b.id)).toContain(bill.id);
 });
 
@@ -434,7 +434,7 @@ test("an unknown sender at the school's domain is a contact suggestion; acceptin
     role: "teacher",
   });
   expect(res.status()).toBe(204);
-  const orgs: J[] = await (await alex.get(`${api}/orgs`)).json();
+  const orgs: J[] = (await (await alex.get(`${api}/orgs`)).json()).items;
   const school = orgs.find((o) => o.name === "Example Elementary");
   const added = school.contacts.find(
     (c: J) => c.email === "newhire@example.edu",

@@ -72,7 +72,9 @@ test('System: the connection is stated as a fact; a server-set value is locked',
 test('Settings, Household: the per-adult dashboard count is a setting', async () => {
   const page = adultPage
   await page.goto('/settings/household')
-  await expect(page.locator('input[name=dashboard_pending_approvals]')).toBeChecked()
+  await expect(
+    page.getByRole('switch', { name: /Show each adult how many approvals/ }),
+  ).toBeChecked()
 })
 
 test('Settings, Account: the current password is required to change your own', async () => {
@@ -81,8 +83,11 @@ test('Settings, Account: the current password is required to change your own', a
   await page.locator('input[name=current_password]').fill('not-my-password-at-all')
   await page.locator('input[name=new_password]').fill('a-brand-new-passphrase-1')
   await page.locator('input[name=new_password_again]').fill('a-brand-new-passphrase-1')
-  await page.getByRole('button', { name: 'Change password' }).click()
-  await expect(page.getByRole('alert')).toBeVisible()
+  await page
+    .getByRole('region', { name: 'Unsaved changes' })
+    .getByRole('button', { name: 'Save' })
+    .click()
+  await expect(page.getByRole('alert').first()).toBeVisible()
   // Still signed in with the old password.
   expect((await page.request.get('/api/v1/me')).ok()).toBeTruthy()
 })

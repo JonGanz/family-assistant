@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { api } from '../../api/client'
-import ErrorBanner from '../../components/ErrorBanner.vue'
 import { copyText } from '../../lib/copy'
 import { downloadText } from '../../lib/download'
+import { UiButton, UiCard, UiCheckbox, UiTextField } from '../../ui'
 import { describeError } from '../shared'
 
 const emit = defineEmits<{ confirmed: [] }>()
@@ -58,51 +58,59 @@ async function confirm() {
       server's disk is lost and you have no copy of the key, those secrets cannot be recovered. Keep
       a copy somewhere safe, such as a password manager.
     </p>
-    <p v-if="!key">
-      To show the key, enter your own login password, the one you set for your account in the setup.
-      This only confirms that it is you. It is not a password for the key.
-    </p>
-    <form v-if="!key" class="form" @submit.prevent="reveal">
-      <label class="field">
-        Your login password
-        <input
+    <template v-if="!key">
+      <p>
+        To show the key, enter your own login password, the one you set for your account in the
+        setup. This only confirms that it is you. It is not a password for the key.
+      </p>
+      <form class="stack" @submit.prevent="reveal">
+        <UiTextField
           v-model="password"
+          label="Your login password"
           name="master_key_password"
           type="password"
           autocomplete="current-password"
           required
         />
-      </label>
-      <ErrorBanner v-if="error" :message="error" />
-      <button type="submit" class="btn-primary" :disabled="busy">Show the key</button>
-    </form>
-    <div v-else class="form">
-      <label class="field">
-        Master key
-        <input
-          :value="key"
-          name="master_key"
-          readonly
-          data-testid="master-key"
-          @focus="($event.target as HTMLInputElement).select()"
-        />
-      </label>
+        <UiCard v-if="error" variant="outlined" role="alert">{{ error }}</UiCard>
+        <div><UiButton type="submit" :loading="busy">Show the key</UiButton></div>
+      </form>
+    </template>
+    <div v-else class="stack">
+      <UiTextField
+        :model-value="key"
+        label="Master key"
+        name="master_key"
+        readonly
+        data-testid="master-key"
+        @focus="($event.target as HTMLInputElement).select()"
+      />
       <div class="row">
-        <button type="button" @click="copy">Copy</button>
-        <button type="button" @click="save">Download</button>
+        <UiButton variant="tonal" @click="copy">Copy</UiButton>
+        <UiButton variant="tonal" @click="save">Download</UiButton>
       </div>
-      <p v-if="copied === 'yes'" class="text-success" role="status">Copied.</p>
-      <p v-if="copied === 'no'" class="muted" role="status">
+      <p v-if="copied === 'yes'" role="status">Copied.</p>
+      <p v-if="copied === 'no'" role="status">
         Copying is not available here. Select the key above and press Ctrl+C.
       </p>
-      <label class="field-inline">
-        <input v-model="stored" type="checkbox" name="key_stored" />
-        I stored it somewhere safe
-      </label>
-      <ErrorBanner v-if="error" :message="error" />
-      <button type="button" class="btn-primary" :disabled="!stored" @click="confirm">
-        Confirm backup
-      </button>
+      <UiCheckbox v-model="stored" label="I stored it somewhere safe" />
+      <UiCard v-if="error" variant="outlined" role="alert">{{ error }}</UiCard>
+      <div><UiButton :disabled="!stored" @click="confirm">Confirm backup</UiButton></div>
     </div>
   </div>
 </template>
+
+<style scoped>
+.master-key,
+.stack {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+.row {
+  display: flex;
+  gap: var(--ui-space-2);
+}
+p {
+  margin: 0;
+}
+</style>

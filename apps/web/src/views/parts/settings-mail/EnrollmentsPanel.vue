@@ -3,11 +3,18 @@ import { onMounted, reactive, ref } from 'vue'
 import type { Member } from '../../../api/client'
 import type { EnrollmentView, OrgView } from '../../../api/mailSettings'
 import { useOrgsStore } from '../../../stores/orgs'
+import ResponsiveItems from '../../../app/ResponsiveItems.vue'
+import { UiButton, UiCheckbox, UiSelect, UiTextField } from '../../../ui'
 import { describeError } from '../../shared'
+import ConfirmDialog from './ConfirmDialog.vue'
+import SheetForm from './SheetForm.vue'
+import { toggleIn } from './toggle'
+import { useConfirm } from './useConfirm'
 
 const props = defineProps<{ child: Member; orgs: OrgView[] }>()
 const store = useOrgsStore()
 const error = ref('')
+const confirm = useConfirm()
 const editing = ref<string | 'new' | null>(null)
 const form = reactive({
   org: '',
@@ -56,64 +63,106 @@ async function save() {
   }
 }
 
-async function remove(e: EnrollmentView) {
-  if (!confirm('Remove this enrollment?')) return
-  try {
-    await store.removeEnrollment(e)
-  } catch (err) {
-    error.value = describeError(err, 'Could not remove.')
-  }
-}
+const remove = (e: EnrollmentView) =>
+  confirm.ask(
+    'Remove this enrollment?',
+    `${orgName(e.org)} for ${props.child.display_name}.`,
+    async () => {
+      try {
+        await store.removeEnrollment(e)
+      } catch (err) {
+        error.value = describeError(err, 'Could not remove.')
+      }
+    },
+    'Remove',
+  )
+const orgOptions = () => props.orgs.map((o) => ({ value: o.id, label: o.name }))
 </script>
 
 <template>
-  <div :data-testid="`enrollments-${child.display_name}`">
+  <div class="enr" :data-testid="`enrollments-${child.display_name}`">
     <h3>{{ child.display_name }}</h3>
-    <ul class="card-list">
-      <li v-for="e in list()" :key="e.id">
-        <strong>{{ orgName(e.org) }}</strong>
-        <span class="muted">
-          {{
-            [
-              e.grade && `grade ${e.grade}`,
-              e.class_name,
-              e.from && `from ${e.from}`,
-              e.until && `until ${e.until}`,
-            ]
-              .filter(Boolean)
-              .join(' · ')
-          }}
-        </span>
-        <button type="button" @click="open(e)">Edit</button>
-        <button type="button" @click="remove(e)">Remove</button>
-      </li>
-    </ul>
-    <button v-if="editing === null && orgs.length" type="button" @click="open('new')">
-      Add enrollment
-    </button>
-    <form v-if="editing !== null" class="form" @submit.prevent="save">
-      <label>
-        Organization
-        <select v-model="form.org" name="org" required>
-          <option v-for="o in orgs" :key="o.id" :value="o.id">{{ o.name }}</option>
-        </select>
-      </label>
-      <label>Grade <input v-model="form.grade" name="grade" /></label>
-      <label>Class <input v-model="form.class_name" name="class_name" /></label>
-      <label>From <input v-model="form.from" name="from" type="date" /></label>
-      <label>Until <input v-model="form.until" name="until" type="date" /></label>
-      <fieldset v-if="contactsOf(form.org).length">
+    <ResponsiveItems :items="list()">
+      <template #item="{ item: e }">
+        <div class="enr__item">
+          <strong>{{ orgName(e.org) }}</strong>
+          <p class="meta">
+            {{
+              [
+                e.grade && `grade ${e.grade}`,
+                e.class_name,
+                e.from && `from ${e.from}`,
+                e.until && `until ${e.until}`,
+              ]
+                .filter(Boolean)
+                .join(' · ')
+            }}
+          </p>
+          <div class="row">
+            <UiButton variant="text" @click="open(e)">Edit</UiButton>
+            <UiButton variant="text" @click="remove(e)">Remove</UiButton>
+          </div>
+        </div>
+      </template>
+    </ResponsiveItems>
+    <div v-if="orgs.length">
+      <UiButton variant="tonal" icon="add" @click="open('new')">Add enrollment</UiButton>
+    </div>
+    <SheetForm
+      :model-value="editing !== null"
+      :title="`Enrollment for ${child.display_name}`"
+      @update:model-value="editing = null"
+      @save="save"
+    >
+      <UiSelect v-model="form.org" label="Organization" :options="orgOptions()" />
+      <UiTextField v-model="form.grade" label="Grade" name="grade" />
+      <UiTextField v-model="form.class_name" label="Class" name="class_name" />
+      <UiTextField v-model="form.from" label="From" name="from" type="date" />
+      <UiTextField v-model="form.until" label="Until" name="until" type="date" />
+      <fieldset v-if="contactsOf(form.org).length" class="enr__contacts">
         <legend>Contacts (teachers, coaches)</legend>
-        <label v-for="c in contactsOf(form.org)" :key="c.id" class="field-inline">
-          <input v-model="form.contacts" type="checkbox" :value="c.id" />
-          {{ c.name }} ({{ c.email }})
-        </label>
+        <UiCheckbox
+          v-for="c in contactsOf(form.org)"
+          :key="c.id"
+          :model-value="form.contacts.includes(c.id)"
+          :label="`${c.name} (${c.email})`"
+          @update:model-value="toggleIn(form.contacts, c.id, $event)"
+        />
       </fieldset>
-      <p v-if="error" class="text-danger" role="alert">{{ error }}</p>
-      <div>
-        <button type="submit">Save</button>
-        <button type="button" @click="editing = null">Cancel</button>
-      </div>
-    </form>
+      <p v-if="error" role="alert">{{ error }}</p>
+    </SheetForm>
+    <ConfirmDialog
+      :pending="confirm.pending.value"
+      @accept="confirm.accept"
+      @cancel="confirm.cancel"
+    />
   </div>
 </template>
+
+<style scoped>
+.enr,
+.enr__item {
+  display: grid;
+  gap: var(--ui-space-2);
+}
+.enr h3 {
+  margin: 0;
+  font: var(--ui-type-title-md);
+}
+.meta {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
+}
+.row {
+  display: flex;
+  gap: var(--ui-space-2);
+}
+.enr__contacts {
+  display: grid;
+  gap: var(--ui-space-1);
+  border: 0;
+  padding: 0;
+  margin: 0;
+}
+</style>

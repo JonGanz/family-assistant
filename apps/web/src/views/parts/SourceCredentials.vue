@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue'
 import type { SourceView } from '../../api/client'
-import ErrorBanner from '../../components/ErrorBanner.vue'
 import { useSourcesStore } from '../../stores/sources'
+import { UiCard, UiTextField } from '../../ui'
 import { describeError } from '../shared'
+import SheetForm from './settings-mail/SheetForm.vue'
 
-const props = defineProps<{ source: SourceView }>()
-const emit = defineEmits<{ done: [] }>()
+const props = defineProps<{ source: SourceView; modelValue: boolean }>()
+const emit = defineEmits<{ done: []; 'update:modelValue': [v: boolean] }>()
 const sources = useSourcesStore()
 const form = reactive({ url: '', username: '', password: '' })
 const error = ref('')
@@ -30,25 +31,30 @@ async function save() {
 </script>
 
 <template>
-  <form class="form" autocomplete="off" @submit.prevent="save">
-    <p class="muted">Leave a field empty to keep its current value.</p>
-    <label>
-      {{ source.kind === 'ics' ? 'New calendar link' : 'New server URL' }}
-      <input v-model="form.url" name="new_url" type="url" autocomplete="off" />
-    </label>
+  <SheetForm
+    :model-value="modelValue"
+    :title="`Change ${source.name}`"
+    save-label="Save and sync"
+    @update:model-value="emit('update:modelValue', $event)"
+    @save="save"
+  >
+    <p>Leave a field empty to keep its current value.</p>
+    <UiTextField
+      v-model="form.url"
+      :label="source.kind === 'ics' ? 'New calendar link' : 'New server URL'"
+      name="new_url"
+      type="url"
+    />
     <template v-if="source.kind === 'caldav'">
-      <label>Username <input v-model="form.username" name="new_user" autocomplete="off" /></label>
-      <label>
-        Password
-        <input
-          v-model="form.password"
-          name="new_password"
-          type="password"
-          autocomplete="new-password"
-        />
-      </label>
+      <UiTextField v-model="form.username" label="Username" name="new_user" />
+      <UiTextField
+        v-model="form.password"
+        label="Password"
+        name="new_password"
+        type="password"
+        autocomplete="new-password"
+      />
     </template>
-    <ErrorBanner v-if="error" :message="error" />
-    <button type="submit">Save and sync</button>
-  </form>
+    <UiCard v-if="error" variant="outlined" role="alert">{{ error }}</UiCard>
+  </SheetForm>
 </template>

@@ -190,13 +190,24 @@ pub async fn detail(
             title: e.event.title,
             start_at: e.event.start_at,
             status: e.event.status.unwrap_or(fa_domain::EventStatus::Extracted),
+            extracted_by: e.extracted_by,
         })
         .collect();
     let tasks = TaskRepo::derived_for_message(conn, id)
         .await?
         .into_iter()
-        .map(|(id, title, status)| DerivedTask { id, title, status })
-        .collect();
+        .collect::<Vec<_>>();
+    let mut derived_tasks = Vec::with_capacity(tasks.len());
+    for (tid, title, status) in tasks {
+        let extracted_by = ExtractedByRepo::get(conn, ExtractTarget::Task, tid.as_uuid()).await?;
+        derived_tasks.push(DerivedTask {
+            id: tid,
+            title,
+            status,
+            extracted_by,
+        });
+    }
+    let tasks = derived_tasks;
     let url = source.as_ref().and_then(|s| external_url(s, &m.remote_id));
     let mut bills = Vec::new();
     for b in BillRepo::for_message(conn, id).await? {

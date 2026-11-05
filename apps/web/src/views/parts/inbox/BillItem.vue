@@ -3,6 +3,7 @@ import { reactive } from 'vue'
 import type { BillPatch, BillView } from '../../../api/client'
 import { fmtDay } from '../../../components/mail/format'
 import { formatMoney } from '../../../stores/bills'
+import { UiButton, UiCard, UiTextField } from '../../../ui'
 
 const props = defineProps<{ bill: BillView; busy?: boolean }>()
 const emit = defineEmits<{ approve: [BillPatch]; reject: [] }>()
@@ -18,35 +19,71 @@ function approve() {
 </script>
 
 <template>
-  <li class="form item">
-    <p>
-      <strong>{{ formatMoney(bill.amount_minor, bill.currency) }}</strong>
-      <span v-if="bill.due_on"> due {{ fmtDay(bill.due_on) }}</span>
-    </p>
-    <label>Payee <input v-model="form.payee" /></label>
-    <label>Due <input v-model="form.due" type="date" /></label>
-    <p class="muted">
-      Confidence {{ Math.round(bill.confidence * 100) }}%.
-      <RouterLink v-if="bill.message" :to="{ name: 'mail-detail', params: { id: bill.message } }"
-        >Open message</RouterLink
-      >
-    </p>
-    <div class="actions">
-      <button type="button" :disabled="busy" @click="approve">Approve</button>
-      <button type="button" :disabled="busy" @click="emit('reject')">Reject</button>
-    </div>
+  <li class="item">
+    <UiCard variant="filled">
+      <template #header>
+        <div class="head">
+          <span
+            >{{ formatMoney(bill.amount_minor, bill.currency)
+            }}<template v-if="bill.due_on"> due {{ fmtDay(bill.due_on) }}</template></span
+          >
+          <slot name="header-trailing" />
+        </div>
+      </template>
+      <div class="fields">
+        <UiTextField v-model="form.payee" label="Payee" />
+        <UiTextField v-model="form.due" label="Due" type="date" />
+        <p class="note">
+          Confidence {{ Math.round(bill.confidence * 100) }}%.
+          <RouterLink
+            v-if="bill.message"
+            :to="{ name: 'mail-detail', params: { id: bill.message } }"
+            >Open message</RouterLink
+          >
+        </p>
+      </div>
+      <template #actions>
+        <UiButton variant="text" :disabled="busy" @click="emit('reject')">Reject</UiButton>
+        <UiButton :disabled="busy" @click="approve">Approve</UiButton>
+      </template>
+    </UiCard>
   </li>
 </template>
 
 <style scoped>
 .item {
-  max-width: none;
+  list-style: none;
 }
-.actions {
+.head {
   display: flex;
-  gap: var(--space-2);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-2);
+  font: var(--ui-type-title-sm);
 }
-.actions button {
-  min-height: 44px;
+.fields {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+.note {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
+}
+.err {
+  margin: 0;
+  color: var(--ui-error);
+  font: var(--ui-type-body-md);
+}
+.checks {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.checks legend {
+  padding: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-label-md);
 }
 </style>

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import MemberChip from '../MemberChip.vue'
+import Avatar from '../Avatar.vue'
+import { UiButton, UiIcon } from '../../ui'
 import { dueLabel, isOverdue, type TaskItemModel } from '../../lib/tasks'
 
 const props = defineProps<{
@@ -32,27 +33,37 @@ const overdue = computed(() => !done.value && isOverdue(props.task.dueAt, props.
           class="priority"
           role="img"
           aria-label="High priority"
-          >!</span
-        >{{ task.title }}
+          ><UiIcon name="warning" :size="20"
+        /></span>
+        {{ task.title }}
       </span>
       <span class="meta">
         <span v-if="due" class="due" :class="{ late: overdue }">{{ due }}</span>
         <span v-if="task.stepsTotal > 0" class="steps"
           >{{ task.stepsDone }}/{{ task.stepsTotal }} steps</span
         >
-        <MemberChip v-for="m in task.assignees" :key="m.id" :name="m.name" :color="m.color" />
       </span>
     </button>
+    <span v-if="task.assignees.length" class="people">
+      <Avatar
+        v-for="m in task.assignees"
+        :key="m.id"
+        :name="m.name"
+        :color="m.color"
+        :src="m.avatarUrl"
+        size="1.75rem"
+      />
+    </span>
     <span class="claim">
       <slot name="claim">
-        <button
+        <UiButton
           v-if="!task.claimedBy && task.status === 'open' && task.assignees.length === 0"
-          type="button"
+          variant="tonal"
           class="claim-btn"
           @click="emit('claim', task.id)"
         >
           Claim
-        </button>
+        </UiButton>
       </slot>
     </span>
   </div>
@@ -62,75 +73,64 @@ const overdue = computed(() => !done.value && isOverdue(props.task.dueAt, props.
 .task-item {
   display: flex;
   align-items: center;
-  gap: var(--space-3);
-  min-height: var(--min-touch, 48px);
-  padding: var(--space-2) var(--space-3);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  gap: var(--ui-space-3);
+  min-height: var(--ui-touch);
+  padding: var(--ui-space-2) var(--ui-space-3);
+  color: var(--ui-on-surface);
 }
 .check {
   flex: none;
-  width: 1.6rem;
-  height: 1.6rem;
-  accent-color: var(--color-success);
+  width: 1.5rem;
+  height: 1.5rem;
+  accent-color: var(--ui-primary);
 }
 .body {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--space-1);
+  gap: var(--ui-space-1);
   text-align: left;
   background: none;
   border: 0;
   padding: 0;
   color: inherit;
-  font: inherit;
+  font: var(--ui-type-body-lg);
   cursor: pointer;
 }
 .title {
-  font-size: var(--font-size-base);
-  font-weight: 500;
+  font: var(--ui-type-title-md);
+  overflow-wrap: anywhere;
 }
 .priority {
-  display: inline-block;
-  margin-right: var(--space-2);
-  padding: 0 0.45em;
-  border-radius: 0;
-  background: var(--color-danger);
-  color: var(--color-bg);
-  font-weight: 700;
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: var(--ui-space-1);
+  color: var(--ui-error);
 }
 .meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: var(--space-2);
-  font-size: var(--font-size-sm);
-  color: var(--color-muted);
+  gap: var(--ui-space-2);
+  font: var(--ui-type-body-sm);
+  color: var(--ui-on-surface-variant);
 }
 .due.late {
-  color: var(--color-danger);
+  color: var(--ui-error);
   font-weight: 600;
+}
+.people {
+  display: inline-flex;
+  gap: var(--ui-space-1);
 }
 .done .title {
   text-decoration: line-through;
-  color: var(--color-muted);
-}
-.claim-btn {
-  min-height: var(--min-touch, 48px);
-  padding: 0 var(--space-3);
-  border: 1px solid var(--color-accent);
-  border-radius: var(--radius-md);
-  background: none;
-  color: var(--color-accent);
-  font: inherit;
-  cursor: pointer;
+  color: var(--ui-on-surface-variant);
 }
 .kiosk {
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-4);
+  gap: var(--ui-space-4);
+  padding: var(--ui-space-3) var(--ui-space-4);
   min-height: 5rem;
 }
 .kiosk .check {

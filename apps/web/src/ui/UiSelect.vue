@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useId } from 'vue'
+import { computed, useAttrs, useId } from 'vue'
 import UiIcon from './UiIcon.vue'
 
 export interface SelectOption {
@@ -7,6 +7,7 @@ export interface SelectOption {
   label: string
   disabled?: boolean
 }
+defineOptions({ inheritAttrs: false })
 const props = defineProps<{
   modelValue: string
   options: SelectOption[]
@@ -16,12 +17,22 @@ const props = defineProps<{
   disabled?: boolean
 }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
-const id = useId()
-const descId = computed(() => (props.error || props.supporting ? `${id}-d` : undefined))
+const attrs = useAttrs()
+// class, style and data-* (test ids) stay on the wrapper; everything else goes to the native control.
+const isWrapperAttr = (k: string) => k === 'class' || k === 'style' || k.startsWith('data-')
+const wrapperAttrs = computed(() =>
+  Object.fromEntries(Object.entries(attrs).filter(([k]) => isWrapperAttr(k))),
+)
+const inputAttrs = computed(() =>
+  Object.fromEntries(Object.entries(attrs).filter(([k]) => !isWrapperAttr(k))),
+)
+const uid = useId()
+const id = computed(() => (attrs.id as string | undefined) ?? uid)
+const descId = computed(() => (props.error || props.supporting ? `${id.value}-d` : undefined))
 </script>
 
 <template>
-  <div class="ui-field" :class="{ 'has-error': error }">
+  <div class="ui-field" :class="{ 'has-error': error }" v-bind="wrapperAttrs">
     <label :for="id" class="ui-field__label">{{ label }}</label>
     <div class="ui-field__box">
       <select
@@ -31,6 +42,7 @@ const descId = computed(() => (props.error || props.supporting ? `${id}-d` : und
         :disabled="disabled"
         :aria-invalid="error ? true : undefined"
         :aria-describedby="descId"
+        v-bind="inputAttrs"
         @change="emit('update:modelValue', ($event.target as HTMLSelectElement).value)"
       >
         <option v-for="o in options" :key="o.value" :value="o.value" :disabled="o.disabled">

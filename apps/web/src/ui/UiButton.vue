@@ -1,37 +1,48 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { RouterLink } from 'vue-router'
 import UiIcon from './UiIcon.vue'
 import UiProgress from './UiProgress.vue'
 import type { IconName } from './icons'
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     variant?: 'filled' | 'tonal' | 'outlined' | 'text'
     icon?: IconName
     loading?: boolean
     disabled?: boolean
     type?: 'button' | 'submit' | 'reset'
+    to?: string
+    href?: string
   }>(),
   { variant: 'filled', type: 'button' },
+)
+const tag = computed(() => (props.to ? RouterLink : props.href ? 'a' : 'button'))
+const linkAttrs = computed(() =>
+  props.to ? { to: props.to } : props.href ? { href: props.href } : {},
 )
 </script>
 
 <template>
-  <button
+  <component
+    :is="tag"
     class="ui-btn"
     :class="`ui-btn--${variant}`"
-    :type="type"
-    :disabled="disabled || loading"
+    v-bind="linkAttrs"
+    :type="tag === 'button' ? type : undefined"
+    :disabled="tag === 'button' ? disabled || loading : undefined"
     :aria-busy="loading || undefined"
   >
     <UiProgress v-if="loading" kind="circular" :size="18" label="Working" />
     <UiIcon v-else-if="icon" :name="icon" :size="20" />
     <slot />
-  </button>
+  </component>
 </template>
 
 <style scoped>
 .ui-btn {
   position: relative;
+  text-decoration: none;
   display: inline-flex;
   align-items: center;
   justify-content: center;

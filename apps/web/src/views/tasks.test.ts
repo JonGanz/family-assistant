@@ -5,11 +5,14 @@ import { useSessionStore } from '../stores/session'
 import { resetSnackbar, useSnackbar } from '../ui/composables/useSnackbar'
 import { toInstant, fromInstant } from './parts/dateInput'
 import TaskAddForm from './parts/TaskAddForm.vue'
+import TaskDetailView from './TaskDetailView.vue'
 import TasksView from './TasksView.vue'
 
+const leaveGuards: (() => unknown)[] = []
 vi.mock('vue-router', () => ({
-  useRouter: () => ({ push: vi.fn() }),
-  useRoute: () => ({ query: {} }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  useRoute: () => ({ query: {}, params: { id: 't1' } }),
+  onBeforeRouteLeave: (fn: () => unknown) => leaveGuards.push(fn),
 }))
 vi.mock('../api/client', () => ({
   api: {
@@ -20,6 +23,8 @@ vi.mock('../api/client', () => ({
     completeTask: vi.fn(),
     reopenTask: vi.fn(),
     household: vi.fn(),
+    task: vi.fn(),
+    patchTask: vi.fn(),
   },
 }))
 import { api } from '../api/client'
@@ -38,6 +43,8 @@ beforeEach(() => {
   setActivePinia(createPinia())
   vi.resetAllMocks()
   resetSnackbar()
+  leaveGuards.length = 0
+  localStorage.clear()
 })
 
 describe('TaskAddForm', () => {
@@ -52,9 +59,12 @@ describe('TaskAddForm', () => {
         tz: 'UTC',
       },
     })
-    const options = w.findAll('select[name=list] option').map((o) => o.text())
+    const options = w
+      .findAll('select')[0]!
+      .findAll('option')
+      .map((o) => o.text())
     expect(options).toEqual(['Homework'])
-    expect(w.find('select[name=assignee]').exists()).toBe(false)
+    expect(w.findAll('select')).toHaveLength(1)
     await w.find('input[name=title]').setValue('Read chapter 3')
     await w.find('form').trigger('submit')
     await flushPromises()
@@ -72,8 +82,8 @@ describe('TaskAddForm', () => {
         tz: 'UTC',
       },
     })
-    expect(w.findAll('select[name=list] option')).toHaveLength(2)
-    expect(w.findAll('select[name=assignee] option')).toHaveLength(3)
+    expect(w.findAll('select')[0]!.findAll('option')).toHaveLength(2)
+    expect(w.findAll('select')[1]!.findAll('option')).toHaveLength(3)
   })
 })
 
@@ -126,5 +136,118 @@ describe('date inputs', () => {
     expect(toInstant('2026-07-01', '09:00', 'Europe/London')).toBe('2026-07-01T08:00:00.000Z')
     expect(toInstant('', '09:00', 'UTC')).toBeNull()
     expect(toInstant('2026-10-26', '', 'UTC')).toBe('2026-10-26T23:59:00.000Z')
+  })
+})
+
+const task = {
+  id: 't1',
+  list: 'chores',
+  list_name: 'Chores',
+  title: 'Dishes',
+  notes: null,
+  status: 'open',
+  origin: 'manual',
+  priority_flag: 'normal',
+  calendar_display: 'hidden',
+  assignees: ['a'],
+  steps: [],
+  claimed_by: null,
+  due_at: null,
+  version: 1,
+}
+
+function signIn(id = 'a', role = 'adult') {
+  useSessionStore().me = {
+    actor: { kind: 'user', member: { id, role } },
+    household: { tz: 'UTC' },
+  } as never
+}
+
+async function mountTasks() {
+  m.members.mockResolvedValue(members as never)
+  m.taskLists.mockResolvedValue(lists as never)
+  m.household.mockResolvedValue({ tz: 'UTC' } as never)
+  m.tasks.mockResolvedValue({ items: [task] } as never)
+  signIn()
+  const w = mount(TasksView, { global: { stubs: { RouterLink: true } } })
+  await flushPromises()
+  return w
+}
+const chip = (w: ReturnType<typeof mount>, name: string) =>
+  w.findAll('.filter button').find((b) => b.text() === name)!
+
+describe('Tasks filter chips', () => {
+  it('defaults to Mine and sends member=', async () => {
+    const w = await mountTasks()
+    expect(m.tasks).toHaveBeenCalledWith(expect.objectContaining({ member: 'a' }))
+    expect(chip(w, 'Mine').attributes('aria-checked')).toBe('true')
+    expect(w.findAll('.filter button').map((b) => b.text())).toEqual(['All', 'Mine', 'Alex', 'Kai'])
+  })
+
+  it('All sends no member, a member chip sends that member, and the choice persists', async () => {
+    const w = await mountTasks()
+    m.tasks.mockClear()
+    await chip(w, 'All').trigger('click')
+    await flushPromises()
+    expect(m.tasks.mock.calls.every(([q]) => !(q as { member?: string }).member)).toBe(true)
+    expect(localStorage.getItem('fa.tasks.filter')).toBe('all')
+    m.tasks.mockClear()
+    await chip(w, 'Kai').trigger('click')
+    await flushPromises()
+    expect(m.tasks).toHaveBeenCalledWith(expect.objectContaining({ member: 'k' }))
+    expect(localStorage.getItem('fa.tasks.filter')).toBe('k')
+  })
+
+  it('restores the stored choice and falls back to Mine for an unknown member', async () => {
+    localStorage.setItem('fa.tasks.filter', 'gone')
+    const w = await mountTasks()
+    expect(chip(w, 'Mine').attributes('aria-checked')).toBe('true')
+    expect(m.tasks).toHaveBeenCalledWith(expect.objectContaining({ member: 'a' }))
+  })
+})
+
+describe('TaskDetailView', () => {
+  async function mountDetail() {
+    m.members.mockResolvedValue(members as never)
+    m.taskLists.mockResolvedValue(lists as never)
+    m.household.mockResolvedValue({ tz: 'UTC' } as never)
+    m.task.mockResolvedValue(task as never)
+    m.tasks.mockResolvedValue({ items: [] } as never)
+    signIn()
+    const w = mount(TaskDetailView, { global: { stubs: { RouterLink: true } } })
+    await flushPromises()
+    return w
+  }
+
+  it('shows the Save bar once the form is dirty and saves one PATCH', async () => {
+    m.patchTask.mockResolvedValue({ ...task, title: 'Dishes now', version: 2 } as never)
+    const w = await mountDetail()
+    expect(w.find('.ui-savebar').exists()).toBe(false)
+    await w.find('input[name=title]').setValue('Dishes now')
+    expect(w.find('.ui-savebar').exists()).toBe(true)
+    await w
+      .findAll('.ui-savebar button')
+      .find((b) => b.text() === 'Save')!
+      .trigger('click')
+    await flushPromises()
+    expect(m.patchTask).toHaveBeenCalledWith(
+      't1',
+      1,
+      expect.objectContaining({ title: 'Dishes now', assignees: ['a'] }),
+    )
+    expect(w.find('.ui-savebar').exists()).toBe(false)
+  })
+
+  it('applies the priority flag at once with an Undo snackbar', async () => {
+    m.patchTask.mockResolvedValue({ ...task, priority_flag: 'high', version: 2 } as never)
+    const w = await mountDetail()
+    await w.find('button[role=switch]').trigger('click')
+    await flushPromises()
+    expect(m.patchTask).toHaveBeenCalledWith('t1', 1, { priority_flag: 'high' })
+    const snack = useSnackbar().state.current
+    expect(snack?.action?.label).toBe('Undo')
+    expect(w.find('.ui-savebar').exists()).toBe(false)
+    await snack!.action!.run()
+    expect(m.patchTask).toHaveBeenLastCalledWith('t1', 2, { priority_flag: 'normal' })
   })
 })

@@ -44,7 +44,7 @@ test('dashboard renders the agenda, the weather and an advisory', async ({ page,
   const { screen, ctx } = await openKiosk(page, browser)
   await expect(screen.getByRole('region', { name: 'Agenda' })).toContainText('Spirit Day')
   await expect(screen.getByTestId('temp')).toBeVisible()
-  await expect(screen.getByRole('region', { name: 'Advisories' })).toContainText('Frost tonight')
+  await expect(screen.getByRole('list', { name: 'Advisories' })).toContainText('Frost tonight')
   await ctx.close()
 })
 
@@ -53,7 +53,7 @@ test('a rule evaluated by the worker shows up on the dashboard without a reload'
   browser,
 }) => {
   const { screen, ctx } = await openKiosk(page, browser)
-  const advisories = screen.getByRole('region', { name: 'Advisories' })
+  const advisories = screen.getByRole('list', { name: 'Advisories' })
   await expect(advisories).toContainText('Frost tonight')
   const text = `Live update ${Date.now()}`
   const res = await page.request.post('/api/v1/weather-rules', {
@@ -74,7 +74,7 @@ test('a rule evaluated by the worker shows up on the dashboard without a reload'
 test('a child login sees only permitted events', async ({ page }) => {
   await uiLogin(page, child)
   await page.goto('/calendar')
-  await page.getByRole('button', { name: 'agenda' }).click()
+  await page.getByRole('radio', { name: 'Agenda' }).click()
   await expect(page.getByText('Spirit Day').first()).toBeVisible() // Riley's school calendar
   // Check this week and the next (the fixture events are a couple of days out).
   for (let week = 0; week < 2; week++) {
@@ -87,12 +87,14 @@ test('a child login sees only permitted events', async ({ page }) => {
 test('settings: add an ICS source and enable its calendar', async ({ page }) => {
   await uiLogin(page, adult)
   await page.goto('/settings/calendars')
-  await page.getByRole('button', { name: 'ICS link' }).click()
-  await page.getByLabel('Name').fill('UI Added Feed')
-  await page.getByLabel('Calendar link').fill(`${FIXTURES}/ics/jordan.ics`)
-  await page.getByRole('button', { name: 'Test' }).click()
-  await expect(page.getByTestId('test-result')).toContainText('It works')
-  await page.getByRole('button', { name: 'Add', exact: true }).click()
+  await page.getByRole('button', { name: 'Add a source' }).click()
+  const sheet = page.getByRole('dialog', { name: 'Add a calendar source' })
+  await sheet.getByRole('radio', { name: 'ICS link' }).click()
+  await sheet.getByLabel('Name').fill('UI Added Feed')
+  await sheet.getByLabel('Calendar link').fill(`${FIXTURES}/ics/jordan.ics`)
+  await sheet.getByRole('button', { name: 'Test' }).click()
+  await expect(sheet.getByTestId('test-result')).toContainText('It works')
+  await sheet.getByRole('button', { name: 'Add', exact: true }).click()
   await expect(page.getByTestId('source-UI Added Feed')).toBeVisible()
   // The worker's first sync bumps the calendar's version; toggling with a stale version is a
   // 409. Wait for it, then reload so the page holds the current versions.

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import type { Member, TaskListView } from '../../api/client'
 import { useTasksStore } from '../../stores/tasks'
 import { addableLists, assignableMembers, type Viewer } from '../../stores/taskMap'
+import { UiButton, UiSelect, UiTextField } from '../../ui'
 import { describeError } from '../shared'
 import { toInstant } from './dateInput'
 
@@ -25,9 +26,17 @@ const date = ref('')
 const time = ref('')
 const assignee = ref(isChild.value ? (props.viewer?.id ?? '') : '')
 const error = ref('')
+const adding = ref(false)
+const listOptions = computed(() => allowed.value.map((l) => ({ value: l.id, label: l.name })))
+const assigneeOptions = computed(() => [
+  { value: '', label: 'Anyone (household)' },
+  ...people.value.map((m) => ({ value: m.id, label: m.display_name })),
+])
 
 async function submit() {
+  if (adding.value) return
   error.value = ''
+  adding.value = true
   try {
     const assignees =
       isChild.value && props.viewer ? [props.viewer.id] : assignee.value ? [assignee.value] : []
@@ -46,39 +55,40 @@ async function submit() {
     emit('done')
   } catch (e) {
     error.value = describeError(e, 'Could not add the task.')
+  } finally {
+    adding.value = false
   }
 }
 </script>
 
 <template>
-  <form class="form add-form" @submit.prevent="submit">
-    <label>Task <input v-model="title" name="title" required maxlength="200" /></label>
-    <label>
-      List
-      <select v-model="list" name="list" required>
-        <option v-for="l in allowed" :key="l.id" :value="l.id">{{ l.name }}</option>
-      </select>
-    </label>
-    <label>Due date <input v-model="date" name="due_date" type="date" /></label>
-    <label v-if="date">Due time <input v-model="time" name="due_time" type="time" /></label>
-    <label v-if="!isChild">
-      For
-      <select v-model="assignee" name="assignee">
-        <option value="">Anyone (household)</option>
-        <option v-for="m in people" :key="m.id" :value="m.id">{{ m.display_name }}</option>
-      </select>
-    </label>
-    <p v-if="error" class="text-danger" role="alert">{{ error }}</p>
-    <div class="row">
-      <button type="submit" :disabled="!list || !title.trim()">Add</button>
-      <button type="button" @click="emit('done')">Cancel</button>
+  <form class="add-form" @submit.prevent="submit">
+    <UiTextField v-model="title" label="Task" name="title" required maxlength="200" />
+    <UiSelect v-model="list" label="List" :options="listOptions" />
+    <UiTextField v-model="date" label="Due date" name="due_date" type="date" />
+    <UiTextField v-if="date" v-model="time" label="Due time" name="due_time" type="time" />
+    <UiSelect v-if="!isChild" v-model="assignee" label="For" :options="assigneeOptions" />
+    <p v-if="error" class="add-form__error" role="alert">{{ error }}</p>
+    <div class="add-form__actions">
+      <UiButton variant="text" @click="emit('done')">Cancel</UiButton>
+      <UiButton type="submit" :loading="adding" :disabled="!list || !title.trim()">Add</UiButton>
     </div>
   </form>
 </template>
 
 <style scoped>
-.row {
+.add-form {
+  display: grid;
+  gap: var(--ui-space-4);
+}
+.add-form__error {
+  margin: 0;
+  color: var(--ui-error);
+  font: var(--ui-type-body-md);
+}
+.add-form__actions {
   display: flex;
-  gap: var(--space-2);
+  justify-content: flex-end;
+  gap: var(--ui-space-2);
 }
 </style>

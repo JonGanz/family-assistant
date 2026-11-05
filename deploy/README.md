@@ -422,12 +422,12 @@ See [4.5](#45-the-wall-screen-dashboard): a second port that serves the wall-scr
 devices on the home network only. Its settings are under **Settings, System**.
 
 ### 8.5 Other profiles
-`--profile gpu` runs Ollama (a GPU node, or one machine running everything; needs an NVIDIA GPU, its driver and
-nvidia-container-toolkit). `--profile ai-cpu` is a placeholder until M4. Profiles combine:
+The `gpu` profile's `ollama` service is one option; **a natively installed Ollama on the GPU PC is the default** (see [Local AI](../README.md#local-ai-optional): bind it to a LAN or tailnet address, never a public one, because it has no authentication). `--profile gpu` runs Ollama in a container (a GPU node, or one machine running everything; needs an NVIDIA GPU, its driver and
+nvidia-container-toolkit). `--profile ai-cpu` is a placeholder until M4.1. Profiles combine:
 `docker compose --profile tailscale --profile gpu up -d`. For two machines, the GPU machine runs
 `docker compose --profile gpu up -d ollama` with `OLLAMA_BIND` set so the server can reach it.
 `fa-gpu-agent` runs natively there with [`systemd/fa-gpu-agent.service`](systemd/fa-gpu-agent.service) (a stub
-until M4).
+until M4.1).
 
 ## 9. Recovery and the command line
 Everyday setup needs no command line. For recovery and scripting, `fa-server` runs inside the app container:
@@ -450,7 +450,7 @@ run on start and stay backward compatible within a minor version (D-033).
 |---|---|
 | default | `init` (one-shot: creates the secrets), `postgres` (not reachable from outside), `app` (web app and API on port 8080, and the background jobs: syncing, mail, notifications), `ntfy` (port 8090), `backup` |
 | `tailscale` | `tailscale` (the sidecar) |
-| `ai-cpu` | placeholders until M4 |
+| `ai-cpu` | placeholders until M4.1 |
 | `gpu` | `ollama` |
 
 The `app` needs outbound HTTPS: calendars, the weather (Open-Meteo), Google and your mail server.

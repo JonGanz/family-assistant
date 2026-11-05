@@ -1,7 +1,4 @@
 <script setup lang="ts">
-import ErrorBanner from '../components/ErrorBanner.vue'
-import PageHeader from '../components/PageHeader.vue'
-import StateBlock from '../components/StateBlock.vue'
 import QRCode from 'qrcode'
 import { onMounted, ref } from 'vue'
 import { api, type DeviceDto, type PairDeviceResp } from '../api/client'
@@ -12,8 +9,27 @@ import LayoutEditor from '../dashboard/LayoutEditor.vue'
 import { loadPreviewData, type PreviewData } from '../dashboard/preview'
 import { S } from '../dashboard/strings'
 import type { DashboardSettings } from '../dashboard/types'
+import ResponsiveItems from '../app/ResponsiveItems.vue'
+import SettingsPage from '../app/SettingsPage.vue'
+import {
+  UiButton,
+  UiCard,
+  UiChip,
+  UiDialog,
+  UiEmptyState,
+  UiErrorState,
+  UiFab,
+  UiSheet,
+  UiSkeleton,
+  UiTextField,
+  useSnackbar,
+} from '../ui'
 
+const snackbar = useSnackbar()
 const devices = ref<DeviceDto[]>([])
+const loading = ref(true)
+const pairing = ref(false)
+const revoking = ref<DeviceDto | null>(null)
 const name = ref('')
 const paired = ref<PairDeviceResp | null>(null)
 const qr = ref('')
@@ -23,9 +39,21 @@ const error = ref('')
 async function load() {
   try {
     devices.value = await api.devices()
+    loadError.value = ''
   } catch (e) {
-    error.value = e instanceof ApiError ? e.message : 'Could not load devices.'
+    loadError.value = e instanceof ApiError ? e.message : 'Could not load devices.'
+  } finally {
+    loading.value = false
   }
+}
+const loadError = ref('')
+
+function openPair() {
+  paired.value = null
+  qr.value = ''
+  lanQr.value = ''
+  error.value = ''
+  pairing.value = true
 }
 onMounted(load)
 
@@ -102,65 +130,60 @@ function closeEditor() {
   draft.value = null
 }
 
-async function revoke(d: DeviceDto) {
-  if (!confirm(`Revoke ${d.name}?`)) return
+async function revoke() {
+  const d = revoking.value
+  revoking.value = null
+  if (!d) return
   try {
     await api.revokeDevice(d.id)
+    snackbar.show({ text: `${d.name} revoked` })
     await load()
   } catch (e) {
-    error.value = e instanceof ApiError ? e.message : 'Revoke failed.'
+    snackbar.show({ text: e instanceof ApiError ? e.message : 'Revoke failed.' })
   }
 }
+
+const lastSeen = (iso: string) =>
+  new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })
 </script>
 
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader eyebrow="Settings" title="Devices" />
-    <ErrorBanner v-if="error" :message="error" />
-
-    <form class="pair" @submit.prevent="pair">
-      <label class="field">Device name <input v-model="name" name="device_name" required /></label>
-      <button type="submit" class="btn-primary">Pair a device</button>
-    </form>
-
-    <div v-if="paired" class="paired" data-testid="paired">
-      <p>
-        Open this URL on the screen (shown once):
-        <code data-testid="pair-url">{{ paired.pair_url }}</code>
-      </p>
-      <img v-if="qr" :src="qr" alt="QR code for the pair URL" width="240" height="240" />
-      <template v-if="paired.lan_pair_url">
-        <p>
-          On a screen without Tailscale, open this home-network address instead (shown once):
-          <code data-testid="lan-pair-url">{{ paired.lan_pair_url }}</code>
-        </p>
-        <img
-          v-if="lanQr"
-          :src="lanQr"
-          alt="QR code for the home-network pair URL"
-          width="240"
-          height="240"
-        />
+  <SettingsPage title="Devices">
+    <UiErrorState v-if="loadError" :message="loadError" @retry="load" />
+    <UiSkeleton v-else-if="loading" :lines="4" />
+    <UiEmptyState
+      v-else-if="!devices.length"
+      icon="devices"
+      title="No devices paired yet"
+      text="Pair a wall screen to show the dashboard on it."
+    >
+      <UiButton icon="add" @click="openPair">Pair a device</UiButton>
+    </UiEmptyState>
+    <ResponsiveItems v-else :items="devices" class="devices">
+      <template #item="{ item: d }">
+        <div class="device" data-testid="device">
+          <div class="device__head">
+            <strong>{{ d.name }}</strong>
+            <UiChip v-if="d.revoked" icon="lock">Revoked</UiChip>
+            <UiChip v-else>{{ d.kind }}</UiChip>
+          </div>
+          <p v-if="!d.revoked && d.last_seen" class="muted">
+            Last seen {{ lastSeen(d.last_seen) }}
+          </p>
+          <div v-if="!d.revoked" class="device__actions">
+            <UiButton v-if="d.kind === 'dashboard'" variant="tonal" icon="edit" @click="edit(d)">
+              {{ S.editLayout }}
+            </UiButton>
+            <UiButton variant="text" icon="delete" @click="revoking = d">Revoke</UiButton>
+          </div>
+        </div>
       </template>
-    </div>
+    </ResponsiveItems>
 
-    <h2>Paired devices</h2>
-    <StateBlock :empty="!devices.length" empty-text="No devices paired yet." />
-    <ul class="card-list">
-      <li v-for="d in devices" :key="d.id" class="row">
-        <strong>{{ d.name }}</strong> ({{ d.kind }})
-        <span v-if="d.revoked"> revoked</span>
-        <span v-else-if="d.last_seen"> last seen {{ d.last_seen }}</span>
-        <button v-if="!d.revoked && d.kind === 'dashboard'" class="btn-sm" @click="edit(d)">
-          {{ S.editLayout }}
-        </button>
-        <button v-if="!d.revoked" class="btn-danger btn-sm" @click="revoke(d)">Revoke</button>
-      </li>
-    </ul>
-
-    <section v-if="editing && draft && preview" class="layout" data-testid="device-layout">
-      <h2>{{ S.layout }}: {{ editing.name }}</h2>
+    <UiCard v-if="editing && draft && preview" data-testid="device-layout">
+      <template #header>{{ S.layout }}: {{ editing.name }}</template>
       <p v-if="notice" role="status">{{ notice }}</p>
+      <p v-if="error" role="alert" class="error">{{ error }}</p>
       <div class="split">
         <LayoutEditor
           v-model="draft"
@@ -174,24 +197,102 @@ async function revoke(d: DeviceDto) {
           <DevicePreview :data="preview" :settings="draft" />
         </div>
       </div>
-      <button type="button" class="btn-ghost" @click="closeEditor">{{ S.closeEditor }}</button>
-    </section>
-  </section>
+      <template #actions>
+        <UiButton variant="text" @click="closeEditor">{{ S.closeEditor }}</UiButton>
+      </template>
+    </UiCard>
+    <p v-else-if="error" role="alert" class="error">{{ error }}</p>
+
+    <div class="fab"><UiFab icon="add" label="Pair a device" extended @click="openPair" /></div>
+
+    <UiSheet v-model="pairing" title="Pair a device">
+      <form v-if="!paired" class="pair" @submit.prevent="pair">
+        <UiTextField v-model="name" label="Device name" name="device_name" required />
+        <p v-if="error" role="alert" class="error">{{ error }}</p>
+        <UiButton type="submit">Pair</UiButton>
+      </form>
+      <div v-else class="paired" data-testid="paired">
+        <p>
+          Open this URL on the screen (shown once):
+          <code data-testid="pair-url">{{ paired.pair_url }}</code>
+        </p>
+        <img v-if="qr" :src="qr" alt="QR code for the pair URL" width="240" height="240" />
+        <template v-if="paired.lan_pair_url">
+          <p>
+            On a screen without Tailscale, open this home-network address instead (shown once):
+            <code data-testid="lan-pair-url">{{ paired.lan_pair_url }}</code>
+          </p>
+          <img
+            v-if="lanQr"
+            :src="lanQr"
+            alt="QR code for the home-network pair URL"
+            width="240"
+            height="240"
+          />
+        </template>
+      </div>
+      <template v-if="paired" #actions>
+        <UiButton @click="pairing = false">Done</UiButton>
+      </template>
+    </UiSheet>
+
+    <UiDialog
+      :model-value="!!revoking"
+      :title="`Revoke ${revoking?.name ?? ''}?`"
+      @update:model-value="!$event && (revoking = null)"
+    >
+      <p>The screen stops working until you pair it again.</p>
+      <template #actions>
+        <UiButton variant="text" @click="revoking = null">Cancel</UiButton>
+        <UiButton @click="revoke">Revoke</UiButton>
+      </template>
+    </UiDialog>
+  </SettingsPage>
 </template>
 
 <style scoped>
-.pair {
+.fab {
+  position: fixed;
+  right: calc(var(--ui-space-4) + env(safe-area-inset-right));
+  bottom: calc(var(--ui-bottom-offset, 0px) + var(--ui-space-4) + env(safe-area-inset-bottom));
+  z-index: 15;
+}
+.device {
+  display: grid;
+  gap: var(--ui-space-2);
+}
+.device__head {
   display: flex;
-  gap: var(--space-3);
-  align-items: end;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-2);
+}
+.device__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+}
+.muted {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
+}
+.error {
+  color: var(--ui-error);
+  margin: 0;
+}
+.pair,
+.paired {
+  display: grid;
+  gap: var(--ui-space-3);
 }
 code {
   word-break: break-all;
 }
 .split {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
-  gap: var(--space-5);
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: var(--ui-space-5);
   align-items: start;
 }
 </style>

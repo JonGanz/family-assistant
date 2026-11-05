@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import PageHeader from '../components/PageHeader.vue'
-import ErrorBanner from '../components/ErrorBanner.vue'
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ApiError } from '../api/http'
 import { useSessionStore } from '../stores/session'
+import { UiButton, UiCard, UiIconButton, UiTextField } from '../ui'
 
 const session = useSessionStore()
 const router = useRouter()
@@ -13,6 +12,7 @@ const username = ref('')
 const password = ref('')
 const error = ref('')
 const busy = ref(false)
+const reveal = ref(false)
 
 function describe(e: unknown): string {
   if (e instanceof ApiError) {
@@ -40,32 +40,72 @@ async function submit() {
 </script>
 
 <template>
-  <section class="login" aria-labelledby="page-title">
-    <PageHeader title="Log in" />
-    <form class="form" @submit.prevent="submit">
-      <label class="field">
-        Username
-        <input v-model="username" name="username" autocomplete="username" required />
-      </label>
-      <label class="field">
-        Password
-        <input
-          v-model="password"
-          name="password"
-          type="password"
-          autocomplete="current-password"
+  <main class="login" aria-labelledby="page-title">
+    <UiCard variant="elevated" class="login__card">
+      <template #header><h1 id="page-title" class="login__title">Log in</h1></template>
+      <form class="login__form" @submit.prevent="submit">
+        <UiTextField
+          v-model="username"
+          label="Username"
+          name="username"
+          autocomplete="username"
           required
         />
-      </label>
-      <ErrorBanner v-if="error" :message="error" />
-      <button type="submit" class="btn-primary" :disabled="busy">Log in</button>
-    </form>
-  </section>
+        <UiTextField
+          v-model="password"
+          label="Password"
+          name="password"
+          :type="reveal ? 'text' : 'password'"
+          autocomplete="current-password"
+          required
+        >
+          <template #trailing>
+            <UiIconButton
+              :icon="reveal ? 'visibility_off' : 'visibility'"
+              :label="reveal ? 'Hide text' : 'Show text'"
+              :pressed="reveal"
+              @click="reveal = !reveal"
+            />
+          </template>
+        </UiTextField>
+        <p v-if="error" class="login__error" role="alert">{{ error }}</p>
+        <UiButton type="submit" :loading="busy">Log in</UiButton>
+      </form>
+    </UiCard>
+  </main>
 </template>
 
 <style scoped>
 .login {
-  max-width: 22rem;
-  margin: 3rem auto;
+  min-height: 100dvh;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  background: var(--ui-surface);
+  color: var(--ui-on-surface);
+}
+.login__card {
+  width: 100%;
+}
+.login__title {
+  margin: 0;
+  font: var(--ui-type-headline-sm);
+}
+.login__form {
+  display: grid;
+  gap: var(--ui-space-4);
+}
+.login__error {
+  margin: 0;
+  color: var(--ui-error);
+}
+@media (min-width: 600px) {
+  .login {
+    align-items: center;
+    padding: var(--ui-space-4);
+  }
+  .login__card {
+    max-width: 24rem;
+  }
 }
 </style>

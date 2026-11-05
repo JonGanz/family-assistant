@@ -1,19 +1,27 @@
 <script setup lang="ts">
-import PageHeader from '../components/PageHeader.vue'
-import StateBlock from '../components/StateBlock.vue'
-import ErrorBanner from '../components/ErrorBanner.vue'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted } from 'vue'
 import type { RoutineRunView } from '../api/client'
 import MemberChip from '../components/MemberChip.vue'
-import ProgressBar from '../components/tasks/ProgressBar.vue'
+import { hueVar } from '../lib/hues'
 import { useMembersStore } from '../stores/members'
 import { useRoutinesStore } from '../stores/routines'
-import { hueVar } from '../lib/hues'
+import {
+  UiCard,
+  UiCheckbox,
+  UiEmptyState,
+  UiErrorState,
+  UiList,
+  UiPage,
+  UiProgress,
+  UiSkeleton,
+  UiTopAppBar,
+  useSnackbar,
+} from '../ui'
 import { describeError } from './shared'
 
 const routines = useRoutinesStore()
 const members = useMembersStore()
-const error = ref('')
+const snackbar = useSnackbar()
 
 onMounted(() => {
   void members.load()
@@ -33,65 +41,119 @@ const groups = computed(() => {
   }
   return out
 })
+const loading = computed(() => !routines.todayLoaded && !routines.error)
 
-async function tick(run: RoutineRunView, stepId: string, done: boolean) {
-  error.value = ''
+// Ticking a step is instant with Undo (D-096): Undo ticks it back.
+async function tick(run: RoutineRunView, stepId: string, text: string, done: boolean) {
   try {
     await routines.tick(run, stepId, done)
   } catch (e) {
-    error.value = describeError(e, 'Could not update the step.')
+    snackbar.show({ text: describeError(e, 'Could not update the step.') })
+    return
   }
+  snackbar.show({
+    text: done ? `Done: ${text}` : `Unticked: ${text}`,
+    action: {
+      label: 'Undo',
+      run: async () => {
+        const current = routines.today.find((r) => r.id === run.id) ?? run
+        try {
+          await routines.tick(current, stepId, !done)
+        } catch (e) {
+          snackbar.show({ text: describeError(e, 'Could not undo.') })
+        }
+      },
+    },
+  })
 }
 </script>
 
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader title="Routines" />
-    <StateBlock
-      :loading="!routines.todayLoaded && !routines.error"
-      :error="routines.error"
-      :empty="routines.todayLoaded && groups.length === 0"
-      empty-text="No routines today."
+  <UiPage>
+    <template #top>
+      <UiTopAppBar title="Routines" />
+    </template>
+
+    <UiSkeleton v-if="loading" :lines="5" />
+    <UiErrorState
+      v-else-if="routines.error"
+      :message="routines.error"
+      @retry="routines.loadToday()"
     />
-    <ErrorBanner v-if="error" :message="error" />
-    <section v-for="g in groups" :key="g.id" class="member">
-      <h2><MemberChip :name="g.name" :color="g.color" /></h2>
-      <div v-for="r in g.runs" :key="r.id" class="run card" :data-testid="`run-${r.routine_name}`">
-        <h3>{{ r.routine_name }}</h3>
-        <ProgressBar :done="r.done" :total="r.total" :label="`${r.routine_name} progress`" />
-        <ul class="steps">
-          <li v-for="s in r.steps" :key="s.step" :class="{ done: !!s.done_at }">
-            <label>
-              <input
-                type="checkbox"
-                :checked="!!s.done_at"
-                @change="tick(r, s.step, ($event.target as HTMLInputElement).checked)"
-              />
-              {{ s.text }}
-              <span v-if="s.target_time" class="muted">by {{ s.target_time.slice(0, 5) }}</span>
-            </label>
-          </li>
-        </ul>
+    <UiEmptyState v-else-if="groups.length === 0" icon="routines" title="No routines today" />
+
+    <section v-for="g in groups" :key="g.id" class="member" :aria-label="g.name">
+      <h2 class="who"><MemberChip :name="g.name" :color="g.color" variant="app" /></h2>
+      <div class="runs">
+        <UiCard
+          v-for="r in g.runs"
+          :key="r.id"
+          variant="filled"
+          :data-testid="`run-${r.routine_name}`"
+        >
+          <template #header>
+            <h3>{{ r.routine_name }}</h3>
+          </template>
+          <UiProgress
+            :value="r.total ? (r.done / r.total) * 100 : 0"
+            :label="`${r.routine_name} progress`"
+          />
+          <p class="count">{{ r.done }} of {{ r.total }}</p>
+          <UiList :aria-label="`${r.routine_name} steps`">
+            <li v-for="s in r.steps" :key="s.step" class="step" :class="{ done: !!s.done_at }">
+              <UiCheckbox
+                :model-value="!!s.done_at"
+                @update:model-value="tick(r, s.step, s.text, $event)"
+              >
+                {{ s.text }}
+                <span v-if="s.target_time" class="by">by {{ s.target_time.slice(0, 5) }}</span>
+              </UiCheckbox>
+            </li>
+          </UiList>
+        </UiCard>
       </div>
     </section>
-  </section>
+  </UiPage>
 </template>
 
 <style scoped>
-.run {
-  margin-bottom: var(--space-3);
-}
-.steps {
-  list-style: none;
-  padding: 0;
+.member {
   display: grid;
-  gap: var(--space-1);
+  gap: var(--ui-space-2);
 }
-.done label {
-  text-decoration: line-through;
-  color: var(--color-muted);
+.who {
+  margin: 0;
+}
+.runs {
+  display: grid;
+  gap: var(--ui-space-3);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 600px) {
+  .runs {
+    grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  }
 }
 h3 {
-  margin: 0 0 var(--space-2);
+  margin: 0;
+  font: var(--ui-type-title-md);
+}
+.count {
+  margin: var(--ui-space-1) 0 0;
+  font: var(--ui-type-body-md);
+  color: var(--ui-on-surface-variant);
+}
+.step {
+  min-height: var(--ui-touch);
+  display: flex;
+  align-items: center;
+}
+.step.done {
+  color: var(--ui-on-surface-variant);
+  text-decoration: line-through;
+}
+.by {
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
 }
 </style>

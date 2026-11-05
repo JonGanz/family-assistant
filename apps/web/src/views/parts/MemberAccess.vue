@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { api, type Member } from '../../api/client'
-import ErrorBanner from '../../components/ErrorBanner.vue'
 import { useMembersStore } from '../../stores/members'
 import { useSessionStore } from '../../stores/session'
 import { describeError } from '../shared'
+import { UiButton, UiCard, UiTextField } from '../../ui'
 import { isPin, passwordMin } from './memberForm'
 
 const props = defineProps<{ member: Member }>()
@@ -70,12 +70,12 @@ function savePin() {
 </script>
 
 <template>
-  <fieldset class="access" :data-testid="`access-${member.display_name}`">
-    <legend>{{ isAdult() ? 'Login' : 'Login and PIN' }}</legend>
+  <UiCard variant="outlined" :data-testid="`access-${member.display_name}`">
+    <template #header>{{ isAdult() ? 'Login' : 'Login and PIN' }}</template>
     <p v-if="claimedByOther()" class="muted" data-testid="claimed-note">
       This adult has their own login. Only they can change their password, PIN and settings.
     </p>
-    <template v-else>
+    <div v-else class="access">
       <p class="muted">
         {{ member.has_account ? 'Has a login.' : 'No login yet.' }}
         {{ member.has_pin ? 'Has a PIN.' : 'No PIN.' }}
@@ -86,38 +86,67 @@ function savePin() {
           They must change this password at first sign-in.
         </template>
       </p>
-      <template v-if="member.has_account && isSelf()">
-        <p class="muted">
-          Change your own password under <RouterLink to="/settings/account">Account</RouterLink>.
-        </p>
-      </template>
+      <p v-if="member.has_account && isSelf()" class="muted">
+        Change your own password under <RouterLink to="/settings/account">Account</RouterLink>.
+      </p>
       <template v-else>
-        <label v-if="!member.has_account" class="field">
-          Username
-          <input v-model="username" name="login_username" autocomplete="off" />
-        </label>
-        <label class="field">
-          {{ member.has_account ? 'New password' : 'Password' }}
-          <input
-            v-model="password"
-            name="login_password"
-            type="password"
-            autocomplete="new-password"
-          />
-        </label>
-        <button type="button" class="btn-sm" @click="saveLogin">
-          {{ member.has_account ? 'Reset password' : 'Create login' }}
-        </button>
+        <UiTextField
+          v-if="!member.has_account"
+          v-model="username"
+          label="Username"
+          name="login_username"
+          autocomplete="off"
+        />
+        <UiTextField
+          v-model="password"
+          :label="member.has_account ? 'New password' : 'Password'"
+          name="login_password"
+          type="password"
+          autocomplete="new-password"
+        />
+        <div class="actions">
+          <UiButton variant="tonal" @click="saveLogin">
+            {{ member.has_account ? 'Reset password' : 'Create login' }}
+          </UiButton>
+        </div>
       </template>
       <template v-if="!isAdult() || isSelf()">
-        <label class="field">
-          {{ member.has_pin ? 'New PIN' : 'PIN' }} (4 to 6 digits)
-          <input v-model="pin" name="pin" inputmode="numeric" autocomplete="off" maxlength="6" />
-        </label>
-        <button type="button" class="btn-sm" @click="savePin">Save PIN</button>
+        <UiTextField
+          v-model="pin"
+          :label="`${member.has_pin ? 'New PIN' : 'PIN'} (4 to 6 digits)`"
+          name="pin"
+          inputmode="numeric"
+          autocomplete="off"
+          maxlength="6"
+        />
+        <div class="actions"><UiButton variant="tonal" @click="savePin">Save PIN</UiButton></div>
       </template>
-    </template>
-    <p v-if="message" class="text-success" role="status">{{ message }}</p>
-    <ErrorBanner v-if="error" :message="error" />
-  </fieldset>
+      <p v-if="message" class="ok" role="status">{{ message }}</p>
+      <p v-if="error" class="err" role="alert">{{ error }}</p>
+    </div>
+  </UiCard>
 </template>
+
+<style scoped>
+.access {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+.actions {
+  display: flex;
+  gap: var(--ui-space-2);
+}
+p {
+  margin: 0;
+}
+.muted {
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-md);
+}
+.ok {
+  color: var(--ui-success);
+}
+.err {
+  color: var(--ui-error);
+}
+</style>

@@ -30,7 +30,7 @@ describe('TaskItem', () => {
     expect(w.text()).toContain('Take out bins')
     expect(w.get('.due').text()).toBe('overdue 2 d')
     expect(w.get('.due').classes()).toContain('late')
-    expect(w.text()).toContain('Ana')
+    expect(w.find('[title=Ana]').exists()).toBe(true)
     expect(w.text()).toContain('1/3 steps')
     expect(w.find('[aria-label="High priority"]').exists()).toBe(true)
   })
@@ -85,7 +85,8 @@ describe('ProgressBar', () => {
     const bar = w.get('[role=progressbar]')
     expect(bar.attributes('aria-valuenow')).toBe('2')
     expect(bar.attributes('aria-valuemax')).toBe('5')
-    expect(w.get('.fill').attributes('style')).toContain('width: 40%')
+    expect(bar.attributes('aria-valuetext')).toBe('2 of 5')
+    expect(w.get('.ui-progress__bar').attributes('style')).toContain('width: 40%')
     expect(w.classes()).not.toContain('complete')
   })
   it('turns complete and supports kiosk', () => {
@@ -94,7 +95,16 @@ describe('ProgressBar', () => {
   })
   it('copes with an empty total', () => {
     const w = mount(ProgressBar, { props: { done: 0, total: 0 } })
-    expect(w.get('.fill').attributes('style')).toContain('width: 0%')
+    expect(w.get('.ui-progress__bar').attributes('style')).toContain('width: 0%')
+  })
+})
+
+describe('StepList ticks stay instant', () => {
+  it('disables the boxes on a closed task', () => {
+    const w = mount(StepList, {
+      props: { steps: [{ id: 's1', text: 'Sort', done: false }], disabled: true },
+    })
+    expect(w.get('input').attributes('disabled')).toBeDefined()
   })
 })
 
@@ -138,7 +148,7 @@ describe('RruleBuilder', () => {
         'onUpdate:modelValue': (v: string) => w.setProps({ modelValue: v }),
       },
     })
-    await w.get('[data-testid=day-MO]').setValue(true)
+    await w.get('[data-testid=day-MO] button').trigger('click')
     await w.get('[data-testid=interval]').setValue(2)
     expect(w.props('modelValue')).toBe('FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,SA')
   })
@@ -149,8 +159,8 @@ describe('RruleBuilder', () => {
         'onUpdate:modelValue': (v: string) => w.setProps({ modelValue: v }),
       },
     })
-    expect(w.get<HTMLSelectElement>('[data-testid=nth]').element.value).toBe('2')
-    await w.get('[data-testid=nth]').setValue('-1')
+    expect(w.get<HTMLSelectElement>('[data-testid=nth] select').element.value).toBe('2')
+    await w.get('[data-testid=nth] select').setValue('-1')
     expect(w.props('modelValue')).toBe('FREQ=MONTHLY;BYDAY=-1TU')
   })
   it('falls back to a raw input for unsupported rules', async () => {

@@ -16,3 +16,19 @@ describe('settings map', () => {
     expect(to).toContain('/settings/system')
   })
 })
+
+describe('settings map entries', () => {
+  it('give every page an icon and a one-line summary', () => {
+    for (const p of visibleGroups(true).flatMap((g) => g.pages)) {
+      expect(p.icon, p.to).toBeTruthy()
+      expect(p.summary, p.to).toBe(p.blurb)
+    }
+  })
+
+  it('lists the AI page for adults only', () => {
+    const adult = visibleGroups(true).flatMap((g) => g.pages.map((p) => p.to))
+    const child = visibleGroups(false).flatMap((g) => g.pages.map((p) => p.to))
+    expect(adult).toContain('/settings/ai')
+    expect(child).not.toContain('/settings/ai')
+  })
+})

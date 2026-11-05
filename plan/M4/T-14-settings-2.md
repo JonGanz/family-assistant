@@ -5,7 +5,7 @@ milestone: M4
 wave: 3
 depends_on: [T-05]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/views/SettingsCalendarsView.vue", "apps/web/src/views/SettingsMailView.vue", "apps/web/src/views/SettingsOrgsView.vue", "apps/web/src/views/SettingsNotificationsView.vue", "apps/web/src/views/SettingsTasksView.vue", "apps/web/src/views/SettingsWeatherView.vue", "apps/web/src/views/SettingsSystemView.vue", "apps/web/src/views/SettingsStatusView.vue", "apps/web/src/stores/sources.ts", "apps/web/src/stores/mailSettings.ts", "apps/web/src/stores/mailSettings.test.ts", "apps/web/src/stores/rules.ts", "apps/web/src/stores/orgs.ts", "apps/web/src/stores/orgs.test.ts", "apps/web/src/stores/notifyPrefs.ts", "apps/web/src/api/mailSettings.ts", "apps/web/src/views/settings2.test.ts", "apps/web/src/views/parts/AbsencesPanel.vue", "apps/web/src/views/parts/AddSourceForm.vue", "apps/web/src/views/parts/DefinitionEditor.vue", "apps/web/src/views/parts/DefinitionsPanel.vue", "apps/web/src/views/parts/RoutinesPanel.vue", "apps/web/src/views/parts/RuleEditor.vue", "apps/web/src/views/parts/SourceCredentials.vue", "apps/web/src/views/parts/TaskListsPanel.vue", "apps/web/src/views/parts/definitionForm.ts", "apps/web/src/views/parts/definitionForm.test.ts", "apps/web/src/views/parts/listForm.ts", "apps/web/src/views/parts/routineForm.ts", "apps/web/src/views/parts/useDefinitionValidation.ts", "apps/web/src/views/parts/useRuleValidation.ts", "apps/web/src/views/parts/settings-mail/**", "apps/web/src/views/system/**", "apps/web/e2e/ui-shots.routes/settings2.ts"]
 decisions: [D-095, D-096, D-052, D-054, D-058, D-061, D-075, D-072]
 ---
@@ -60,3 +60,8 @@ The user answered R2 on 2026-11-04 and 2026-11-05. These rules apply to every wa
   - store changes made;
   - questions for the user's R3 review;
   - "list what outside your paths needs changing"
+
+## Outcome (T-14 report)
+- Built: Calendars, Mail, Orgs, Notifications, Tasks settings (chips instead of tabs, `?tab=` kept), Weather, System (grouped cards, draft and Save bar), Status; every part rewritten; new shared parts in `settings-mail/` (ConfirmDialog, InstantCheck, InstantSelect, SheetForm, PageFab, PageNotices); `rules` store `loaded`.
+- Defaults applied: System booleans are part of the draft (each save restarts the server); tabs became chips; empty lists show a FAB plus an empty-state button.
+- e2e: m1, m2, m3 and m35 selectors (T-19).

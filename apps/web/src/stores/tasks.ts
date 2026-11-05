@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { api, type TaskPatch, type TaskView } from '../api/client'
 import { isConflict } from '../api/http'
+import { useSessionStore } from './session'
 
 export type TaskTab = 'now' | 'mine' | 'all' | 'suggested'
 
@@ -11,6 +12,25 @@ const QUERY = {
   all: { view: 'all', status: 'open' },
   suggested: { view: 'all', status: 'suggested' },
 } as const
+
+/** Who the task lists show: everyone, the signed-in member, or one member by id. */
+export type TaskFilter = 'all' | 'mine' | (string & {})
+export const FILTER_KEY = 'fa.tasks.filter'
+
+function readFilter(fallback: TaskFilter): TaskFilter {
+  try {
+    return localStorage.getItem(FILTER_KEY) || fallback
+  } catch {
+    return fallback
+  }
+}
+function writeFilter(f: TaskFilter): void {
+  try {
+    localStorage.setItem(FILTER_KEY, f)
+  } catch {
+    // Private mode or blocked storage: the choice simply is not remembered.
+  }
+}
 
 /** The server pages newest-created first; the lists show the soonest due first (undated last). */
 function byDue(a: TaskView, b: TaskView): number {
@@ -37,6 +57,37 @@ export const useTasksStore = defineStore('tasks', () => {
   const conflict = ref(false)
   const undo = ref<UndoState | null>(null)
   const wanted = new Set<TaskTab>()
+  const session = useSessionStore()
+  /** Per device (D-096 style): default Mine, or All when nobody is signed in as a member. */
+  const filter = ref<TaskFilter>(readFilter(session.member ? 'mine' : 'all'))
+
+  /** The `member=` query value for the current filter; undefined means no filter. */
+  function memberParam(): string | undefined {
+    if (filter.value === 'all') return undefined
+    if (filter.value === 'mine') return session.member?.id
+    return filter.value
+  }
+  /** Suggestions are household-wide, so the filter does not apply to them. */
+  function query(tab: TaskTab) {
+    const member = tab === 'suggested' ? undefined : memberParam()
+    return member ? { ...QUERY[tab], member } : { ...QUERY[tab] }
+  }
+
+  /** Picks a filter, remembers it, drops the pages loaded so far (paging restarts) and reloads. */
+  async function setFilter(f: TaskFilter): Promise<void> {
+    filter.value = f
+    writeFilter(f)
+    tabs.value = {}
+    nextBefore.value = {}
+    await refresh()
+  }
+  /** An id that is no longer a member falls back to Mine (or All with no signed-in member). */
+  function validateFilter(memberIds: string[]): void {
+    const f = filter.value
+    if (f === 'all' || f === 'mine' || memberIds.includes(f)) return
+    filter.value = session.member ? 'mine' : 'all'
+    writeFilter(filter.value)
+  }
 
   const msg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
@@ -52,10 +103,10 @@ export const useTasksStore = defineStore('tasks', () => {
     pending.value++
     try {
       const shown = tabs.value[tab]?.length ?? 0
-      let page = await api.tasks(QUERY[tab])
+      let page = await api.tasks(query(tab))
       const items = [...page.items]
       while (page.next_before && items.length < shown) {
-        page = await api.tasks({ ...QUERY[tab], before: page.next_before })
+        page = await api.tasks({ ...query(tab), before: page.next_before })
         items.push(...page.items)
       }
       setTab(tab, items, page.next_before)
@@ -73,7 +124,7 @@ export const useTasksStore = defineStore('tasks', () => {
     if (!before) return
     pending.value++
     try {
-      const page = await api.tasks({ ...QUERY[tab], before })
+      const page = await api.tasks({ ...query(tab), before })
       setTab(tab, [...(tabs.value[tab] ?? []), ...page.items], page.next_before)
       error.value = null
     } catch (e) {
@@ -187,6 +238,9 @@ export const useTasksStore = defineStore('tasks', () => {
     loading,
     conflict,
     undo,
+    filter,
+    setFilter,
+    validateFilter,
     load,
     loadMore,
     loadRange,

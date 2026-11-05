@@ -41,6 +41,545 @@
         ]
       }
     },
+    "/api/v1/ai/llm-endpoint": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "get_endpoint",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LlmEndpointView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "code `not_configured`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "put_endpoint",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LlmEndpointPut"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LlmEndpointView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ai/llm-endpoint/models": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "list_models",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LlmModels"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "code `llm_unavailable`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ai/llm-endpoint/test": {
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "test_endpoint",
+        "requestBody": {
+          "description": "unsaved values; an empty body tests the stored ones",
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/LlmEndpointTest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "`ok: false` when the server is unreachable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LlmEndpointTestResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ai/pipeline": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "get_pipeline",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AiPipelinePoint"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ai/pipeline/{decision_point}": {
+      "put": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "put_pipeline",
+        "parameters": [
+          {
+            "name": "decision_point",
+            "in": "path",
+            "description": "one of the four email decision points",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiPipelinePut"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiPipelinePoint"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ai/recipes/extract": {
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "extract_recipe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeExtractReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeDraft"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "codes `bad_request`, `fetch_failed`, `no_recipe`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "code `llm_unavailable`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ai/settings": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "get_settings",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettings"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "put_settings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AiSettingsPut"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiSettings"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ai/stats": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "operationId": "get_stats",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "description": "default 7, 1 to 90",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AiStats"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "tags": [
@@ -8350,6 +8889,116 @@
           }
         }
       },
+      "AiPipelinePoint": {
+        "type": "object",
+        "description": "The `llm` stage of one email decision point.",
+        "required": [
+          "decision_point",
+          "llm_enabled",
+          "llm_threshold",
+          "version_id"
+        ],
+        "properties": {
+          "decision_point": {
+            "type": "string"
+          },
+          "llm_enabled": {
+            "type": "boolean"
+          },
+          "llm_threshold": {
+            "type": "number",
+            "format": "float"
+          },
+          "version_id": {
+            "type": "string",
+            "description": "The active pipeline version (uuid)."
+          }
+        }
+      },
+      "AiPipelinePut": {
+        "type": "object",
+        "required": [
+          "llm_enabled",
+          "llm_threshold"
+        ],
+        "properties": {
+          "llm_enabled": {
+            "type": "boolean"
+          },
+          "llm_threshold": {
+            "type": "number",
+            "format": "float",
+            "description": "0 to 1."
+          }
+        }
+      },
+      "AiSettings": {
+        "type": "object",
+        "required": [
+          "mail_extract_mode",
+          "max_input_chars",
+          "updated_at"
+        ],
+        "properties": {
+          "mail_extract_mode": {
+            "$ref": "#/components/schemas/MailExtractMode"
+          },
+          "max_input_chars": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339."
+          }
+        }
+      },
+      "AiSettingsPut": {
+        "type": "object",
+        "required": [
+          "mail_extract_mode",
+          "max_input_chars"
+        ],
+        "properties": {
+          "mail_extract_mode": {
+            "$ref": "#/components/schemas/MailExtractMode"
+          },
+          "max_input_chars": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "AiStats": {
+        "type": "object",
+        "required": [
+          "since",
+          "calls",
+          "stages"
+        ],
+        "properties": {
+          "calls": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LlmCallStat"
+            }
+          },
+          "since": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "stages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StageCount"
+            }
+          }
+        }
+      },
       "AllMarker": {
         "type": "string",
         "enum": [
@@ -9404,9 +10053,14 @@
           "id",
           "title",
           "start_at",
-          "status"
+          "status",
+          "extracted_by"
         ],
         "properties": {
+          "extracted_by": {
+            "$ref": "#/components/schemas/ExtractOrigin",
+            "description": "`llm` when the `mail.llm` job proposed it (M4)."
+          },
           "id": {
             "$ref": "#/components/schemas/EventId"
           },
@@ -9428,9 +10082,14 @@
         "required": [
           "id",
           "title",
-          "status"
+          "status",
+          "extracted_by"
         ],
         "properties": {
+          "extracted_by": {
+            "$ref": "#/components/schemas/ExtractOrigin",
+            "description": "`llm` when the `mail.llm` job proposed it (M4)."
+          },
           "id": {
             "$ref": "#/components/schemas/TaskId"
           },
@@ -10745,6 +11404,212 @@
           "adult_only"
         ]
       },
+      "LlmCallStat": {
+        "type": "object",
+        "required": [
+          "purpose",
+          "total",
+          "ok"
+        ],
+        "properties": {
+          "ok": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "p50_ms": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "p95_ms": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int64"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "LlmDialect": {
+        "type": "string",
+        "enum": [
+          "openai_chat",
+          "ollama_native"
+        ]
+      },
+      "LlmEndpointPut": {
+        "type": "object",
+        "description": "Body of `PUT /ai/llm-endpoint`. `api_key`: absent keeps the stored key, `null` clears it, a\nstring sets it.",
+        "required": [
+          "base_url",
+          "model",
+          "dialect",
+          "timeout_ms",
+          "enabled"
+        ],
+        "properties": {
+          "api_key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "base_url": {
+            "type": "string"
+          },
+          "dialect": {
+            "$ref": "#/components/schemas/LlmDialect"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "model": {
+            "type": "string"
+          },
+          "timeout_ms": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "LlmEndpointTest": {
+        "type": "object",
+        "description": "Body of `POST /ai/llm-endpoint/test`: unsaved values; a missing field uses the stored one.",
+        "properties": {
+          "api_key": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Absent: the stored key. `null`: no key. A string: that key."
+          },
+          "base_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dialect": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LlmDialect"
+              }
+            ]
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "timeout_ms": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "LlmEndpointTestResult": {
+        "type": "object",
+        "required": [
+          "ok"
+        ],
+        "properties": {
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "An `LlmError` kind: `unavailable`, `timeout`, `http`, `bad_json`, `schema` or `config`."
+          },
+          "latency_ms": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "model_found": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        }
+      },
+      "LlmEndpointView": {
+        "type": "object",
+        "required": [
+          "base_url",
+          "model",
+          "dialect",
+          "has_api_key",
+          "timeout_ms",
+          "enabled",
+          "updated_at"
+        ],
+        "properties": {
+          "base_url": {
+            "type": "string"
+          },
+          "dialect": {
+            "$ref": "#/components/schemas/LlmDialect"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "has_api_key": {
+            "type": "boolean"
+          },
+          "model": {
+            "type": "string"
+          },
+          "timeout_ms": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339."
+          }
+        }
+      },
+      "LlmModels": {
+        "type": "object",
+        "required": [
+          "models"
+        ],
+        "properties": {
+          "models": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "Location": {
         "type": "object",
         "required": [
@@ -10896,6 +11761,14 @@
             "format": "date-time"
           }
         }
+      },
+      "MailExtractMode": {
+        "type": "string",
+        "enum": [
+          "off",
+          "fallback",
+          "always"
+        ]
       },
       "MailProvider": {
         "type": "string",
@@ -13108,6 +13981,149 @@
           }
         }
       },
+      "RecipeDraft": {
+        "type": "object",
+        "description": "A recipe extracted from a page. Minutes are integers; `source_url` is an absolute URL.",
+        "required": [
+          "name",
+          "origin",
+          "ingredients",
+          "steps",
+          "tags"
+        ],
+        "properties": {
+          "cook_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "image_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ingredients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipeIngredient"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/RecipeOrigin"
+          },
+          "prep_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "servings": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "source_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "total_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "yield_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "RecipeExtractReq": {
+        "type": "object",
+        "description": "Exactly one of `url` and `html`.",
+        "properties": {
+          "html": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "RecipeIngredient": {
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "item": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "quantity": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "text": {
+            "type": "string",
+            "description": "The source line, always present."
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "RecipeOrigin": {
+        "type": "string",
+        "enum": [
+          "jsonld",
+          "llm"
+        ]
+      },
       "Relevance": {
         "type": "string",
         "enum": [
@@ -14250,6 +15266,32 @@
           }
         ],
         "description": "A calendar source plus whether the app may write events to it."
+      },
+      "StageCount": {
+        "type": "object",
+        "required": [
+          "decision_point",
+          "rules",
+          "llm",
+          "human"
+        ],
+        "properties": {
+          "decision_point": {
+            "type": "string"
+          },
+          "human": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "llm": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rules": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
       },
       "StageKind": {
         "type": "string",

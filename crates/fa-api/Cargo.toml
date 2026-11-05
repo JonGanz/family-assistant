@@ -21,6 +21,12 @@ fa-tasks.workspace = true
 fa-notify.workspace = true
 fa-mail.workspace = true
 fa-config.workspace = true
+fa-llm.workspace = true
+fa-recipe.workspace = true
+fa-pipeline.workspace = true
+fa-connectors.workspace = true
+reqwest.workspace = true
+ts-rs.workspace = true
 axum.workspace = true
 axum-extra.workspace = true
 tower.workspace = true
@@ -44,7 +50,6 @@ utoipa.workspace = true
 utoipa-swagger-ui.workspace = true
 
 [dev-dependencies]
-fa-connectors.workspace = true
 figment.workspace = true
 wiremock.workspace = true
 tower = { workspace = true, features = ["util"] }

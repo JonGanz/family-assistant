@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
 import { api, type SettingView } from '../../api/client'
-import ErrorBanner from '../../components/ErrorBanner.vue'
 import { useSessionStore } from '../../stores/session'
 import { useSetupStore } from '../../stores/setup'
+import { UiButton, UiCard, UiTextField } from '../../ui'
 import { describeError } from '../shared'
 import { buildPatch, draftFrom, metaFor, type Draft } from '../system/settingsModel'
 import StepButtons from './StepButtons.vue'
@@ -70,27 +70,56 @@ async function next() {
 </script>
 
 <template>
-  <form class="form" data-testid="step-access" @submit.prevent="next">
-    <h2>Access and notifications</h2>
-    <div v-for="s in shown" :key="s.key">
-      <label v-if="drafts[s.key]" class="field">
-        {{ metaFor(s.key).label }}
-        <input
-          v-model="drafts[s.key]!.value as string"
-          :name="s.key"
-          :type="s.kind === 'url' ? 'url' : 'text'"
-          :disabled="s.locked"
-        />
-      </label>
-      <p class="muted">{{ metaFor(s.key).help }}</p>
-      <p v-if="s.locked" class="muted">Set by the server, so it cannot be changed here.</p>
-    </div>
-    <p class="muted">Leave the notifications server empty to keep notifications off.</p>
-    <div class="row">
-      <button type="button" @click="sendTest">Send a test</button>
-      <span v-if="note" class="text-success" role="status">{{ note }}</span>
-    </div>
-    <ErrorBanner v-if="error" :message="error" />
-    <StepButtons :busy="busy" @back="setup.goto(4)" />
+  <form class="step" data-testid="step-access" @submit.prevent="next">
+    <UiCard>
+      <template #header>Access and notifications</template>
+      <div class="stack">
+        <div v-for="s in shown" :key="s.key" class="stack">
+          <UiTextField
+            v-if="drafts[s.key]"
+            v-model="drafts[s.key]!.value as string"
+            :label="metaFor(s.key).label"
+            :name="s.key"
+            :type="s.kind === 'url' ? 'url' : 'text'"
+            :disabled="s.locked"
+            :supporting="
+              s.locked ? 'Set by the server, so it cannot be changed here.' : metaFor(s.key).help
+            "
+          />
+        </div>
+        <p class="muted">Leave the notifications server empty to keep notifications off.</p>
+        <div class="test">
+          <UiButton variant="tonal" icon="notifications" @click="sendTest">Send a test</UiButton>
+          <span v-if="note" class="ok" role="status">{{ note }}</span>
+        </div>
+        <p v-if="error" class="err" role="alert">{{ error }}</p>
+      </div>
+      <template #actions><StepButtons :busy="busy" @back="setup.goto(4)" /></template>
+    </UiCard>
   </form>
 </template>
+
+<style scoped>
+.stack {
+  display: grid;
+  gap: var(--ui-space-3);
+}
+.test {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-3);
+  flex-wrap: wrap;
+}
+p {
+  margin: 0;
+}
+.muted {
+  color: var(--ui-on-surface-variant);
+}
+.ok {
+  color: var(--ui-success);
+}
+.err {
+  color: var(--ui-error);
+}
+</style>

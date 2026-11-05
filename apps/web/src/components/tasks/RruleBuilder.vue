@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { UiChip, UiSelect, UiTextField } from '../../ui'
 import { WEEKDAYS, buildRrule, parseSimple, type SimpleRule, type Weekday } from '../../lib/rrule'
 
 const model = defineModel<string>({ required: true })
@@ -44,6 +45,25 @@ function toggleDay(d: Weekday) {
     : [...weekdays.value, d]
 }
 
+const MODES = [
+  { value: 'weekly', label: 'Weekly on days' },
+  { value: 'monthly_day', label: 'Monthly on a day of the month' },
+  { value: 'monthly_nth', label: 'Monthly on the nth weekday' },
+  { value: 'raw', label: 'Custom (RRULE text)' },
+]
+const DAY_OPTIONS = [
+  ...Array.from({ length: 31 }, (_, i) => ({ value: String(i + 1), label: String(i + 1) })),
+  { value: '-1', label: 'Last day' },
+]
+const NTH_OPTIONS = [
+  { value: '1', label: '1st' },
+  { value: '2', label: '2nd' },
+  { value: '3', label: '3rd' },
+  { value: '4', label: '4th' },
+  { value: '-1', label: 'Last' },
+]
+const WEEKDAY_OPTIONS = WEEKDAYS.map((d) => ({ value: d, label: DAY_LABEL[d] }))
+
 function switchMode(m: Mode) {
   if (m === 'raw') raw.value = model.value
   mode.value = m
@@ -52,72 +72,70 @@ function switchMode(m: Mode) {
 
 <template>
   <div class="rrule-builder">
-    <label>
-      Repeat
-      <select
-        data-testid="mode"
-        :value="mode"
-        @change="switchMode(($event.target as HTMLSelectElement).value as Mode)"
+    <UiSelect
+      data-testid="mode"
+      label="Repeat"
+      :model-value="mode"
+      :options="MODES"
+      @update:model-value="switchMode($event as Mode)"
+    />
+
+    <UiTextField
+      v-if="mode !== 'raw'"
+      :model-value="String(interval)"
+      data-testid="interval"
+      type="number"
+      min="1"
+      :label="mode === 'weekly' ? 'Every N weeks' : 'Every N months'"
+      @update:model-value="interval = Number($event)"
+    />
+
+    <div v-if="mode === 'weekly'" class="days" role="group" aria-label="Days">
+      <UiChip
+        v-for="d in WEEKDAYS"
+        :key="d"
+        variant="filter"
+        :selected="weekdays.includes(d)"
+        :data-testid="`day-${d}`"
+        @click="toggleDay(d)"
       >
-        <option value="weekly">Weekly on days</option>
-        <option value="monthly_day">Monthly on a day of the month</option>
-        <option value="monthly_nth">Monthly on the nth weekday</option>
-        <option value="raw">Custom (RRULE text)</option>
-      </select>
-    </label>
-
-    <template v-if="mode !== 'raw'">
-      <label>
-        Every
-        <input v-model.number="interval" data-testid="interval" type="number" min="1" />
-        {{ mode === 'weekly' ? 'week(s)' : 'month(s)' }}
-      </label>
-    </template>
-
-    <fieldset v-if="mode === 'weekly'" class="days">
-      <legend>Days</legend>
-      <label v-for="d in WEEKDAYS" :key="d" class="day">
-        <input
-          type="checkbox"
-          :data-testid="`day-${d}`"
-          :checked="weekdays.includes(d)"
-          @change="toggleDay(d)"
-        />
         {{ DAY_LABEL[d] }}
-      </label>
-    </fieldset>
+      </UiChip>
+    </div>
 
-    <label v-if="mode === 'monthly_day'">
-      Day of month
-      <select v-model.number="day" data-testid="month-day">
-        <option v-for="n in 31" :key="n" :value="n">{{ n }}</option>
-        <option :value="-1">Last day</option>
-      </select>
-    </label>
+    <UiSelect
+      v-if="mode === 'monthly_day'"
+      data-testid="month-day"
+      label="Day of month"
+      :model-value="String(day)"
+      :options="DAY_OPTIONS"
+      @update:model-value="day = Number($event)"
+    />
 
     <template v-if="mode === 'monthly_nth'">
-      <label>
-        Which
-        <select v-model.number="nth" data-testid="nth">
-          <option :value="1">1st</option>
-          <option :value="2">2nd</option>
-          <option :value="3">3rd</option>
-          <option :value="4">4th</option>
-          <option :value="-1">Last</option>
-        </select>
-      </label>
-      <label>
-        Weekday
-        <select v-model="nthDay" data-testid="nth-day">
-          <option v-for="d in WEEKDAYS" :key="d" :value="d">{{ DAY_LABEL[d] }}</option>
-        </select>
-      </label>
+      <UiSelect
+        data-testid="nth"
+        label="Which"
+        :model-value="String(nth)"
+        :options="NTH_OPTIONS"
+        @update:model-value="nth = Number($event)"
+      />
+      <UiSelect
+        data-testid="nth-day"
+        label="Weekday"
+        :model-value="nthDay"
+        :options="WEEKDAY_OPTIONS"
+        @update:model-value="nthDay = $event as Weekday"
+      />
     </template>
 
-    <label v-if="mode === 'raw'">
-      RRULE
-      <input v-model="raw" data-testid="raw" type="text" spellcheck="false" />
-    </label>
+    <UiTextField
+      v-if="mode === 'raw'"
+      v-model="raw"
+      data-testid="raw"
+      label="RRULE"
+      spellcheck="false"
+    />
   </div>
 </template>
 
@@ -125,24 +143,11 @@ function switchMode(m: Mode) {
 .rrule-builder {
   display: flex;
   flex-direction: column;
-  gap: var(--space-3);
-}
-label {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-input[type='number'] {
-  width: 5rem;
+  gap: var(--ui-space-3);
 }
 .days {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-.day {
-  min-height: var(--min-touch, 48px);
+  gap: var(--ui-space-2);
 }
 </style>

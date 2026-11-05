@@ -129,13 +129,6 @@ const showDrawer = computed(() => withNav.value && bp.value === 'expanded' && !c
   min-width: 0;
   outline: none;
 }
-/* Views not yet on UiPage keep the old padding and width until they are migrated. */
-.app-main > :deep(:not(.ui-page, .settings-layout)) {
-  box-sizing: border-box;
-  max-width: 64rem;
-  margin: 0 auto;
-  padding: 1rem;
-}
 .app-side {
   position: sticky;
   top: 0;

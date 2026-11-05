@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import QRCode from 'qrcode'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import type { NotifyTrigger } from '../api/client'
 import type { ApprovalMode } from '../api/mailSettings'
-import ErrorBanner from '../components/ErrorBanner.vue'
-import PageHeader from '../components/PageHeader.vue'
+import SettingsPage from '../app/SettingsPage.vue'
 import { useHouseholdStore } from '../stores/household'
 import { useMembersStore } from '../stores/members'
 import { useNotifyPrefsStore } from '../stores/notifyPrefs'
 import { useSessionStore } from '../stores/session'
-import { describeError } from './shared'
+import { UiButton, UiCard, UiSaveBar, UiSelect, UiSwitch, UiTextField, useFormDraft } from '../ui'
+import InstantCheck from './parts/settings-mail/InstantCheck.vue'
+import InstantSelect from './parts/settings-mail/InstantSelect.vue'
+import PageNotices from './parts/settings-mail/PageNotices.vue'
 
 const session = useSessionStore()
 const members = useMembersStore()
@@ -34,17 +36,6 @@ const APPROVAL_MODES: { key: ApprovalMode; label: string }[] = [
 ]
 
 const selected = ref('')
-const form = reactive({
-  triggers: [] as NotifyTrigger[],
-  dueSoon: 60,
-  nudge: 15,
-  override: false,
-  from: '21:00',
-  until: '07:00',
-  copyTo: '',
-  approval: 'batched' as ApprovalMode,
-})
-const message = ref('')
 const error = ref('')
 const testResult = ref<{ ok: boolean; message: string } | null>(null)
 const qr = ref('')
@@ -60,33 +51,46 @@ const adults = computed(() =>
 const isChild = computed(() => members.items.find((m) => m.id === selected.value)?.role === 'child')
 const triggers = computed(() => TRIGGERS.filter((t) => !t.adultOnly || !isChild.value))
 
-function fill() {
-  const p = store.prefs
-  if (!p) return
-  form.triggers = [...p.enabled_triggers]
-  form.dueSoon = p.due_soon_minutes
-  form.nudge = p.nudge_minutes
-  form.override = !!(p.quiet_from && p.quiet_until)
-  form.from = p.quiet_from ?? household.quiet.from
-  form.until = p.quiet_until ?? household.quiet.until
-  form.copyTo = p.copy_to_member ?? ''
-  form.approval = p.approval_mode ?? 'batched'
+interface Draft {
+  dueSoon: string
+  nudge: string
+  override: boolean
+  from: string
+  until: string
 }
+function draftFromPrefs(): Draft {
+  const p = store.prefs
+  return {
+    dueSoon: String(p?.due_soon_minutes ?? 60),
+    nudge: String(p?.nudge_minutes ?? 15),
+    override: !!(p?.quiet_from && p?.quiet_until),
+    from: p?.quiet_from ?? household.quiet.from,
+    until: p?.quiet_until ?? household.quiet.until,
+  }
+}
+const form = useFormDraft(draftFromPrefs, async (d) => {
+  const ok = await store.save({
+    due_soon_minutes: Number(d.dueSoon),
+    nudge_minutes: Number(d.nudge),
+    quiet_from: d.override ? d.from : null,
+    quiet_until: d.override ? d.until : null,
+  })
+  if (!ok) throw new Error('Changed elsewhere. Reload to see the latest, then try again.')
+})
+const d = form.draft
 
 async function pick(id: string) {
   selected.value = id
-  message.value = ''
   error.value = ''
   testResult.value = null
   await store.load(id)
-  fill()
+  form.discard()
 }
 
 onMounted(async () => {
   await Promise.all([members.load(), household.load()])
   if (session.member) await pick(session.member.id)
 })
-watch(() => store.prefs?.version, fill)
 watch(
   () => store.prefs?.subscribe_url,
   async (url) => {
@@ -101,30 +105,23 @@ watch(
   { immediate: true },
 )
 
-function toggle(t: NotifyTrigger) {
-  form.triggers = form.triggers.includes(t)
-    ? form.triggers.filter((x) => x !== t)
-    : [...form.triggers, t]
+const triggerOn = (t: NotifyTrigger) => !!store.prefs?.enabled_triggers.includes(t)
+function setTrigger(t: NotifyTrigger, on: boolean) {
+  const cur = store.prefs?.enabled_triggers ?? []
+  const next = on ? [...cur.filter((x) => x !== t), t] : cur.filter((x) => x !== t)
+  return store.save({ enabled_triggers: next })
 }
-
-async function save() {
-  message.value = ''
-  error.value = ''
-  try {
-    const ok = await store.save({
-      enabled_triggers: form.triggers,
-      due_soon_minutes: form.dueSoon,
-      nudge_minutes: form.nudge,
-      quiet_from: form.override ? form.from : null,
-      quiet_until: form.override ? form.until : null,
-      copy_to_member: form.copyTo || null,
-      approval_mode: isChild.value ? undefined : form.approval,
-    })
-    if (ok) message.value = 'Saved.'
-  } catch (e) {
-    error.value = describeError(e, 'Save failed.')
-  }
-}
+const approvalOptions = APPROVAL_MODES.map((a) => ({ value: a.key, label: a.label }))
+const copyOptions = computed(() => [
+  { value: '', label: 'Nobody' },
+  ...adults.value.map((m) => ({ value: m.id, label: m.display_name })),
+])
+const memberOptions = computed(() =>
+  choices.value.map((m) => ({
+    value: m.id,
+    label: `${m.display_name}${m.id === session.member?.id ? ' (me)' : ''}`,
+  })),
+)
 
 async function sendTest() {
   testResult.value = null
@@ -136,123 +133,145 @@ async function sendTest() {
 </script>
 
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader eyebrow="Settings" title="Notifications" />
-    <label v-if="choices.length > 1" class="field-inline picker">
-      Settings for
-      <select
-        :value="selected"
-        name="member"
-        @change="pick(($event.target as HTMLSelectElement).value)"
-      >
-        <option v-for="m in choices" :key="m.id" :value="m.id">
-          {{ m.display_name }}{{ m.id === session.member?.id ? ' (me)' : '' }}
-        </option>
-      </select>
-    </label>
-    <ErrorBanner v-if="store.error" :message="store.error" />
+  <SettingsPage title="Notifications">
+    <UiSelect
+      v-if="choices.length > 1"
+      :model-value="selected"
+      label="Settings for"
+      name="member"
+      :options="memberOptions"
+      @update:model-value="pick"
+    />
+    <PageNotices
+      :load-error="store.error"
+      :conflict="store.conflict"
+      :error="error"
+      @reload="pick(selected)"
+    />
 
     <template v-if="store.prefs">
-      <p
+      <UiCard
         v-if="!store.prefs.server_configured"
-        class="muted"
+        variant="outlined"
         role="status"
         data-testid="not-configured"
       >
-        Notifications are not configured on this server. Ask whoever runs it to set the ntfy
-        address. You can still choose your settings below.
-      </p>
-
-      <form class="form" @submit.prevent="save">
-        <fieldset>
-          <legend>Tell me when</legend>
-          <label v-for="t in triggers" :key="t.key" class="field-inline">
-            <input
-              type="checkbox"
-              :checked="form.triggers.includes(t.key)"
-              @change="toggle(t.key)"
-            />
-            {{ t.label }}
-          </label>
-        </fieldset>
-        <label class="field">
-          Minutes before a task is due
-          <input v-model.number="form.dueSoon" name="due_soon" type="number" min="1" max="1440" />
-        </label>
-        <label class="field">
-          Minutes before a routine deadline to nudge
-          <input v-model.number="form.nudge" name="nudge" type="number" min="1" max="240" />
-        </label>
-        <fieldset>
-          <legend>Quiet hours</legend>
-          <label class="field-inline">
-            <input v-model="form.override" type="checkbox" name="quiet_override" />
-            Use my own quiet hours (the household default is
-            {{ household.quiet.from }}–{{ household.quiet.until }})
-          </label>
-          <template v-if="form.override">
-            <label class="field"
-              >From <input v-model="form.from" name="quiet_from" type="time"
-            /></label>
-            <label class="field"
-              >Until <input v-model="form.until" name="quiet_until" type="time"
-            /></label>
-          </template>
-        </fieldset>
-        <label v-if="!isChild" class="field">
-          Approval reminders
-          <select v-model="form.approval" name="approval_mode">
-            <option v-for="a in APPROVAL_MODES" :key="a.key" :value="a.key">{{ a.label }}</option>
-          </select>
-        </label>
-        <label class="field">
-          Also send a copy to
-          <select v-model="form.copyTo" name="copy_to">
-            <option value="">Nobody</option>
-            <option v-for="m in adults" :key="m.id" :value="m.id">{{ m.display_name }}</option>
-          </select>
-        </label>
-        <ErrorBanner v-if="store.conflict" conflict @reload="pick(selected)" />
-        <ErrorBanner v-if="error" :message="error" />
-        <p v-if="message" class="text-success" role="status">{{ message }}</p>
-        <button type="submit" class="btn-primary">Save</button>
-      </form>
-
-      <h2>Phone</h2>
-      <div v-if="store.prefs.subscribe_url" class="subscribe">
         <p>
-          Open this address in the ntfy app (or scan the code) to subscribe:
-          <br /><code data-testid="subscribe-url">{{ store.prefs.subscribe_url }}</code>
+          Notifications are not configured on this server. Ask whoever runs it to set the ntfy
+          address. You can still choose your settings below.
         </p>
-        <img
-          v-if="qr"
-          :src="qr"
-          width="192"
-          height="192"
-          alt="QR code for the ntfy subscribe address"
+      </UiCard>
+
+      <UiCard>
+        <template #header>Tell me when</template>
+        <InstantCheck
+          v-for="t in triggers"
+          :key="t.key"
+          as="switch"
+          :model-value="triggerOn(t.key)"
+          :label="t.label"
+          :save="(v: boolean) => setTrigger(t.key, v)"
         />
-      </div>
-      <p v-else class="muted">No subscribe address is available yet.</p>
-      <button type="button" :disabled="!store.prefs.server_configured" @click="sendTest">
-        Send test
-      </button>
-      <p
-        v-if="testResult"
-        :class="testResult.ok ? 'text-success' : 'text-danger'"
-        role="status"
-        data-testid="test-result"
-      >
-        {{ testResult.message }}
-      </p>
+      </UiCard>
+
+      <UiCard>
+        <template #header>Reminders</template>
+        <UiTextField
+          v-model="d.dueSoon"
+          label="Minutes before a task is due"
+          name="due_soon"
+          type="number"
+          min="1"
+          max="1440"
+        />
+        <UiTextField
+          v-model="d.nudge"
+          label="Minutes before a routine deadline to nudge"
+          name="nudge"
+          type="number"
+          min="1"
+          max="240"
+        />
+        <UiSwitch
+          v-model="d.override"
+          :label="`Use my own quiet hours (the household default is ${household.quiet.from}–${household.quiet.until})`"
+        />
+        <template v-if="d.override">
+          <UiTextField v-model="d.from" label="Quiet from" name="quiet_from" type="time" />
+          <UiTextField v-model="d.until" label="Quiet until" name="quiet_until" type="time" />
+        </template>
+      </UiCard>
+
+      <UiCard>
+        <template #header>Delivery</template>
+        <InstantSelect
+          v-if="!isChild"
+          :model-value="store.prefs.approval_mode ?? 'batched'"
+          label="Approval reminders"
+          :options="approvalOptions"
+          :save="(v: string) => store.save({ approval_mode: v as ApprovalMode })"
+        />
+        <InstantSelect
+          :model-value="store.prefs.copy_to_member ?? ''"
+          label="Also send a copy to"
+          :options="copyOptions"
+          :save="(v: string) => store.save({ copy_to_member: v || null })"
+        />
+      </UiCard>
+      <UiSaveBar
+        :dirty="form.dirty.value"
+        :saving="form.saving.value"
+        :error="form.error.value"
+        @save="form.save"
+        @discard="form.discard"
+      />
+
+      <UiCard>
+        <template #header>Phone</template>
+        <div v-if="store.prefs.subscribe_url" class="subscribe">
+          <p>
+            Open this address in the ntfy app (or scan the code) to subscribe:
+            <br /><code data-testid="subscribe-url">{{ store.prefs.subscribe_url }}</code>
+          </p>
+          <img
+            v-if="qr"
+            :src="qr"
+            width="192"
+            height="192"
+            alt="QR code for the ntfy subscribe address"
+          />
+        </div>
+        <p v-else class="meta">No subscribe address is available yet.</p>
+        <p
+          v-if="testResult"
+          :class="testResult.ok ? 'text-success' : 'text-danger'"
+          role="status"
+          data-testid="test-result"
+        >
+          {{ testResult.message }}
+        </p>
+        <template #actions>
+          <UiButton variant="tonal" :disabled="!store.prefs.server_configured" @click="sendTest"
+            >Send test</UiButton
+          >
+        </template>
+      </UiCard>
     </template>
-  </section>
+  </SettingsPage>
 </template>
 
 <style scoped>
-.picker {
-  margin-bottom: var(--space-3);
-}
 code {
   word-break: break-all;
+}
+.meta {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+}
+.text-success {
+  color: var(--ui-success);
+}
+.text-danger {
+  color: var(--ui-error);
 }
 </style>

@@ -1,47 +1,33 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import ResponsiveItems from '../../../app/ResponsiveItems.vue'
 import { useMailSettingsStore } from '../../../stores/mailSettings'
-import { describeError } from '../../shared'
+import InstantCheck from './InstantCheck.vue'
 
 const store = useMailSettingsStore()
-const error = ref('')
-
-async function toggle(key: string, enabled: boolean) {
-  error.value = ''
-  try {
-    await store.setSignal(key, enabled)
-  } catch (e) {
-    error.value = describeError(e, 'Could not save.')
-  }
-}
+// A signal row is keyed by `key`; ResponsiveItems wants an `id`.
+const items = () => store.signals.map((s) => ({ ...s, id: s.key }))
 </script>
 
 <template>
-  <div>
-    <p v-if="error" class="text-danger" role="alert">{{ error }}</p>
-    <ul class="card-list">
-      <li v-for="s in store.signals" :key="s.key">
-        <label class="field-inline">
-          <input
-            type="checkbox"
-            :checked="s.enabled"
-            :aria-label="s.key"
-            @change="toggle(s.key, ($event.target as HTMLInputElement).checked)"
-          />
-          <span>
-            {{ s.description }}
-            <span class="muted">({{ s.decision_point }}, confidence {{ s.confidence }})</span>
-          </span>
-        </label>
-      </li>
-    </ul>
+  <div class="panel">
+    <ResponsiveItems :items="items()">
+      <template #item="{ item: s }">
+        <InstantCheck
+          as="switch"
+          :model-value="s.enabled"
+          :label="s.description"
+          :save="(v: boolean) => store.setSignal(s.key, v)"
+        />
+        <p class="meta">{{ s.key }} · {{ s.decision_point }}, confidence {{ s.confidence }}</p>
+      </template>
+    </ResponsiveItems>
   </div>
 </template>
 
 <style scoped>
-.inline {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
+.meta {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
 }
 </style>

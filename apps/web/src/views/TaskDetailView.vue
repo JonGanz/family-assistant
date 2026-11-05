@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import PageHeader from '../components/PageHeader.vue'
-import { computed, onMounted, reactive, ref } from 'vue'
+// Task detail and editor (M4). One draft and one Save bar for the page, because the API takes a
+// single versioned PATCH; the priority flag and the calendar display apply at once with Undo.
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import type { TaskView } from '../api/client'
-import ErrorBanner from '../components/ErrorBanner.vue'
+import type { TaskPatch, TaskView } from '../api/client'
+import StepEditor from '../components/tasks/StepEditor.vue'
 import StepList from '../components/tasks/StepList.vue'
 import { calendarDisplayLabel, type CalendarDisplay, type PriorityFlag } from '../lib/tasks'
 import { useHouseholdStore } from '../stores/household'
@@ -11,6 +12,24 @@ import { useListsStore } from '../stores/lists'
 import { useMembersStore } from '../stores/members'
 import { useSessionStore } from '../stores/session'
 import { useTasksStore } from '../stores/tasks'
+import {
+  UiButton,
+  UiCard,
+  UiChip,
+  UiDialog,
+  UiErrorState,
+  UiIconButton,
+  UiPage,
+  UiSaveBar,
+  UiSegmented,
+  UiSkeleton,
+  UiSwitch,
+  UiTextField,
+  UiTopAppBar,
+  useFormDraft,
+  useInstantSave,
+  useSnackbar,
+} from '../ui'
 import { fromInstant, toInstant } from './parts/dateInput'
 import { describeError } from './shared'
 
@@ -21,42 +40,87 @@ const household = useHouseholdStore()
 const members = useMembersStore()
 const lists = useListsStore()
 const tasks = useTasksStore()
+const snackbar = useSnackbar()
 
 const id = computed(() => String(route.params.id))
 const task = ref<TaskView | null>(null)
 const loadError = ref('')
-const error = ref('')
-const saved = ref(false)
+const confirmDelete = ref(false)
 
-const form = reactive({
-  title: '',
-  notes: '',
-  date: '',
-  time: '',
-  assignees: [] as string[],
-  priority: 'normal' as PriorityFlag,
-  display: 'hidden' as CalendarDisplay,
-  steps: [] as string[],
+interface Draft {
+  title: string
+  notes: string
+  date: string
+  time: string
+  assignees: string[]
+  steps: string[]
+}
+
+function fromTask(): Draft {
+  const t = task.value
+  const due = fromInstant(t?.due_at, household.tz)
+  return {
+    title: t?.title ?? '',
+    notes: t?.notes ?? '',
+    date: due.date,
+    time: due.time,
+    assignees: t ? [...t.assignees] : [],
+    steps: t ? t.steps.map((s) => s.text) : [],
+  }
+}
+
+const SAVE_CONFLICT = 'This task was changed elsewhere. Reload to see the latest.'
+
+async function patch(p: TaskPatch): Promise<TaskView> {
+  const t = task.value
+  if (!t) throw new Error('The task is not loaded.')
+  let v: TaskView | null
+  try {
+    v = await tasks.save(t, p)
+  } catch (e) {
+    throw new Error(describeError(e, 'Save failed.'), { cause: e })
+  }
+  if (!v) throw new Error(SAVE_CONFLICT)
+  task.value = v
+  return v
+}
+
+const form = useFormDraft(fromTask, async (d) => {
+  await patch({
+    title: d.title.trim(),
+    notes: d.notes.trim() || null,
+    due_at: toInstant(d.date, d.time, household.tz),
+    assignees: d.assignees,
+    steps: d.steps,
+  })
 })
-const newStep = ref('')
+const draft = form.draft
+
+// Instant controls (D-096): the flag and the display mode.
+const priority = ref<PriorityFlag>('normal')
+const display = ref<CalendarDisplay>('hidden')
+const savePriority = useInstantSave(
+  priority,
+  async (v) => void (await patch({ priority_flag: v })),
+  { label: 'Priority saved' },
+)
+const saveDisplay = useInstantSave(
+  display,
+  async (v) => void (await patch({ calendar_display: v })),
+  { label: 'Calendar display saved' },
+)
 
 function fill(t: TaskView) {
   task.value = t
-  const due = fromInstant(t.due_at, household.tz)
-  form.title = t.title
-  form.notes = t.notes ?? ''
-  form.date = due.date
-  form.time = due.time
-  form.assignees = [...t.assignees]
-  form.priority = t.priority_flag
-  form.display = t.calendar_display
-  form.steps = t.steps.map((s) => s.text)
+  priority.value = t.priority_flag
+  display.value = t.calendar_display
 }
 
 async function load() {
   loadError.value = ''
   try {
     fill(await tasks.get(id.value))
+    tasks.conflict = false
   } catch (e) {
     loadError.value = describeError(e, 'Could not load the task.')
   }
@@ -91,79 +155,57 @@ const sourceLabel = computed(
       email: 'From an email',
     })[task.value?.origin ?? 'manual'],
 )
+const displayOptions = (['hidden', 'until_done', 'always'] as CalendarDisplay[]).map((d) => ({
+  value: d,
+  label: calendarDisplayLabel(d),
+}))
+const stepModels = computed(
+  () => task.value?.steps.map((s) => ({ id: s.id, text: s.text, done: !!s.done_at })) ?? [],
+)
 
-function moveStep(i: number, d: number) {
-  const j = i + d
-  if (j < 0 || j >= form.steps.length) return
-  const s = form.steps
-  ;[s[i], s[j]] = [s[j]!, s[i]!]
-}
-function addStep() {
-  const t = newStep.value.trim()
-  if (t) form.steps.push(t)
-  newStep.value = ''
-}
 function toggleAssignee(mid: string) {
-  form.assignees = form.assignees.includes(mid)
-    ? form.assignees.filter((x) => x !== mid)
-    : [...form.assignees, mid]
-}
-
-async function save() {
-  const t = task.value
-  if (!t) return
-  error.value = ''
-  saved.value = false
-  try {
-    const v = await tasks.save(t, {
-      title: form.title.trim(),
-      notes: form.notes.trim() || null,
-      due_at: toInstant(form.date, form.time, household.tz),
-      assignees: form.assignees,
-      priority_flag: form.priority,
-      calendar_display: form.display,
-      steps: form.steps,
-    })
-    if (v) {
-      fill(v)
-      saved.value = true
-    }
-  } catch (e) {
-    error.value = describeError(e, 'Save failed.')
-  }
+  draft.value.assignees = draft.value.assignees.includes(mid)
+    ? draft.value.assignees.filter((x) => x !== mid)
+    : [...draft.value.assignees, mid]
 }
 
 async function tick(stepId: string, done: boolean) {
-  error.value = ''
   try {
     await tasks.tick(id.value, stepId, done)
     fill(await tasks.get(id.value))
   } catch (e) {
-    error.value = describeError(e, 'Could not update the step.')
+    snackbar.show({ text: describeError(e, 'Could not update the step.') })
   }
 }
 
 async function remove() {
-  if (!task.value || !confirm(`Delete “${task.value.title}”?`)) return
+  confirmDelete.value = false
+  if (!task.value) return
   try {
     await tasks.remove(task.value.id)
     await router.replace({ name: 'tasks' })
   } catch (e) {
-    error.value = describeError(e, 'Could not delete the task.')
+    snackbar.show({ text: describeError(e, 'Could not delete the task.') })
   }
 }
-
-const stepModels = computed(
-  () => task.value?.steps.map((s) => ({ id: s.id, text: s.text, done: !!s.done_at })) ?? [],
-)
+const back = () => void router.push({ name: 'tasks' })
 </script>
 
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader v-if="!task" title="Task" back="/tasks" />
-    <ErrorBanner v-if="loadError" :message="loadError" />
-    <template v-if="task">
-      <PageHeader :title="task.title" back="/tasks">
+  <UiPage>
+    <template #top>
+      <UiTopAppBar :title="task?.title ?? 'Task'" back @back="back">
+        <template v-if="task && canEdit" #actions>
+          <UiIconButton icon="delete" label="Delete task" @click="confirmDelete = true" />
+        </template>
+      </UiTopAppBar>
+    </template>
+
+    <UiErrorState v-if="loadError" :message="loadError" @retry="load" />
+    <UiSkeleton v-else-if="!task" :lines="6" />
+
+    <template v-else>
+      <p class="meta">
         {{ sourceLabel }} · {{ task.list_name }} · {{ task.status }}
         <template v-if="task.definition && session.isAdult">
           ·
@@ -172,139 +214,149 @@ const stepModels = computed(
             >Edit the schedule</RouterLink
           >
         </template>
-      </PageHeader>
-      <p v-if="task.assignee_away" class="muted">An assignee is away on the due date.</p>
+      </p>
+      <p v-if="task.assignee_away" class="meta">An assignee is away on the due date.</p>
+      <div v-if="tasks.conflict" class="conflict" role="alert">
+        <span>{{ SAVE_CONFLICT }}</span>
+        <UiButton variant="tonal" icon="refresh" @click="load">Reload</UiButton>
+      </div>
 
-      <form class="form" @submit.prevent="save">
-        <label
-          >Title <input v-model="form.title" name="title" required :disabled="!canEdit"
-        /></label>
-        <label>
-          Notes
-          <textarea v-model="form.notes" name="notes" rows="3" :disabled="!canEdit" />
-        </label>
-        <label
-          >Due date <input v-model="form.date" name="due_date" type="date" :disabled="!canEdit"
-        /></label>
-        <label v-if="form.date">
-          Due time <input v-model="form.time" name="due_time" type="time" :disabled="!canEdit" />
-        </label>
-        <fieldset>
-          <legend>Assigned to</legend>
-          <label v-for="m in people" :key="m.id" class="field-inline">
-            <input
-              type="checkbox"
-              :checked="form.assignees.includes(m.id)"
-              :disabled="!canEdit || !session.isAdult"
-              @change="toggleAssignee(m.id)"
-            />
-            {{ m.display_name }}
-          </label>
-          <p v-if="form.assignees.length === 0" class="muted">Anyone in the household.</p>
-        </fieldset>
-        <label>
-          Priority
-          <select v-model="form.priority" name="priority" :disabled="!canEdit">
-            <option value="normal">Normal</option>
-            <option value="high">High</option>
-          </select>
-        </label>
-        <label>
-          On the calendar
-          <select v-model="form.display" name="calendar_display" :disabled="!canEdit">
-            <option
-              v-for="d in ['hidden', 'until_done', 'always'] as CalendarDisplay[]"
-              :key="d"
-              :value="d"
-            >
-              {{ calendarDisplayLabel(d) }}
-            </option>
-          </select>
-        </label>
+      <UiCard variant="filled">
+        <div class="title-field">
+          <UiTextField
+            v-model="draft.title"
+            label="Title"
+            name="title"
+            required
+            :disabled="!canEdit"
+          />
+        </div>
+      </UiCard>
 
-        <fieldset>
-          <legend>Steps</legend>
-          <ol v-if="canEdit" class="edit-steps">
-            <li v-for="(_s, i) in form.steps" :key="i">
-              <input v-model="form.steps[i]" :aria-label="`Step ${i + 1}`" />
-              <button
-                type="button"
-                :disabled="i === 0"
-                aria-label="Move up"
-                @click="moveStep(i, -1)"
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                :disabled="i === form.steps.length - 1"
-                aria-label="Move down"
-                @click="moveStep(i, 1)"
-              >
-                ↓
-              </button>
-              <button type="button" aria-label="Remove step" @click="form.steps.splice(i, 1)">
-                ✕
-              </button>
-            </li>
-          </ol>
-          <div v-if="canEdit" class="add-step">
-            <input
-              v-model="newStep"
-              name="new_step"
-              placeholder="Add a step"
-              @keydown.enter.prevent="addStep"
-            />
-            <button type="button" @click="addStep">Add step</button>
-          </div>
+      <UiCard variant="filled">
+        <template #header><h2 class="card-title">Notes</h2></template>
+        <UiTextField
+          v-model="draft.notes"
+          label="Notes"
+          name="notes"
+          multiline
+          :disabled="!canEdit"
+        />
+      </UiCard>
+
+      <UiCard variant="filled">
+        <template #header><h2 class="card-title">Due and display</h2></template>
+        <div class="stack">
+          <UiTextField
+            v-model="draft.date"
+            label="Due date"
+            name="due_date"
+            type="date"
+            :disabled="!canEdit"
+          />
+          <UiTextField
+            v-if="draft.date"
+            v-model="draft.time"
+            label="Due time"
+            name="due_time"
+            type="time"
+            :disabled="!canEdit"
+          />
+          <UiSwitch
+            label="High priority"
+            :model-value="priority === 'high'"
+            :disabled="!canEdit"
+            @update:model-value="savePriority.set($event ? 'high' : 'normal')"
+          />
+          <UiSegmented
+            label="On the calendar"
+            :model-value="display"
+            :options="displayOptions"
+            @update:model-value="canEdit && saveDisplay.set($event as CalendarDisplay)"
+          />
+        </div>
+      </UiCard>
+
+      <UiCard variant="filled">
+        <template #header><h2 class="card-title">Steps</h2></template>
+        <div class="stack">
+          <StepEditor v-if="canEdit" v-model="draft.steps" />
           <StepList
             v-if="stepModels.length"
             :steps="stepModels"
             :disabled="task.status !== 'open'"
             @tick="tick"
           />
-          <p v-else class="muted">No steps.</p>
-        </fieldset>
-
-        <ErrorBanner v-if="tasks.conflict" conflict @reload="load" />
-        <ErrorBanner v-if="error" :message="error" />
-        <p v-if="saved" class="text-ok" role="status">Saved.</p>
-        <div v-if="canEdit" class="row">
-          <button type="submit" class="btn-primary">Save</button>
-          <button type="button" class="btn-danger" @click="remove">Delete</button>
+          <p v-else-if="!canEdit" class="meta">No steps.</p>
         </div>
-      </form>
+      </UiCard>
+
+      <UiCard variant="filled">
+        <template #header><h2 class="card-title">Assigned to</h2></template>
+        <div class="chips" role="group" aria-label="Assigned to">
+          <UiChip
+            v-for="m in people"
+            :key="m.id"
+            variant="filter"
+            :selected="draft.assignees.includes(m.id)"
+            :disabled="!canEdit || !session.isAdult"
+            @click="toggleAssignee(m.id)"
+          >
+            {{ m.display_name }}
+          </UiChip>
+        </div>
+        <p v-if="draft.assignees.length === 0" class="meta">Anyone in the household.</p>
+      </UiCard>
+
+      <UiSaveBar
+        :dirty="form.dirty.value"
+        :saving="form.saving.value"
+        :error="form.error.value"
+        @save="form.save"
+        @discard="form.discard"
+      />
     </template>
-  </section>
+
+    <UiDialog v-model="confirmDelete" :title="`Delete “${task?.title ?? ''}”?`">
+      This removes the task for everyone.
+      <template #actions>
+        <UiButton variant="text" @click="confirmDelete = false">Cancel</UiButton>
+        <UiButton @click="remove">Delete</UiButton>
+      </template>
+    </UiDialog>
+  </UiPage>
 </template>
 
 <style scoped>
-.add-step,
-.edit-steps li {
+.meta {
+  margin: 0;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-md);
+}
+.card-title {
+  margin: 0;
+  font: var(--ui-type-title-md);
+}
+.stack {
+  display: grid;
+  gap: var(--ui-space-4);
+}
+.chips {
   display: flex;
-  gap: var(--space-2);
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+}
+.conflict {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-3) var(--ui-space-4);
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-error-container);
+  color: var(--ui-on-error-container);
 }
-.edit-steps {
-  padding: 0;
-  list-style: none;
-  display: grid;
-  gap: var(--space-1);
-}
-.edit-steps input {
-  flex: 1;
-}
-form > label:not(.field-inline) {
-  display: grid;
-  gap: var(--space-1);
-}
-fieldset {
-  display: grid;
-  gap: var(--space-2);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-}
-.text-ok {
-  color: var(--color-success);
+.title-field :deep(.ui-field__input) {
+  font: var(--ui-type-headline-sm);
 }
 </style>

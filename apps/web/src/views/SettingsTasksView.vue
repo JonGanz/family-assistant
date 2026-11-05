@@ -1,37 +1,53 @@
 <script setup lang="ts">
-import Tabs from '../components/Tabs.vue'
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import SettingsPage from '../app/SettingsPage.vue'
+import { UiChip } from '../ui'
 import AbsencesPanel from './parts/AbsencesPanel.vue'
 import DefinitionsPanel from './parts/DefinitionsPanel.vue'
 import RoutinesPanel from './parts/RoutinesPanel.vue'
 import TaskListsPanel from './parts/TaskListsPanel.vue'
-import PageHeader from '../components/PageHeader.vue'
 
-const TABS = [
+const SECTIONS = [
   { key: 'lists', label: 'Lists' },
   { key: 'definitions', label: 'Chores & schedules' },
   { key: 'routines', label: 'Routines' },
   { key: 'absences', label: 'Absences' },
 ] as const
-type Key = (typeof TABS)[number]['key']
+type Key = (typeof SECTIONS)[number]['key']
 
 const route = useRoute()
 const router = useRouter()
-const tab = computed<Key>(() => {
+const section = computed<Key>(() => {
   const q = route.query.tab
-  return TABS.some((t) => t.key === q) ? (q as Key) : 'lists'
+  return SECTIONS.some((t) => t.key === q) ? (q as Key) : 'lists'
 })
 const go = (key: Key) => router.replace({ query: { tab: key } })
 </script>
 
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader eyebrow="Settings" title="Tasks" />
-    <Tabs :model-value="tab" :tabs="TABS" label="Task settings" @update:model-value="go" />
-    <TaskListsPanel v-if="tab === 'lists'" />
-    <DefinitionsPanel v-else-if="tab === 'definitions'" />
-    <RoutinesPanel v-else-if="tab === 'routines'" />
+  <SettingsPage title="Tasks">
+    <div class="sections" role="group" aria-label="Task settings">
+      <UiChip
+        v-for="s in SECTIONS"
+        :key="s.key"
+        variant="filter"
+        :selected="section === s.key"
+        @click="go(s.key)"
+        >{{ s.label }}</UiChip
+      >
+    </div>
+    <TaskListsPanel v-if="section === 'lists'" />
+    <DefinitionsPanel v-else-if="section === 'definitions'" />
+    <RoutinesPanel v-else-if="section === 'routines'" />
     <AbsencesPanel v-else />
-  </section>
+  </SettingsPage>
 </template>
+
+<style scoped>
+.sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-2);
+}
+</style>

@@ -135,6 +135,12 @@ export const routes: RouteRecordRaw[] = [
         meta: adult,
       },
       {
+        path: 'ai',
+        name: 'settings-ai',
+        component: () => import('../views/SettingsAiView.vue'),
+        meta: adult,
+      },
+      {
         path: 'orgs',
         name: 'settings-orgs',
         component: () => import('../views/SettingsOrgsView.vue'),

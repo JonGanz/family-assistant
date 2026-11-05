@@ -106,6 +106,7 @@ test.afterAll(async () => {
 
 test('Settings -> Mail: add an IMAP source with Test connection', async () => {
   await page.goto('/settings/mail')
+  await page.getByRole('button', { name: 'Add a mail source' }).click()
   const form = page.getByTestId('add-mail-source')
   await form.getByLabel('Type').selectOption('imap')
   await form.getByLabel('Name', { exact: true }).fill(SOURCE)
@@ -145,18 +146,17 @@ test('Settings -> Mail: add an IMAP source with Test connection', async () => {
 
 test('Mail list: filter by child, open a message', async () => {
   await page.goto('/mail')
-  await page.getByLabel('Member').selectOption({ label: 'Riley' })
-  await page.getByRole('button', { name: 'Search' }).click()
+  const member = (name: string) =>
+    page.getByRole('group', { name: 'Member' }).getByRole('checkbox', { name })
+  await member('Riley').check()
   const row = page.getByRole('link', { name: /Spring Concert for grade 3/ })
   await expect(row).toBeVisible()
   await expect(row.getByText('School')).toBeVisible()
-  await page.getByLabel('Member').selectOption({ label: 'Jordan' })
-  await page.getByRole('button', { name: 'Search' }).click()
+  await member('Jordan').check()
   await expect(page.getByRole('link', { name: /Spring Concert for grade 3/ })).toHaveCount(0)
   await expect(page.getByText('No messages.')).toBeVisible()
 
-  await page.getByLabel('Member').selectOption({ label: 'Riley' })
-  await page.getByRole('button', { name: 'Search' }).click()
+  await member('Riley').check()
   await page.getByRole('link', { name: /Grade 3 news from class 3B/ }).click()
   await expect(page).toHaveURL(/\/mail\/[0-9a-f-]+$/)
   await expect(page.getByRole('heading', { name: /Grade 3 news from class 3B/ })).toBeVisible()
@@ -165,7 +165,7 @@ test('Mail list: filter by child, open a message', async () => {
 
 test('Inbox: approve an event proposal', async () => {
   await page.goto('/inbox')
-  await page.getByRole('tab', { name: /^Events/ }).click()
+  await page.getByRole('radio', { name: /^Events/ }).click()
   const item = await eventItem(page, 'Spring Concert')
   const badge = page.getByRole('link', { name: /Inbox/ })
   await expect(badge).toContainText(/\d/)
@@ -177,19 +177,19 @@ test('Inbox: approve an event proposal', async () => {
 
 test('Labelling view: one-tap confirm and progress', async () => {
   await page.goto('/mail/label')
-  const progress = page.locator('label.progress')
+  const progress = page.getByTestId('label-progress')
   await expect(progress).toContainText(/\d+ of \d+ labelled/)
   const labelled = async () =>
     Number(/(\d+) of \d+ labelled/.exec((await progress.textContent()) ?? '')?.[1])
   const before = await labelled()
-  const subject = await page.locator('article.card h2').textContent()
+  const subject = await page.getByTestId('label-subject').textContent()
   // Progress counts the evaluation-sample messages a member has labelled.
   const sampled = page.waitForResponse((r) => r.url().includes('/eval-sample') && r.ok())
-  await page.getByLabel('In the evaluation sample').check()
+  await page.getByRole('switch', { name: 'In the evaluation sample' }).click()
   await sampled
   await page.getByRole('button', { name: 'Looks right' }).click()
   await expect.poll(labelled).toBeGreaterThan(before)
-  await expect(page.locator('article.card h2')).not.toHaveText(subject ?? '')
+  await expect(page.getByTestId('label-subject')).not.toHaveText(subject ?? '')
   await page.getByRole('button', { name: 'Skip' }).click()
 })
 

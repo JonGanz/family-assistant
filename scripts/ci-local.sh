@@ -36,7 +36,10 @@ export DATABASE_URL="postgres://fa:fa@127.0.0.1:$PORT/fa" SQLX_OFFLINE=true
 echo "== rust: fmt, clippy, tests"
 cargo fmt --all --check
 cargo clippy --workspace --all-targets -- -D warnings
-if cargo nextest --version >/dev/null 2>&1; then cargo nextest run --workspace; else cargo test --workspace; fi
+# Without nextest every test of a binary shares one process, and sqlx::test caps a process at 20
+# connections (each test borrows up to 5): the fa-api tests then time out with PoolTimedOut.
+# nextest (as in GitHub CI) runs one process per test; the fallback limits the threads instead.
+if cargo nextest --version >/dev/null 2>&1; then cargo nextest run --workspace; else cargo test --workspace -- --test-threads=4; fi
 echo "== rust: the GreenMail-gated IMAP tests (FA_TEST_GREENMAIL)"
 export FA_TEST_GREENMAIL="127.0.0.1:$IMAP_PORT:$IMAPS_PORT"
 if cargo nextest --version >/dev/null 2>&1; then

@@ -66,6 +66,9 @@ pub struct MailServices {
     pub inbox: InboxService,
     pub labels: LabelService,
     pub setup: SetupService,
+    /// The shared LLM provider (`None`: the LLM is off) and the key sealing the endpoint secret.
+    pub(crate) llm: Option<Arc<fa_llm::Provider>>,
+    pub(crate) key: Arc<fa_store::MasterKey>,
 }
 
 impl MailServices {
@@ -76,6 +79,8 @@ impl MailServices {
             inbox: InboxService::new(deps.store.clone()),
             labels: LabelService::new(deps.store.clone()),
             setup: SetupService::new(deps.store.clone()),
+            llm: deps.llm.clone(),
+            key: deps.key.clone(),
         }
     }
 }

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { UiButton } from '../../ui'
+
 withDefaults(
   defineProps<{
     back?: boolean
@@ -13,9 +15,21 @@ defineEmits<{ back: []; skip: [] }>()
 </script>
 
 <template>
-  <div class="row step-buttons">
-    <button v-if="back" type="button" class="btn-ghost" @click="$emit('back')">Back</button>
-    <button v-if="skip" type="button" class="btn-ghost" @click="$emit('skip')">Skip for now</button>
-    <button type="submit" class="btn-primary" :disabled="disabled || busy">{{ next }}</button>
+  <div class="step-buttons">
+    <UiButton v-if="back" variant="text" @click="$emit('back')">Back</UiButton>
+    <span class="step-buttons__gap" />
+    <UiButton v-if="skip" variant="text" @click="$emit('skip')">Skip for now</UiButton>
+    <UiButton type="submit" :disabled="disabled" :loading="busy">{{ next }}</UiButton>
   </div>
 </template>
+
+<style scoped>
+.step-buttons {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+}
+.step-buttons__gap {
+  flex: 1;
+}
+</style>

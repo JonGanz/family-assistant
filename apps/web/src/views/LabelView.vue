@@ -1,8 +1,6 @@
 <script setup lang="ts">
-import PageHeader from '../components/PageHeader.vue'
-import StateBlock from '../components/StateBlock.vue'
-import ErrorBanner from '../components/ErrorBanner.vue'
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import type { DecisionPointKey } from '../api/client'
 import DecisionFix from '../components/mail/DecisionFix.vue'
 import { LABEL_POINTS, valueOrDefault } from '../components/mail/decisions'
@@ -10,12 +8,26 @@ import { fmt } from '../components/mail/format'
 import { useHouseholdStore } from '../stores/household'
 import { useMailStore } from '../stores/mail'
 import { useMembersStore } from '../stores/members'
+import {
+  UiButton,
+  UiCard,
+  UiEmptyState,
+  UiErrorState,
+  UiPage,
+  UiProgress,
+  UiSkeleton,
+  UiSwitch,
+  UiTopAppBar,
+  useInstantSave,
+  useSnackbar,
+} from '../ui'
 import { describeError } from './shared'
 
 const mail = useMailStore()
 const household = useHouseholdStore()
 const members = useMembersStore()
-const error = ref('')
+const router = useRouter()
+const snackbar = useSnackbar()
 const busy = ref(false)
 
 const cur = computed(() => mail.label)
@@ -33,11 +45,10 @@ onMounted(() => {
 
 async function run(fn: () => Promise<void>) {
   busy.value = true
-  error.value = ''
   try {
     await fn()
   } catch (e) {
-    error.value = describeError(e)
+    snackbar.show({ text: describeError(e) })
   } finally {
     busy.value = false
   }
@@ -60,28 +71,44 @@ function looksRight() {
   })
 }
 const next = () => msg.value && run(() => mail.nextToLabel(msg.value!.summary.id))
-const toggleSample = (e: Event) =>
-  msg.value &&
-  run(() => mail.setEvalSample(msg.value!.summary.id, (e.target as HTMLInputElement).checked))
+// 'In the evaluation sample' is a single switch: instant, with Undo (D-096).
+const sample = ref(false)
+watch(
+  () => msg.value?.summary.in_eval_sample,
+  (v) => (sample.value = !!v),
+  { immediate: true },
+)
+const { set: setSample } = useInstantSave(
+  sample,
+  async (on) => {
+    if (msg.value) await mail.setEvalSample(msg.value.summary.id, on)
+  },
+  { label: 'Evaluation sample updated' },
+)
 </script>
-
 <template>
-  <section aria-labelledby="page-title">
-    <PageHeader title="Label mail" back="/mail" />
-    <StateBlock
-      :error="mail.labelError"
-      :empty="mail.labelEmpty"
-      empty-text="Nothing left to label right now."
+  <UiPage>
+    <template #top>
+      <UiTopAppBar title="Label mail" back @back="router.push('/mail')" />
+    </template>
+
+    <UiErrorState v-if="mail.labelError" :message="mail.labelError" @retry="mail.nextToLabel()" />
+    <UiEmptyState
+      v-else-if="mail.labelEmpty"
+      icon="check"
+      title="Nothing left to label right now."
     />
-    <ErrorBanner v-if="error" :message="error" />
-    <template v-if="msg && cur">
-      <label class="progress">
-        {{ cur.progress.labelled }} of {{ cur.progress.target }} labelled
-        <progress :value="pct" max="100">{{ pct }}%</progress>
-      </label>
-      <article class="card">
-        <h2>{{ msg.summary.subject }}</h2>
-        <p class="muted">
+    <UiSkeleton v-else-if="!msg || !cur" :lines="5" />
+    <template v-else>
+      <div class="progress" data-testid="label-progress">
+        <span>{{ cur.progress.labelled }} of {{ cur.progress.target }} labelled</span>
+        <UiProgress :value="pct" label="Labelling progress" />
+      </div>
+      <UiCard variant="filled">
+        <template #header>
+          <h2 class="subject" data-testid="label-subject">{{ msg.summary.subject }}</h2>
+        </template>
+        <p class="note">
           {{ msg.summary.from_name || msg.summary.from_addr }} &middot;
           {{ fmt(msg.summary.received_at, household.tz) }}
         </p>
@@ -89,63 +116,70 @@ const toggleSample = (e: Event) =>
         <RouterLink :to="{ name: 'mail-detail', params: { id: msg.summary.id } }"
           >Full message</RouterLink
         >
-      </article>
-      <div class="points">
-        <DecisionFix
-          v-for="p in LABEL_POINTS"
-          :key="p"
-          :point="p"
-          :decisions="msg.decisions"
-          :categories="mail.categories"
-          :members="members.items"
-          open
-          @fix="(v) => fixPoint(p, v)"
-        />
-      </div>
-      <label class="field-inline">
-        <input type="checkbox" :checked="msg.summary.in_eval_sample" @change="toggleSample" />
-        In the evaluation sample
-      </label>
+      </UiCard>
+      <UiCard variant="filled">
+        <div class="points">
+          <DecisionFix
+            v-for="p in LABEL_POINTS"
+            :key="p"
+            :point="p"
+            :decisions="msg.decisions"
+            :categories="mail.categories"
+            :members="members.items"
+            open
+            @fix="(v) => fixPoint(p, v)"
+          />
+          <UiSwitch
+            :model-value="sample"
+            label="In the evaluation sample"
+            @update:model-value="setSample"
+          />
+        </div>
+      </UiCard>
       <div class="buttons">
-        <button type="button" class="btn-primary" :disabled="busy" @click="looksRight">
-          Looks right
-        </button>
-        <button type="button" class="btn-ghost" :disabled="busy" @click="next">Skip</button>
+        <UiButton variant="text" :disabled="busy" @click="next">Skip</UiButton>
+        <UiButton :disabled="busy" icon="check" @click="looksRight">Looks right</UiButton>
       </div>
     </template>
-  </section>
+  </UiPage>
 </template>
 
 <style scoped>
 .progress {
   display: grid;
-  gap: var(--space-1);
-  margin-bottom: var(--space-3);
+  gap: var(--ui-space-2);
+  font: var(--ui-type-body-md);
 }
-.progress progress {
-  width: 100%;
+.subject {
+  margin: 0;
+  font: var(--ui-type-title-md);
+  overflow-wrap: anywhere;
 }
-.card {
-  margin-bottom: var(--space-3);
+.note {
+  margin: 0 0 var(--ui-space-2);
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-md);
 }
 .snippet {
+  margin: 0 0 var(--ui-space-2);
   overflow-wrap: anywhere;
+  font: var(--ui-type-body-md);
 }
 .points {
   display: grid;
-  gap: var(--space-3);
-  margin-bottom: var(--space-3);
+  gap: var(--ui-space-3);
 }
 .buttons {
-  display: flex;
-  gap: var(--space-3);
   position: sticky;
-  bottom: 0;
-  padding: var(--space-3) 0;
-  background: var(--color-bg);
+  bottom: calc(var(--ui-bottom-offset, 0px) + env(safe-area-inset-bottom));
+  z-index: 5;
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--ui-space-3);
+  padding: var(--ui-space-3) 0;
+  background: var(--ui-surface);
 }
-.buttons button {
+.buttons > * {
   flex: 1;
-  min-height: 52px;
 }
 </style>
