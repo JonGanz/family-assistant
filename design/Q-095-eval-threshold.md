@@ -24,4 +24,4 @@ A (T-09).
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

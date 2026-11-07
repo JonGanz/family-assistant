@@ -24,4 +24,4 @@ A (T-10). Month scrolls sideways when narrow; '+N more' in Month has no per-day 
 
 ## Answer
 <!-- answer below this line -->
-
+Option A is valid, but we should also maintain what the last state was and return to that view when returning. This will allow a user to always be brought back to the last view they used, without needing an unnecessary configuration option.

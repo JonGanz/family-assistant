@@ -23,4 +23,4 @@ A (T-13).
 
 ## Answer
 <!-- answer below this line -->
-
+Option A is fine for now.

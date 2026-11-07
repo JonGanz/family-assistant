@@ -25,4 +25,4 @@ A (T-12). D is a possible follow-up.
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

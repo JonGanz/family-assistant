@@ -21,4 +21,4 @@ FA_ALLOW_PLAIN_IMAP and FA_IMAP_TLS_INSECURE are process-wide, tests-only switch
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

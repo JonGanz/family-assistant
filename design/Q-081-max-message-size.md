@@ -21,4 +21,4 @@ Code review 2 (C2-01, C2-05): a Gmail message over about 7.5 MB stopped the mail
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

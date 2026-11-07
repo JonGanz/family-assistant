@@ -21,4 +21,4 @@ Code review 2 (C2-15) found that the CalDAV client follows server-supplied hrefs
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

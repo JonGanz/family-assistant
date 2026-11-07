@@ -24,4 +24,4 @@ A (T-13). It changes the look of those themes noticeably.
 
 ## Answer
 <!-- answer below this line -->
-
+Option B. That said, the theme's selected have been (for the most part) been personally used with Neovim, where we have more than the standard terminal hue's for options, which give the editor far more depth of options. Can these theme's be bolstered with more variants from their Neovim counterparts? This would allow for better options with card backgrounds and text colors.

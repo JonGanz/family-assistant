@@ -24,4 +24,4 @@ A (T-10).
 
 ## Answer
 <!-- answer below this line -->
-
+A.

@@ -23,4 +23,4 @@ A (T-14). Tasks settings tabs became filter chips (`?tab=` kept); empty lists sh
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

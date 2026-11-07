@@ -21,4 +21,4 @@ Notification titles can contain mail subjects and bill payees, which an ntfy ser
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

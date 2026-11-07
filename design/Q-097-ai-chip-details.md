@@ -24,4 +24,4 @@ A (T-16). Contacts carry no provenance field yet.
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.
