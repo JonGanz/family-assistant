@@ -69,9 +69,30 @@ Outstanding findings and suggestions from the 2026-10-26 repository review (full
 | P-15 ✅ done 2026-10-26 (M3.5 T-01) | `fa.py check` has no negative test and `ci.yml` was not YAML-validated after the `docs` job was added | Add a bad-fixture test; run the workflow once | QUICK |
 | P-16 ✅ done 2026-10-26 (M3.5) | Not run during the review: `scripts/ci-local.sh`, `scripts/e2e.sh`, `scripts/compose-smoke.sh`, the DB-backed Rust tests | Run before the next milestone starts | — |
 
+## M4 known gaps and follow-ups (2026-11-07)
+Source: the *Outcome* of [plan/M4.md](plan/M4.md) and the T-NN outcomes in [plan/M4/](plan/M4/). Open until a milestone takes them.
+| ID | Area | Gap | Suggested fix | Size |
+|---|---|---|---|---|
+| G4-01 | AI, notify | When the LLM sets `email.time_sensitive` to true after `mail.process` has run, no notification is created (the rules' path is the only one that notifies) | The `mail.llm` job raises the same notification when the decision flips to true and none was sent | QUICK |
+| G4-02 | AI, tasks | A task the LLM proposes before the rules' `tasks.from_mail` job has run becomes a second suggestion instead of refining the rules' one | Order the jobs (`mail.llm` after `tasks.from_mail`), or dedupe in `tasks.from_mail` against LLM suggestions | QUICK |
+| G4-03 | AI, mail actions | When the LLM changes a category, the rules' category auto-actions (label, archive, mark read) stay applied; the new category's run as well | Decide: revert the old category's actions (they are undoable) or keep them; a question first | LARGER |
+| G4-04 | AI | A later `mail.process` rerun of a message (for example after a rule change) can hide the LLM's decision behind a new rules decision | Keep the LLM decision as authoritative in `llm_first` unless a person changes it; re-queue `mail.llm` on rerun | QUICK |
+| G4-05 | AI | Task proposals carry no confidence (`TaskView` has no `confidence`), so the inbox chip shows only "AI" for tasks | Add `confidence` to the task suggestion and `TaskView` | QUICK |
+| G4-06 | AI | Contacts the LLM finds carry no provenance (`extracted_by`) | Add `extracted_by` to contacts and the chip in the inbox | QUICK |
+| G4-07 | AI | No live test against a real OpenAI-compatible server; the default model `qwen3:8b` is not measured against `qwen3.5:9b` | Opt-in test (`FA_TEST_LLM_URL`) with fictional mail: schema validity and latency per model; then set the documented default (needs the user's go-ahead to use the GPU) | QUICK |
+| G4-08 | Mail UI, API | Mail filters with several values filter only the loaded page (the API takes one `category`, `member`, `source`) | Multi-value query parameters on `GET /messages` | QUICK |
+| G4-09 | Members | `MembersManager` shows a new member after the first POST while the login is created by a second; a reload in between leaves a child without a login | Show the row only after both requests, or one endpoint that creates both | QUICK |
+| G4-10 | Web tests | No mount test for `CalendarView` (the stored view `fa.calendar.view` is untested) | Add a view test | QUICK |
+| G4-11 | Web | Task completion with Undo is implemented separately in Today, Tasks and the task detail | Extract a shared task-undo composable | QUICK |
+| G4-12 | ui/ | Threshold sliders are raw `<input type=range>`; `UiChip` uses checkbox semantics while `UiFilterChips` draws its own `aria-pressed` buttons; 12 lint warnings `vue/require-default-prop` in `ui/` | Add `UiSlider`; align `UiChip` filter semantics with `UiFilterChips`; give the props defaults | QUICK |
+| G4-13 | Themes | Where a Neovim port's own text fails 4.5:1 on its deepest layer, the applied layer is eased toward the page colour (D-106 annotation), so it differs slightly from the published hex | Accept, or fall back to `textStrong` on that layer instead; review with the user | — |
+| G4-14 | Tooling | `cargo-nextest` is not installed locally, so `ci-local.sh` falls back to `cargo test --test-threads=4` (sqlx caps a process at 20 connections); gitleaks is not installed locally either | `cargo install cargo-nextest --locked`, install gitleaks | QUICK |
+| G4-15 | Next milestone | D-098 to D-102 (mail-task visibility per source, CalDAV host scope, IMAP PEM, message size limit, ntfy generic text) are designed but not built | Plan them with the code review 2 LARGER items | LARGER |
+
 ## Suggested order
 1. ~~Answer Q-061 to Q-066~~ (done: D-066 to D-071).
 2. ~~M3.5 code~~ (done 2026-10-26: every item listed for it above is closed; see [plan/M3.5.md](plan/M3.5.md), *Outcome*).
 3. The M3.5 shakedown (R-01 to R-04, U-16).
 4. ~~The M4 plan picks up the deferred items~~ (done 2026-11-02, M3.7).
 5. The milestone after M4 picks up the LARGER findings of code review 2 (C2-02, C2-05, C2-08, C2-09, C2-15, C2-19, C2-21, C2-30). Q-078 to Q-082 were answered on 2026-11-07 (D-098 to D-102), and the arch docs describe the result.
+6. M4 known gaps G4-01 to G4-15 (above): QUICK ones as a follow-up wave or with the next milestone; G4-03 needs a question first.
