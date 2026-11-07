@@ -21,7 +21,7 @@ None.
 - H-14 (M3.5): Tailscale auth key, `--profile tailscale`, phone on the tailnet, ntfy subscribed
 - H-15 (M4): Ollama on the GPU PC bound to the LAN or tailnet address (`OLLAMA_HOST`), `ollama pull qwen3:8b`, endpoint saved and tested in Settings → AI
 - H-16 (M4): Run `fa-server eval` for each email decision point with and without `--with-llm` on the real labelled sample; enable the `llm` stage where it helps
-- H-17 (M4): UI review checkpoints R1 to R4 on the review artifacts
+- H-17 (M4): UI review checkpoints R1 to R4 on the review artifacts (R1 to R3 done; R4 published 2026-11-07)
 
 ## Tasks not done (plans not closed)
 None.

@@ -18,7 +18,7 @@ There is one plan per milestone (`M<n>.md`). Its sub-agent task briefs are in `M
 | M3.5 Onboarding and shakedown | [M3.5.md](M3.5.md) | code-complete, awaiting human steps H-12 to H-14, then the shakedown (H-02 to H-11 redone on the new install, U-16, a week of inbox numbers) | [M3.5/](M3.5/): T-01 to T-10 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)), plus human steps H-12 to H-14 and the shakedown |
 | M3.6 Themes | [M3.6.md](M3.6.md) | code-complete; e2e, clippy and tests green, compose-smoke pending (D-079 to D-081) | [M3.6/](M3.6/): T-01 to T-08 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)); T-09 integration is the main session |
 | M3.7 Review follow-ups | [M3.7.md](M3.7.md) | running (C-10, C-13, C-14, P-06, P-07, second code review) | [M3.7/](M3.7/): T-01 to T-07 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)) |
-| M4 UI revamp and LLM extraction slice | [M4.md](M4.md) | planned (two tracks, D-097; review checkpoints R1 to R4) | [M4/](M4/): T-01 to T-17 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)), plus human steps H-15 to H-17 |
+| M4 UI revamp and LLM extraction slice | [M4.md](M4.md) | done 2026-11-07 (code-complete; H-15 to H-17 open) | [M4/](M4/): T-01 to T-23 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)), plus human steps H-15 to H-17 |
 
 ## Reviews
 Time-boxed review sessions (CLAUDE.md workflow 7). Each file has findings tables with IDs, sizes and status.
