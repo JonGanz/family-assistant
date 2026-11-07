@@ -3,7 +3,11 @@
 use std::sync::{Arc, Mutex};
 
 use async_trait::async_trait;
-use axum::{Json, Router, extract::State, routing::post};
+use axum::{
+    Json, Router,
+    extract::State,
+    routing::{get, post},
+};
 use chrono::{DateTime, Duration, NaiveTime, TimeZone, Utc};
 use fa_domain::*;
 use fa_jobs::JobContext;
@@ -44,6 +48,10 @@ async fn stub(reply: Value) -> (String, Stub) {
     }));
     let app = Router::new()
         .route("/v1/chat/completions", post(chat))
+        .route(
+            "/v1/models",
+            get(|| async { Json(json!({"data": [{"id": "test-model"}]})) }),
+        )
         .with_state(state.clone());
     let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let url = format!("http://{}/v1", l.local_addr().unwrap());
@@ -201,6 +209,20 @@ async fn env(pool: PgPool, base_url: Option<String>) -> Env {
     Pipeline::set_llm_stage(&mut tx, h, DecisionPointKey::EmailCategory, true, 0.7)
         .await
         .unwrap();
+    // The M4 tests below run rules_first; the D-107 tests switch with `Env::settings`.
+    AiSettingsRepo::update_all(
+        &mut tx,
+        h,
+        &AiSettingsInput {
+            mail_extract_mode: MailExtractMode::Fallback,
+            max_input_chars: 12000,
+            mail_mode: MailMode::RulesFirst,
+            catchup_days: 30,
+            extract_fallback_cutoff: 0.8,
+        },
+    )
+    .await
+    .unwrap();
     tx.commit().await.unwrap();
 
     let provider = Arc::new(fa_llm::Provider::new(
@@ -304,7 +326,7 @@ impl Env {
             store: self.store.clone(),
             backup_dir: None,
         };
-        let hs = fa_mail::handlers(&self.deps);
+        let hs = fa_mail::process::handlers_with_clock(&self.deps, now);
         hs.iter()
             .find(|h| h.kind() == kind)
             .unwrap()
@@ -542,4 +564,571 @@ async fn prune_deletes_old_calls(pool: PgPool) {
     e.run("llm.prune", json!({})).await.unwrap();
     assert_eq!(e.count("SELECT count(*) FROM llm_call").await, 2);
     assert!(fa_mail::default_schedules().contains(&("llm.prune", "0 4 * * *")));
+}
+
+// ------------------------------------------------------------------ D-107: llm_first
+
+/// Rows of `event`: (title, status, extracted_by), oldest first.
+async fn events(e: &Env) -> Vec<(String, String, String)> {
+    sqlx::query_as("SELECT title, status, extracted_by FROM event ORDER BY created_at, id")
+        .fetch_all(&e.pool)
+        .await
+        .unwrap()
+}
+
+impl Env {
+    async fn settings(&self, mode: MailMode, catchup_days: u32, cutoff: f32) {
+        let mut tx = self.store.tx_for(self.h).await.unwrap();
+        AiSettingsRepo::update_all(
+            &mut tx,
+            self.h,
+            &AiSettingsInput {
+                mail_extract_mode: MailExtractMode::Fallback,
+                max_input_chars: 12000,
+                mail_mode: mode,
+                catchup_days,
+                extract_fallback_cutoff: cutoff,
+            },
+        )
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+    }
+
+    async fn llm_state(&self, id: MessageId) -> String {
+        sqlx::query_scalar("SELECT llm_state FROM message WHERE id = $1")
+            .bind(id.as_uuid())
+            .fetch_one(&self.pool)
+            .await
+            .unwrap()
+    }
+
+    /// `(stage_kind, is_final)` of the decisions of a point, oldest first.
+    async fn decisions(&self, id: MessageId, dp: &str) -> Vec<(String, bool)> {
+        sqlx::query_as(
+            "SELECT d.stage_kind, d.is_final FROM decision d
+             JOIN decision_point p ON p.id = d.decision_point_id
+             WHERE d.subject_id = $1 AND p.key = $2 ORDER BY d.created_at, d.id",
+        )
+        .bind(id.as_uuid())
+        .bind(dp)
+        .fetch_all(&self.pool)
+        .await
+        .unwrap()
+    }
+
+    async fn backlog(&self) -> LlmBacklog {
+        let mut tx = self.store.tx_for(self.h).await.unwrap();
+        LlmStateRepo::backlog(&mut tx, self.h).await.unwrap()
+    }
+
+    async fn set_endpoint(&self, url: &str, enabled: bool) {
+        let mut tx = self.store.tx_for(self.h).await.unwrap();
+        LlmEndpointRepo::upsert(
+            &mut tx,
+            self.h,
+            &LlmEndpointInput {
+                base_url: url.into(),
+                model: "test-model".into(),
+                dialect: LlmDialect::OpenaiChat,
+                timeout_ms: 5000,
+                enabled,
+            },
+        )
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+        self.deps.llm.as_ref().unwrap().invalidate(self.h);
+    }
+
+    /// Runs every queued `mail.llm` job payload (in queue order).
+    async fn run_llm_jobs(&self) {
+        let payloads: Vec<Value> = sqlx::query_scalar(
+            "SELECT payload FROM job WHERE kind = 'mail.llm' AND status = 'queued'
+             ORDER BY priority DESC, run_at, created_at",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .unwrap();
+        for p in payloads {
+            self.run("mail.llm", p).await.unwrap();
+        }
+    }
+}
+
+fn conference_answer(category: &str) -> Value {
+    json!({
+        "category": {"value": category, "confidence": 0.9},
+        "events": [{"title": "Conference with Ms Rivera", "start": "2026-11-06T23:00:00Z",
+                    "end": "2026-11-07T00:00:00Z", "location": "Room 12", "confidence": 0.9}],
+        "bills": [], "tasks": []
+    })
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn llm_first_queues_every_message_even_when_rules_are_sure(pool: PgPool) {
+    let (url, _) = stub(json!({})).await;
+    let e = env(pool, Some(url)).await;
+    e.settings(MailMode::LlmFirst, 30, 0.8).await;
+    // A confident ICS invite, a plain mail and a promotion: all of them go to the model.
+    let ics = e.insert(&fixture("teacher_ics.eml"), "ics").await;
+    let plain = e.plain("p").await;
+    let promo = e.insert(&fixture("promo.eml"), "promo").await;
+    for id in [ics, plain, promo] {
+        e.svc.process(e.h, id, None).await.unwrap();
+        assert_eq!(e.llm_state(id).await, "queued");
+    }
+    assert_eq!(e.category(ics).await.as_deref(), Some("school"));
+    assert_eq!(e.jobs("mail.llm").await.len(), 3);
+    // Reprocessing keeps one job per message and the state.
+    e.svc.process(e.h, ics, None).await.unwrap();
+    assert_eq!(e.jobs("mail.llm").await.len(), 3);
+    assert_eq!(
+        e.backlog().await,
+        LlmBacklog {
+            awaiting: 0,
+            queued: 3
+        }
+    );
+    // The rules' result applied at once: one proposal from the rule extractor.
+    assert_eq!(
+        events(&e).await,
+        vec![(
+            "Parent-teacher conference".into(),
+            "extracted".into(),
+            "rules".into()
+        )]
+    );
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn llm_first_replaces_rules_decisions_and_pending_proposals(pool: PgPool) {
+    let (url, state) = stub(conference_answer("appointments")).await;
+    let e = env(pool, Some(url)).await;
+    e.settings(MailMode::LlmFirst, 30, 0.8).await;
+    let id = e.insert(&fixture("teacher_ics.eml"), "ics").await;
+    e.svc.process(e.h, id, None).await.unwrap();
+    assert_eq!(e.category(id).await.as_deref(), Some("school"));
+    assert_eq!(
+        e.decisions(id, "email.category").await,
+        vec![("rules".to_string(), true)]
+    );
+
+    let payload = e.jobs("mail.llm").await.remove(0);
+    e.run("mail.llm", payload).await.unwrap();
+
+    // All four points and the extraction were asked.
+    let sys = state.lock().unwrap().requests[0]["messages"][0]["content"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert!(sys.contains(
+        "Fields to fill: category, time_sensitive, is_bill, member_link, events, bills, tasks."
+    ));
+    // The model's category replaced the rules' decision: both are on record, the model's last.
+    assert_eq!(e.category(id).await.as_deref(), Some("appointments"));
+    assert_eq!(
+        e.decisions(id, "email.category").await,
+        vec![("rules".to_string(), true), ("llm".to_string(), true)]
+    );
+    // The pending rule proposal took the model's title and location; nothing was added.
+    assert_eq!(
+        events(&e).await,
+        vec![(
+            "Conference with Ms Rivera".into(),
+            "extracted".into(),
+            "llm".into()
+        )]
+    );
+    let loc: Option<String> = sqlx::query_scalar("SELECT location FROM event")
+        .fetch_one(&e.pool)
+        .await
+        .unwrap();
+    assert_eq!(loc.as_deref(), Some("Room 12"));
+    assert_eq!(e.llm_state(id).await, "done");
+    // A second run (a duplicate job) asks nothing.
+    e.run("mail.llm", json!({"message_id": id})).await.unwrap();
+    assert_eq!(state.lock().unwrap().requests.len(), 1);
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn llm_first_leaves_what_people_decided_alone(pool: PgPool) {
+    let (url, state) = stub(conference_answer("school")).await;
+    let e = env(pool, Some(url)).await;
+    e.settings(MailMode::LlmFirst, 30, 0.8).await;
+    let labelled = e.insert(&fixture("teacher_ics.eml"), "a").await;
+    let rejected = e.insert(&fixture("teacher_ics.eml"), "b").await;
+    for id in [labelled, rejected] {
+        e.svc.process(e.h, id, None).await.unwrap();
+    }
+    assert_eq!(events(&e).await.len(), 2);
+
+    // A person labels the first message (an extract category) and approves its event; the
+    // second message's event is rejected.
+    {
+        let mut tx = e.store.tx_for(e.h).await.unwrap();
+        let subject = Subject {
+            kind: SubjectType::Message,
+            id: labelled.as_uuid(),
+        };
+        Pipeline::record_human(
+            &mut tx,
+            e.h,
+            DecisionPointKey::EmailCategory,
+            subject,
+            json!("appointments"),
+            None,
+        )
+        .await
+        .unwrap();
+        MessageRepo::set_classification(&mut tx, labelled, Some("appointments"), None, None)
+            .await
+            .unwrap();
+        let rows: Vec<(uuid::Uuid, uuid::Uuid)> =
+            sqlx::query_as("SELECT id, message_id FROM event ORDER BY created_at, id")
+                .fetch_all(&mut *tx)
+                .await
+                .unwrap();
+        for (ev, msg) in rows {
+            let status = if msg == labelled.as_uuid() {
+                EventStatus::Approved
+            } else {
+                EventStatus::Rejected
+            };
+            EventRepo::set_status(&mut tx, ev.into(), status, None)
+                .await
+                .unwrap();
+        }
+        tx.commit().await.unwrap();
+    }
+
+    e.run_llm_jobs().await;
+
+    // The label stands; the model was not asked for a category on the labelled message.
+    assert_eq!(e.category(labelled).await.as_deref(), Some("appointments"));
+    assert_eq!(
+        e.decisions(labelled, "email.category").await,
+        vec![("rules".to_string(), true), ("human".to_string(), true)]
+    );
+    let sys = state.lock().unwrap().requests[0]["messages"][0]["content"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert!(!sys.contains("category.value"));
+    // Approved and rejected events keep their titles and status; the model added nothing.
+    let rows = events(&e).await;
+    assert_eq!(rows.len(), 2);
+    assert!(
+        rows.iter()
+            .all(|r| r.0 == "Parent-teacher conference" && r.2 == "rules")
+    );
+    let mut statuses: Vec<_> = rows.iter().map(|r| r.1.as_str()).collect();
+    statuses.sort_unstable();
+    assert_eq!(statuses, ["approved", "rejected"]);
+    // The unlabelled message still got the model's category.
+    assert_eq!(e.llm_state(labelled).await, "done");
+    assert_eq!(e.llm_state(rejected).await, "done");
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn llm_first_without_a_client_waits_and_enabling_catches_up(pool: PgPool) {
+    let e = env(pool, None).await;
+    e.settings(MailMode::LlmFirst, 30, 0.8).await;
+    let dated = |day_month: (u32, u32)| ParsedMessage {
+        from_addr: "noreply@example.com".into(),
+        subject: SUBJECT.into(),
+        body_text: "Please join us for a short chat about the crossing.".into(),
+        date: Some(
+            Utc.with_ymd_and_hms(2026, day_month.1, day_month.0, 9, 0, 0)
+                .unwrap(),
+        ),
+        ..Default::default()
+    };
+    // The clock is 2026-10-28: yesterday, ten days ago and forty days ago.
+    let ids = [
+        e.insert(&dated((27, 10)), "recent").await,
+        e.insert(&dated((18, 10)), "mid").await,
+        e.insert(&dated((18, 9)), "old").await,
+    ];
+    for id in ids {
+        e.svc.process(e.h, id, None).await.unwrap();
+        assert_eq!(e.llm_state(id).await, "awaiting");
+    }
+    assert!(e.jobs("mail.llm").await.is_empty());
+    assert_eq!(
+        e.backlog().await,
+        LlmBacklog {
+            awaiting: 3,
+            queued: 0
+        }
+    );
+
+    // Without an endpoint the catch-up does nothing.
+    e.run("mail.llm.catchup", json!({"household": e.h}))
+        .await
+        .unwrap();
+    assert!(e.jobs("mail.llm").await.is_empty());
+
+    // An endpoint that does not answer: probed (and logged), nothing queued.
+    e.set_endpoint(&dead_url().await, true).await;
+    e.run("mail.llm.catchup", json!({"household": e.h}))
+        .await
+        .unwrap();
+    assert!(e.jobs("mail.llm").await.is_empty());
+    assert_eq!(
+        e.count("SELECT count(*) FROM llm_call WHERE purpose = 'endpoint.test' AND NOT ok")
+            .await,
+        1
+    );
+
+    // A window of 0 days switches the catch-up off.
+    let (url, state) = stub(answer()).await;
+    e.set_endpoint(&url, true).await;
+    e.settings(MailMode::LlmFirst, 0, 0.8).await;
+    e.run("mail.llm.catchup", json!({"household": e.h}))
+        .await
+        .unwrap();
+    assert!(e.jobs("mail.llm").await.is_empty());
+
+    // The endpoint answers and the window is 30 days: the two recent messages, newest first;
+    // the old one stays rules-only.
+    e.settings(MailMode::LlmFirst, 30, 0.8).await;
+    e.run("mail.llm.catchup", json!({"household": e.h}))
+        .await
+        .unwrap();
+    let jobs: Vec<Value> = sqlx::query_scalar(
+        "SELECT payload FROM job WHERE kind = 'mail.llm' ORDER BY priority DESC, run_at",
+    )
+    .fetch_all(&e.pool)
+    .await
+    .unwrap();
+    let queued: Vec<Value> = jobs.iter().map(|j| j["message_id"].clone()).collect();
+    assert_eq!(queued, vec![json!(ids[0]), json!(ids[1])]);
+    assert_eq!(
+        e.count("SELECT count(*) FROM job WHERE kind = 'mail.llm' AND priority = -1")
+            .await,
+        2
+    );
+    assert_eq!(e.llm_state(ids[2]).await, "awaiting");
+    assert_eq!(
+        e.backlog().await,
+        LlmBacklog {
+            awaiting: 1,
+            queued: 2
+        }
+    );
+    assert_eq!(
+        e.count("SELECT count(*) FROM llm_call WHERE purpose = 'endpoint.test' AND ok")
+            .await,
+        1
+    );
+    // Running the schedule's variant (no household) finds nothing more within the window.
+    e.run("mail.llm.catchup", json!({})).await.unwrap();
+    assert_eq!(e.jobs("mail.llm").await.len(), 2);
+
+    // The jobs run; those messages are done.
+    e.run_llm_jobs().await;
+    assert_eq!(e.llm_state(ids[0]).await, "done");
+    assert_eq!(e.llm_state(ids[1]).await, "done");
+    assert_eq!(state.lock().unwrap().requests.len(), 2);
+    assert_eq!(
+        e.backlog().await,
+        LlmBacklog {
+            awaiting: 1,
+            queued: 0
+        }
+    );
+    assert!(fa_mail::default_schedules().contains(&("mail.llm.catchup", "*/15 * * * *")));
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn disabling_the_endpoint_parks_queued_messages(pool: PgPool) {
+    let (url, state) = stub(answer()).await;
+    let e = env(pool, Some(url.clone())).await;
+    e.settings(MailMode::LlmFirst, 30, 0.8).await;
+    let id = e.plain("m").await;
+    e.svc.process(e.h, id, None).await.unwrap();
+    assert_eq!(e.llm_state(id).await, "queued");
+    e.set_endpoint(&url, false).await;
+    // The job completes without a call and the message waits instead of being dropped.
+    e.run_llm_jobs().await;
+    assert_eq!(e.llm_state(id).await, "awaiting");
+    assert!(state.lock().unwrap().requests.is_empty());
+    // Enabling it again and catching up brings the message back.
+    e.set_endpoint(&url, true).await;
+    e.run("mail.llm.catchup", json!({"household": e.h}))
+        .await
+        .unwrap();
+    assert_eq!(e.llm_state(id).await, "queued");
+    e.run_llm_jobs().await;
+    assert_eq!(e.llm_state(id).await, "done");
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn an_unreachable_endpoint_parks_the_message_on_the_last_attempt(pool: PgPool) {
+    let e = env(pool, Some(dead_url().await)).await;
+    e.settings(MailMode::LlmFirst, 30, 0.8).await;
+    let id = e.plain("m").await;
+    e.svc.process(e.h, id, None).await.unwrap();
+    // Claim the job as the worker would (attempt 1 of 12).
+    {
+        let mut tx = e.store.tx_system().await.unwrap();
+        let j = loop {
+            let j = JobRepo::claim(&mut tx, "t", 60).await.unwrap().unwrap();
+            if j.kind == "mail.llm" {
+                break j;
+            }
+        };
+        assert_eq!((j.attempts, j.max_attempts), (1, 12));
+        tx.commit().await.unwrap();
+    }
+    let payload = e.jobs("mail.llm").await.remove(0);
+    let err = e.run("mail.llm", payload.clone()).await.unwrap_err();
+    assert_eq!(err.to_string(), "llm unavailable");
+    // Still retrying: not parked.
+    assert_eq!(e.llm_state(id).await, "queued");
+    sqlx::query("UPDATE job SET attempts = max_attempts WHERE kind = 'mail.llm'")
+        .execute(&e.pool)
+        .await
+        .unwrap();
+    e.run("mail.llm", payload).await.unwrap_err();
+    assert_eq!(e.llm_state(id).await, "awaiting");
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn rules_first_uses_the_configurable_cutoff(pool: PgPool) {
+    let (url, _) = stub(json!({})).await;
+    let e = env(pool, Some(url)).await;
+    // The ICS invite scores 0.95: strong at the default cutoff, so no job.
+    let ics = e.insert(&fixture("teacher_ics.eml"), "ics").await;
+    e.svc.process(e.h, ics, None).await.unwrap();
+    assert!(e.jobs("mail.llm").await.is_empty());
+    assert_eq!(e.llm_state(ics).await, "none");
+    // A cutoff above that score makes the same message ask the model.
+    e.settings(MailMode::RulesFirst, 30, 0.99).await;
+    e.svc.process(e.h, ics, None).await.unwrap();
+    assert_eq!(e.jobs("mail.llm").await.len(), 1);
+    assert_eq!(e.llm_state(ics).await, "queued");
+    // rules_first never touches what the rules decided: a final rules decision is not asked.
+    let (ask_cat, _) = (e.decisions(ics, "email.category").await, ());
+    assert_eq!(ask_cat.last(), Some(&("rules".to_string(), true)));
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn rules_threshold_is_a_new_pipeline_version(pool: PgPool) {
+    let e = env(pool, None).await;
+    let mut tx = e.store.tx_for(e.h).await.unwrap();
+    let dp = DecisionPointKey::EmailIsBill;
+    let v1 = Pipeline::set_stages(&mut tx, e.h, dp, false, 0.7, None)
+        .await
+        .unwrap();
+    // Nothing changed: the active version stays.
+    assert_eq!(
+        Pipeline::set_stages(&mut tx, e.h, dp, false, 0.7, Some(0.8))
+            .await
+            .unwrap(),
+        v1
+    );
+    let v2 = Pipeline::set_stages(&mut tx, e.h, dp, false, 0.7, Some(0.9))
+        .await
+        .unwrap();
+    assert_ne!(v1, v2);
+    let point = DecisionPointRepo::get_by_key(&mut tx, dp)
+        .await
+        .unwrap()
+        .unwrap();
+    let (active, stages) = PipelineRepo::active_version(&mut tx, point.id)
+        .await
+        .unwrap()
+        .unwrap();
+    assert_eq!(active.id, v2);
+    let rules = stages.iter().find(|s| s.kind == StageKind::Rules).unwrap();
+    assert_eq!(rules.accept_threshold, 0.9);
+    // No llm stage was invented for a point that has none.
+    assert!(stages.iter().all(|s| s.kind != StageKind::Llm));
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn llm_first_refines_a_pending_bill_but_not_an_edited_one(pool: PgPool) {
+    let answer = json!({
+        "category": {"value": "bills", "confidence": 0.9},
+        "is_bill": {"value": true, "confidence": 0.9},
+        "bills": [{"payee": "Example Power Co", "amount_cents": 5000, "currency": "USD",
+                   "due": "2026-11-20", "confidence": 0.9}]
+    });
+    let (url, state) = stub(answer.clone()).await;
+    let e = env(pool, Some(url)).await;
+    e.settings(MailMode::LlmFirst, 30, 0.8).await;
+    {
+        let t = Utc::now();
+        let mut tx = e.store.tx_for(e.h).await.unwrap();
+        OrgRepo::insert(
+            &mut tx,
+            &Org {
+                id: OrgId::new(),
+                household_id: e.h,
+                kind: OrgKind::Biller,
+                name: "Power Co".into(),
+                domains: vec!["power.example.com".into()],
+                senders: vec![],
+                ics_calendar_id: None,
+                default_calendar_id: None,
+                contact_mode: ContactMode::Manual,
+                bill_amount_regex: None,
+                bill_due_regex: None,
+                bill_account_regex: None,
+                archived_at: None,
+                created_at: t,
+                updated_at: t,
+            },
+        )
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+    }
+    let mail = |remote: &str, amount: &str| ParsedMessage {
+        from_addr: "billing@power.example.com".into(),
+        subject: format!("Statement {remote}"),
+        body_text: format!("Your statement is ready. Amount due: ${amount}"),
+        date: Some(now()),
+        ..Default::default()
+    };
+    let (a, b) = (
+        e.insert(&mail("a", "50.00"), "a").await,
+        e.insert(&mail("b", "75.00"), "b").await,
+    );
+    for id in [a, b] {
+        e.svc.process(e.h, id, None).await.unwrap();
+    }
+    let sql = "SELECT payee, status, extracted_by FROM bill WHERE message_id = $1";
+    let row = |id: MessageId| {
+        let pool = e.pool.clone();
+        async move {
+            sqlx::query_as::<_, (String, String, String)>(sql)
+                .bind(id.as_uuid())
+                .fetch_all(&pool)
+                .await
+                .unwrap()
+        }
+    };
+    let (ra, rb) = (row(a).await, row(b).await);
+    assert_eq!((ra.len(), rb.len()), (1, 1));
+    assert!(ra[0].1 == "proposed" && ra[0].2 == "rules");
+    // A person edits the second message's bill (a version bump) before the model answers.
+    sqlx::query("UPDATE bill SET version = version + 1 WHERE message_id = $1")
+        .bind(b.as_uuid())
+        .execute(&e.pool)
+        .await
+        .unwrap();
+    let jobs = e.jobs("mail.llm").await;
+    e.run("mail.llm", jobs[0].clone()).await.unwrap();
+    state.lock().unwrap().reply["bills"][0]["amount_cents"] = json!(7500);
+    e.run("mail.llm", jobs[1].clone()).await.unwrap();
+    // The first bill took the model's payee; the edited one is untouched, and nothing was added.
+    assert_eq!(
+        row(a).await,
+        vec![("Example Power Co".into(), "proposed".into(), "llm".into())]
+    );
+    assert_eq!(row(b).await, rb);
+    assert_eq!(e.count("SELECT count(*) FROM bill").await, 2);
 }

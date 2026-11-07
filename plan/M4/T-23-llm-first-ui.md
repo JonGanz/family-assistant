@@ -5,7 +5,7 @@ milestone: M4
 wave: 7
 depends_on: [T-22]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/views/SettingsAiView.vue", "apps/web/src/views/parts/settings-ai/**", "apps/web/src/stores/ai.ts", "apps/web/src/stores/ai.test.ts", "apps/web/src/views/settingsAi.test.ts", "apps/web/e2e/ui-shots.routes/ai.ts", "arch/Frontend.md", "arch/src/Frontend.py", "arch/Frontend.drawio"]
 decisions: [D-107]
 ---
@@ -37,3 +37,14 @@ You are a sub-agent on milestone M4 of the Family Assistant project, a self-host
 - [ ] Prettier is clean on touched files
 - [ ] Never run `scripts/dev-run.sh`, never bind 8080/5173/18091, and run no state-changing git commands
 - [ ] Report: files changed, e2e selector changes, and "list what outside your paths needs changing"
+
+## Note from T-22 (read before step 2)
+In `llm_first` a decision point with no `llm` stage is still asked (at the default 0.7). Show the per-point LLM control as **on unless switched off** in that mode, and as today in `rules_first`. Check the generated `AiPipelinePoint`, `AiSettings`, `AiSettingsPut`, `LlmBacklog` and `MailMode` types for the final field names (`extract_fallback_cutoff` is on `AiSettings`). `catchup_days = 0` means no catch-up; label it "Off".
+
+## Outcome (T-23 report)
+- Settings → AI has a "Mail processing" card: the mode (`llm_first` or `rules_first`, instant with Undo) and, in `llm_first`, the catch-up window (0 shows "Off", saved with the Save bar). In `rules_first` it shows per-point rules thresholds and the extraction fallback cutoff (sliders saved on release with Undo).
+- A backlog line ("N messages waiting for the AI · M queued") is hidden at 0/0 and refreshes on endpoint changes and every 30 s.
+- `stores/ai.ts` gained `backlog`/`loadBacklog` and `setStage` with `rules_threshold`. Every settings save goes through one `putSettings`.
+- New test ids: `mail-mode-card`, `backlog`, `rules-threshold`, `cutoff`, `name="catchup_days"`. The mocked `ai-settings` shot shows a backlog of 12/3.
+- Gap fixed by the main session: `AiPipelinePoint.llm_stage_present` (fa-api) lets the view show a point as on in `llm_first` unless its stage exists and is off. Added a view test.
+- Web checks after the fix: lint 0 errors, typecheck, test (612 passed), build.

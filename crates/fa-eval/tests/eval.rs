@@ -259,6 +259,24 @@ impl Env {
             .await;
     }
 
+    async fn mode(&self, mode: MailMode) {
+        let mut tx = self.store.tx_for(self.h).await.unwrap();
+        AiSettingsRepo::update_all(
+            &mut tx,
+            self.h,
+            &AiSettingsInput {
+                mail_extract_mode: MailExtractMode::Fallback,
+                max_input_chars: 12000,
+                mail_mode: mode,
+                catchup_days: 30,
+                extract_fallback_cutoff: 0.8,
+            },
+        )
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+    }
+
     async fn count(&self, sql: &str) -> i64 {
         let mut tx = self.store.tx_for(self.h).await.unwrap();
         sqlx::query_scalar(sql).fetch_one(&mut *tx).await.unwrap()
@@ -270,6 +288,7 @@ async fn rules_only_then_with_llm(pool: PgPool) {
     let (url, calls) = stub().await;
     let e = env(pool, Some(url)).await;
     e.fill().await;
+    e.mode(MailMode::RulesFirst).await;
     let decisions = e.count("SELECT count(*) FROM decision").await;
     let jobs = e.count("SELECT count(*) FROM job").await;
 
@@ -318,6 +337,38 @@ async fn rules_only_then_with_llm(pool: PgPool) {
         4
     );
     assert_eq!(e.count("SELECT count(*) FROM llm_call").await, 4);
+}
+
+/// D-107: in llm_first the model answers every item and the rules decide only what it leaves
+/// open.
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn llm_first_asks_every_item_and_falls_back_to_the_rules(pool: PgPool) {
+    let (url, calls) = stub().await;
+    let e = env(pool, Some(url)).await;
+    e.fill().await;
+    e.mode(MailMode::LlmFirst).await;
+    let dp = DecisionPointKey::EmailCategory;
+    let mut tx = e.store.tx_for(e.h).await.unwrap();
+    let opts = EvalOpts {
+        with_llm: true,
+        limit: None,
+    };
+    let r = run(&mut tx, e.h, dp, opts, Some(&e.provider))
+        .await
+        .unwrap();
+    assert_eq!(r.items, 6);
+    // The model is unsure about the two items the rules decide (0.3 is below its threshold), so
+    // the rules keep them; it decides the three clear ones; one item stays open.
+    assert_eq!((r.per_stage[0].decided, r.per_stage[0].correct), (2, 1));
+    assert_eq!((r.per_stage[1].decided, r.per_stage[1].correct), (3, 2));
+    assert_eq!((r.undecided, r.llm_errors), (1, 0));
+    assert_eq!(*calls.lock().unwrap(), 6);
+    // Without --with-llm the mode changes nothing.
+    let r = run(&mut tx, e.h, dp, EvalOpts::default(), None)
+        .await
+        .unwrap();
+    assert_eq!((r.per_stage.len(), r.per_stage[0].decided), (1, 2));
+    assert_eq!(*calls.lock().unwrap(), 6);
 }
 
 #[sqlx::test(migrations = "../fa-store/migrations")]

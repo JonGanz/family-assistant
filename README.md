@@ -429,8 +429,12 @@ evaluation sample* to count a message toward the held-out set; the progress bar 
 messages of that sample (200 by default).
 
 ## Local AI (optional)
-With a local LLM enabled, mail the rules can't settle gets a second opinion (category, time-sensitive, member
-link, is it a bill), and the LLM extracts events, bills and tasks for the approval inbox. **Nothing is applied
+With a local LLM enabled, **every message goes to the LLM** by default (D-107). It decides the category,
+whether the mail is time-sensitive, which members it concerns and whether it is a bill, and it extracts events,
+bills and tasks for the approval inbox. The rules still run instantly first, so nothing waits on the GPU. The LLM's
+answer then replaces their result, but never anything a person has approved, rejected, edited or labelled. Settings,
+AI, **Mail mode** switches to "rules first", where the LLM is asked only when the rules are unsure; that mode also
+exposes the rules threshold per decision point. **Nothing is applied
 without approval**: AI items wait in the inbox with an "AI" chip. Without the LLM, or while it is unreachable,
 everything works as before. Any OpenAI-compatible server works (D-093); the default is
 [Ollama](https://ollama.com/) on a GPU PC (about 7 to 8B models at Q4 fit an 8 GB card).
@@ -450,13 +454,16 @@ everything works as before. Any OpenAI-compatible server works (D-093); the defa
 > LAN or tailnet only.
 
 **Connect the app:** Settings, AI. Enter the base URL (`http://192.168.1.20:11434/v1`) and the model, press
-**Test connection** (it reports latency and whether the model exists), then enable the endpoint and the AI stage
-of each decision point you want. If the server needs a key, add it there; it is stored encrypted and never shown again.
+**Test connection** (it reports latency and whether the model exists), then enable the endpoint. In "rules first" mode, also
+switch on the AI stage of each decision point you want. If the server needs a key, add it there; it is stored encrypted and never shown again.
 Alternatively, `docker compose --profile gpu up -d ollama` runs Ollama as a container ([deploy guide](deploy/README.md#85-other-profiles));
 a natively installed Ollama is the default.
 
-**When the PC is off or asleep:** AI jobs wait and retry for about a day, and the rules keep working. Items appear
-once the PC is back.
+**When the PC is off or asleep:** the rules keep working, and each message is marked as waiting for the AI.
+When the endpoint answers again, a catch-up job (`mail.llm.catchup`, checked every 15 minutes and on saving or
+enabling the endpoint) queues the waiting messages, newest first, within the **catch-up window** (default 30 days,
+0 is off). Settings, AI shows how many are waiting. The first enable also queues the last 30 days, so expect the GPU
+to be busy for a while.
 
 **Measure it.** `fa-server eval` replays your labelled mail through the pipeline and prints accuracy, coverage and
 latency. It only reads (decisions and messages) and writes nothing; run it yourself on your own data:

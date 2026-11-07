@@ -20,6 +20,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/backlog": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Messages waiting for the LLM (`awaiting`) and queued for it. */
+        get: operations["get_backlog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/llm-endpoint": {
         parameters: {
             query?: never;
@@ -1777,8 +1794,19 @@ export interface components {
         AiPipelinePoint: {
             decision_point: string;
             llm_enabled: boolean;
+            /**
+             * @description Whether the active version has an `llm` stage at all. In `llm_first` a point without one is
+             *     still asked, so the UI shows it as on unless a stage exists and is switched off (D-107).
+             */
+            llm_stage_present: boolean;
             /** Format: float */
             llm_threshold: number;
+            /**
+             * Format: float
+             * @description The `rules` stage's confidence bar (`rules_first`: below it the LLM is asked). 0.5 to 0.99,
+             *     default 0.8.
+             */
+            rules_threshold: number;
             /** @description The active pipeline version (uuid). */
             version_id: string;
         };
@@ -1789,9 +1817,26 @@ export interface components {
              * @description 0 to 1.
              */
             llm_threshold: number;
+            /**
+             * Format: float
+             * @description 0.5 to 0.99; absent keeps the stored one. A change is a new pipeline version.
+             */
+            rules_threshold?: number | null;
         };
         AiSettings: {
+            /**
+             * Format: int32
+             * @description Only messages received within this many days are caught up (0 to 365).
+             */
+            catchup_days: number;
+            /**
+             * Format: float
+             * @description `rules_first` and `mail_extract_mode = fallback`: the LLM extracts when no rule extractor
+             *     reached this confidence (0.5 to 0.99).
+             */
+            extract_fallback_cutoff: number;
             mail_extract_mode: components["schemas"]["MailExtractMode"];
+            mail_mode: components["schemas"]["MailMode"];
             /** Format: int32 */
             max_input_chars: number;
             /**
@@ -1801,7 +1846,18 @@ export interface components {
             updated_at: string;
         };
         AiSettingsPut: {
+            /**
+             * Format: int32
+             * @description 0 to 365; 0 switches the catch-up off. Absent keeps the stored value (default 30).
+             */
+            catchup_days?: number | null;
+            /**
+             * Format: float
+             * @description 0.5 to 0.99. Absent keeps the stored value (default 0.8).
+             */
+            extract_fallback_cutoff?: number | null;
             mail_extract_mode: components["schemas"]["MailExtractMode"];
+            mail_mode?: null | components["schemas"]["MailMode"];
             /** Format: int32 */
             max_input_chars: number;
         };
@@ -2483,6 +2539,19 @@ export interface components {
         };
         /** @enum {string} */
         ListCompletionPolicy: "assignee" | "adult_only";
+        /** @description Messages waiting for the LLM (`GET /ai/backlog`). */
+        LlmBacklog: {
+            /**
+             * Format: int32
+             * @description Processed by the rules only, waiting for the LLM to come back.
+             */
+            awaiting: number;
+            /**
+             * Format: int32
+             * @description A `mail.llm` job is queued or running.
+             */
+            queued: number;
+        };
         LlmCallStat: {
             /** Format: int64 */
             ok: number;
@@ -2598,6 +2667,12 @@ export interface components {
         };
         /** @enum {string} */
         MailExtractMode: "off" | "fallback" | "always";
+        /**
+         * @description Who goes first: the LLM (the rules apply at once as a provisional value and as the
+         *     fallback) or the rules (the LLM is asked only when they are unsure). D-107.
+         * @enum {string}
+         */
+        MailMode: "llm_first" | "rules_first";
         /** @enum {string} */
         MailProvider: "gmail" | "imap";
         MailRetention: {
@@ -3856,6 +3931,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdvisoryView"][];
+                };
+            };
+        };
+    };
+    get_backlog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LlmBacklog"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
                 };
             };
         };

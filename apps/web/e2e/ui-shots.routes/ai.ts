@@ -65,6 +65,9 @@ const endpoint: S['LlmEndpointView'] = {
 const settings: S['AiSettings'] = {
   mail_extract_mode: 'fallback',
   max_input_chars: 8000,
+  mail_mode: 'llm_first',
+  catchup_days: 30,
+  extract_fallback_cutoff: 0.8,
   updated_at: NOW,
 }
 const pipeline: S['AiPipelinePoint'][] = [
@@ -75,7 +78,9 @@ const pipeline: S['AiPipelinePoint'][] = [
 ].map(([decision_point, llm_enabled]) => ({
   decision_point: decision_point as string,
   llm_enabled: llm_enabled as boolean,
+  llm_stage_present: true,
   llm_threshold: 0.7,
+  rules_threshold: 0.8,
   version_id: '00000000-0000-4000-8000-000000000001',
 }))
 const stats: S['AiStats'] = {
@@ -89,6 +94,8 @@ const stats: S['AiStats'] = {
     { decision_point: 'email.is_bill', rules: 140, llm: 0, human: 2 },
   ],
 }
+
+const backlog: S['LlmBacklog'] = { awaiting: 12, queued: 3 }
 
 async function mockInbox(page: Page) {
   await page.route(/\/api\/v1\/inbox(\?.*)?$/, (r) => r.fulfill(json(inbox)))
@@ -105,6 +112,7 @@ async function mockAi(page: Page) {
   )
   await page.route(/\/api\/v1\/ai\/settings/, (r) => r.fulfill(json(settings)))
   await page.route(/\/api\/v1\/ai\/pipeline(\?.*)?$/, (r) => r.fulfill(json(pipeline)))
+  await page.route(/\/api\/v1\/ai\/backlog/, (r) => r.fulfill(json(backlog)))
   await page.route(/\/api\/v1\/ai\/stats/, (r) => r.fulfill(json(stats)))
 }
 

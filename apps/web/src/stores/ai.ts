@@ -12,6 +12,8 @@ export type AiSettings = S['AiSettings']
 export type AiSettingsPut = S['AiSettingsPut']
 export type AiPipelinePoint = S['AiPipelinePoint']
 export type AiStats = S['AiStats']
+export type LlmBacklog = S['LlmBacklog']
+export type MailMode = S['MailMode']
 
 const BASE = '/api/v1/ai'
 
@@ -22,6 +24,7 @@ export const useAiStore = defineStore('ai', () => {
   const pipeline = ref<AiPipelinePoint[]>([])
   const stats = ref<AiStats | null>(null)
   const models = ref<string[]>([])
+  const backlog = ref<LlmBacklog>({ awaiting: 0, queued: 0 })
   const loaded = ref(false)
   const error = ref<string | null>(null)
 
@@ -43,6 +46,7 @@ export const useAiStore = defineStore('ai', () => {
       loaded.value = true
       if (endpoint.value) void loadModels().catch(() => undefined)
       void loadStats().catch(() => undefined)
+      void loadBacklog().catch(() => undefined)
     } catch (e) {
       error.value = e instanceof Error ? e.message : String(e)
       loaded.value = true
@@ -72,7 +76,7 @@ export const useAiStore = defineStore('ai', () => {
 
   async function setStage(
     dp: string,
-    body: { llm_enabled: boolean; llm_threshold: number },
+    body: { llm_enabled: boolean; llm_threshold: number; rules_threshold?: number },
   ): Promise<AiPipelinePoint> {
     const p = await http.put<AiPipelinePoint>(`${BASE}/pipeline/${encodeURIComponent(dp)}`, body)
     pipeline.value = pipeline.value.map((x) => (x.decision_point === dp ? p : x))
@@ -83,7 +87,13 @@ export const useAiStore = defineStore('ai', () => {
     stats.value = await http.get<AiStats>(`${BASE}/stats?days=${days}`)
   }
 
+  async function loadBacklog(): Promise<void> {
+    backlog.value = await http.get<LlmBacklog>(`${BASE}/backlog`)
+  }
+
   return {
+    backlog,
+    loadBacklog,
     endpoint,
     settings,
     pipeline,

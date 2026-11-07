@@ -1,10 +1,16 @@
 <script setup lang="ts">
 // Settings → AI (Frontend.md §3e). Cards: LLM endpoint (form + Save bar, instant switch), email
 // decision stages (instant, Undo), extraction (instant mode + small form), activity (read-only).
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import { ApiError } from '../api/http'
 import SettingsPage from '../app/SettingsPage.vue'
-import { useAiStore, type AiPipelinePoint, type LlmEndpointTestResult } from '../stores/ai'
+import {
+  useAiStore,
+  type AiPipelinePoint,
+  type AiSettingsPut,
+  type LlmEndpointTestResult,
+  type MailMode,
+} from '../stores/ai'
 import {
   UiButton,
   UiCard,
@@ -13,6 +19,7 @@ import {
   UiIconButton,
   UiList,
   UiListItem,
+  UiRadioGroup,
   UiSaveBar,
   UiSegmented,
   UiSelect,
@@ -83,6 +90,7 @@ const form = useFormDraft(fromEndpoint, async (d) => {
       ...keyField(d),
     })
     setupOpen.value = false
+    void ai.loadBacklog().catch(() => undefined)
     void ai.loadModels().catch(() => undefined)
   } catch (e) {
     const field = e instanceof ApiError ? e.problem.field : undefined
@@ -118,9 +126,17 @@ const enabledSave = useInstantSave(
       timeout_ms: e.timeout_ms,
       enabled: v,
     })
+    void ai.loadBacklog().catch(() => undefined)
   },
   { label: 'Endpoint switch saved' },
 )
+const backlogText = computed(() => {
+  const { awaiting, queued } = ai.backlog
+  if (awaiting <= 0 && queued <= 0) return ''
+  const w = `${awaiting} ${awaiting === 1 ? 'message' : 'messages'} waiting for the AI`
+  return queued > 0 ? `${w} · ${queued} queued` : w
+})
+let backlogTimer: ReturnType<typeof setInterval> | undefined
 
 // Model list: a select when the server answers, a text field with Refresh otherwise.
 const refreshing = ref(false)
@@ -189,23 +205,36 @@ const STAGE_NAMES: Record<string, string> = {
 }
 const stageName = (dp: string) => STAGE_NAMES[dp] ?? dp
 const pct = (v: number) => `${Math.round(v * 100)}%`
+const llmFirst = computed(() => (ai.settings?.mail_mode ?? 'llm_first') === 'llm_first')
 const thresholds = ref<Record<string, number>>({})
+const rulesThresholds = ref<Record<string, number>>({})
 watch(
   () => ai.pipeline,
   (rows) => {
     thresholds.value = Object.fromEntries(rows.map((r) => [r.decision_point, r.llm_threshold]))
+    rulesThresholds.value = Object.fromEntries(
+      rows.map((r) => [r.decision_point, r.rules_threshold]),
+    )
   },
   { immediate: true, deep: true },
 )
-async function applyStage(
-  p: AiPipelinePoint,
-  next: { llm_enabled: boolean; llm_threshold: number },
-) {
-  const old = { llm_enabled: p.llm_enabled, llm_threshold: p.llm_threshold }
+interface StageValues {
+  llm_enabled: boolean
+  llm_threshold: number
+  rules_threshold: number
+}
+const valuesOf = (p: AiPipelinePoint): StageValues => ({
+  llm_enabled: p.llm_enabled,
+  llm_threshold: p.llm_threshold,
+  rules_threshold: p.rules_threshold,
+})
+async function applyStage(p: AiPipelinePoint, next: StageValues) {
+  const old = valuesOf(p)
   try {
     await ai.setStage(p.decision_point, next)
   } catch (e) {
     thresholds.value[p.decision_point] = old.llm_threshold
+    rulesThresholds.value[p.decision_point] = old.rules_threshold
     snackbar.show({ text: e instanceof Error ? e.message : 'Could not save' })
     return
   }
@@ -223,14 +252,92 @@ async function applyStage(
     },
   })
 }
+// In llm_first a point without an llm stage is still asked, so it reads as on (D-107).
+const llmOn = (p: AiPipelinePoint) =>
+  llmFirst.value ? !p.llm_stage_present || p.llm_enabled : p.llm_enabled
 const toggleStage = (p: AiPipelinePoint, on: boolean) =>
-  applyStage(p, { llm_enabled: on, llm_threshold: p.llm_threshold })
+  applyStage(p, { ...valuesOf(p), llm_enabled: on })
 function releaseThreshold(p: AiPipelinePoint, ev: Event) {
   const v = Number((ev.target as HTMLInputElement).value)
-  if (v !== p.llm_threshold) void applyStage(p, { llm_enabled: p.llm_enabled, llm_threshold: v })
+  if (v !== p.llm_threshold) void applyStage(p, { ...valuesOf(p), llm_threshold: v })
+}
+function releaseRulesThreshold(p: AiPipelinePoint, ev: Event) {
+  const v = Number((ev.target as HTMLInputElement).value)
+  if (v !== p.rules_threshold) void applyStage(p, { ...valuesOf(p), rules_threshold: v })
 }
 
-// Extraction.
+// Mail processing and extraction. Every settings save sends the stored values it does not change.
+function putSettings(patch: Partial<AiSettingsPut>) {
+  const cur = ai.settings
+  return ai.saveSettings({
+    mail_extract_mode: cur?.mail_extract_mode ?? 'fallback',
+    max_input_chars: cur?.max_input_chars ?? 6000,
+    ...patch,
+  })
+}
+const mailMode = ref<MailMode>(ai.settings?.mail_mode ?? 'llm_first')
+watch(
+  () => ai.settings?.mail_mode,
+  (v) => v && (mailMode.value = v),
+)
+const mailModeSave = useInstantSave(
+  mailMode,
+  async (v) => {
+    await putSettings({ mail_mode: v })
+  },
+  { label: 'Mail processing saved' },
+)
+const mailModeOptions = [
+  { value: 'llm_first', label: 'Use the AI for every message (rules as fallback)' },
+  { value: 'rules_first', label: 'Use rules first, AI only when unsure' },
+]
+const catchupErr = ref('')
+const catchupForm = useFormDraft(
+  () => ({ catchup_days: String(ai.settings?.catchup_days ?? 30) }),
+  async (x) => {
+    catchupErr.value = ''
+    const n = Number(x.catchup_days)
+    if (!Number.isInteger(n) || n < 0 || n > 365) {
+      catchupErr.value = 'Enter a whole number from 0 to 365.'
+      throw new Error('Check the highlighted field.')
+    }
+    await putSettings({ catchup_days: n })
+  },
+)
+const catchupHint = computed(() =>
+  Number(catchupForm.draft.value.catchup_days) === 0 ? 'Off' : 'Catches up newest first.',
+)
+const cutoff = ref(ai.settings?.extract_fallback_cutoff ?? 0.8)
+watch(
+  () => ai.settings?.extract_fallback_cutoff,
+  (v) => v != null && (cutoff.value = v),
+)
+async function releaseCutoff(ev: Event) {
+  const v = Number((ev.target as HTMLInputElement).value)
+  const old = ai.settings?.extract_fallback_cutoff ?? 0.8
+  if (v === old) return
+  try {
+    await putSettings({ extract_fallback_cutoff: v })
+  } catch (e) {
+    cutoff.value = old
+    snackbar.show({ text: e instanceof Error ? e.message : 'Could not save' })
+    return
+  }
+  snackbar.show({
+    text: 'Extraction cutoff saved',
+    action: {
+      label: 'Undo',
+      run: async () => {
+        try {
+          await putSettings({ extract_fallback_cutoff: old })
+        } catch (e) {
+          snackbar.show({ text: e instanceof Error ? e.message : 'Could not undo' })
+        }
+      },
+    },
+  })
+}
+
 const mode = ref(ai.settings?.mail_extract_mode ?? 'fallback')
 watch(
   () => ai.settings?.mail_extract_mode,
@@ -239,10 +346,7 @@ watch(
 const modeSave = useInstantSave(
   mode,
   async (v) => {
-    await ai.saveSettings({
-      mail_extract_mode: v,
-      max_input_chars: ai.settings?.max_input_chars ?? 6000,
-    })
+    await putSettings({ mail_extract_mode: v })
   },
   { label: 'Extraction mode saved' },
 )
@@ -262,10 +366,7 @@ const maxForm = useFormDraft(
       throw new Error('Check the highlighted field.')
     }
     try {
-      await ai.saveSettings({
-        mail_extract_mode: ai.settings?.mail_extract_mode ?? 'fallback',
-        max_input_chars: n,
-      })
+      await putSettings({ max_input_chars: n })
     } catch (e) {
       if (e instanceof ApiError && e.problem.field === 'max_input_chars') {
         maxErr.value = e.message
@@ -306,7 +407,11 @@ async function refreshStats() {
 }
 const ms = (v?: number | null) => (v == null ? '-' : `${v} ms`)
 
-onMounted(() => ai.load())
+onMounted(() => {
+  void ai.load()
+  backlogTimer = setInterval(() => void ai.loadBacklog().catch(() => undefined), 30_000)
+})
+onUnmounted(() => clearInterval(backlogTimer))
 </script>
 
 <template>
@@ -417,6 +522,9 @@ onMounted(() => ai.load())
             Run the LLM server on your home network or tailnet only; it has no password by default.
           </p>
           <p v-if="testText" class="note" role="status" data-testid="test-result">{{ testText }}</p>
+          <p v-if="backlogText" class="note" role="status" data-testid="backlog">
+            {{ backlogText }}
+          </p>
         </template>
         <template v-if="showForm" #actions>
           <UiButton variant="tonal" :disabled="testing" data-testid="test" @click="testConnection"
@@ -433,6 +541,34 @@ onMounted(() => ai.load())
         @discard="form.discard"
       />
 
+      <UiCard data-testid="mail-mode-card">
+        <template #header>Mail processing</template>
+        <UiRadioGroup
+          :model-value="mailMode"
+          legend="Who reads incoming mail first"
+          :options="mailModeOptions"
+          @update:model-value="mailModeSave.set($event as MailMode)"
+        />
+        <template v-if="llmFirst">
+          <UiTextField
+            v-model="catchupForm.draft.value.catchup_days"
+            label="Catch up on mail from the last (days)"
+            name="catchup_days"
+            type="number"
+            :error="catchupErr"
+            :supporting="catchupHint"
+          />
+        </template>
+      </UiCard>
+      <UiSaveBar
+        v-if="llmFirst"
+        :dirty="catchupForm.dirty.value"
+        :saving="catchupForm.saving.value"
+        :error="catchupForm.error.value"
+        @save="catchupForm.save"
+        @discard="catchupForm.discard"
+      />
+
       <UiCard data-testid="stages-card">
         <template #header>Email decisions</template>
         <p v-if="!ai.endpoint || !enabled" class="note">
@@ -443,17 +579,37 @@ onMounted(() => ai.load())
             v-for="p in ai.pipeline"
             :key="p.decision_point"
             :headline="stageName(p.decision_point)"
-            :supporting="`Ask the LLM when rules are unsure, above ${pct(thresholds[p.decision_point] ?? p.llm_threshold)}`"
+            :supporting="
+              llmFirst
+                ? `The AI decides; its answer is used above ${pct(thresholds[p.decision_point] ?? p.llm_threshold)}`
+                : `Ask the LLM when rules are unsure, above ${pct(thresholds[p.decision_point] ?? p.llm_threshold)}`
+            "
           >
             <template #trailing>
               <div class="stage">
+                <input
+                  v-if="!llmFirst"
+                  type="range"
+                  min="0.5"
+                  max="0.99"
+                  step="0.01"
+                  :value="rulesThresholds[p.decision_point] ?? p.rules_threshold"
+                  :aria-label="`${stageName(p.decision_point)} rules threshold`"
+                  data-testid="rules-threshold"
+                  @input="
+                    rulesThresholds[p.decision_point] = Number(
+                      ($event.target as HTMLInputElement).value,
+                    )
+                  "
+                  @change="releaseRulesThreshold(p, $event)"
+                />
                 <input
                   type="range"
                   min="0.5"
                   max="0.95"
                   step="0.05"
                   :value="thresholds[p.decision_point] ?? p.llm_threshold"
-                  :disabled="!p.llm_enabled"
+                  :disabled="!llmOn(p)"
                   :aria-label="`${stageName(p.decision_point)} threshold`"
                   @input="
                     thresholds[p.decision_point] = Number(($event.target as HTMLInputElement).value)
@@ -461,7 +617,7 @@ onMounted(() => ai.load())
                   @change="releaseThreshold(p, $event)"
                 />
                 <UiSwitch
-                  :model-value="p.llm_enabled"
+                  :model-value="llmOn(p)"
                   :label="`${stageName(p.decision_point)} LLM`"
                   @update:model-value="toggleStage(p, $event)"
                 />
@@ -474,11 +630,30 @@ onMounted(() => ai.load())
       <UiCard data-testid="extract-card">
         <template #header>Extraction</template>
         <UiSegmented
+          v-if="!llmFirst"
           :model-value="mode"
           label="Pull events, bills and tasks out of mail with the LLM"
           :options="modeOptions"
           @update:model-value="modeSave.set($event as typeof mode)"
         />
+        <label v-if="!llmFirst && mode === 'fallback'" class="cutoff">
+          <span class="note"
+            >Ask the AI when no rule extractor is sure above {{ pct(cutoff) }}</span
+          >
+          <input
+            v-model.number="cutoff"
+            type="range"
+            min="0.5"
+            max="0.99"
+            step="0.01"
+            data-testid="cutoff"
+            aria-label="Extraction fallback cutoff"
+            @change="releaseCutoff"
+          />
+        </label>
+        <p v-if="llmFirst" class="note">
+          The AI reads every message and pulls out events, bills and tasks.
+        </p>
         <UiTextField
           v-model="maxForm.draft.value.max_input_chars"
           label="Longest text sent to the model (characters)"
@@ -558,6 +733,13 @@ onMounted(() => ai.load())
 }
 .stage input[type='range'] {
   width: 7rem;
+  accent-color: var(--ui-primary);
+}
+.cutoff {
+  display: grid;
+  gap: var(--ui-space-1);
+}
+.cutoff input[type='range'] {
   accent-color: var(--ui-primary);
 }
 .stat {

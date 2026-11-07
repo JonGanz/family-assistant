@@ -42,12 +42,21 @@ describe('ai store', () => {
     })
     expect(m.put.mock.calls[0]![1]).not.toHaveProperty('api_key')
     s.pipeline = [
-      { decision_point: 'email.category', llm_enabled: false, llm_threshold: 0.7, version_id: 'v' },
+      {
+        decision_point: 'email.category',
+        llm_enabled: false,
+        llm_stage_present: true,
+        llm_threshold: 0.7,
+        rules_threshold: 0.8,
+        version_id: 'v',
+      },
     ]
     m.put.mockResolvedValue({
       decision_point: 'email.category',
       llm_enabled: true,
+      llm_stage_present: true,
       llm_threshold: 0.8,
+      rules_threshold: 0.8,
       version_id: 'w',
     } as never)
     await s.setStage('email.category', { llm_enabled: true, llm_threshold: 0.8 })
@@ -56,6 +65,21 @@ describe('ai store', () => {
       llm_threshold: 0.8,
     })
     expect(s.pipeline[0]!.llm_enabled).toBe(true)
+  })
+
+  it('loads the backlog with the rest and on demand', async () => {
+    m.get.mockImplementation(async (p: string) => {
+      if (p.endsWith('/llm-endpoint')) throw new ApiError(404, { code: 'not_configured' })
+      if (p.endsWith('/backlog')) return { awaiting: 12, queued: 3 }
+      if (p.endsWith('/settings')) return {}
+      if (p.endsWith('/pipeline')) return []
+      return { calls: [], stages: [], since: '' }
+    })
+    const s = useAiStore()
+    await s.load()
+    await vi.waitFor(() => expect(s.backlog).toEqual({ awaiting: 12, queued: 3 }))
+    await s.loadBacklog()
+    expect(m.get).toHaveBeenCalledWith('/api/v1/ai/backlog')
   })
 
   it('loads stats for the given days', async () => {

@@ -41,6 +41,42 @@
         ]
       }
     },
+    "/api/v1/ai/backlog": {
+      "get": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "Messages waiting for the LLM (`awaiting`) and queued for it.",
+        "operationId": "get_backlog",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LlmBacklog"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
     "/api/v1/ai/llm-endpoint": {
       "get": {
         "tags": [
@@ -8895,7 +8931,9 @@
         "required": [
           "decision_point",
           "llm_enabled",
+          "llm_stage_present",
           "llm_threshold",
+          "rules_threshold",
           "version_id"
         ],
         "properties": {
@@ -8905,9 +8943,18 @@
           "llm_enabled": {
             "type": "boolean"
           },
+          "llm_stage_present": {
+            "type": "boolean",
+            "description": "Whether the active version has an `llm` stage at all. In `llm_first` a point without one is\nstill asked, so the UI shows it as on unless a stage exists and is switched off (D-107)."
+          },
           "llm_threshold": {
             "type": "number",
             "format": "float"
+          },
+          "rules_threshold": {
+            "type": "number",
+            "format": "float",
+            "description": "The `rules` stage's confidence bar (`rules_first`: below it the LLM is asked). 0.5 to 0.99,\ndefault 0.8."
           },
           "version_id": {
             "type": "string",
@@ -8929,6 +8976,14 @@
             "type": "number",
             "format": "float",
             "description": "0 to 1."
+          },
+          "rules_threshold": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float",
+            "description": "0.5 to 0.99; absent keeps the stored one. A change is a new pipeline version."
           }
         }
       },
@@ -8937,11 +8992,28 @@
         "required": [
           "mail_extract_mode",
           "max_input_chars",
+          "mail_mode",
+          "catchup_days",
+          "extract_fallback_cutoff",
           "updated_at"
         ],
         "properties": {
+          "catchup_days": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Only messages received within this many days are caught up (0 to 365).",
+            "minimum": 0
+          },
+          "extract_fallback_cutoff": {
+            "type": "number",
+            "format": "float",
+            "description": "`rules_first` and `mail_extract_mode = fallback`: the LLM extracts when no rule extractor\nreached this confidence (0.5 to 0.99)."
+          },
           "mail_extract_mode": {
             "$ref": "#/components/schemas/MailExtractMode"
+          },
+          "mail_mode": {
+            "$ref": "#/components/schemas/MailMode"
           },
           "max_input_chars": {
             "type": "integer",
@@ -8962,8 +9034,36 @@
           "max_input_chars"
         ],
         "properties": {
+          "catchup_days": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "0 to 365; 0 switches the catch-up off. Absent keeps the stored value (default 30).",
+            "minimum": 0
+          },
+          "extract_fallback_cutoff": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float",
+            "description": "0.5 to 0.99. Absent keeps the stored value (default 0.8)."
+          },
           "mail_extract_mode": {
             "$ref": "#/components/schemas/MailExtractMode"
+          },
+          "mail_mode": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MailMode",
+                "description": "Absent keeps the stored value (default `llm_first`)."
+              }
+            ]
           },
           "max_input_chars": {
             "type": "integer",
@@ -11404,6 +11504,28 @@
           "adult_only"
         ]
       },
+      "LlmBacklog": {
+        "type": "object",
+        "description": "Messages waiting for the LLM (`GET /ai/backlog`).",
+        "required": [
+          "awaiting",
+          "queued"
+        ],
+        "properties": {
+          "awaiting": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Processed by the rules only, waiting for the LLM to come back.",
+            "minimum": 0
+          },
+          "queued": {
+            "type": "integer",
+            "format": "int32",
+            "description": "A `mail.llm` job is queued or running.",
+            "minimum": 0
+          }
+        }
+      },
       "LlmCallStat": {
         "type": "object",
         "required": [
@@ -11768,6 +11890,14 @@
           "off",
           "fallback",
           "always"
+        ]
+      },
+      "MailMode": {
+        "type": "string",
+        "description": "Who goes first: the LLM (the rules apply at once as a provisional value and as the\nfallback) or the rules (the LLM is asked only when they are unsure). D-107.",
+        "enum": [
+          "llm_first",
+          "rules_first"
         ]
       },
       "MailProvider": {

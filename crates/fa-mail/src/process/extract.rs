@@ -74,6 +74,8 @@ pub struct Emitted {
     pub tasks: usize,
     pub contacts_suggested: usize,
     pub contacts_created: usize,
+    /// Pending rule proposals that took the LLM's title and fields (`llm_first`).
+    pub refined: usize,
 }
 
 /// One message's extraction run.
@@ -88,7 +90,12 @@ pub(crate) struct Extractor<'a> {
     pub is_bill: Option<bool>,
     pub members: &'a [MemberId],
     pub attachments: Option<&'a Arc<dyn AttachmentSource>>,
-    /// Set when a rule extractor found an item at `BILL_OPEN_THRESHOLD` or above.
+    /// `llm_first`: an LLM item takes over the still-pending rule proposal it matches.
+    pub refine: bool,
+    /// A rule item at or above this confidence makes the rules' extraction "strong"
+    /// (`ai_settings.extract_fallback_cutoff`).
+    pub strong_cutoff: f32,
+    /// Set when a rule extractor found an item at `strong_cutoff` or above.
     pub strong: bool,
 }
 
@@ -123,7 +130,7 @@ impl Extractor<'_> {
             .map(|e| e.event.dedupe_key)
             .collect();
         for e in fa_rules::extract_events(&self.of.facts(), &self.pc.rules) {
-            self.strong |= e.confidence >= BILL_OPEN_THRESHOLD;
+            self.strong |= e.confidence >= self.strong_cutoff;
             let end = e.end.unwrap_or(e.start);
             if end < now {
                 continue;
@@ -218,7 +225,7 @@ impl Extractor<'_> {
         }
         for b in found {
             let open = b.confidence >= BILL_OPEN_THRESHOLD;
-            self.strong |= open;
+            self.strong |= b.confidence >= self.strong_cutoff;
             let bill = Bill {
                 id: BillId::new(),
                 household_id: self.household,
@@ -301,7 +308,7 @@ impl Extractor<'_> {
         };
         let (reply_to, action_to) = self.task_targets();
         for a in fa_rules::extract_actions(&self.of.facts(), &self.pc.rules) {
-            self.strong |= a.confidence >= BILL_OPEN_THRESHOLD;
+            self.strong |= a.confidence >= self.strong_cutoff;
             let (kind, assignees) = match a.kind {
                 ActionKind::Action => ("action", &action_to),
                 ActionKind::Reply => ("reply", &reply_to),

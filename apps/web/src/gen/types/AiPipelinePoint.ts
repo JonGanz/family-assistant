@@ -3,7 +3,17 @@
 /**
  * The `llm` stage of one email decision point.
  */
-export type AiPipelinePoint = { decision_point: string, llm_enabled: boolean, llm_threshold: number, 
+export type AiPipelinePoint = { decision_point: string, llm_enabled: boolean, 
+/**
+ * Whether the active version has an `llm` stage at all. In `llm_first` a point without one is
+ * still asked, so the UI shows it as on unless a stage exists and is switched off (D-107).
+ */
+llm_stage_present: boolean, llm_threshold: number, 
+/**
+ * The `rules` stage's confidence bar (`rules_first`: below it the LLM is asked). 0.5 to 0.99,
+ * default 0.8.
+ */
+rules_threshold: number, 
 /**
  * The active pipeline version (uuid).
  */

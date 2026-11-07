@@ -74,7 +74,7 @@ impl Modify for Security {
         mail::reject_inbox, mail::list_bills, mail::patch_bill,
         ai::get_endpoint, ai::put_endpoint, ai::test_endpoint, ai::list_models,
         ai::get_settings, ai::put_settings, ai::get_pipeline, ai::put_pipeline,
-        ai::get_stats, ai::extract_recipe,
+        ai::get_stats, ai::get_backlog, ai::extract_recipe,
     ),
     components(schemas(
         crate::tasks::ViewParam, crate::tasks::StatusParam,

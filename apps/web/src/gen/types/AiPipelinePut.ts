@@ -4,4 +4,8 @@ export type AiPipelinePut = { llm_enabled: boolean,
 /**
  * 0 to 1.
  */
-llm_threshold: number, };
+llm_threshold: number, 
+/**
+ * 0.5 to 0.99; absent keeps the stored one. A change is a new pipeline version.
+ */
+rules_threshold?: number | null, };

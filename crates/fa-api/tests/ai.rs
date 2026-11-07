@@ -660,6 +660,168 @@ async fn pipeline_put_makes_a_version_and_stats_shape(pool: PgPool) {
     );
 }
 
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn llm_first_settings_rules_threshold_and_catchup(pool: PgPool) {
+    let fx = seed(pool).await;
+    let adult = login(&fx, "alex", ADULT_PW).await;
+    let c = [("cookie", adult.as_str())];
+    let settings = format!("{AI}/settings");
+    // The defaults of D-107.
+    let r = send(&fx.app, Method::GET, &settings, &c, None).await;
+    let j = r.json();
+    assert_eq!(
+        (j["mail_mode"].clone(), j["catchup_days"].clone()),
+        (json!("llm_first"), json!(30))
+    );
+    assert!((j["extract_fallback_cutoff"].as_f64().unwrap() - 0.8).abs() < 1e-6);
+    // The old body keeps the new fields as they are.
+    let r = send(
+        &fx.app,
+        Method::PUT,
+        &settings,
+        &c,
+        Some(json!({"mail_extract_mode": "fallback", "max_input_chars": 8000})),
+    )
+    .await;
+    assert_eq!(r.json()["mail_mode"], "llm_first");
+    let r = send(
+        &fx.app,
+        Method::PUT,
+        &settings,
+        &c,
+        Some(
+            json!({"mail_extract_mode": "fallback", "max_input_chars": 8000,
+                    "mail_mode": "rules_first", "catchup_days": 7, "extract_fallback_cutoff": 0.9}),
+        ),
+    )
+    .await;
+    assert_eq!(
+        r.status,
+        StatusCode::OK,
+        "{}",
+        String::from_utf8_lossy(&r.body)
+    );
+    let j = send(&fx.app, Method::GET, &settings, &c, None).await.json();
+    assert_eq!(
+        (j["mail_mode"].clone(), j["catchup_days"].clone()),
+        (json!("rules_first"), json!(7))
+    );
+    assert!((j["extract_fallback_cutoff"].as_f64().unwrap() - 0.9).abs() < 1e-6);
+    for (field, v) in [
+        ("catchup_days", json!(366)),
+        ("extract_fallback_cutoff", json!(0.4)),
+        ("extract_fallback_cutoff", json!(1.0)),
+    ] {
+        let mut b = json!({"mail_extract_mode": "fallback", "max_input_chars": 8000});
+        b[field] = v;
+        let r = send(&fx.app, Method::PUT, &settings, &c, Some(b)).await;
+        assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY, "{field}");
+        assert_eq!(r.json()["field"], field);
+    }
+    let r = send(
+        &fx.app,
+        Method::PUT,
+        &settings,
+        &c,
+        Some(
+            json!({"mail_extract_mode": "fallback", "max_input_chars": 8000, "mail_mode": "nope"}),
+        ),
+    )
+    .await;
+    assert!(r.status.is_client_error());
+
+    // rules_threshold: default 0.8, a change is a new version, absent keeps it.
+    let uri = format!("{AI}/pipeline/email.is_bill");
+    let g = send(&fx.app, Method::GET, &format!("{AI}/pipeline"), &c, None)
+        .await
+        .json();
+    let p = g
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|p| p["decision_point"] == "email.is_bill")
+        .unwrap()
+        .clone();
+    assert!((p["rules_threshold"].as_f64().unwrap() - 0.8).abs() < 1e-6);
+    let put = |body: Value| {
+        let (app, uri, cookie) = (fx.app.clone(), uri.clone(), adult.clone());
+        async move {
+            send(
+                &app,
+                Method::PUT,
+                &uri,
+                &[("cookie", cookie.as_str())],
+                Some(body),
+            )
+            .await
+        }
+    };
+    let r = put(json!({"llm_enabled": false, "llm_threshold": 0.7, "rules_threshold": 0.9})).await;
+    assert_eq!(
+        r.status,
+        StatusCode::OK,
+        "{}",
+        String::from_utf8_lossy(&r.body)
+    );
+    assert!((r.json()["rules_threshold"].as_f64().unwrap() - 0.9).abs() < 1e-6);
+    assert_ne!(r.json()["version_id"], p["version_id"]);
+    let v1 = r.json()["version_id"].clone();
+    let r = put(json!({"llm_enabled": false, "llm_threshold": 0.7})).await;
+    assert!((r.json()["rules_threshold"].as_f64().unwrap() - 0.9).abs() < 1e-6);
+    assert_eq!(r.json()["version_id"], v1);
+    for bad in [0.4, 1.0] {
+        let r =
+            put(json!({"llm_enabled": false, "llm_threshold": 0.7, "rules_threshold": bad})).await;
+        assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY);
+        assert_eq!(r.json()["field"], "rules_threshold");
+    }
+
+    // Saving an enabled endpoint queues a catch-up; a disabled one does not.
+    let ep = format!("{AI}/llm-endpoint");
+    let mut body = json!({"base_url": "http://192.0.2.10:11434/v1", "model": "m",
+        "dialect": "openai_chat", "timeout_ms": 5000, "enabled": false});
+    send(&fx.app, Method::PUT, &ep, &c, Some(body.clone())).await;
+    let mut tx = fx.state.store.tx_system().await.unwrap();
+    let n = |kind: &'static str| {
+        sqlx::query_scalar::<_, i64>("SELECT count(*) FROM job WHERE kind = $1").bind(kind)
+    };
+    assert_eq!(n("mail.llm.catchup").fetch_one(&mut *tx).await.unwrap(), 0);
+    tx.rollback().await.unwrap();
+    body["enabled"] = json!(true);
+    send(&fx.app, Method::PUT, &ep, &c, Some(body.clone())).await;
+    send(&fx.app, Method::PUT, &ep, &c, Some(body)).await;
+    let mut tx = fx.state.store.tx_system().await.unwrap();
+    let payloads: Vec<Value> =
+        sqlx::query_scalar("SELECT payload FROM job WHERE kind = 'mail.llm.catchup'")
+            .fetch_all(&mut *tx)
+            .await
+            .unwrap();
+    assert_eq!(payloads.len(), 2);
+    assert!(payloads.iter().all(|p| p["household"].is_string()));
+}
+
+/// Needs `/ai/backlog` registered in `lib.rs` (and `ai::get_backlog` in `openapi.rs`), which T-22
+/// does not own; the main session registers it and removes the `ignore`.
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn backlog_counts_waiting_messages(pool: PgPool) {
+    let fx = seed(pool).await;
+    let adult = login(&fx, "alex", ADULT_PW).await;
+    let c = [("cookie", adult.as_str())];
+    let r = send(&fx.app, Method::GET, &format!("{AI}/backlog"), &c, None).await;
+    assert_eq!(r.status, StatusCode::OK);
+    assert_eq!(r.json(), json!({"awaiting": 0, "queued": 0}));
+    let child = login(&fx, "sam", CHILD_PW).await;
+    let r = send(
+        &fx.app,
+        Method::GET,
+        &format!("{AI}/backlog"),
+        &[("cookie", child.as_str())],
+        None,
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::FORBIDDEN);
+}
+
 const JSONLD: &str = r#"<html><head><script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Recipe","name":"Plain Soup","recipeIngredient":["2 cups water","1 tsp salt"],
  "recipeInstructions":[{"@type":"HowToStep","text":"Boil the water."}],"prepTime":"PT5M"}

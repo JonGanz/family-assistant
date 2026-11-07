@@ -56,7 +56,10 @@ mod weather_rule;
 
 pub use account::{AccountLockout, UserAccountRepo};
 pub use advisory::AdvisoryRepo;
-pub use ai::{AiSettingsRepo, ExtractTarget, ExtractedByRepo, LlmCallRepo, LlmEndpointRepo};
+pub use ai::{
+    AiSettingsRepo, ExtractTarget, ExtractedByRepo, LlmCallRepo, LlmEndpointRepo, LlmStateRepo,
+    PendingBill, PendingEvent, PendingTask, ProposalRefineRepo,
+};
 pub use audit::AuditRepo;
 pub use avatar::MemberAvatarRepo;
 pub use bill::{BillRepo, InboxRepo, MailActionRepo, NewMailAction};

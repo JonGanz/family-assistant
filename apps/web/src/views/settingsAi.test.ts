@@ -33,9 +33,19 @@ const endpoint = {
 const point = (dp: string, on = false) => ({
   decision_point: dp,
   llm_enabled: on,
+  llm_stage_present: true,
   llm_threshold: 0.7,
+  rules_threshold: 0.8,
   version_id: 'v',
 })
+let settingsBody: Record<string, unknown> = {
+  mail_extract_mode: 'fallback',
+  max_input_chars: 6000,
+  mail_mode: 'rules_first',
+  catchup_days: 30,
+  extract_fallback_cutoff: 0.8,
+}
+let backlogBody = { awaiting: 0, queued: 0 }
 
 function serve(ep: unknown) {
   m.get.mockImplementation(async (p: string) => {
@@ -44,7 +54,8 @@ function serve(ep: unknown) {
       return ep
     }
     if (p.endsWith('/models')) return { models: [] }
-    if (p.endsWith('/settings')) return { mail_extract_mode: 'fallback', max_input_chars: 6000 }
+    if (p.endsWith('/settings')) return settingsBody
+    if (p.endsWith('/backlog')) return backlogBody
     if (p.endsWith('/pipeline')) return [point('email.category'), point('email.is_bill')]
     return { calls: [], stages: [], since: '' }
   })
@@ -59,6 +70,8 @@ beforeEach(() => {
   setActivePinia(createPinia())
   vi.resetAllMocks()
   resetSnackbar()
+  settingsBody = { ...settingsBody, mail_mode: 'rules_first' }
+  backlogBody = { awaiting: 0, queued: 0 }
 })
 
 describe('Settings AI', () => {
@@ -134,7 +147,69 @@ describe('Settings AI', () => {
     expect(m.put).toHaveBeenCalledWith('/api/v1/ai/pipeline/email.category', {
       llm_enabled: true,
       llm_threshold: 0.7,
+      rules_threshold: 0.8,
     })
+  })
+
+  it('in llm_first hides the extract mode and rules thresholds and shows the catch-up window', async () => {
+    settingsBody = { ...settingsBody, mail_mode: 'llm_first' }
+    serve(endpoint)
+    const w = await mountPage()
+    expect(w.find('input[name="catchup_days"]').exists()).toBe(true)
+    expect(
+      w
+        .find('[data-testid="extract-card"] [role="radio"], [data-testid="extract-card"] .ui-seg')
+        .exists(),
+    ).toBe(false)
+    expect(w.find('[data-testid="rules-threshold"]').exists()).toBe(false)
+  })
+
+  it('in llm_first shows a point without an llm stage as on (D-107)', async () => {
+    settingsBody = { ...settingsBody, mail_mode: 'llm_first' }
+    serve(endpoint)
+    const orig = m.get.getMockImplementation()!
+    m.get.mockImplementation(async (p: string) => {
+      if (p.endsWith('/pipeline'))
+        return [{ ...point('email.category'), llm_stage_present: false }, point('email.is_bill')]
+      return orig(p)
+    })
+    const w = await mountPage()
+    const sw = w.findAll('[data-testid="stages-card"] [role="switch"]')
+    expect(sw[0]!.attributes('aria-checked')).toBe('true')
+    expect(sw[1]!.attributes('aria-checked')).toBe('false')
+  })
+
+  it('in rules_first shows rules thresholds and no catch-up window', async () => {
+    serve(endpoint)
+    const w = await mountPage()
+    expect(w.find('input[name="catchup_days"]').exists()).toBe(false)
+    expect(w.findAll('[data-testid="rules-threshold"]')).toHaveLength(2)
+    expect(w.find('[data-testid="cutoff"]').exists()).toBe(true)
+  })
+
+  it('switching the mail mode saves instantly with Undo and keeps the other settings', async () => {
+    serve(endpoint)
+    m.put.mockResolvedValue({ ...settingsBody, mail_mode: 'llm_first' } as never)
+    const w = await mountPage()
+    await w.find('[data-testid="mail-mode-card"] input[value="llm_first"]').setValue(true)
+    await flushPromises()
+    expect(m.put).toHaveBeenCalledWith('/api/v1/ai/settings', {
+      mail_extract_mode: 'fallback',
+      max_input_chars: 6000,
+      mail_mode: 'llm_first',
+    })
+    expect(useSnackbar().state.current?.action?.label).toBe('Undo')
+  })
+
+  it('shows the backlog line only when something waits', async () => {
+    serve(endpoint)
+    let w = await mountPage()
+    expect(w.find('[data-testid="backlog"]').exists()).toBe(false)
+    backlogBody = { awaiting: 12, queued: 3 }
+    w = await mountPage()
+    expect(w.find('[data-testid="backlog"]').text()).toBe(
+      '12 messages waiting for the AI · 3 queued',
+    )
   })
 
   it('shows the empty activity text', async () => {

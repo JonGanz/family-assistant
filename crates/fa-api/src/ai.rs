@@ -10,16 +10,16 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use chrono::{DateTime, Duration, Utc};
 use fa_domain::{
-    Action, AiSettings, DecisionPointKey, HouseholdId, LlmCallStat, LlmDialect, LlmEndpoint,
-    LlmEndpointInput, LlmEndpointView, MailExtractMode, NewLlmCall, Resource, SecretKind,
-    StageCount, StageKind,
+    Action, AiSettings, AiSettingsInput, DEFAULT_RULES_THRESHOLD, DecisionPointKey, HouseholdId,
+    LlmBacklog, LlmCallStat, LlmDialect, LlmEndpoint, LlmEndpointInput, LlmEndpointView,
+    MailExtractMode, MailMode, NewLlmCall, Resource, SecretKind, StageCount, StageKind,
 };
 use fa_llm::{Dialect, EndpointConfig, LlmClient, LlmError};
 use fa_pipeline::{Pipeline, PipelineError};
 use fa_recipe::RecipeDraft;
 use fa_store::{
-    AiSettingsRepo, DecisionPointRepo, DecisionRepo, LlmCallRepo, LlmEndpointRepo, PipelineRepo,
-    SecretRepo,
+    AiSettingsRepo, DecisionPointRepo, DecisionRepo, JobRepo, LlmCallRepo, LlmEndpointRepo,
+    LlmStateRepo, NewJob, PipelineRepo, SecretRepo,
 };
 use serde::{Deserialize, Deserializer, Serialize};
 use ts_rs::TS;
@@ -123,6 +123,18 @@ pub struct LlmModels {
 pub struct AiSettingsPut {
     pub mail_extract_mode: MailExtractMode,
     pub max_input_chars: u32,
+    /// Absent keeps the stored value (default `llm_first`).
+    #[serde(default)]
+    #[ts(as = "Option<MailMode>", optional = nullable)]
+    pub mail_mode: Option<MailMode>,
+    /// 0 to 365; 0 switches the catch-up off. Absent keeps the stored value (default 30).
+    #[serde(default)]
+    #[ts(as = "Option<u32>", optional = nullable)]
+    pub catchup_days: Option<u32>,
+    /// 0.5 to 0.99. Absent keeps the stored value (default 0.8).
+    #[serde(default)]
+    #[ts(as = "Option<f32>", optional = nullable)]
+    pub extract_fallback_cutoff: Option<f32>,
 }
 
 /// The `llm` stage of one email decision point.
@@ -131,7 +143,13 @@ pub struct AiSettingsPut {
 pub struct AiPipelinePoint {
     pub decision_point: String,
     pub llm_enabled: bool,
+    /// Whether the active version has an `llm` stage at all. In `llm_first` a point without one is
+    /// still asked, so the UI shows it as on unless a stage exists and is switched off (D-107).
+    pub llm_stage_present: bool,
     pub llm_threshold: f32,
+    /// The `rules` stage's confidence bar (`rules_first`: below it the LLM is asked). 0.5 to 0.99,
+    /// default 0.8.
+    pub rules_threshold: f32,
     /// The active pipeline version (uuid).
     pub version_id: String,
 }
@@ -142,6 +160,10 @@ pub struct AiPipelinePut {
     pub llm_enabled: bool,
     /// 0 to 1.
     pub llm_threshold: f32,
+    /// 0.5 to 0.99; absent keeps the stored one. A change is a new pipeline version.
+    #[serde(default)]
+    #[ts(as = "Option<f32>", optional = nullable)]
+    pub rules_threshold: Option<f32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -342,6 +364,17 @@ pub async fn put_endpoint(
         })),
     )
     .await?;
+    if ep.enabled {
+        // Messages that waited for an LLM are queued once the endpoint answers (D-107).
+        let mut job = NewJob::new("mail.llm.catchup");
+        job.household_id = Some(hid);
+        job.payload = serde_json::json!({"household": hid});
+        job.idempotency_key = Some(format!(
+            "mail.llm.catchup:{hid}:{}",
+            Utc::now().timestamp_millis()
+        ));
+        JobRepo::enqueue(&mut tx, &job).await?;
+    }
     tx.commit().await?;
     invalidate(&s, hid);
     Ok(Json(view(&ep, has_key)))
@@ -532,9 +565,34 @@ pub async fn put_settings(
     if !(1000..=100_000).contains(&req.max_input_chars) {
         return Err(field("max_input_chars", "must be between 1000 and 100000"));
     }
+    if req.catchup_days.is_some_and(|d| d > 365) {
+        return Err(field("catchup_days", "must be between 0 and 365"));
+    }
+    if req
+        .extract_fallback_cutoff
+        .is_some_and(|c| !c.is_finite() || !(0.5..=0.99).contains(&c))
+    {
+        return Err(field(
+            "extract_fallback_cutoff",
+            "must be between 0.5 and 0.99",
+        ));
+    }
     let mut tx = s.store.tx_for(hid).await?;
-    let v =
-        AiSettingsRepo::update(&mut tx, hid, req.mail_extract_mode, req.max_input_chars).await?;
+    let cur = AiSettingsRepo::get_or_default(&mut tx, hid).await?;
+    let v = AiSettingsRepo::update_all(
+        &mut tx,
+        hid,
+        &AiSettingsInput {
+            mail_extract_mode: req.mail_extract_mode,
+            max_input_chars: req.max_input_chars,
+            mail_mode: req.mail_mode.unwrap_or(cur.mail_mode),
+            catchup_days: req.catchup_days.unwrap_or(cur.catchup_days),
+            extract_fallback_cutoff: req
+                .extract_fallback_cutoff
+                .unwrap_or(cur.extract_fallback_cutoff),
+        },
+    )
+    .await?;
     audit(
         &mut tx,
         &auth.actor,
@@ -543,10 +601,23 @@ pub async fn put_settings(
         None,
         Some(serde_json::json!({
             "mail_extract_mode": v.mail_extract_mode, "max_input_chars": v.max_input_chars,
+            "mail_mode": v.mail_mode, "catchup_days": v.catchup_days,
+            "extract_fallback_cutoff": v.extract_fallback_cutoff,
         })),
     )
     .await?;
     tx.commit().await?;
+    Ok(Json(v))
+}
+
+/// Messages waiting for the LLM (`awaiting`) and queued for it.
+#[utoipa::path(get, path = "/api/v1/ai/backlog", tag = "ai", security(("cookie" = [])),
+    responses((status = 200, body = LlmBacklog), (status = 403, body = Problem)))]
+pub async fn get_backlog(State(s): State<AppState>, auth: Auth) -> ApiResult<Json<LlmBacklog>> {
+    let hid = adult(&auth.actor)?;
+    let mut tx = s.store.tx_for(hid).await?;
+    let v = LlmStateRepo::backlog(&mut tx, hid).await?;
+    tx.rollback().await?;
     Ok(Json(v))
 }
 
@@ -571,7 +642,12 @@ async fn point_view(
     Ok(AiPipelinePoint {
         decision_point: dp.as_str().to_owned(),
         llm_enabled: llm.is_some_and(|s| s.enabled),
+        llm_stage_present: llm.is_some(),
         llm_threshold: llm.map_or(DEFAULT_THRESHOLD, |s| s.accept_threshold),
+        rules_threshold: stages
+            .iter()
+            .find(|s| s.kind == StageKind::Rules)
+            .map_or(DEFAULT_RULES_THRESHOLD, |s| s.accept_threshold),
         version_id: version.id.to_string(),
     })
 }
@@ -615,13 +691,26 @@ pub async fn put_pipeline(
     if !req.llm_threshold.is_finite() || !(0.0..=1.0).contains(&req.llm_threshold) {
         return Err(field("llm_threshold", "must be between 0 and 1"));
     }
+    if req
+        .rules_threshold
+        .is_some_and(|t| !t.is_finite() || !(0.5..=0.99).contains(&t))
+    {
+        return Err(field("rules_threshold", "must be between 0.5 and 0.99"));
+    }
     let mut tx = s.store.tx_for(hid).await?;
     Pipeline::ensure_defaults(&mut tx, hid)
         .await
         .map_err(pipeline_err)?;
-    Pipeline::set_llm_stage(&mut tx, hid, dp, req.llm_enabled, req.llm_threshold)
-        .await
-        .map_err(pipeline_err)?;
+    Pipeline::set_stages(
+        &mut tx,
+        hid,
+        dp,
+        req.llm_enabled,
+        req.llm_threshold,
+        req.rules_threshold,
+    )
+    .await
+    .map_err(pipeline_err)?;
     let out = point_view(&mut tx, dp).await?;
     audit(
         &mut tx,
@@ -631,6 +720,7 @@ pub async fn put_pipeline(
         Some(dp.as_str().to_owned()),
         Some(serde_json::json!({
             "llm_enabled": out.llm_enabled, "llm_threshold": out.llm_threshold,
+            "rules_threshold": out.rules_threshold,
         })),
     )
     .await?;

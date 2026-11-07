@@ -196,18 +196,40 @@ impl Pipeline {
         candidates: Vec<Candidate>,
         version: PipelineVersionId,
     ) -> Result<Outcome> {
+        Self::record_stage_or(conn, subject, dp, kind, candidates, version, None).await
+    }
+
+    /// Like [`Pipeline::record_stage`], but a version without an `llm` stage is accepted when
+    /// `fallback_threshold` is given (`llm_first` asks the model at every point whose stage is
+    /// not switched off, D-107). An explicitly disabled stage is an error either way.
+    pub async fn record_stage_or(
+        conn: &mut PgConnection,
+        subject: Subject,
+        dp: DecisionPointKey,
+        kind: StageKind,
+        candidates: Vec<Candidate>,
+        version: PipelineVersionId,
+        fallback_threshold: Option<f32>,
+    ) -> Result<Outcome> {
         if kind != StageKind::Llm {
             return Err(PipelineError::Invalid(
                 "record_stage handles the llm stage only".into(),
             ));
         }
         let point = dp_id(conn, dp).await?;
-        let stage = PipelineRepo::stages(conn, version)
-            .await?
-            .into_iter()
-            .find(|s| s.enabled && s.kind == StageKind::Llm)
-            .ok_or_else(|| PipelineError::Invalid("the version has no enabled llm stage".into()))?;
-        let accepted = accept(dp, candidates, stage.accept_threshold);
+        let stages = PipelineRepo::stages(conn, version).await?;
+        let threshold = match stages.iter().find(|s| s.kind == StageKind::Llm) {
+            Some(s) if s.enabled => s.accept_threshold,
+            Some(_) => {
+                return Err(PipelineError::Invalid(
+                    "the version has no enabled llm stage".into(),
+                ));
+            }
+            None => fallback_threshold.ok_or_else(|| {
+                PipelineError::Invalid("the version has no enabled llm stage".into())
+            })?,
+        };
+        let accepted = accept(dp, candidates, threshold);
         if accepted.is_empty() {
             return Ok(Outcome {
                 values: vec![Candidate {
@@ -258,6 +280,20 @@ impl Pipeline {
         enabled: bool,
         threshold: f32,
     ) -> Result<PipelineVersionId> {
+        Self::set_stages(conn, household, dp, enabled, threshold, None).await
+    }
+
+    /// [`Pipeline::set_llm_stage`] plus, with `rules_threshold`, the `rules` stage's threshold
+    /// (the `rules_first` confidence bar), in one new version. Unchanged settings return the
+    /// active version.
+    pub async fn set_stages(
+        conn: &mut PgConnection,
+        household: HouseholdId,
+        dp: DecisionPointKey,
+        enabled: bool,
+        threshold: f32,
+        rules_threshold: Option<f32>,
+    ) -> Result<PipelineVersionId> {
         let point = dp_id(conn, dp).await?;
         let (active, stages) = PipelineRepo::active_version(conn, point.id)
             .await?
@@ -265,12 +301,17 @@ impl Pipeline {
                 PipelineError::Invalid(format!("no active pipeline for {}", dp.as_str()))
             })?;
         let existing = stages.iter().find(|s| s.kind == StageKind::Llm);
-        match existing {
-            Some(s) if s.enabled == enabled && s.accept_threshold == threshold => {
-                return Ok(active.id);
-            }
-            None if !enabled => return Ok(active.id),
-            _ => {}
+        let rules_changed = rules_threshold.is_some_and(|t| {
+            stages
+                .iter()
+                .any(|s| s.kind == StageKind::Rules && s.accept_threshold != t)
+        });
+        let llm_same = match existing {
+            Some(s) => s.enabled == enabled && s.accept_threshold == threshold,
+            None => !enabled,
+        };
+        if llm_same && !rules_changed {
+            return Ok(active.id);
         }
         let new_id = PipelineVersionId::new();
         let llm = PipelineStage {
@@ -289,11 +330,18 @@ impl Pipeline {
             .filter(|s| s.kind != StageKind::Llm)
             .cloned()
             .collect();
+        if let Some(t) = rules_threshold {
+            for s in next.iter_mut().filter(|s| s.kind == StageKind::Rules) {
+                s.accept_threshold = t;
+            }
+        }
         let at = next
             .iter()
             .position(|s| s.kind == StageKind::Human)
             .unwrap_or(next.len());
-        next.insert(at, llm);
+        if existing.is_some() || enabled {
+            next.insert(at, llm);
+        }
         for (i, s) in next.iter_mut().enumerate() {
             s.id = PipelineStageId::new();
             s.pipeline_version_id = new_id;
@@ -312,7 +360,12 @@ impl Pipeline {
                 decision_point_id: point.id,
                 version: latest + 1,
                 active: true,
-                name: if enabled { "Rules + LLM" } else { "Rules only" }.into(),
+                name: if next.iter().any(|s| s.kind == StageKind::Llm && s.enabled) {
+                    "Rules + LLM"
+                } else {
+                    "Rules only"
+                }
+                .into(),
                 created_by: None,
             },
             &next,

@@ -2,14 +2,16 @@
 title: Ingest — email, rules pipeline, bills, linking, approvals
 scope: Mail sources (Gmail API and IMAP) and sync, message storage and retention, the decision pipeline engine (rules-only preset), deterministic classifiers and extractors, orgs, contacts and enrollments, bills, event proposals and calendar writes, the approval inbox, email tasks, the labelling view
 status: draft
-updated: 2026-11-07
+updated: 2026-11-08
 drawio: Ingest.drawio
 drawio_src: src/Ingest.py
-depends_on: [D-001, D-004, D-006, D-007, D-008, D-009, D-010, D-012, D-013, D-014, D-018, D-019, D-023, D-024, D-027, D-028, D-029, D-034, D-035, D-036, D-044, D-045, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-068, D-070, D-071, D-078, D-093, D-094, D-098, D-100, D-101]
+depends_on: [D-001, D-004, D-006, D-007, D-008, D-009, D-010, D-012, D-013, D-014, D-018, D-019, D-023, D-024, D-027, D-028, D-029, D-034, D-035, D-036, D-044, D-045, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-068, D-070, D-071, D-078, D-093, D-094, D-098, D-100, D-101, D-107]
 milestone: M3
 ---
 
 # Ingest: email, rules pipeline, bills, linking, approvals (DRAFT v1.2)
+
+**v1.4 (2026-11-08, M4 wave 6):** LLM first (D-107): by default every processed message gets one `mail.llm` call, the rules' result is the provisional value and the fallback, and messages that could not reach a model are caught up later (§5, §7, §13, §14). `rules_first` keeps the v1.2 behaviour. Detail is in [AI.md](AI.md) §5a and §6a.
 
 **v1.3 (2026-11-07):** per-source task visibility (D-098), per-source IMAP PEM (D-100) and the message size limit (D-101), all **planned for the milestone after M4** (code review 2: C2-21, C2-01/C2-05).
 
@@ -145,6 +147,7 @@ Both providers implement `MailProvider { initial(window, filter), incremental(st
 - **Versioning:** an edit saves a new version, and an earlier one can be reactivated. In M3, rules can be edited (Settings → Mail rules) but the stage list can't; the Pipeline settings screen is M4.
 - Every decision records its stage, version, value and confidence, so M4 can report each stage's hit rate.
 - **The `llm` stage (M4, D-094, [AI.md](AI.md) §5):** offered for `email.category`, `email.time_sensitive`, `email.member_link` and `email.is_bill`, toggled per point in Settings → AI (each toggle saves a new version with `llm` inserted before `human`; default threshold 0.7, `on_unavailable = queue`). `Pipeline::run` never calls the LLM: when `rules` falls below its threshold and the next enabled stage is `llm`, the outcome carries `pending_llm`, the default applies meanwhile, and `mail.process` enqueues one `mail.llm{message}` job. The job's result goes through `Pipeline::record_stage`: at or above the threshold it is a `Decision` with `stage_kind = llm`, below it falls through to `human`. If the category changes, the message's category behaviour re-runs.
+- **LLM first (D-107, `ai_settings.mail_mode = llm_first`, the default; [AI.md](AI.md) §5a):** `mail.process` queues `mail.llm` for **every** message when an endpoint is enabled (same key `mail.llm:<message>`, `message.llm_state = queued`), whatever the rules decided. The rules' decisions apply at once. The job asks for all four points (except where a person labelled the point, or the point's `llm` stage is switched off) and records the model's answer through `record_stage_or`, which makes it the latest decision; it also refines the message's still-pending, rule-made proposals and never touches approved, rejected or edited ones. With no usable endpoint the message is marked `awaiting` and `mail.llm.catchup` queues it later (§13). In `rules_first` the rules threshold per point is the `rules` stage's `accept_threshold` (default 0.8), editable in Settings → AI.
 
 ## 6. Classification rules (fa-rules)
 ### 6.1 Rule conditions
@@ -192,7 +195,7 @@ Summarising a long newsletter per child is System 2 work (after M4).
 | Action phrases ("please sign", "permission slip", "RSVP by", "reply by", "return by") with an optional deadline | suggested tasks (D-060) | 0.6–0.8 |
 | A direct question (`?` in a sentence addressed to the reader) from an `org_contact` | suggested reply task (adults) | 0.6 |
 
-| **LLM extraction (M4, `mail.llm`)**: one schema-constrained call per message (events, bills, tasks, and any pending decision points), when the category's behaviour is `extract` and `ai_settings.mail_extract_mode` is `always`, or `fallback` (the default) and no rule extractor reached 0.8 | events, bills, suggested tasks, all with `extracted_by = llm` and through the same dedupe and proposal paths | the model's own, gated by the `llm` threshold |
+| **LLM extraction (M4, `mail.llm`)**: one schema-constrained call per message (events, bills, tasks, and the decision points it is asked for), when the category's behaviour is `extract` and `mail_extract_mode` is not `off`. In `llm_first` (default) every message is asked; in `rules_first`, `always`, or `fallback` and no rule extractor reached `ai_settings.extract_fallback_cutoff` (default 0.8) | events, bills, suggested tasks, all with `extracted_by = llm` and through the same dedupe and proposal paths | the model's own, gated by the `llm` threshold |
 
 - Extraction runs only for categories whose behaviour is `extract` (D-054).
 - Every extracted item records `extracted_by` (`rules` or `llm`); the inbox shows an "AI" chip for `llm`. LLM items are never applied without approval (D-057, D-060).
@@ -288,11 +291,12 @@ Summarising a long newsletter per child is System 2 work (after M4).
 | `tasks.from_bill{bill}`, `tasks.from_mail{message, kind}` | enqueued | Pay and email tasks (§9) |
 | `inbox.expire` | hourly | Marks stale proposals `expired` (D-061) |
 | `mail.retention` | daily | The D-034 policy: purge content, mark expired after `max_pending_days` |
-| `mail.llm{message}` (M4) | enqueued by `mail.process` (idempotency key `mail.llm:<message>`, 12 attempts) | One LLM call; record decisions, re-run behaviour, emit LLM proposals (§5, §7) |
+| `mail.llm{message}` (M4) | enqueued by `mail.process` (idempotency key `mail.llm:<message>`, 12 attempts), and by `mail.llm.catchup` | One LLM call; record decisions, refine pending proposals, re-run behaviour, emit LLM proposals, set `llm_state` (§5, §7) |
+| `mail.llm.catchup{household?}` (D-107) | `PUT /ai/llm-endpoint` with `enabled = true` (payload `{household}`), and cron `*/15 * * * *` (every household with waiting messages) | If messages are `awaiting` and the endpoint answers a ping: queues `mail.llm` for those received within `catchup_days`, newest first, in batches of 200 (AI.md §6a) |
 | `llm.prune` (M4) | daily 04:00 | Deletes `llm_call` rows older than 90 days |
 
 ## 14. Configuration
-Organizations, enrollments, mail sources, rules, categories, retention, events and inbox settings and thresholds are edited in Settings and stored in the database. M4 adds `ai_settings` (Settings → AI): `mail_extract_mode` `off|fallback|always` (default `fallback`) and `max_input_chars` (default 12000), plus the LLM endpoint ([AI.md](AI.md) §2). There is no household file (D-089). Credentials are entered in the UI.
+Organizations, enrollments, mail sources, rules, categories, retention, events and inbox settings and thresholds are edited in Settings and stored in the database. M4 adds `ai_settings` (Settings → AI): `mail_extract_mode` `off|fallback|always` (default `fallback`), `max_input_chars` (default 12000), and, from D-107, `mail_mode` `llm_first|rules_first` (default `llm_first`), `catchup_days` (default 30) and `extract_fallback_cutoff` (default 0.8), plus the LLM endpoint ([AI.md](AI.md) §2). There is no household file (D-089). Credentials are entered in the UI.
 
 ## 15. Frontend (summary; detail in Frontend.md v3)
 New app screens:

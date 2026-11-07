@@ -2,6 +2,7 @@
 //! columns and member links, and hands extracted events, bills, tasks and contacts to their
 //! owners. Also job `inbox.expire`. See plan/M3.md "Mail service" (T-10 paragraph).
 
+mod catchup;
 mod expire;
 mod extract;
 mod facts;
@@ -12,14 +13,15 @@ use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
 use fa_domain::{
-    Candidate, CategoryBehaviour, DecidedBy, DecisionPointKey, HouseholdId, MailExtractMode,
-    MemberId, MessageId, NotifyTrigger, ProcessingState, Subject, SubjectType,
+    Candidate, CategoryBehaviour, DecidedBy, DecisionPointKey, HouseholdId, LlmState,
+    MailExtractMode, MailMode, MemberId, MessageId, NotifyTrigger, ProcessingState, Subject,
+    SubjectType,
 };
 use fa_jobs::{BoxFuture, JobContext, JobError, JobHandler};
 use fa_pipeline::Pipeline;
 use fa_store::{
-    AiSettingsRepo, ChangeBus, DecisionPointRepo, DecisionRepo, JobRepo, MailSourceRepo,
-    MessageRepo, NewJob, NewNotification, NotificationRepo, Store, mail_defaults,
+    AiSettingsRepo, ChangeBus, DecisionPointRepo, DecisionRepo, JobRepo, LlmStateRepo,
+    MailSourceRepo, MessageRepo, NewJob, NewNotification, NotificationRepo, Store, mail_defaults,
 };
 use serde::Deserialize;
 use sqlx::PgConnection;
@@ -374,6 +376,7 @@ impl ProcessService {
             }
         }
 
+        let ai = AiSettingsRepo::get_or_default(&mut tx, household).await?;
         let extractable =
             cat.filter(|c| c.behaviour == CategoryBehaviour::Extract && c.key != "junk");
         let mut rules_strong = false;
@@ -391,6 +394,8 @@ impl ProcessService {
                 is_bill,
                 members: &members,
                 attachments: self.attachments.as_ref(),
+                refine: false,
+                strong_cutoff: ai.extract_fallback_cutoff,
                 strong: false,
             };
             if steps.events {
@@ -408,30 +413,51 @@ impl ProcessService {
             rules_strong = ex.strong;
         }
 
-        if let Some(llm) = &self.llm {
-            let wants_extract = extractable.is_some()
-                && (steps.events || steps.bills || steps.tasks)
-                && match AiSettingsRepo::get_or_default(&mut tx, household)
-                    .await?
-                    .mail_extract_mode
+        match ai.mail_mode {
+            MailMode::LlmFirst if full => {
+                // Every message goes to the model; without a usable endpoint it waits for one.
+                let has_client = self.has_client(household).await;
+                if has_client {
+                    if enqueue_llm(&mut tx, household, msg.id, rules_strong, None).await? {
+                        LlmStateRepo::transition(
+                            &mut tx,
+                            msg.id,
+                            &[LlmState::None, LlmState::Awaiting],
+                            LlmState::Queued,
+                        )
+                        .await?;
+                    }
+                } else {
+                    LlmStateRepo::transition(
+                        &mut tx,
+                        msg.id,
+                        &[LlmState::None],
+                        LlmState::Awaiting,
+                    )
+                    .await?;
+                }
+            }
+            MailMode::LlmFirst => {}
+            MailMode::RulesFirst => {
+                let wants_extract = extractable.is_some()
+                    && (steps.events || steps.bills || steps.tasks)
+                    && match ai.mail_extract_mode {
+                        MailExtractMode::Off => false,
+                        MailExtractMode::Always => true,
+                        MailExtractMode::Fallback => !rules_strong,
+                    };
+                if (pending_llm || wants_extract)
+                    && self.has_client(household).await
+                    && enqueue_llm(&mut tx, household, msg.id, rules_strong, None).await?
                 {
-                    MailExtractMode::Off => false,
-                    MailExtractMode::Always => true,
-                    MailExtractMode::Fallback => !rules_strong,
-                };
-            if (pending_llm || wants_extract)
-                && llm.client_for(household).await.ok().flatten().is_some()
-            {
-                let mut job = NewJob::new("mail.llm");
-                job.household_id = Some(household);
-                job.payload = serde_json::json!({
-                    "message_id": msg.id,
-                    "household": household,
-                    "rules_strong": rules_strong,
-                });
-                job.idempotency_key = Some(format!("mail.llm:{}", msg.id));
-                job.max_attempts = 12;
-                JobRepo::enqueue(&mut tx, &job).await?;
+                    LlmStateRepo::transition(
+                        &mut tx,
+                        msg.id,
+                        &[LlmState::None, LlmState::Awaiting],
+                        LlmState::Queued,
+                    )
+                    .await?;
+                }
             }
         }
 
@@ -471,11 +497,48 @@ impl ProcessService {
         Ok(out)
     }
 
+    /// A provider is wired and the household has an enabled endpoint.
+    async fn has_client(&self, household: HouseholdId) -> bool {
+        match &self.llm {
+            Some(llm) => llm.client_for(household).await.ok().flatten().is_some(),
+            None => false,
+        }
+    }
+
     /// Resolves the household of a message when the payload carries none.
     async fn household_of(&self, message: MessageId) -> Result<Option<HouseholdId>> {
         let mut tx = self.store.tx_system().await?;
         Ok(MessageRepo::household_of(&mut tx, message).await?)
     }
+}
+
+/// Queues `mail.llm` for `message` (key `mail.llm:<message>`, or `...:<suffix>` for a catch-up).
+/// Returns whether a job was added.
+pub(crate) async fn enqueue_llm(
+    conn: &mut PgConnection,
+    household: HouseholdId,
+    message: MessageId,
+    rules_strong: bool,
+    catchup: Option<(i64, i32)>,
+) -> Result<bool> {
+    let mut job = NewJob::new("mail.llm");
+    job.household_id = Some(household);
+    job.payload = serde_json::json!({
+        "message_id": message,
+        "household": household,
+        "rules_strong": rules_strong,
+    });
+    job.max_attempts = 12;
+    match catchup {
+        None => job.idempotency_key = Some(format!("mail.llm:{message}")),
+        Some((stamp, rank)) => {
+            // Behind live mail, newest message first.
+            job.idempotency_key = Some(format!("mail.llm:{message}:cu:{stamp}"));
+            job.priority = -1;
+            job.run_at = Some(Utc::now() + chrono::Duration::milliseconds(i64::from(rank)));
+        }
+    }
+    Ok(JobRepo::enqueue(conn, &job).await?.is_some())
 }
 
 pub(crate) fn job_err(e: MailError) -> JobError {
@@ -545,15 +608,32 @@ pub fn process_service(deps: &Arc<MailDeps>) -> ProcessService {
 }
 
 pub fn handlers(deps: &Arc<MailDeps>) -> Vec<Arc<dyn JobHandler>> {
+    handlers_from(|| process_service(deps))
+}
+
+/// [`handlers`] with a replaced clock (tests): events that ended by then are not proposed.
+pub fn handlers_with_clock(
+    deps: &Arc<MailDeps>,
+    now: impl Fn() -> DateTime<Utc> + Clone + Send + Sync + 'static,
+) -> Vec<Arc<dyn JobHandler>> {
+    handlers_from(|| process_service(deps).with_clock(now.clone()))
+}
+
+fn handlers_from(svc: impl Fn() -> ProcessService) -> Vec<Arc<dyn JobHandler>> {
     vec![
-        Arc::new(ProcessJob(process_service(deps))),
-        Arc::new(llm::LlmJob(process_service(deps))),
+        Arc::new(ProcessJob(svc())),
+        Arc::new(llm::LlmJob(svc())),
         Arc::new(llm::PruneJob),
+        Arc::new(catchup::CatchupJob(svc())),
         Arc::new(ExpireJob),
     ]
 }
 
 /// `(job kind, cron)`; `mail.process` is only ever enqueued.
 pub fn default_schedules() -> Vec<(&'static str, &'static str)> {
-    vec![("inbox.expire", "7 * * * *"), ("llm.prune", "0 4 * * *")]
+    vec![
+        ("inbox.expire", "7 * * * *"),
+        ("llm.prune", "0 4 * * *"),
+        ("mail.llm.catchup", "*/15 * * * *"),
+    ]
 }

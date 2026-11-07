@@ -13,6 +13,15 @@ use crate::ids::{HouseholdId, LlmEndpointId};
 db_enum!(LlmDialect { OpenaiChat => "openai_chat", OllamaNative => "ollama_native" });
 db_enum!(MailExtractMode { Off => "off", Fallback => "fallback", Always => "always" });
 db_enum!(
+    /// Who goes first: the LLM (the rules apply at once as a provisional value and as the
+    /// fallback) or the rules (the LLM is asked only when they are unsure). D-107.
+    MailMode { LlmFirst => "llm_first", RulesFirst => "rules_first" }
+);
+db_enum!(
+    /// Where a message stands with the LLM (`message.llm_state`). Nothing is waiting or done yet.
+    LlmState { None => "none", Queued => "queued", Done => "done", Awaiting => "awaiting" }
+);
+db_enum!(
     /// Who produced an extracted event, bill or task.
     ExtractOrigin { Rules => "rules", Llm => "llm" }
 );
@@ -32,6 +41,13 @@ impl Default for MailExtractMode {
 }
 
 #[allow(clippy::derivable_impls)]
+impl Default for MailMode {
+    fn default() -> Self {
+        Self::LlmFirst
+    }
+}
+
+#[allow(clippy::derivable_impls)]
 impl Default for ExtractOrigin {
     fn default() -> Self {
         Self::Rules
@@ -40,6 +56,9 @@ impl Default for ExtractOrigin {
 
 pub const DEFAULT_LLM_TIMEOUT_MS: u32 = 120_000;
 pub const DEFAULT_MAX_INPUT_CHARS: u32 = 12_000;
+pub const DEFAULT_CATCHUP_DAYS: u32 = 30;
+/// Rules-confidence default (per decision point and for the extraction fallback cutoff).
+pub const DEFAULT_RULES_THRESHOLD: f32 = 0.8;
 
 /// The endpoint row. The API key is a `secret` row (owner type `llm_endpoint`), never a column.
 #[derive(Debug, Clone, PartialEq)]
@@ -83,8 +102,34 @@ pub struct LlmEndpointView {
 pub struct AiSettings {
     pub mail_extract_mode: MailExtractMode,
     pub max_input_chars: u32,
+    pub mail_mode: MailMode,
+    /// Only messages received within this many days are caught up (0 to 365).
+    pub catchup_days: u32,
+    /// `rules_first` and `mail_extract_mode = fallback`: the LLM extracts when no rule extractor
+    /// reached this confidence (0.5 to 0.99).
+    pub extract_fallback_cutoff: f32,
     /// RFC 3339.
     pub updated_at: DateTime<Utc>,
+}
+
+/// What `PUT /ai/settings` writes.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct AiSettingsInput {
+    pub mail_extract_mode: MailExtractMode,
+    pub max_input_chars: u32,
+    pub mail_mode: MailMode,
+    pub catchup_days: u32,
+    pub extract_fallback_cutoff: f32,
+}
+
+/// Messages waiting for the LLM (`GET /ai/backlog`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS, ToSchema)]
+#[ts(export, export_to = "../../../apps/web/src/gen/types/")]
+pub struct LlmBacklog {
+    /// Processed by the rules only, waiting for the LLM to come back.
+    pub awaiting: u32,
+    /// A `mail.llm` job is queued or running.
+    pub queued: u32,
 }
 
 impl AiSettings {
@@ -93,6 +138,9 @@ impl AiSettings {
         Self {
             mail_extract_mode: MailExtractMode::default(),
             max_input_chars: DEFAULT_MAX_INPUT_CHARS,
+            mail_mode: MailMode::default(),
+            catchup_days: DEFAULT_CATCHUP_DAYS,
+            extract_fallback_cutoff: DEFAULT_RULES_THRESHOLD,
             updated_at: now,
         }
     }

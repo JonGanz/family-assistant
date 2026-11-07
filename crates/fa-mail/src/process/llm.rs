@@ -9,16 +9,16 @@ use chrono::{DateTime, Duration, NaiveDate, NaiveDateTime, NaiveTime, TimeZone, 
 use chrono_tz::Tz;
 use fa_domain::{
     Bill, BillId, BillStatus, Candidate, CategoryBehaviour, DecidedBy, DecisionPointKey,
-    EmailTasksMode, ExtractOrigin, HouseholdId, MailExtractMode, MessageId, NotifyTrigger,
-    PipelineVersionId, StageKind, Subject, SubjectType, bill_dedupe_key,
+    EmailTasksMode, ExtractOrigin, HouseholdId, LlmState, MailExtractMode, MailMode, MessageId,
+    NotifyTrigger, PipelineVersionId, StageKind, Subject, SubjectType, bill_dedupe_key,
 };
 use fa_jobs::{BoxFuture, JobContext, JobError, JobHandler};
 use fa_llm::{ExtractRequest, LlmError};
 use fa_pipeline::Pipeline;
 use fa_store::{
     AiSettingsRepo, BillRepo, ChangeBus, DecisionPointRepo, DecisionRepo, EventRepo, ExtractTarget,
-    ExtractedByRepo, HouseholdRepo, LlmCallRepo, MailSourceRepo, MessageRepo, NewExtractedEvent,
-    NotificationRepo, PipelineRepo,
+    ExtractedByRepo, HouseholdRepo, LlmCallRepo, LlmStateRepo, MailSourceRepo, MessageRepo,
+    NewExtractedEvent, NotificationRepo, PipelineRepo, ProposalRefineRepo,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -229,9 +229,16 @@ fn parse_when(s: &str, tz: Tz) -> Option<(DateTime<Utc>, bool)> {
 }
 
 impl ProcessService {
-    /// Decision points whose active pipeline has an enabled `llm` stage and still holds only the
-    /// default.
-    async fn llm_asks(conn: &mut sqlx::PgConnection, subject: Subject) -> Result<(Vec<Ask>, f32)> {
+    /// The decision points to ask the model about, and the threshold for extracted items.
+    ///
+    /// `rules_first`: points whose active pipeline has an enabled `llm` stage and no final
+    /// decision yet. `llm_first`: every point whose `llm` stage is not switched off, except where
+    /// a person decided (a label); the rules' decisions are replaced.
+    async fn llm_asks(
+        conn: &mut sqlx::PgConnection,
+        subject: Subject,
+        mode: MailMode,
+    ) -> Result<(Vec<Ask>, f32)> {
         let mut asks = Vec::new();
         let mut threshold = DEFAULT_THRESHOLD;
         for dp in DPS {
@@ -242,17 +249,27 @@ impl ProcessService {
             else {
                 continue;
             };
-            let Some(stage) = stages
-                .iter()
-                .find(|s| s.enabled && s.kind == StageKind::Llm)
-            else {
-                continue;
-            };
-            if dp == DecisionPointKey::EmailCategory {
-                threshold = stage.accept_threshold;
-            }
+            let stage = stages.iter().find(|s| s.kind == StageKind::Llm);
             let latest = DecisionRepo::latest(conn, point.id, subject).await?;
-            if latest.is_none_or(|d| !d.is_final) {
+            let (usable, wanted) = match mode {
+                MailMode::RulesFirst => (
+                    stage.is_some_and(|s| s.enabled),
+                    latest.is_none_or(|d| !d.is_final),
+                ),
+                MailMode::LlmFirst => (
+                    stage.is_none_or(|s| s.enabled),
+                    !latest.is_some_and(|d| d.stage_kind == StageKind::Human && d.is_final),
+                ),
+            };
+            if !usable {
+                continue;
+            }
+            if dp == DecisionPointKey::EmailCategory
+                && let Some(s) = stage
+            {
+                threshold = s.accept_threshold;
+            }
+            if wanted {
                 asks.push(Ask {
                     dp,
                     version: version.id,
@@ -334,6 +351,25 @@ impl ProcessService {
         }
     }
 
+    /// No usable endpoint: a message that waited in `queued` or never asked moves to `awaiting`,
+    /// so the catch-up picks it up when an endpoint is saved or switched on.
+    async fn park(
+        &self,
+        household: HouseholdId,
+        message: MessageId,
+    ) -> std::result::Result<(), Fail> {
+        let mut tx = self.store.tx_for(household).await?;
+        LlmStateRepo::transition(
+            &mut tx,
+            message,
+            &[LlmState::None, LlmState::Queued],
+            LlmState::Awaiting,
+        )
+        .await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
     /// One `mail.llm` run: asks the model for what is still open, records the decisions and hands
     /// the extracted items to the approval inbox.
     async fn run_llm(
@@ -343,7 +379,7 @@ impl ProcessService {
         rules_strong: bool,
     ) -> std::result::Result<(), Fail> {
         let Some(llm) = &self.llm else {
-            return Ok(());
+            return self.park(household, message).await;
         };
         if llm
             .client_for(household)
@@ -351,15 +387,19 @@ impl ProcessService {
             .map_err(Fail::Llm)?
             .is_none()
         {
-            return Ok(());
+            // No endpoint, or it is switched off: wait for one (D-107).
+            return self.park(household, message).await;
         }
         let subject = Subject {
             kind: SubjectType::Message,
             id: message.as_uuid(),
         };
         // Read everything first; no transaction is held during the model call.
-        let (msg, pc, of, asks, threshold, extract, max_chars) = {
+        let (msg, pc, of, asks, threshold, extract, max_chars, mode) = {
             let mut tx = self.store.tx_for(household).await?;
+            if LlmStateRepo::get(&mut tx, message).await? == Some(LlmState::Done) {
+                return Ok(());
+            }
             let Some(msg) = MessageRepo::get_with_content(&mut tx, message).await? else {
                 return Ok(());
             };
@@ -369,7 +409,7 @@ impl ProcessService {
                 .value;
             let pc = context::load(&mut tx, household, Some(&source)).await?;
             let ai = AiSettingsRepo::get_or_default(&mut tx, household).await?;
-            let (asks, threshold) = Self::llm_asks(&mut tx, subject).await?;
+            let (asks, threshold) = Self::llm_asks(&mut tx, subject, ai.mail_mode).await?;
             let cat_asked = asks.iter().any(|a| a.dp == DecisionPointKey::EmailCategory);
             let extractable = msg
                 .category
@@ -378,7 +418,9 @@ impl ProcessService {
                 .is_some_and(|c| c.behaviour == CategoryBehaviour::Extract && c.key != "junk");
             let extract = ai.mail_extract_mode != MailExtractMode::Off
                 && (cat_asked || extractable)
-                && (ai.mail_extract_mode == MailExtractMode::Always || !rules_strong);
+                && (ai.mail_mode == MailMode::LlmFirst
+                    || ai.mail_extract_mode == MailExtractMode::Always
+                    || !rules_strong);
             let of = OwnedFacts::new(&msg);
             (
                 msg,
@@ -388,9 +430,13 @@ impl ProcessService {
                 threshold,
                 extract,
                 ai.max_input_chars as usize,
+                ai.mail_mode,
             )
         };
         if asks.is_empty() && !extract {
+            let mut tx = self.store.tx_for(household).await?;
+            LlmStateRepo::set(&mut tx, message, LlmState::Done).await?;
+            tx.commit().await?;
             return Ok(());
         }
         let req = Self::llm_request(&pc, &of, &asks, extract, max_chars);
@@ -411,13 +457,14 @@ impl ProcessService {
             if cands.is_empty() {
                 continue;
             }
-            let o = Pipeline::record_stage(
+            let o = Pipeline::record_stage_or(
                 &mut tx,
                 subject,
                 ask.dp,
                 StageKind::Llm,
                 cands,
                 ask.version,
+                Some(DEFAULT_THRESHOLD),
             )
             .await?;
             if o.stage != StageKind::Llm {
@@ -472,6 +519,7 @@ impl ProcessService {
             )
             .await?;
         }
+        LlmStateRepo::set(&mut tx, message, LlmState::Done).await?;
         ChangeBus::publish(
             &mut tx,
             household,
@@ -518,6 +566,8 @@ impl ProcessService {
                 is_bill: bill_flag,
                 members: &members,
                 attachments: None,
+                refine: mode == MailMode::LlmFirst,
+                strong_cutoff: 1.0,
                 strong: false,
             };
             ex.llm_events(
@@ -533,7 +583,7 @@ impl ProcessService {
             }
             ex.llm_tasks(res.tasks.as_deref().unwrap_or(&[]), threshold, &mut out)
                 .await?;
-            if out.events > 0 || out.bills_proposed > 0 || out.tasks > 0 {
+            if out.events > 0 || out.bills_proposed > 0 || out.tasks > 0 || out.refined > 0 {
                 ChangeBus::publish(&mut tx, household, "inbox.updated", &serde_json::json!({}))
                     .await?;
             }
@@ -548,11 +598,38 @@ impl ProcessService {
             events = out.events,
             bills = out.bills_proposed,
             tasks = out.tasks,
+            refined = out.refined,
             latency_ms = got.latency.as_millis() as u64,
             "mail.llm"
         );
         Ok(())
     }
+}
+
+/// The event, among `items` (title, start, all-day), that the LLM's event is the same as: the
+/// same start slot (local day and quarter hour, as in the dedupe key) and, when several share
+/// it, the most similar title.
+fn match_slot(
+    items: &[(&str, DateTime<Utc>, bool)],
+    title: &str,
+    start: DateTime<Utc>,
+    all_day: bool,
+    tz: Tz,
+) -> Option<usize> {
+    let slot = fa_rules::event_dedupe_key("", start, all_day, tz);
+    let same: Vec<usize> = (0..items.len())
+        .filter(|&i| {
+            items[i].2 == all_day && fa_rules::event_dedupe_key("", items[i].1, all_day, tz) == slot
+        })
+        .collect();
+    if same.len() == 1 {
+        return same.first().copied();
+    }
+    same.into_iter()
+        .map(|i| (i, fa_rules::title_similarity(items[i].0, title)))
+        .filter(|(_, sim)| *sim >= 0.6)
+        .max_by(|a, b| a.1.total_cmp(&b.1))
+        .map(|(i, _)| i)
 }
 
 impl Extractor<'_> {
@@ -565,11 +642,21 @@ impl Extractor<'_> {
     ) -> Result<()> {
         let tz = self.pc.tz();
         let org = self.org().map(|o| o.id);
-        let mut seen: HashSet<String> = EventRepo::derived_for_message(self.conn, self.msg.id)
-            .await?
-            .into_iter()
-            .map(|e| e.event.dedupe_key)
+        let derived = EventRepo::derived_for_message(self.conn, self.msg.id).await?;
+        let mut seen: HashSet<String> =
+            derived.iter().map(|e| e.event.dedupe_key.clone()).collect();
+        // Events of this message that are no longer pending (approved, rejected, written, or
+        // already the LLM's): an LLM event for the same slot is the same event, not a new one.
+        let settled: Vec<(&str, DateTime<Utc>, bool)> = derived
+            .iter()
+            .filter(|e| e.message_id == Some(self.msg.id))
+            .map(|e| (e.event.title.as_str(), e.event.start_at, e.event.all_day))
             .collect();
+        let mut pending = if self.refine {
+            ProposalRefineRepo::events(self.conn, self.msg.id).await?
+        } else {
+            Vec::new()
+        };
         for e in items {
             let conf = clamp(e.confidence);
             let title = e.title.trim();
@@ -588,6 +675,29 @@ impl Extractor<'_> {
                 continue;
             }
             let key = fa_rules::event_dedupe_key(title, start, all_day, tz);
+            let pending_view: Vec<(&str, DateTime<Utc>, bool)> = pending
+                .iter()
+                .map(|p| (p.title.as_str(), p.start_at, p.all_day))
+                .collect();
+            let matched = if self.refine {
+                match_slot(&pending_view, title, start, all_day, tz)
+            } else {
+                None
+            };
+            if let Some(i) = matched {
+                let p = pending.remove(i);
+                let location = e.location.as_deref().filter(|l| !l.trim().is_empty());
+                if ProposalRefineRepo::refine_event(self.conn, p.id, title, location, conf, &key)
+                    .await?
+                {
+                    seen.insert(key);
+                    out.refined += 1;
+                    continue;
+                }
+            }
+            if self.refine && match_slot(&settled, title, start, all_day, tz).is_some() {
+                continue;
+            }
             if !seen.insert(key.clone()) {
                 continue;
             }
@@ -657,6 +767,17 @@ impl Extractor<'_> {
         out: &mut Emitted,
     ) -> Result<()> {
         let org = self.org().map(|o| o.id);
+        let (mut pending, settled) = if self.refine {
+            (
+                ProposalRefineRepo::bills(self.conn, self.msg.id).await?,
+                ProposalRefineRepo::settled_bills(self.conn, self.msg.id).await?,
+            )
+        } else {
+            (Vec::new(), Vec::new())
+        };
+        let same_bill = |p: &fa_store::PendingBill, amount: i64, due: Option<NaiveDate>| {
+            p.amount_minor == amount && (p.due_on == due || p.due_on.is_none() || due.is_none())
+        };
         for b in items {
             let conf = clamp(b.confidence);
             let payee = b.payee.trim();
@@ -667,6 +788,23 @@ impl Extractor<'_> {
                 .due
                 .as_deref()
                 .and_then(|d| NaiveDate::parse_from_str(d.trim(), "%Y-%m-%d").ok());
+            // The same bill: the same amount, and the same due date unless one side has none.
+            if let Some(i) = pending
+                .iter()
+                .position(|p| same_bill(p, b.amount_cents, due_on))
+            {
+                let p = pending.remove(i);
+                let key = bill_dedupe_key(payee, b.amount_cents, due_on.or(p.due_on));
+                if ProposalRefineRepo::refine_bill(self.conn, p.id, payee, due_on, conf, &key)
+                    .await?
+                {
+                    out.refined += 1;
+                    continue;
+                }
+            }
+            if settled.iter().any(|p| same_bill(p, b.amount_cents, due_on)) {
+                continue;
+            }
             let currency = match b.currency.trim() {
                 c if c.len() == 3 && c.is_ascii() => c.to_ascii_uppercase(),
                 _ => self.pc.household.currency.clone(),
@@ -730,6 +868,11 @@ impl Extractor<'_> {
         }
         let tz = self.pc.tz();
         let (reply_to, action_to) = self.task_targets();
+        let mut pending = if self.refine {
+            ProposalRefineRepo::tasks(self.conn, self.msg.id).await?
+        } else {
+            Vec::new()
+        };
         for t in items {
             let title = t.title.trim();
             if clamp(t.confidence) < threshold || title.is_empty() {
@@ -748,6 +891,18 @@ impl Extractor<'_> {
                         .earliest()
                 })
                 .map(|d| d.with_timezone(&Utc));
+            // A pending rule task of the same sort (reply with reply, anything else with the
+            // rules' "action") takes the LLM's title, due date and kind.
+            if let Some(i) = pending
+                .iter()
+                .position(|p| (p.kind == "reply") == (kind == "reply"))
+            {
+                let p = pending.remove(i);
+                if ProposalRefineRepo::refine_task(self.conn, p.id, title, due_at, kind).await? {
+                    out.refined += 1;
+                    continue;
+                }
+            }
             let assignees = if kind == "reply" {
                 &reply_to
             } else {
@@ -811,11 +966,52 @@ impl JobHandler for LlmJob {
                 Ok(()) => Ok(()),
                 Err(Fail::Mail(e)) => Err(job_err(e)),
                 // Retried with the job runner's backoff (on_unavailable = queue); only the kind
-                // is kept, never the message of the error.
-                Err(Fail::Llm(LlmError::Config(c))) if c == "disabled" => Ok(()),
-                Err(Fail::Llm(e)) => Err(JobError::Handler(format!("llm {}", e.kind()))),
+                // is kept, never the message of the error. On the last attempt the message
+                // waits for the catch-up instead.
+                Err(Fail::Llm(LlmError::Config(c))) if c == "disabled" => self
+                    .0
+                    .park(household, p.message_id)
+                    .await
+                    .map_err(|f| match f {
+                        Fail::Mail(e) => job_err(e),
+                        Fail::Llm(e) => JobError::Handler(format!("llm {}", e.kind())),
+                    }),
+                Err(Fail::Llm(e)) => {
+                    self.0.after_failure(household, p.message_id).await;
+                    Err(JobError::Handler(format!("llm {}", e.kind())))
+                }
             }
         })
+    }
+}
+
+impl ProcessService {
+    /// A failed model call: when no retry is left, the message moves to `awaiting`.
+    async fn after_failure(&self, household: HouseholdId, message: MessageId) {
+        let res = async {
+            let last = {
+                let mut sys = self.store.tx_system().await?;
+                let a = LlmStateRepo::running_attempt(&mut sys, message).await?;
+                sys.rollback().await?;
+                a.is_none_or(|(attempts, max)| attempts >= max)
+            };
+            if last {
+                let mut tx = self.store.tx_for(household).await?;
+                LlmStateRepo::transition(
+                    &mut tx,
+                    message,
+                    &[LlmState::None, LlmState::Queued],
+                    LlmState::Awaiting,
+                )
+                .await?;
+                tx.commit().await?;
+            }
+            Ok::<(), fa_store::StoreError>(())
+        }
+        .await;
+        if let Err(e) = res {
+            tracing::warn!(error = %e, "llm_state not updated");
+        }
     }
 }
 

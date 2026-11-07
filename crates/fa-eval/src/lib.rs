@@ -5,7 +5,7 @@
 use std::collections::BTreeSet;
 use std::time::Instant;
 
-use fa_domain::{Candidate, DecisionPointKey, HouseholdId, MessageId, StageKind};
+use fa_domain::{Candidate, DecisionPointKey, HouseholdId, MailMode, MessageId, StageKind};
 use fa_llm::Provider;
 use fa_mail::context;
 use fa_mail::process::{MailLlmResult, eval_request, llm_candidates, rules_candidates};
@@ -188,9 +188,11 @@ pub async fn run(
         .iter()
         .find(|s| s.kind == StageKind::Llm)
         .map_or(DEFAULT_THRESHOLD, |s| s.accept_threshold);
-    let max_chars = AiSettingsRepo::get_or_default(conn, household)
-        .await?
-        .max_input_chars as usize;
+    let ai = AiSettingsRepo::get_or_default(conn, household).await?;
+    let max_chars = ai.max_input_chars as usize;
+    // llm_first (D-107): the model answers every item and the rules only decide what it leaves
+    // open; rules_first: the model sees what the rules leave open.
+    let llm_first = provider.is_some() && ai.mail_mode == MailMode::LlmFirst;
 
     // Sample messages with a human truth: the latest human decision per message.
     let rows: Vec<(uuid::Uuid, serde_json::Value)> = sqlx::query_as(
@@ -227,27 +229,35 @@ pub async fn run(
         let t0 = Instant::now();
         let accepted = accept(dp, rules_candidates(&pc, &msg, dp), rules_threshold);
         let took = t0.elapsed().as_secs_f64() * 1000.0;
-        if !accepted.is_empty() {
+        if !llm_first && !accepted.is_empty() {
             rules.decided += 1;
             rules.ms.push(took);
             rules.correct += u32::from(is_correct(dp, &accepted, &truth));
             continue;
         }
-        let Some(p) = provider else { continue };
-        let req = eval_request(&pc, &msg, dp, max_chars);
-        match p.call::<MailLlmResult>(household, PURPOSE, &req).await {
-            Ok(got) => {
-                let accepted = accept(dp, llm_candidates(&pc, &got.value, dp), llm_threshold);
-                if !accepted.is_empty() {
-                    llm_acc.decided += 1;
-                    llm_acc.ms.push(got.latency.as_secs_f64() * 1000.0);
-                    llm_acc.correct += u32::from(is_correct(dp, &accepted, &truth));
+        if let Some(p) = provider {
+            let req = eval_request(&pc, &msg, dp, max_chars);
+            match p.call::<MailLlmResult>(household, PURPOSE, &req).await {
+                Ok(got) => {
+                    let answer = accept(dp, llm_candidates(&pc, &got.value, dp), llm_threshold);
+                    if !answer.is_empty() {
+                        llm_acc.decided += 1;
+                        llm_acc.ms.push(got.latency.as_secs_f64() * 1000.0);
+                        llm_acc.correct += u32::from(is_correct(dp, &answer, &truth));
+                        continue;
+                    }
+                }
+                Err(e) => {
+                    llm_errors += 1;
+                    tracing::warn!(kind = e.kind(), "eval llm call failed");
                 }
             }
-            Err(e) => {
-                llm_errors += 1;
-                tracing::warn!(kind = e.kind(), "eval llm call failed");
-            }
+        }
+        // llm_first: the rules are the fallback when the model decided nothing.
+        if llm_first && !accepted.is_empty() {
+            rules.decided += 1;
+            rules.ms.push(took);
+            rules.correct += u32::from(is_correct(dp, &accepted, &truth));
         }
     }
 

@@ -5,7 +5,7 @@ milestone: M4
 wave: 6
 depends_on: [T-20, T-21]
 agent: {model: sonnet, effort: high}
-status: running
+status: done
 owns: ["crates/fa-store/migrations/20261107000001_llm_first.up.sql", "crates/fa-store/migrations/20261107000001_llm_first.down.sql", "crates/fa-store/src/**", "crates/fa-store/tests/**", "crates/fa-store/.sqlx/**", ".sqlx/**", "crates/fa-domain/src/ai.rs", "crates/fa-domain/src/lib.rs", "crates/fa-pipeline/**", "crates/fa-mail/**", "crates/fa-tasks/src/ingest.rs", "crates/fa-api/src/ai.rs", "crates/fa-api/tests/**", "bins/fa-server/src/**", "crates/fa-eval/**", "arch/AI.md", "arch/Ingest.md", "arch/src/AI.py", "arch/src/Ingest.py", "arch/AI.drawio", "arch/Ingest.drawio"]
 decisions: [D-107, D-094, D-057, D-060]
 ---
@@ -82,3 +82,22 @@ The paths in `owns`. Never edit an existing migration; add the new one. If you n
 - [ ] Report: files changed, deviations from the contracts (names), the auto-action behaviour on a category change, README changes needed, and "list what outside your paths needs changing"
 - [ ] Never run `scripts/dev-run.sh`, never bind 8080/5173/18091, never touch the dev DB at 127.0.0.1:55432, and run no state-changing git commands
 - [ ] Disk: stop below 6 GB free
+
+## Outcome (T-22 report)
+- **Migration `20261107000001_llm_first`:** adds `ai_settings.mail_mode` (default `llm_first`), `catchup_days` (default 30; 0 means no catch-up) and `extract_fallback_cutoff` (default 0.8, check 0.5–1, API validates 0.5–0.99), plus `message.llm_state` with a partial index on `awaiting`.
+- **Domain types:** `MailMode`, `LlmState`, `LlmBacklog` and `AiSettingsInput`. The request fields are optional, so old clients keep working.
+- **Store:** `LlmStateRepo` and `ProposalRefineRepo`. The SQL guards change only untouched rule proposals.
+- **Pipeline:** `record_stage_or` and `set_stages` (the rules threshold and the llm stage saved in one version).
+- **fa-mail:**
+  - In `llm_first`, every message queues `mail.llm`; with no client it is marked `awaiting`. `rules_first` uses the configurable cutoff.
+  - The job asks every point a person has not decided and whose stage is not switched off, refines pending proposals, and sets `done`. A disabled endpoint, or the last failed attempt (read from its own `job` row), sets `awaiting`.
+  - `mail.llm.catchup`: keys `mail.llm.catchup:<household>:<unix ms>`, a `*/15` cron, per-message jobs staggered newest first. It is registered through `fa_mail::handlers` and `default_schedules`.
+- **API:** the settings, pipeline and endpoint routes carry the new fields; an enabled endpoint save queues the catch-up. The main session registered `GET /ai/backlog` in `lib.rs` and `openapi.rs` and un-ignored its test.
+- **Eval:** honours `mail_mode`.
+- **Tests:** `fa-store/tests/llm_first.rs` (5 tests), 9 new tests in `llm_flow.rs`, plus API and eval tests. The job handlers take a clock (`handlers_with_clock`), which fixed a test that relied on today's date.
+- **Category change:** auto actions of the rules' category stay applied (undoable for 30 days), and the new category's actions also run (`mail.auto_actions:<msg>:llm`). Pending proposals from the old category stay.
+- **deny:** `RUSTSEC-2026-0441` (`pin-utils` via `async-imap`) is ignored with a reason, and the stale zip ignores are dropped (main session).
+- **Follow-ups:**
+  - A task from the model becomes a second suggestion if `tasks.from_mail` had not yet run.
+  - A model flipping `time_sensitive` sends no notification (the M4 gap).
+  - In `llm_first`, `llm_enabled` on a point means "not switched off"; T-23 handles the UI.
