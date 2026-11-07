@@ -2,10 +2,10 @@
 title: Platform
 scope: code layout, runtime, security, deployment, backups, dev workflow
 status: draft
-updated: 2026-11-04
+updated: 2026-11-07
 drawio: Platform.drawio
 drawio_src: src/Platform.py
-depends_on: [D-002, D-003, D-004, D-005, D-006, D-010, D-018, D-019, D-020, D-023, D-025, D-026, D-031, D-032, D-033, D-034, D-035, D-064, D-065, D-069, D-072, D-073, D-074, D-075, D-076, D-077, D-093, D-094]
+depends_on: [D-002, D-003, D-004, D-005, D-006, D-010, D-018, D-019, D-020, D-023, D-025, D-026, D-031, D-032, D-033, D-034, D-035, D-064, D-065, D-069, D-072, D-073, D-074, D-075, D-076, D-077, D-093, D-094, D-102]
 milestone: M0
 ---
 
@@ -131,7 +131,7 @@ Three layers, each with one owner and one place to edit it (D-065, D-075):
 | Layer | What | Where it lives | Edited by |
 |---|---|---|---|
 | 1. **Infrastructure** | `DATABASE_URL` (or its parts plus `FA_DATABASE_PASSWORD_FILE`), `FA_SECRETS_DIR` / `FA_MASTER_KEY_PATH`, `FA_BIND_ADDR`, `FA_HTTP_PORT`, `FA_HTTP_HOST_IP`, `FA_LOG_LEVEL`, `FA_LOG_FORMAT`, `FA_WEB_DIST_DIR`, `TS_AUTHKEY`, `TS_HOSTNAME` | environment (compose defaults; `.env` optional) | the hoster; needs a restart |
-| 2. **Runtime settings** | public address (`public_base_url`, `tailnet_base_url`), `cookie_secure` (`auto\|true\|false`), ntfy URL and token, the ntfy address for phones (`ntfy_public_url`; empty derives the tailnet `:8443` or this host's `:8090`), Google client ID and secret, plain-HTTP feeds, private hosts for feeds (review C-05), the D-064 listener fields, trusted proxies (D-069), `key_backup_confirmed_at` | `instance_setting` (system-scoped table: `key text PK, value jsonb, secret_id → secret NULL, updated_at`); secrets envelope-encrypted | adults in **Settings, System**; the wizard fills the first values |
+| 2. **Runtime settings** | public address (`public_base_url`, `tailnet_base_url`), `cookie_secure` (`auto\|true\|false`), ntfy URL and token, the ntfy address for phones (`ntfy_public_url`; empty derives the tailnet `:8443` or this host's `:8090`), `ntfy_generic_text` (`auto\|on\|off`, default `auto`: on when the host of `ntfy_url` is outside the loopback, private LAN and tailnet ranges; D-102, planned for the milestone after M4; edited in Settings → Notifications, delivery in Tasks.md §5.2), Google client ID and secret, plain-HTTP feeds, private hosts for feeds (review C-05), the D-064 listener fields, trusted proxies (D-069), `key_backup_confirmed_at` | `instance_setting` (system-scoped table: `key text PK, value jsonb, secret_id → secret NULL, updated_at`); secrets envelope-encrypted | adults in **Settings, System**; the wizard fills the first values |
 | 3. **Household data** | members, sources, lists, rules, pipelines, and so on | per-household tables (RLS) | adults in the UI |
 
 - **Resolution for layer 2:** environment variable > DB > default. A field set by the environment is shown read-only as "set by the server", so every existing `FA_*` variable keeps working and overrides the UI.

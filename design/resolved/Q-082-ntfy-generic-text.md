@@ -1,12 +1,12 @@
 ---
 id: Q-082
 title: A generic-text mode for notifications sent through ntfy
-status: open
+status: resolved
 batch: 21
 area: notify
 created: 2026-11-02
-resolved:
-decisions: []
+resolved: 2026-11-07
+decisions: [D-102]
 ---
 
 # Q-082: A generic-text mode for notifications sent through ntfy

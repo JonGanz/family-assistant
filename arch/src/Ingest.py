@@ -38,7 +38,7 @@ org = cls(pm, "Org", ["kind: school|daycare|club|biller|other", "name, domains[]
 oc = cls(pm, "OrgContact", ["name, email", "role: teacher|coach|admin|office|other"], 40, 300, 260)
 enr = cls(pm, "Enrollment", ["grade?, class?", "from?, until?"], 360, 300, 200)
 mem = cls(pm, "Member (+M3)", ["aliases[]", "gender?: female|male|other", "relevance_tags[] (D-055)"], 360, 90, 200)
-src = cls(pm, "MailSource", ["provider: gmail|imap, address", "read_only = true, visibility: owners|household", "query?, folders[] (imap)", "backfill_days = 30, poll_minutes = 5", "history_id? | uidvalidity/uidnext, state"], 620, 90, 260)
+src = cls(pm, "MailSource", ["provider: gmail|imap, address", "read_only = true, visibility: owners|household", "task_visibility = follow_until_accepted", "imap_pem? (secret)", "query?, folders[] (imap)", "backfill_days = 30, poll_minutes = 5", "history_id? | uidvalidity/uidnext, state"], 620, 90, 260)
 msgc = cls(pm, "Message", ["remote_id, thread_id?, received_at", "from, to[], subject, gmail_labels[]", "category?, time_sensitive?, is_bill?", "processing_state: pending|processed|expired", "content? (policy, D-034)", "is_learning_example, in_eval_sample"], 620, 300, 280)
 bill = cls(pm, "Bill", ["payee, amount_minor, currency", "due_on?, account_hint?", "status: proposed|open|paid|dismissed", "confidence (pay task: adult pool, D-059)"], 360, 470, 240)
 cat = cls(pm, "Category", ["key, label", "behaviour: ignore|keep|extract", "notify_time_sensitive", "auto_actions[] (label)", "email_tasks: suggest|create|off"], 40, 470, 260)

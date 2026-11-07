@@ -1,12 +1,12 @@
 ---
 id: Q-081
 title: What happens to a mail message over the size limit
-status: open
+status: resolved
 batch: 21
 area: ingest
 created: 2026-11-02
-resolved:
-decisions: []
+resolved: 2026-11-07
+decisions: [D-101]
 ---
 
 # Q-081: What happens to a mail message over the size limit

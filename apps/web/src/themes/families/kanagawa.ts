@@ -23,6 +23,19 @@ const family: ThemeFamily = {
         text: '#545464', // lotusInk1
         onAccent: '#f2ecbc', // lotusWhite3
       },
+      extended: {
+        layers: [
+          '#f2ecbc', // lotusWhite3
+          '#e5ddb0', // lotusWhite2
+          '#dcd5ac', // lotusWhite1
+          '#d5cea3', // lotusWhite0
+        ],
+        selection: '#c9cbd1', // lotusViolet3
+        highlight: '#e7dba0', // lotusWhite4
+        textStrong: '#43436c', // lotusInk2
+        textSubtle: '#716e61', // lotusGray2
+        comment: '#8a8980', // lotusGray3
+      },
       hues: {
         red: '#c84053', // lotusRed
         orange: '#cc6d00', // lotusOrange
@@ -47,6 +60,19 @@ const family: ThemeFamily = {
         text: '#dcd7ba', // fujiWhite
         onAccent: '#16161d', // sumiInk0
       },
+      extended: {
+        layers: [
+          '#1F1F28', // sumiInk3
+          '#2A2A37', // sumiInk4
+          '#363646', // sumiInk5
+          '#54546D', // sumiInk6
+        ],
+        selection: '#223249', // waveBlue1
+        highlight: '#2A2A37', // sumiInk4
+        textStrong: '#DCD7BA', // fujiWhite
+        textSubtle: '#C8C093', // oldWhite
+        comment: '#727169', // fujiGray
+      },
       hues: {
         red: '#e46876', // waveRed
         orange: '#ffa066', // surimiOrange
@@ -70,6 +96,19 @@ const family: ThemeFamily = {
         muted: '#a6a69c', // dragonGray
         text: '#c5c9c5', // dragonWhite
         onAccent: '#0d0c0c', // dragonBlack0
+      },
+      extended: {
+        layers: [
+          '#181616', // dragonBlack3
+          '#282727', // dragonBlack4
+          '#393836', // dragonBlack5
+          '#625e5a', // dragonBlack6
+        ],
+        selection: '#223249', // waveBlue1
+        highlight: '#282727', // dragonBlack4
+        textStrong: '#c5c9c5', // dragonWhite
+        textSubtle: '#a6a69c', // dragonGray
+        comment: '#7a8382', // dragonGray3
       },
       hues: {
         red: '#c4746e', // dragonRed

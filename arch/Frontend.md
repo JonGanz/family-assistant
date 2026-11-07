@@ -2,10 +2,10 @@
 title: Frontend
 scope: Vue PWA structure, design system and navigation, routes, first-run wizard, settings structure, dashboard (kiosk) design and layout config, data flow (REST + SSE), offline and insecure-context behaviour
 status: draft
-updated: 2026-11-04
+updated: 2026-11-07
 drawio: Frontend.drawio
 drawio_src: src/Frontend.py
-depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078, D-079, D-080, D-081, D-093, D-094, D-095, D-096, D-097]
+depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078, D-079, D-080, D-081, D-093, D-094, D-095, D-096, D-097, D-098, D-099, D-100, D-101, D-102, D-103, D-104, D-105, D-106]
 milestone: M4
 ---
 
@@ -49,7 +49,7 @@ The whole app must work over plain HTTP on a LAN address, where the browser is i
 ### 1.2 Design system (D-095)
 A home-grown Vue component library in `apps/web/src/ui/`, modelled on Material 3 patterns and used by every app-shell and setup screen. The kiosk dashboard keeps its own look (§4) and reuses a `ui/` component only where nothing changes visually.
 - **Tokens** (`ui/tokens.css`), loaded after `styles/base.css`:
-  - **Colour** is never a literal. Every colour token is a `color-mix()` of the theme variables from §3d: surface and five container tones (`--ui-surface-container-{lowest,low,mid,high,highest}` mix `--color-surface` toward `--color-text`), on-surface and its variant, outline and its variant, primary (the `blue` hue), on-primary, primary container, error, and the state layers (hover 8 %, focus and pressed 12 %). Every theme in the catalogue therefore gets the same tonal structure.
+  - **Colour** is never a literal. Every colour token derives from the theme variables from §3d. The surface and its five container tones (`--ui-surface-container-{lowest,low,mid,high,highest}`) map onto the theme's **four layers** (D-106, T-21): page = `--color-layer-0` (`bg`), card = `--color-layer-1`, raised = `--color-layer-2`, dialog or sheet = `--color-layer-3`. A variant without extended slots gets the layers from `color-mix` steps of `bg` toward `text` (5, 10 and 15 %; 3, 6 and 9 % for Seoul256). Secondary text on a container uses that layer's `--color-on-layer-N-subtle` (§3d). `--color-comment` is used only for placeholders and disabled text. `::selection` and list hover use `--color-selection` and `--color-highlight`. The rest stay `color-mix()` of the theme variables: on-surface and its variant, outline and its variant, primary (the `blue` hue), on-primary, primary container, error, and the state layers (hover 8 %, focus and pressed 12 %). Every theme in the catalogue therefore gets the same tonal structure.
   - **Spacing** is a 4 px grid (`--ui-space-1..8`).
   - **Shape** is `--ui-radius-xs..xl` plus `full` (4, 8, 12, 16, 28 px, pill), with `none` (0) for **events inside calendar grids, which are square** (R1 review, 2026-11-04). Cards default to `filled`.
   - **Density** is per device (`data-density` on `<html>`, `localStorage` `fa.density`), with **comfortable** (Material 3 sizes) as the default and **compact** as the option (R1). It is set in Appearance next to the theme.
@@ -63,7 +63,7 @@ A home-grown Vue component library in `apps/web/src/ui/`, modelled on Material 3
   - **Surfaces:** `UiCard` (elevated, filled or outlined; media, header, body and actions slots; the whole card can be a link), `UiDivider`.
   - **Lists:** `UiList` and `UiListItem` (one to three lines, leading and trailing slots), the main way to show collections on phones.
   - **Actions:** `UiButton` (filled, tonal, outlined, text), `UiIconButton`, `UiFab`.
-  - **Inputs:** `UiTextField`, `UiSelect`, `UiSwitch`, `UiCheckbox`, `UiRadioGroup`, `UiSegmented`, `UiChip` (assist, filter, input).
+  - **Inputs:** `UiTextField`, `UiSelect`, `UiSwitch`, `UiCheckbox`, `UiRadioGroup`, `UiSegmented`, `UiChip` (assist, filter, input), `UiFilterChips` (the shared filter row, §1.5).
   - **Overlays:** `UiDialog`, `UiBottomSheet`, `UiSheet` (bottom sheet on compact, dialog otherwise), `UiMenu`, `UiSnackbarHost`.
   - **Feedback:** `UiBadge`, `UiProgress`, `UiSkeleton`, `UiEmptyState`, `UiErrorState`, `UiSaveBar`.
   - **Navigation:** `UiNavBar`, `UiNavRail`, `UiNavDrawer`.
@@ -87,7 +87,16 @@ One rule everywhere outside the dashboard:
 - **A single control applies instantly.** A switch, a stand-alone single choice (radio group, segmented button, select) and a checkbox in a list save on change through `useInstantSave`: an optimistic update, then a snackbar "Saved" with **Undo** (about 5 s), which saves the old value. A failure reverts the control and shows the error in the snackbar.
 - **A multi-field form saves together.** It edits a draft from `useFormDraft` (`draft`, `dirty`, `save`, `discard`). While it is dirty, a `UiSaveBar` (Discard, Save) shows, **sticky at the bottom of the viewport on every window class** (R2). Leaving the page asks first (router guard and `beforeunload`). Success shows a snackbar; field errors from the server show under their fields, and a 409 shows "changed elsewhere, reload" in the bar.
 - **Creating** something (a task, a source, a member) is a form in a `UiSheet` with its own Save, never instant.
-- **Destructive** actions confirm in a dialog unless they offer Undo (task completion keeps its Undo snackbar, §3a).
+- **Destructive** actions confirm in a dialog unless they offer Undo (task completion keeps its Undo snackbar, §3a). **Inbox Approve** applies instantly; **Reject** asks first, since there is no undo endpoint yet (D-104, Q-089).
+- **Settings → System** switches are part of the page draft and save with the Save bar, because each save re-reads the server config (D-104, Q-094). **Settings → Account** changes the password through the Save bar. **Members** are edited in a sheet on every width, accepted for now (D-104, Q-093).
+
+### 1.5 Filter rows (D-105)
+Every filter row is one shared component, `UiFilterChips` (`ui/`; props `options`, `modelValue: string[]` where empty means All, `allLabel`, `label`), a `group` of filter chips with `aria-pressed` that wraps on phones:
+- The first chip is **All**. Choosing All clears every other chip.
+- Choosing any other chip clears All and toggles that chip on or off independently, so Bills can show Proposed and Open together.
+- Clearing the last chosen chip returns to All.
+- It is used by Bills (state; the grouping by state stays and only the chosen states' groups show), Calendar (members), Tasks (members) and Mail (category, member, source, state). The Inbox **AI only** chip stays a separate toggle and is not remembered (§3e).
+- A remembered filter stores the chosen set. Where the API takes a single value, the client filters.
 
 ## 2. Routes
 | Path | Shell | Guard | Content |
@@ -129,7 +138,8 @@ Shown when no household exists. It is **open to whoever opens the app first** (D
 ## 3. App shell screens (M1)
 - **Today:** a merged list of today's and tomorrow's events with member chips, the current weather plus the 7-day strip, and advisories at the top.
 - **Calendar:**
-  - The agenda view is the default on phones, and the week view on desktop. Month view is available.
+  - The Agenda, Week and Month switch is a row under the top bar (D-103). The first visit opens Agenda on compact widths and Week on medium and expanded. After that the Calendar reopens in the view last used on that device (`localStorage` key `fa.calendar.view`: `agenda|week|month`; the per-width default applies only when nothing is stored). There is no setting for it.
+  - The member filter is a `UiFilterChips` row (§1.5).
   - Events are coloured by their linked members (several members: equal bands in the stripe, D-086), and multi-member events show stacked chips.
   - A busy-masked event shows as a hatched block labelled "Busy".
   - Each event has a 'from ↗' link to its source when the source gives a URL (Google `htmlLink`).
@@ -143,22 +153,29 @@ Shown when no household exists. It is **open to whoever opens the app first** (D
 - All mutating forms send `If-Match` versions and show a "changed elsewhere, reload" banner on a 409.
 
 ## 3a. App shell screens (M2, [Tasks.md](Tasks.md))
-- **Tasks** (`/tasks`): tabs *Now* (D-042: "Mine" first, then "Household"), *Mine*, *Lists* (each list with its open tasks), and *Suggested* (adults, weather suggestions to accept or dismiss). Each item shows title, due (relative, overdue in red), assignee chips, a step count, and a claim button for pool tasks. Completing shows a 10-second **Undo** snackbar.
+- **Tasks** (`/tasks`): the member filter is a `UiFilterChips` row (§1.5), remembered per device in `fa.tasks.filter` as a list of member ids (default the viewer's own member, 'Mine'; an old string value is migrated). Tabs *Now* (D-042: "Mine" first, then "Household"), *Mine*, *Lists* (each list with its open tasks), and *Suggested* (adults, weather suggestions to accept or dismiss). Each item shows title, due (relative, overdue in red), assignee chips, a step count, and a claim button for pool tasks. Completing shows a 10-second **Undo** snackbar.
 - **Task detail and editor:** title, notes, due, steps (add, reorder, tick), priority flag, and calendar display (`hidden`, `until done`, `always`; "key date" is the label for `always`, D-046). Children get the same editor for their own one-off tasks on lists that allow it (D-045).
 - **Routines** (`/routines`): today's runs with a **progress bar** per member (D-041). Children see their own.
 - **Settings → Tasks** (adults): lists (policy, flags, calendar default, claim time), definitions (schedule `every N days after done` or `repeat on…` with an RRULE builder for weekly/monthly, lead days, due time, missed behaviour, strategy and ordered candidates, rotation options, priority, season window and condition with the same validation as the weather rule editor, pause), routines (members, window, steps with target times, day filter, school calendar and keywords, dashboard toggle), and **absences** (member, from, until).
 - **Settings → Notifications:** per member (self, plus children for adults): trigger toggles, due-soon and nudge minutes, quiet-hours override, copy-to adult, the subscribe URL with a QR code, and "Send test". When the server has no ntfy URL, the screen says notifications are not configured.
+- **Planned after M4:**
+  - **Settings → Calendars**, on a CalDAV source: a **Trust other hosts** toggle (`trust_other_hosts`, default off; D-099, [Feeds.md](Feeds.md)).
+  - **Settings → Notifications**: ntfy **generic text** (`ntfy_generic_text` `auto|on|off`, default `auto`: on when `ntfy_url` resolves outside the LAN and tailnet ranges; D-102, [Tasks.md](Tasks.md)).
 - **Settings → Household** gains the Now list size and weights, and the default quiet hours.
 - **Calendar page:** tasks with `until_done` or `always` show as task chips (checkbox and member colour) on their due day; `always` stays after completion, shown as done (D-046).
 
 ## 3b. App shell screens (M3, [Ingest.md](Ingest.md))
 New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/inbox`, `/bills`, `/settings/mail`, `/settings/orgs`. Children get none of them (D-063); they see derived events and tasks in the existing screens.
-- **Mail** (`/mail`): messages from visible sources (D-063), filtered by category, member, source and state; ignored categories hidden behind a toggle. Each row: sender, subject, category chip, member chips, time-sensitive marker.
+- **Mail** (`/mail`): messages from visible sources (D-063), filtered by category, member, source and state; ignored categories hidden behind a toggle. Each row: sender, subject, category chip, member chips, time-sensitive marker. Category, member, source and state are `UiFilterChips` rows (§1.5).
 - **Message** (`/mail/:id`): metadata, body (when content is kept), and for a child filter the relevant and general sections first with the others collapsed (D-055); the decisions with one-tap "Fix"; derived items; "Make task"; mail actions with an Undo list for 30 days (D-058; hidden on read-only sources); "open in Gmail ↗" when an external link exists.
-- **Inbox** (`/inbox`): tabs for events, bills, tasks and contacts (D-056, D-057, D-060). Events show the suggested calendar with a picker and editable title and time; tasks show assignees and due; contacts show org, child and the triggering message. Approve and reject buttons, a nav badge with the count, and SSE `inbox.updated`. Each adult sees only items from sources they may see (owners, or every adult for `household` sources); the server filters, the UI has no other view (D-078).
+- **Inbox** (`/inbox`): tabs for events, bills, tasks and contacts (D-056, D-057, D-060). Events show the suggested calendar with a picker and editable title and time; tasks show assignees and due; contacts show org, child and the triggering message. Approve and reject buttons (Reject confirms first, §1.4), a nav badge with the count, and SSE `inbox.updated`. Each adult sees only items from sources they may see (owners, or every adult for `household` sources); the server filters, the UI has no other view (D-078).
 - **Labelling** (`/mail/label`, D-062): phone-first, one message per screen, the four decision points pre-filled as chips (one tap confirms all, tapping a chip fixes it), "in eval sample" toggle, progress toward ~200, and "next" from the suggested balanced queue.
-- **Bills** (`/bills`): open, proposed and paid bills with payee, amount, due date and the pay task's state (D-059).
+- **Bills** (`/bills`): open, proposed and paid bills with payee, amount, due date and the pay task's state (D-059), grouped by state with a `UiFilterChips` state row (§1.5, D-105).
 - **Settings → Mail:** sources (add **Gmail** via Google sign-in or **IMAP** with host, port, username and app password plus a "Test connection" button, D-052; owners, visibility, read-only, backfill, filter, folders, poll, state and reconnect), categories (behaviour, notify, auto actions, email tasks; D-054, D-058, D-060), rules (condition builder with a dry run on recent mail), and household mail settings (event auto-write off by default with its thresholds, inbox expiry, gender term lists; D-055, D-057, D-061).
+  - **Planned after M4 (D-098, D-100, D-101):**
+    - per source, **task visibility** for mail-derived tasks (`task_visibility`: `follow_until_accepted` default, `follow_until_done`, `household`);
+    - on an IMAP source, an optional **PEM** (`imap_pem`, a server certificate or CA bundle; write-only like other secrets);
+    - the household **max message size** (`mail.max_message_bytes`, default 40 MB) and, per source, the list of **too-large messages** (stored as headers only).
 - **Settings → Organizations:** orgs (kind, domains, senders, ICS feed, default calendar, contact mode), contacts, and enrollments per child.
 - **Member editor** gains aliases, and for children an optional gender and relevance tags (D-055).
 - **Inbox** is an app screen only: approvals never appear on the dashboard (D-068).
@@ -186,9 +203,12 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 ## 3d. Themes (D-079, D-080, D-081)
 **Catalogue.** `themes/` holds one data file per family: Catppuccin, Nord, Dracula, Gruvbox, Solarized, Tokyo Night, Rosé Pine, Kanagawa, seoul256 (D-083; dark 233–239 and light 252–256 as variants). Nord also has a light Snow Storm variant (D-083). A family lists the light and/or dark variants its project publishes (Catppuccin has Latte and three dark flavours). Every variant fills the same tokens:
 - **neutrals:** `bg`, `surface`, `surface-2`, `border`, `muted`, `text`, `on-accent` (text on a hue-coloured fill);
+- **extended slots** (optional, D-106, taken verbatim from the variant's Neovim port, R-006): `layers` (4 steps: page = `bg`, card, raised, dialog), `textStrong`, `textSubtle`, `comment`, `selection`, `highlight`, and extra named `accents`;
 - **hues:** `red`, `orange`, `yellow`, `green`, `cyan`, `blue`, `purple`, `pink`. A palette without a native hue supplies its nearest colour.
 
-`applyTheme` writes the tokens as CSS custom properties on `<html>` (`--color-bg`, `--color-surface`, `--color-text`, `--hue-red`…). The existing names in `base.css` stay as aliases, so components keep working: `--color-accent` is the `blue` hue, and `--color-danger`, `--color-warning` and `--color-success` are `red`, `yellow` and `green`. Source and licence of each palette are recorded next to its file.
+`applyTheme` writes the tokens as CSS custom properties on `<html>` (`--color-bg`, `--color-surface`, `--color-text`, `--hue-red`…). The existing names in `base.css` stay as aliases, so components keep working: `--color-accent` is the `blue` hue, and `--color-danger`, `--color-warning` and `--color-success` are `red`, `yellow` and `green`. When `extended` is present `applyTheme` also writes `--color-layer-0..3`, `--color-text-strong`, `--color-text-subtle`, `--color-comment`, `--color-selection` and `--color-highlight`; when it is absent it writes derived values (layers by `color-mix` of `bg` toward `text`, the text slots falling back to `text` and `muted`). Variants without a Neovim port (Dracula Alucard, Nord Snow Storm, Seoul256) have no `extended` and keep the derivation, Seoul256 with smaller mix steps.
+
+**Per-layer secondary text** (D-106). Palette values are never altered for contrast. For each layer `applyTheme` picks the secondary-text colour and writes it as `--color-on-layer-N-subtle`: `textSubtle` where it reaches 4.5:1 on that layer, else `muted`, else `text`. `comment` is for placeholders and disabled text only. Source and licence of each palette are recorded next to its file.
 
 **Mode.** A device's choice is `{family, variant?, mode}` with `mode` one of `auto | light | dark`.
 - A family with **both** light and dark variants follows the mode. In the app, `auto` follows the device's `prefers-color-scheme`. On the kiosk, `auto` is dark between sunset and sunrise (from the weather data).
@@ -201,7 +221,7 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 
 **Member colours** (D-080). A member's `color` is a hue name. The client uses `var(--hue-<name>)` for chips, the agenda and task items. `eventColors` returns one hue per linked member (an event for two members shows both), and a neutral for an event with none; calendars have no colour (D-086). In the Week view an event takes its column's member colour. The member picker shows the current theme's swatches.
 
-**Contrast** (build-time unit test over every variant): `text` and `muted` on `bg` and on both surfaces at least 4.5:1; each hue on `bg` at least 3:1 (stripes, chips, accents); `on-accent` on `blue`. A failing value is corrected in the theme data, never adjusted at run time.
+**Contrast** (build-time unit test over every variant): `text` and `muted` on `bg` and on both surfaces at least 4.5:1; `text` and the chosen subtle token on every layer at least 4.5:1; each hue on `bg` at least 3:1 (stripes, chips, accents); `on-accent` on `blue`. Neovim palette values are **not altered** (D-106); where a slot fails, the fallback chain above applies. The earlier R-002 corrections to `text` and `muted` stay. The three light themes (Solarized light, Tokyo Night Day, Rosé Pine Dawn) keep their published accents, so **accent-as-text below 4.5:1 is accepted** there (D-106, reverting the M4 darkening) and no test forbids it.
 
 ## 3e. Settings → AI and AI provenance (M4, D-093, D-094; detail in [AI.md](AI.md))
 `/settings/ai`, adults only, is a stack of cards:
@@ -210,10 +230,11 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
   - The model field is a select filled from the server's model list when one is available, otherwise free text.
   - A one-line hint says the LLM server should listen only on the home network or tailnet.
 - **Email decisions:** one row per decision point (`email.category`, `email.time_sensitive`, `email.member_link`, `email.is_bill`), each with an LLM switch (instant) and an accept threshold slider (saves on release, with Undo).
+- **Placement:** Settings → AI sits under "Sources and rules", after Mail. A newly saved endpoint starts **enabled** (D-104, Q-096).
 - **Extraction:** `mail_extract_mode` as a segmented button (Off, When rules find nothing, Always; instant) and the max input size (form).
 - **Activity:** a stats card for the last 7 days. It shows LLM calls per purpose (count, success share, p50 and p95 latency) and, per decision point, the share decided by rules, the LLM and a person. It is read-only.
 
-**AI provenance in the inbox:** items whose `extracted_by` is `llm` carry an **"AI" chip** (the `ai` icon) with the confidence as a percentage. Its tooltip, or a tap on compact screens, explains "suggested by the local language model". Approval works exactly as for rule-made items (D-057, D-060). The message screen's decision list marks decisions with `stage_kind = llm` the same way.
+**AI provenance in the inbox:** items whose `extracted_by` is `llm` carry an **"AI" chip** (the `ai` icon) with the confidence as a percentage. Its tooltip, or a tap on compact screens, explains "suggested by the local language model". Approval works exactly as for rule-made items (D-057, D-060). Tasks carry just "AI". Wide screens show a tooltip and phones a sheet (D-104, Q-097). The Inbox has an **"AI only" filter chip**, a separate toggle that is not remembered. The message screen's decision list marks decisions with `stage_kind = llm` the same way.
 
 ## 4. Dashboard (kiosk shell)
 **Navigation (D-082, D-084, D-090):** a bar along the shorter edge of the screen as detected (left in landscape, top in portrait; same button size in both) switches between **Home** (the configured panels below) and **Week** (a table: a row per day for the calendar week that starts on the household's `week_start` (Monday or Sunday) and holds today, a column per person; each cell lists that person's events, drawn like the calendar page's, and the tasks due that day; the day cell carries the forecast; it fills the view and never scrolls: a cell that cannot fit its items in one column splits them into two half-width columns when each half stays readable, then ends with a "+N" slot that opens a modal listing everything in that cell, D-087). A bottom row has previous and next arrows, a box showing "Current" or the date range of the shown week, and a "Hide past events" switch (ended events go; a task goes only once completed). The view fetches its own week with `GET /api/v1/dashboard?from=`). The view is local state. The Home view scrolls, so no panel is cropped when another needs more room: in landscape each of its two columns (left 4/12, right 8/12) scrolls on its own, in portrait the clock and weather share a fixed top row 50/50, a thin members strip follows, then two columns that each scroll on their own: "right now" (now, routines, member tasks) on the left and "coming up" (agenda, week) on the right, a lone column taking the full width (the groups are `PORTRAIT_*` in `layout/index.ts`); the Week view does not scroll (D-087). The connection status (Connected only while heartbeats arrive: "No data" after 45 s of silence, D-091), the stale badge and the adult unlock button sit at the end of the bar (D-085).

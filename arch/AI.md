@@ -2,18 +2,18 @@
 title: AI — tiers, LLM endpoint, llm stage, recipe extraction, eval
 scope: The intelligence tiers (rules, System One, LLM), how the core reaches an LLM server (D-093), fa-llm and its Provider, the llm pipeline stage and the mail.llm job, the recipe-extraction contract for M5, basic eval, LLM call observability, security and failure modes, and the M4.1 roadmap
 status: draft
-updated: 2026-11-04
+updated: 2026-11-07
 drawio: AI.drawio
 drawio_src: src/AI.py
 depends_on: [Overall.md, Ingest.md, Platform.md]
 milestone: M4
-decisions: [D-002, D-020, D-024, D-025, D-026, D-027, D-028, D-029, D-057, D-060, D-071, D-093, D-094]
+decisions: [D-002, D-020, D-024, D-025, D-026, D-027, D-028, D-029, D-057, D-060, D-071, D-093, D-094, D-104]
 research: [R-001, R-004]
 ---
 
 # AI: tiers, LLM endpoint, llm stage, recipes, eval (DRAFT v1, M4)
 
-This document is derived from PROJECT.md and every accepted AI decision: D-024 to D-029, D-071, D-093 and D-094. D-067 is superseded by D-094. The plan with the exact contracts is [plan/M4.md](../plan/M4.md); when the two disagree, the plan's contract wins until this doc is updated.
+This document is derived from PROJECT.md and every accepted AI decision: D-024 to D-029, D-071, D-093, D-094 and D-104 (confirmed M4 choices). D-067 is superseded by D-094. The plan with the exact contracts is [plan/M4.md](../plan/M4.md); when the two disagree, the plan's contract wins until this doc is updated.
 
 **M4 builds only the LLM extraction slice (D-094).** System One, kNN, the backend registry, `fa-gpu-agent` and Wake-on-LAN come in M4.1 (§10).
 
@@ -38,7 +38,7 @@ The app works with no AI at all. Every pipeline ends in `rules` or `human`, and 
   - `model`: a free text field, also offered from the server's model list;
   - `dialect`: `openai_chat` (the default) or `ollama_native`;
   - `timeout_ms`: default 120000;
-  - `enabled`: default false;
+  - `enabled`: default false in the table, but Settings → AI saves a newly created endpoint as enabled (D-104, Q-096);
   - an optional API key, stored as a `secret` row (`owner_type = 'llm_endpoint'`, `kind = 'api_key'`, AAD-bound per C-10) and never returned, only `has_api_key`.
 - **Default profile:** Ollama on the GPU PC at `http://<gpu-pc-lan-or-tailnet-ip>:11434/v1`, model `qwen3:8b` (R-004; about 5.2 GB to download, fits 8 GB of VRAM at Q4). Swapping the server or model is a settings change.
 - **Model list:** `GET {base_url}/models` (OpenAI shape) or `/api/tags` (`ollama_native`) fills the model picker. `ping` = list the models, then check that the configured one is present.
@@ -97,7 +97,7 @@ The coupling rule holds: `fa-recipe` stores nothing (M5 adds storage in `fa-meal
 - decisions are recorded through `record_stage`;
 - if `email.category` changed, the job re-runs the message's category behaviour step, which is idempotent;
 - extracted items go through the **existing** dedupe and proposal paths with `extracted_by = llm`, and still wait for approval (D-057, D-060);
-- the inbox shows an "AI" chip with the confidence.
+- the inbox shows an "AI · NN%" chip with the confidence ("AI" for tasks), a tooltip on wide screens and a sheet on phones, and an "AI only" filter chip that is not remembered (D-104, Q-097).
 
 **Retries.** The job is enqueued with `max_attempts = 12`. The worker's backoff is `30 s × 2^attempts`, so the queue keeps retrying for about a day while the GPU PC is off. `Unavailable` and `Timeout` fail the job for a retry. `BadJson` and `Schema` fail it the same way, because the model may answer differently next time. After the last attempt the job is `dead` and the message keeps its rule or default values.
 
@@ -122,7 +122,7 @@ The coupling rule holds: `fa-recipe` stores nothing (M5 adds storage in `fa-meal
 | `GET /ai/stats?days=7` | Calls per purpose (total, ok, p50 and p95 in ms) and decisions per stage |
 | `POST /ai/recipes/extract` | `{url}` or `{html}` → `RecipeDraft` (nothing stored) |
 
-Settings → AI (the web app, Frontend.md) shows the endpoint card, the test result, the model picker, the extract mode, the per-point toggles and the stats card.
+Settings → AI (the web app, Frontend.md, under "Sources and rules" after Mail, D-104 Q-096) shows the endpoint card, the test result, the model picker, the extract mode, the per-point toggles and the stats card.
 
 ## 9. Recipe extraction contract (for M5)
 - **Deterministic first:** `from_html` reads schema.org `Recipe` JSON-LD, including `@graph`, arrays and `HowToSection` steps.
@@ -136,6 +136,7 @@ Settings → AI (the web app, Frontend.md) shows the endpoint card, the test res
 - `fa-server eval --household <id> --decision-point <dp> [--with-llm] [--limit N] [--json]` runs over `message.in_eval_sample` messages.
 - The **truth** is the human decision for that point; messages without one are skipped.
 - It reports, per stage (`rules`, then `llm`, then the remainder to `human`): items decided, correct, p50 and p95 latency. Overall it reports accuracy and coverage (the share decided before `human`).
+- With `--with-llm` the `llm` stage uses its stored threshold even when the stage is off, else 0.7; a failed LLM call counts as undecided (D-104, Q-095).
 - It writes no decisions. LLM calls are logged with `purpose = "eval"`.
 - It is run by a person on the real install (a human step); tests use fixtures.
 - M4.1 adds calibration (ECE), dry-run in a Pipeline screen and backend comparison.

@@ -1,12 +1,12 @@
 ---
 id: Q-089
 title: How Inbox approve and reject apply
-status: open
+status: resolved
 batch: 23
 area: frontend
 created: 2026-11-04
-resolved:
-decisions: []
+resolved: 2026-11-07
+decisions: [D-104]
 ---
 
 # Q-089: How Inbox approve and reject apply

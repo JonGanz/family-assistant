@@ -2,10 +2,10 @@
 title: Tasks — lists, recurrence, assignment, routines, notifications
 scope: task lists, recurring definitions, occurrences and steps, assignment strategies, absences, completion policy, the Now list, routines, season and weather triggers, calendar display, ntfy notifications
 status: draft
-updated: 2026-10-30
+updated: 2026-11-07
 drawio: Tasks.drawio
 drawio_src: src/Tasks.py
-depends_on: [D-006, D-010, D-013, D-017, D-018, D-019, D-023, D-027, D-029, D-031, D-035, D-036, D-037, D-038, D-039, D-040, D-041, D-042, D-043, D-044, D-045, D-046, D-047, D-048, D-049, D-050]
+depends_on: [D-006, D-010, D-013, D-017, D-018, D-019, D-023, D-027, D-029, D-031, D-035, D-036, D-037, D-038, D-039, D-040, D-041, D-042, D-043, D-044, D-045, D-046, D-047, D-048, D-049, D-050, D-098, D-102]
 milestone: M2
 ---
 
@@ -125,7 +125,7 @@ All of these are editable per list (D-045, D-046). A task can change its own `ca
 - `always` tasks are **key dates**. They stay after completion (shown as done) and are the only tasks shown in the **agenda** panel, which otherwise shows events.
 - `hidden` tasks appear only in task views.
 - Preparation for a key date is added as steps on that task or as separate earlier one-off tasks.
-- Calendar visibility rules (D-036) don't apply to tasks. Task visibility follows the RBAC matrix (§7).
+- Calendar visibility rules (D-036) don't apply to tasks. Task visibility follows the RBAC matrix (§7), except for tasks derived from mail (§7.1, D-098).
 
 ## 5. Notifications (D-010, D-044)
 ### 5.1 Triggers
@@ -139,7 +139,7 @@ All of these are editable per list (D-045, D-046). A task can change its own `ca
 
 ### 5.2 Delivery
 - Each member's topic is a random 24-character name, generated when preferences are first saved. It acts as the capability (ntfy's standard model) and never contains household specifics. The API returns it only to that member and to adults.
-- `fa-server` publishes to `FA_NTFY_URL` with an optional `FA_NTFY_TOKEN` (bearer). Without `FA_NTFY_URL`, notifications are disabled and the settings screen says so. Settings → Notifications shows the subscribe URL and a QR code.
+- `fa-server` publishes to `FA_NTFY_URL` with an optional `FA_NTFY_TOKEN` (bearer). Without `FA_NTFY_URL`, notifications are disabled and the settings screen says so. **Generic text (D-102, planned for the milestone after M4):** the setting `ntfy_generic_text` (`auto|on|off`, default `auto`, Platform.md §6, edited in Settings → Notifications) makes `notify.send` publish a neutral title and body (for example "New item in Family Assistant") and keep the details in the app, because titles can contain mail subjects and bill payees. `auto` means on when the host of `ntfy_url` resolves outside the loopback, private LAN and tailnet ranges, and off otherwise; `on` and `off` override it. Grouped messages ("3 new tasks") keep their count only when it reveals nothing. Settings → Notifications shows the subscribe URL and a QR code.
 - Hosters who want more than topic secrecy enable ntfy's own access control (`auth-default-access: deny-all`, a write token for `fa-server`, read access per topic). `deploy/README.md` documents it; the app doesn't manage ntfy users.
 - Producers (fa-tasks now, M3 later) insert outbox rows unconditionally, deduplicated by `dedupe_key`. `notify.send` runs every minute and decides: it drops rows whose trigger the member has turned off, holds rows during quiet hours (household default or the member's override), groups each member's remaining rows that are at least 60 seconds old into one message ("3 new tasks"), publishes, and retries failures with backoff (at most 5 attempts).
 - **Children:** notifications go to the child's own topic. With `copy_to_member` set, the same message also goes to that adult, prefixed with the child's name.
@@ -172,6 +172,14 @@ All of these are editable per list (D-045, D-046). A task can change its own `ca
 | Manage lists, definitions, routines, absences | ✗ | ✓ | ✗ | ✗ |
 | Skip, accept suggested | ✗ | ✓ | ✗ | ✗ (adult's own session) |
 | Notification preferences | own | own and children's | ✗ | ✗ |
+
+### 7.1 Mail-derived tasks (D-098, planned for the milestone after M4)
+A task with `origin = email` is derived from a message in a mail source, and its title can be the mail subject. Until D-098 the task routes skipped the mailbox visibility, so any adult could list, edit or delete a suggested or open task from another adult's owners-only mailbox. The design:
+- `mail_source.task_visibility` (Ingest.md §3, written by the mail source routes and Settings → Mail on the source) is `follow_until_accepted` (default), `follow_until_done` or `household`.
+- `follow_until_accepted`: while the task is `suggested`, only the adults who may see the source see it. Once accepted it is an ordinary household task.
+- `follow_until_done`: the task keeps the source's visibility until it is `done` or `skipped`. `household`: the task is an ordinary household task from creation.
+- The task queries (list, Now list, detail) filter on this rule, and the edit, delete, skip and accept routes apply the same check. A hidden task answers 404, and it does not count in the Suggested badge or in the dashboard panels.
+- The rule reads the task's `source_ref` (a message) to find the source. Manual tasks made with "Make task" from a message follow the same setting.
 
 ## 8. Configuration
 Lists, definitions, routines and per-member notification preferences are edited in the UI and stored in the database. There is no household file (D-089). The example household gets no task data (D-047).

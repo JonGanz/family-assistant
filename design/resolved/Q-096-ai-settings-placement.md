@@ -1,12 +1,12 @@
 ---
 id: Q-096
 title: Where Settings → AI lives, and whether a new endpoint starts enabled
-status: open
+status: resolved
 batch: 23
 area: frontend
 created: 2026-11-04
-resolved:
-decisions: []
+resolved: 2026-11-07
+decisions: [D-104]
 ---
 
 # Q-096: Where Settings → AI lives, and whether a new endpoint starts enabled

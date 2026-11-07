@@ -1,6 +1,6 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { emptyFilters, filtersToQuery, useMailStore } from './mail'
+import { emptyFilters, filtersToQuery, matchesFilters, useMailStore } from './mail'
 
 vi.mock('../api/client', () => ({
   api: {
@@ -34,13 +34,21 @@ describe('mail filters', () => {
       include_ignored: undefined,
       before: undefined,
     })
-    const f = { ...emptyFilters(), category: 'school', q: ' hi ', includeIgnored: true }
+    const f = { ...emptyFilters(), category: ['school'], q: ' hi ', includeIgnored: true }
     expect(filtersToQuery(f, 'c1')).toMatchObject({
       category: 'school',
       q: 'hi',
       include_ignored: true,
       before: 'c1',
     })
+  })
+
+  it('sends one chosen value and filters several on the client', () => {
+    const two = { ...emptyFilters(), member: ['a', 'b'], source: ['s1'] }
+    expect(filtersToQuery(two)).toMatchObject({ member: undefined, source: 's1' })
+    const msgOf = (members: string[]) => ({ members, source: 's1', category: null }) as never
+    expect(matchesFilters(msgOf(['b']), two)).toBe(true)
+    expect(matchesFilters(msgOf(['z']), two)).toBe(false)
   })
 })
 

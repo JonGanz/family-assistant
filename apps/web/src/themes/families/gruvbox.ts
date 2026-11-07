@@ -23,6 +23,19 @@ const family: ThemeFamily = {
         text: '#3c3836', // dark1 (fg1)
         onAccent: '#fbf1c7', // light0
       },
+      extended: {
+        layers: [
+          '#fbf1c7', // bg0
+          '#ebdbb2', // bg1
+          '#d5c4a1', // bg2
+          '#bdae93', // bg3
+        ],
+        selection: '#d5c4a1', // bg2
+        highlight: '#ebdbb2', // bg1
+        textStrong: '#282828', // fg0
+        textSubtle: '#504945', // fg2
+        comment: '#7c6f64', // fg4
+      },
       hues: {
         red: '#9d0006', // faded_red
         orange: '#af3a03', // faded_orange
@@ -46,6 +59,19 @@ const family: ThemeFamily = {
         muted: '#d5c4a1', // light2 (fg2; swap: light3 #bdae93 was 4.05:1)
         text: '#ebdbb2', // light1 (fg1)
         onAccent: '#282828', // dark0
+      },
+      extended: {
+        layers: [
+          '#282828', // bg0
+          '#3c3836', // bg1
+          '#504945', // bg2
+          '#665c54', // bg3
+        ],
+        selection: '#504945', // bg2
+        highlight: '#3c3836', // bg1
+        textStrong: '#fbf1c7', // fg0
+        textSubtle: '#d5c4a1', // fg2
+        comment: '#928374', // gray
       },
       hues: {
         red: '#fb4934', // bright_red

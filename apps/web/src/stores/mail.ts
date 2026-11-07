@@ -14,28 +14,39 @@ import {
 } from '../api/client'
 
 export interface MailFilters {
-  category: string
-  member: string
-  source: string
+  /** Chosen values per chip row (D-105); empty means All. */
+  category: string[]
+  member: string[]
+  source: string[]
   q: string
   includeIgnored: boolean
 }
 
 export const emptyFilters = (): MailFilters => ({
-  category: '',
-  member: '',
-  source: '',
+  category: [],
+  member: [],
+  source: [],
   q: '',
   includeIgnored: false,
 })
 
 const msg = (e: unknown) => (e instanceof Error ? e.message : String(e))
 
+/** The API takes one value per row; with several chosen the rest is filtered here. */
+const one = (v: string[]) => (v.length === 1 ? v[0] : undefined)
+
+export function matchesFilters(m: MessageSummary, f: MailFilters): boolean {
+  if (f.category.length > 1 && !(m.category && f.category.includes(m.category))) return false
+  if (f.member.length > 1 && !m.members.some((id) => f.member.includes(id))) return false
+  if (f.source.length > 1 && !f.source.includes(m.source)) return false
+  return true
+}
+
 export function filtersToQuery(f: MailFilters, before?: string): MessageQuery {
   return {
-    category: f.category || undefined,
-    member: f.member || undefined,
-    source: f.source || undefined,
+    category: one(f.category),
+    member: one(f.member),
+    source: one(f.source),
     q: f.q.trim() || undefined,
     include_ignored: f.includeIgnored || undefined,
     before,
@@ -72,7 +83,7 @@ export const useMailStore = defineStore('mail', () => {
     loading.value = true
     try {
       const page = await api.messages(filtersToQuery(filters.value))
-      items.value = page.items
+      items.value = page.items.filter((m) => matchesFilters(m, filters.value))
       nextBefore.value = page.next_before ?? null
       error.value = null
     } catch (e) {
@@ -87,7 +98,7 @@ export const useMailStore = defineStore('mail', () => {
     loading.value = true
     try {
       const page = await api.messages(filtersToQuery(filters.value, nextBefore.value))
-      items.value = [...items.value, ...page.items]
+      items.value = [...items.value, ...page.items.filter((m) => matchesFilters(m, filters.value))]
       nextBefore.value = page.next_before ?? null
     } catch (e) {
       error.value = msg(e)

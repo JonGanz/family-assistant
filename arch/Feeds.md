@@ -2,10 +2,10 @@
 title: Feeds — calendar read & weather
 scope: calendar sync (Google, CalDAV, ICS), Google OAuth accounts, weather fetch, WeatherRules, advisories, cross-process change events
 status: draft
-updated: 2026-10-30
+updated: 2026-11-07
 drawio: Feeds.drawio
 drawio_src: src/Feeds.py
-depends_on: [D-004, D-006, D-008, D-014, D-017, D-018, D-019, D-023, D-034, D-035, D-036, D-068]
+depends_on: [D-004, D-006, D-008, D-014, D-017, D-018, D-019, D-023, D-034, D-035, D-036, D-068, D-099]
 milestone: M1
 ---
 
@@ -34,7 +34,7 @@ This refines the Calendar and Weather packages of [Domain.md](Domain.md). All ta
 | `household` (+cols) | `units: metric\|imperial` (default `metric`), `calendar_past_days` (30), `calendar_future_days` (400), `weather_retention_days` (7), `private_events_as_busy` (true, D-036), `week_start: monday\|sunday` (default `monday`, D-084) | Editable in the UI (Settings → Household) |
 | `oauth_account` | provider: `google`, owner_member, email, scopes[], secret (refresh token), state: `ok\|needs_reauth\|error`, last_error? | One per connected Google account. Gmail (M3) reuses it with extra scopes (incremental consent) |
 | `oauth_pending` | state (PK), session, member, pkce_verifier, return_to, expires_at (10 min) | Short-lived flow state, cleaned hourly by the `oauth.cleanup` job |
-| `calendar_source` | kind: `google\|caldav\|ics`, name, owner_member?, oauth_account? (google), url? (caldav base), username? (caldav), secret? (caldav password, **or the whole ICS URL**), writable=false, poll_minutes (default 15, ICS 60), state, last_synced_at?, last_error?, archived_at? | `owner_member = null` means a household source. ICS URLs often embed a secret token (Google's "secret address", school portals), so the URL is a `Secret` and the API shows it masked |
+| `calendar_source` | kind: `google\|caldav\|ics`, name, owner_member?, oauth_account? (google), url? (caldav base), username? (caldav), secret? (caldav password, **or the whole ICS URL**), writable=false, `trust_other_hosts` (bool, default false, CalDAV only; D-099, planned for the milestone after M4), poll_minutes (default 15, ICS 60), state, last_synced_at?, last_error?, archived_at? | `trust_other_hosts` is written by `PATCH /calendar-sources/{id}` and the "Trust other hosts" toggle in Settings → Calendars on the source (§7). `owner_member = null` means a household source. ICS URLs often embed a secret token (Google's "secret address", school portals), so the URL is a `Secret` and the API shows it masked |
 | `calendar` | source, remote_id, name, enabled, is_default_target (M3), sync_state (Google `syncToken` / CalDAV `getctag` / ICS `ETag`), last_full_sync_at | Unique `(source, remote_id)`. An ICS source has exactly one calendar |
 | `calendar_member` | calendar ↔ member (M:N) | No members means a **household calendar** |
 | `event` | calendar?, remote_uid?, instance_key (`''` or the RECURRENCE-ID as UTC ISO), title, description?, location?, start_at, end_at, all_day, start_date?/end_date? (all-day), source_tz?, is_private, cancelled, origin: `synced\|extracted\|manual`, status? (`null` for synced; `proposed\|approved\|written\|rejected` from M3), confidence?, source_ref, dedupe_key, remote_etag?, version | **One row per occurrence** (see §3.3). Unique `(calendar, remote_uid, instance_key)`. Index on `(household_id, start_at)` |
@@ -146,4 +146,5 @@ The api and the worker are separate processes (Platform.md §3), so the worker c
 ## 7. Security notes
 - Secrets (refresh tokens, CalDAV passwords, ICS URLs) use the existing envelope encryption, and are never returned by the API or written to logs. The `reqwest` client logs only the host.
 - The OAuth `state` is a random value bound to the user's session and stored in a short-lived `oauth_pending` row (10 min, with the PKCE verifier). The callback rejects a missing or mismatched state.
+- **CalDAV host scope (D-099, planned for the milestone after M4; code review 2 C2-15):** the CalDAV client follows server-supplied hrefs and redirects (`calendar-home-set`, calendar collections, event hrefs) only to hosts within the configured source URL's registrable domain (public-suffix aware, so `p12-caldav.icloud.com` is allowed for `caldav.icloud.com`, and `a.co.uk` does not allow `b.co.uk`). The per-source toggle `trust_other_hosts` (default off) lifts the restriction. Credentials are never sent to a host outside the allowed set: such an href is not requested and the sync ends in state `error` with a `last_error` naming the host. This needs a public-suffix lookup in `fa-connectors` (`caldav`).
 - Outbound fetches have a 20 s timeout and a 10 MB body limit, and accept `https` only (plus `http` when `FA_ALLOW_HTTP_FEEDS=true`, for LAN CalDAV servers and tests).

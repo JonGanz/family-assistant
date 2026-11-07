@@ -27,6 +27,19 @@ const family: ThemeFamily = {
         text: '#eceff4', // nord6
         onAccent: '#2e3440', // nord0
       },
+      extended: {
+        layers: [
+          '#2E3440', // nord0
+          '#3B4252', // nord1
+          '#434C5E', // nord2
+          '#4C566A', // nord3
+        ],
+        selection: '#434C5E', // nord2
+        highlight: '#3B4252', // nord1
+        textStrong: '#eceff4', // nord6
+        textSubtle: '#D8DEE9', // nord4
+        comment: '#616E88', // nord.nvim light, outside the palette
+      },
       hues: {
         red: '#bf616a', // nord11
         orange: '#d08770', // nord12

@@ -1,12 +1,12 @@
 ---
 id: Q-080
 title: "Self-hosted IMAP on the LAN: certificate pinning and plain IMAP"
-status: open
+status: resolved
 batch: 21
 area: ingest
 created: 2026-11-02
-resolved:
-decisions: []
+resolved: 2026-11-07
+decisions: [D-100]
 ---
 
 # Q-080: Self-hosted IMAP on the LAN: certificate pinning and plain IMAP

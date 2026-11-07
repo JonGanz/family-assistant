@@ -1,12 +1,12 @@
 ---
 id: Q-088
 title: A 'Now' card on the Today page
-status: open
+status: resolved
 batch: 23
 area: frontend
 created: 2026-11-04
-resolved:
-decisions: []
+resolved: 2026-11-07
+decisions: [D-104]
 ---
 
 # Q-088: A 'Now' card on the Today page

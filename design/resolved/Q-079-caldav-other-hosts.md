@@ -1,12 +1,12 @@
 ---
 id: Q-079
 title: CalDAV servers that send the client to another host
-status: open
+status: resolved
 batch: 21
 area: feeds
 created: 2026-11-02
-resolved:
-decisions: []
+resolved: 2026-11-07
+decisions: [D-099]
 ---
 
 # Q-079: CalDAV servers that send the client to another host

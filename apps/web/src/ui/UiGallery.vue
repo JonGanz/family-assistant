@@ -11,6 +11,7 @@ import {
   UiCard,
   UiCheckbox,
   UiChip,
+  UiFilterChips,
   UiDialog,
   UiDivider,
   UiEmptyState,
@@ -123,6 +124,7 @@ const seg = ref('week')
 const check = ref(true)
 const sw = ref(false)
 const chipSel = ref(true)
+const filterSel = ref<string[]>([])
 const chips = ref(['School', 'Sports'])
 const selectOptions = [
   { value: 'weekly', label: 'Every week' },
@@ -391,6 +393,17 @@ const dayOptions = [
             >{{ c }}</UiChip
           >
           <UiChip disabled>Disabled</UiChip>
+        </div>
+        <div class="g-row ui-demo">
+          <UiFilterChips
+            v-model="filterSel"
+            label="Demo filter"
+            :options="[
+              { value: 'a', label: 'Alex' },
+              { value: 'b', label: 'Kai' },
+              { value: 'c', label: 'Sam' },
+            ]"
+          />
         </div>
       </UiSection>
 

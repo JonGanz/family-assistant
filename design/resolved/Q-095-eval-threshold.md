@@ -1,12 +1,12 @@
 ---
 id: Q-095
 title: Which threshold the eval uses when the llm stage is off
-status: open
+status: resolved
 batch: 23
 area: tech
 created: 2026-11-04
-resolved:
-decisions: []
+resolved: 2026-11-07
+decisions: [D-104]
 ---
 
 # Q-095: Which threshold the eval uses when the llm stage is off

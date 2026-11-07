@@ -1,12 +1,12 @@
 ---
 id: Q-087
 title: Where the Calendar's view switch goes, and the default view
-status: open
+status: resolved
 batch: 23
 area: frontend
 created: 2026-11-04
-resolved:
-decisions: []
+resolved: 2026-11-07
+decisions: [D-103]
 ---
 
 # Q-087: Where the Calendar's view switch goes, and the default view

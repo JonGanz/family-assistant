@@ -25,6 +25,7 @@ const family: ThemeFamily = {
       id: 'dark-237',
       label: 'Dark 237',
       mode: 'dark',
+      layerMix: [3, 6, 9], // fallback layer steps shrink for this thin ramp (R-006)
       neutrals: {
         bg: '#4b4b4b', // xterm 237
         surface: '#3f3f3f', // xterm 236
@@ -49,6 +50,7 @@ const family: ThemeFamily = {
       id: 'dark-233',
       label: 'Dark 233',
       mode: 'dark',
+      layerMix: [3, 6, 9], // fallback layer steps shrink for this thin ramp (R-006)
       neutrals: {
         bg: '#171717', // xterm 233
         surface: '#060606', // xterm 232
@@ -73,6 +75,7 @@ const family: ThemeFamily = {
       id: 'dark-234',
       label: 'Dark 234',
       mode: 'dark',
+      layerMix: [3, 6, 9], // fallback layer steps shrink for this thin ramp (R-006)
       neutrals: {
         bg: '#252525', // xterm 234
         surface: '#171717', // xterm 233
@@ -97,6 +100,7 @@ const family: ThemeFamily = {
       id: 'dark-235',
       label: 'Dark 235',
       mode: 'dark',
+      layerMix: [3, 6, 9], // fallback layer steps shrink for this thin ramp (R-006)
       neutrals: {
         bg: '#333233', // xterm 235
         surface: '#252525', // xterm 234
@@ -121,6 +125,7 @@ const family: ThemeFamily = {
       id: 'dark-236',
       label: 'Dark 236',
       mode: 'dark',
+      layerMix: [3, 6, 9], // fallback layer steps shrink for this thin ramp (R-006)
       neutrals: {
         bg: '#3f3f3f', // xterm 236
         surface: '#333233', // xterm 235
@@ -145,6 +150,7 @@ const family: ThemeFamily = {
       id: 'dark-238',
       label: 'Dark 238',
       mode: 'dark',
+      layerMix: [3, 6, 9], // fallback layer steps shrink for this thin ramp (R-006)
       neutrals: {
         bg: '#565656', // xterm 238
         surface: '#4b4b4b', // xterm 237
@@ -169,6 +175,7 @@ const family: ThemeFamily = {
       id: 'dark-239',
       label: 'Dark 239',
       mode: 'dark',
+      layerMix: [3, 6, 9], // fallback layer steps shrink for this thin ramp (R-006)
       neutrals: {
         bg: '#616161', // xterm 239
         surface: '#565656', // xterm 238
@@ -193,6 +200,7 @@ const family: ThemeFamily = {
       id: 'light-253',
       label: 'Light 253',
       mode: 'light',
+      layerMix: [3, 6, 9], // fallback layer steps shrink for this thin ramp (R-006)
       neutrals: {
         bg: '#e1e1e1', // xterm 253
         surface: '#e9e9e9', // xterm 254
@@ -217,6 +225,7 @@ const family: ThemeFamily = {
       id: 'light-252',
       label: 'Light 252',
       mode: 'light',
+      layerMix: [3, 6, 9], // fallback layer steps shrink for this thin ramp (R-006)
       neutrals: {
         bg: '#d9d9d9', // xterm 252
         surface: '#e1e1e1', // xterm 253
@@ -241,6 +250,7 @@ const family: ThemeFamily = {
       id: 'light-254',
       label: 'Light 254',
       mode: 'light',
+      layerMix: [3, 6, 9], // fallback layer steps shrink for this thin ramp (R-006)
       neutrals: {
         bg: '#e9e9e9', // xterm 254
         surface: '#f1f1f1', // xterm 255
@@ -265,6 +275,7 @@ const family: ThemeFamily = {
       id: 'light-255',
       label: 'Light 255',
       mode: 'light',
+      layerMix: [3, 6, 9], // fallback layer steps shrink for this thin ramp (R-006)
       neutrals: {
         bg: '#f1f1f1', // xterm 255
         surface: '#ffffff', // xterm 256
@@ -289,6 +300,7 @@ const family: ThemeFamily = {
       id: 'light-256',
       label: 'Light 256',
       mode: 'light',
+      layerMix: [3, 6, 9], // fallback layer steps shrink for this thin ramp (R-006)
       neutrals: {
         bg: '#ffffff', // xterm 256
         surface: '#ffffff', // xterm 256

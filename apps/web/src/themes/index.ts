@@ -2,6 +2,7 @@ import { ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import { FAMILIES } from './families'
 import { HUES } from './types'
+import { contrastRatio } from '../lib/contrast'
 import type { ThemeChoice, ThemeFamily, ThemeVariant } from './types'
 
 export { FAMILIES }
@@ -33,6 +34,48 @@ export function resolveVariant(
   return ofMode.find((v) => v.id === choice.variant) ?? ofMode[0] ?? family.variants[0]!
 }
 
+function mixHex(a: string, b: string, pctB: number): string {
+  const ch = (h: string, i: number) => parseInt(h.slice(1 + i * 2, 3 + i * 2), 16)
+  const out = [0, 1, 2].map((i) =>
+    Math.round(ch(a, i) * (1 - pctB / 100) + ch(b, i) * (pctB / 100)),
+  )
+  return '#' + out.map((v) => v.toString(16).padStart(2, '0')).join('')
+}
+
+/** The layer, text and selection slots of a variant, with derived values where it has no `extended`. */
+export function resolveExtended(variant: ThemeVariant) {
+  const n = variant.neutrals
+  const x = variant.extended
+  const mix = variant.layerMix ?? [5, 10, 15]
+  const raw: [string, string, string, string] = x?.layers ?? [
+    n.bg,
+    mixHex(n.bg, n.text, mix[0]),
+    mixHex(n.bg, n.text, mix[1]),
+    mixHex(n.bg, n.text, mix[2]),
+  ]
+  // A published layer that body text cannot read on (R-006: Frappe, Macchiato, Dragon, Solarized
+  // dark, Tokyo Night Day, layer 3) is pulled back toward the page until `text` reaches 4.5:1.
+  const layers = raw.map((l) => {
+    let out = l
+    for (let p = 10; p <= 100 && contrastRatio(n.text, out) < 4.5; p += 10) out = mixHex(l, n.bg, p)
+    return out
+  }) as [string, string, string, string]
+  const textSubtle = x?.textSubtle ?? n.muted
+  // secondary text per layer: textSubtle, else muted, else text, whichever first reaches 4.5:1
+  const onLayerSubtle = layers.map(
+    (l) => [textSubtle, n.muted, n.text].find((c) => contrastRatio(c, l) >= 4.5) ?? n.text,
+  )
+  return {
+    layers,
+    textStrong: x?.textStrong ?? n.text,
+    textSubtle,
+    comment: x?.comment ?? n.muted,
+    selection: x?.selection ?? mixHex(n.bg, variant.hues.blue, 25),
+    highlight: x?.highlight ?? mixHex(n.bg, n.text, 6),
+    onLayerSubtle,
+  }
+}
+
 export function applyTheme(
   variant: ThemeVariant,
   el: HTMLElement = document.documentElement,
@@ -46,6 +89,14 @@ export function applyTheme(
   set('--color-muted', n.muted)
   set('--color-text', n.text)
   set('--color-on-accent', n.onAccent)
+  const x = resolveExtended(variant)
+  x.layers.forEach((l, i) => set(`--color-layer-${i}`, l))
+  x.onLayerSubtle.forEach((c, i) => set(`--color-on-layer-${i}-subtle`, c))
+  set('--color-text-strong', x.textStrong)
+  set('--color-text-subtle', x.textSubtle)
+  set('--color-comment', x.comment)
+  set('--color-selection', x.selection)
+  set('--color-highlight', x.highlight)
   for (const h of HUES) set(`--hue-${h}`, variant.hues[h])
   set('--color-accent', variant.hues.blue)
   set('--color-focus', variant.hues.blue)

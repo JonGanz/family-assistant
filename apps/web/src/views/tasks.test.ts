@@ -180,28 +180,33 @@ describe('Tasks filter chips', () => {
   it('defaults to Mine and sends member=', async () => {
     const w = await mountTasks()
     expect(m.tasks).toHaveBeenCalledWith(expect.objectContaining({ member: 'a' }))
-    expect(chip(w, 'Mine').attributes('aria-checked')).toBe('true')
-    expect(w.findAll('.filter button').map((b) => b.text())).toEqual(['All', 'Mine', 'Alex', 'Kai'])
+    expect(chip(w, 'Mine').attributes('aria-pressed')).toBe('true')
+    expect(chip(w, 'All').attributes('aria-pressed')).toBe('false')
+    expect(w.findAll('.filter button').map((b) => b.text())).toEqual(['All', 'Mine', 'Kai'])
   })
 
-  it('All sends no member, a member chip sends that member, and the choice persists', async () => {
+  it('All sends no member, chips add up, and the choice persists', async () => {
     const w = await mountTasks()
     m.tasks.mockClear()
     await chip(w, 'All').trigger('click')
     await flushPromises()
     expect(m.tasks.mock.calls.every(([q]) => !(q as { member?: string }).member)).toBe(true)
-    expect(localStorage.getItem('fa.tasks.filter')).toBe('all')
+    expect(localStorage.getItem('fa.tasks.filter')).toBe('[]')
     m.tasks.mockClear()
     await chip(w, 'Kai').trigger('click')
     await flushPromises()
     expect(m.tasks).toHaveBeenCalledWith(expect.objectContaining({ member: 'k' }))
-    expect(localStorage.getItem('fa.tasks.filter')).toBe('k')
+    expect(localStorage.getItem('fa.tasks.filter')).toBe('["k"]')
+    await chip(w, 'Mine').trigger('click')
+    await flushPromises()
+    expect(localStorage.getItem('fa.tasks.filter')).toBe('["k","a"]')
+    expect(chip(w, 'All').attributes('aria-pressed')).toBe('false')
   })
 
-  it('restores the stored choice and falls back to Mine for an unknown member', async () => {
+  it('migrates an old stored string and falls back to Mine for an unknown member', async () => {
     localStorage.setItem('fa.tasks.filter', 'gone')
     const w = await mountTasks()
-    expect(chip(w, 'Mine').attributes('aria-checked')).toBe('true')
+    expect(chip(w, 'Mine').attributes('aria-pressed')).toBe('true')
     expect(m.tasks).toHaveBeenCalledWith(expect.objectContaining({ member: 'a' }))
   })
 })

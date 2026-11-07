@@ -21,7 +21,20 @@ const family: ThemeFamily = {
         border: '#93a1a1', // base1
         muted: '#566c73', // base01 - derived (published #586e75 is 4.39:1)
         text: '#073642', // base02 (swap: base01 #586e75 was 4.39:1)
-        onAccent: '#fdf6e3', // base3 (the published value) - blue darkened below to reach 4.5:1 with it
+        onAccent: '#1e1e1b', // base3 - derived (published #fdf6e3 is 3.41:1 on blue)
+      },
+      extended: {
+        layers: [
+          '#fdf6e3', // base3
+          '#eee8d5', // base2
+          '#CCCDC2', // mix_base01
+          '#93A1A1', // base1
+        ],
+        selection: '#CCCDC2', // mix_base01
+        highlight: '#eee8d5', // base2
+        textStrong: '#002b36', // base03
+        textSubtle: '#586E75', // base01
+        comment: '#93A1A1', // base1
       },
       hues: {
         red: '#dc322f', // red
@@ -29,7 +42,7 @@ const family: ThemeFamily = {
         yellow: '#b38800', // yellow - derived (published #b58900 is 2.98:1)
         green: '#849700', // green - derived (published #859900 is 2.97:1)
         cyan: '#299e95', // cyan - derived (published #2aa198 is 2.93:1)
-        blue: '#1e6ca4', // blue - derived (published #268bd2 is 3.00:1 as text on the surface)
+        blue: '#268bd2', // blue
         purple: '#6c71c4', // violet
         pink: '#d33682', // magenta
       },
@@ -46,6 +59,19 @@ const family: ThemeFamily = {
         muted: '#93a1a1', // base1 (swap: base0 #839496 was 4.11:1)
         text: '#eee8d5', // base2 (swap: base1 #93a1a1 text; moved up to stay above muted)
         onAccent: '#00222b', // base03 - derived (published #002b36 is 4.08:1 on blue)
+      },
+      extended: {
+        layers: [
+          '#002b36', // base03
+          '#073642', // base02
+          '#2C4E56', // mix_base1
+          '#586E75', // base01
+        ],
+        selection: '#0B4764', // mix_blue
+        highlight: '#073642', // base02
+        textStrong: '#fdf6e3', // base3
+        textSubtle: '#93A1A1', // base1
+        comment: '#586E75', // base01
       },
       hues: {
         red: '#dc322f', // red

@@ -23,6 +23,19 @@ const family: ThemeFamily = {
         text: '#4c4f69', // text
         onAccent: '#ffffff', // white (not in palette)
       },
+      extended: {
+        layers: [
+          '#eff1f5', // base
+          '#e6e9ef', // mantle
+          '#dce0e8', // crust
+          '#ccd0da', // surface0
+        ],
+        selection: '#bcc0cc', // surface1
+        highlight: '#ccd0da', // surface0
+        textStrong: '#4c4f69', // text
+        textSubtle: '#6c6f85', // subtext0
+        comment: '#8c8fa1', // overlay1
+      },
       hues: {
         red: '#d20f39', // red
         orange: '#c2410c', // peach - derived (published #fe640b is 2.64:1)
@@ -46,6 +59,19 @@ const family: ThemeFamily = {
         muted: '#a6adc8', // subtext0
         text: '#cdd6f4', // text
         onAccent: '#11111b', // crust
+      },
+      extended: {
+        layers: [
+          '#1e1e2e', // base
+          '#313244', // surface0
+          '#45475a', // surface1
+          '#585b70', // surface2
+        ],
+        selection: '#585b70', // surface2
+        highlight: '#313244', // surface0
+        textStrong: '#cdd6f4', // text
+        textSubtle: '#a6adc8', // subtext0
+        comment: '#7f849c', // overlay1
       },
       hues: {
         red: '#f38ba8', // red
@@ -71,6 +97,19 @@ const family: ThemeFamily = {
         text: '#c6d0f5', // text
         onAccent: '#232634', // crust
       },
+      extended: {
+        layers: [
+          '#303446', // base
+          '#414559', // surface0
+          '#51576d', // surface1
+          '#626880', // surface2
+        ],
+        selection: '#626880', // surface2
+        highlight: '#414559', // surface0
+        textStrong: '#c6d0f5', // text
+        textSubtle: '#a5adce', // subtext0
+        comment: '#838ba7', // overlay1
+      },
       hues: {
         red: '#e78284', // red
         orange: '#ef9f76', // peach
@@ -94,6 +133,19 @@ const family: ThemeFamily = {
         muted: '#a5adcb', // subtext0
         text: '#cad3f5', // text
         onAccent: '#181926', // crust
+      },
+      extended: {
+        layers: [
+          '#24273a', // base
+          '#363a4f', // surface0
+          '#494d64', // surface1
+          '#5b6078', // surface2
+        ],
+        selection: '#5b6078', // surface2
+        highlight: '#363a4f', // surface0
+        textStrong: '#cad3f5', // text
+        textSubtle: '#a5adcb', // subtext0
+        comment: '#8087a2', // overlay1
       },
       hues: {
         red: '#ed8796', // red

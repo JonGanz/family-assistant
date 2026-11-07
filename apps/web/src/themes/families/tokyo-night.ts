@@ -21,7 +21,20 @@ const family: ThemeFamily = {
         border: '#b4b5b9', // border
         muted: '#475380', // fg_dark - derived (published #6172b0 is 2.79:1)
         text: '#2e51a0', // fg - derived (published #3760bf is 3.54:1)
-        onAccent: '#ffffff', // white (the published value) - blue darkened below to reach 4.5:1 with it
+        onAccent: '#141414', // white (not in palette) - derived (published #ffffff is 4.02:1 on blue)
+      },
+      extended: {
+        layers: [
+          '#e1e2e7', // bg
+          '#d0d5e3', // bg_dark
+          '#c4c8da', // bg_highlight
+          '#b7c1e3', // bg_visual
+        ],
+        selection: '#b7c1e3', // bg_visual
+        highlight: '#c4c8da', // bg_highlight
+        textStrong: '#3760bf', // fg
+        textSubtle: '#6172b0', // fg_dark
+        comment: '#848cb5', // comment
       },
       hues: {
         red: '#f52a65', // red
@@ -29,7 +42,7 @@ const family: ThemeFamily = {
         yellow: '#8c6c3e', // yellow
         green: '#587539', // green
         cyan: '#007197', // cyan
-        blue: '#1f549c', // blue - derived (published #2e7de9 is 3.11:1 as text on the surface)
+        blue: '#2e7de9', // blue
         purple: '#9854f1', // magenta
         pink: '#d20065', // magenta2
       },
@@ -46,6 +59,19 @@ const family: ThemeFamily = {
         muted: '#a9b1d6', // fg_dark
         text: '#c0caf5', // fg
         onAccent: '#16161e', // bg_dark
+      },
+      extended: {
+        layers: [
+          '#1a1b26', // bg
+          '#292e42', // bg_highlight
+          '#3b4261', // fg_gutter
+          '#414868', // terminal_black
+        ],
+        selection: '#394b70', // blue7
+        highlight: '#292e42', // bg_highlight
+        textStrong: '#c0caf5', // fg
+        textSubtle: '#a9b1d6', // fg_dark
+        comment: '#565f89', // comment
       },
       hues: {
         red: '#f7768e', // red
@@ -71,6 +97,19 @@ const family: ThemeFamily = {
         text: '#c0caf5', // fg
         onAccent: '#1f2335', // bg_dark
       },
+      extended: {
+        layers: [
+          '#24283b', // bg
+          '#292e42', // bg_highlight
+          '#3b4261', // fg_gutter
+          '#414868', // terminal_black
+        ],
+        selection: '#394b70', // blue7
+        highlight: '#292e42', // bg_highlight
+        textStrong: '#c0caf5', // fg
+        textSubtle: '#a9b1d6', // fg_dark
+        comment: '#565f89', // comment
+      },
       hues: {
         red: '#f7768e', // red
         orange: '#ff9e64', // orange
@@ -94,6 +133,19 @@ const family: ThemeFamily = {
         muted: '#828bb8', // fg_dark
         text: '#c8d3f5', // fg
         onAccent: '#1e2030', // bg_dark
+      },
+      extended: {
+        layers: [
+          '#222436', // bg
+          '#2f334d', // bg_highlight
+          '#3b4261', // fg_gutter
+          '#444a73', // terminal_black
+        ],
+        selection: '#394b70', // blue7
+        highlight: '#2f334d', // bg_highlight
+        textStrong: '#c8d3f5', // fg
+        textSubtle: '#828bb8', // fg_dark
+        comment: '#636da6', // comment
       },
       hues: {
         red: '#ff757f', // red

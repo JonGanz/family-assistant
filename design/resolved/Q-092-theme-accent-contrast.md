@@ -1,12 +1,12 @@
 ---
 id: Q-092
 title: Darker accents in three light themes for AA contrast
-status: open
+status: resolved
 batch: 23
 area: frontend
 created: 2026-11-04
-resolved:
-decisions: []
+resolved: 2026-11-07
+decisions: [D-106]
 ---
 
 # Q-092: Darker accents in three light themes for AA contrast

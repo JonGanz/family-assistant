@@ -5,6 +5,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 import {
   UiBottomSheet,
   UiDialog,
+  UiFilterChips,
   UiIcon,
   UiNavBar,
   UiNavDrawer,
@@ -277,5 +278,42 @@ describe('ui gaps (T-19)', () => {
     expect(b.element.tagName).toBe('A')
     expect(b.attributes('href')).toBe('https://example.com')
     expect(mount(UiButton).element.tagName).toBe('BUTTON')
+  })
+})
+
+describe('UiFilterChips (D-105)', () => {
+  const options = [
+    { value: 'a', label: 'Alex' },
+    { value: 'b', label: 'Kai' },
+  ]
+  const make = (modelValue: string[]) =>
+    mount(UiFilterChips, { props: { options, modelValue, label: 'Who' } })
+  const btn = (w: ReturnType<typeof make>, name: string) =>
+    w.findAll('button').find((b) => b.text() === name)!
+  const last = (w: ReturnType<typeof make>) => w.emitted('update:modelValue')!.at(-1)![0]
+
+  it('renders All first and marks it pressed when nothing is chosen', () => {
+    const w = make([])
+    expect(w.attributes('role')).toBe('group')
+    expect(w.findAll('button').map((b) => b.text())).toEqual(['All', 'Alex', 'Kai'])
+    expect(btn(w, 'All').attributes('aria-pressed')).toBe('true')
+    expect(btn(w, 'Alex').attributes('aria-pressed')).toBe('false')
+  })
+  it('All clears the others', async () => {
+    const w = make(['a', 'b'])
+    await btn(w, 'All').trigger('click')
+    expect(last(w)).toEqual([])
+  })
+  it('another chip toggles and adds to the set', async () => {
+    const w = make(['a'])
+    await btn(w, 'Kai').trigger('click')
+    expect(last(w)).toEqual(['a', 'b'])
+    expect(btn(w, 'All').attributes('aria-pressed')).toBe('false')
+    await btn(make([]), 'Alex').trigger('click')
+  })
+  it('clearing the last chosen chip returns to All', async () => {
+    const w = make(['a'])
+    await btn(w, 'Alex').trigger('click')
+    expect(last(w)).toEqual([])
   })
 })

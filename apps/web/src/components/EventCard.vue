@@ -78,6 +78,7 @@ const chips = computed(() =>
 }
 .event-card.selectable:hover {
   background: var(--ui-surface-container-high);
+  --ui-on-surface-variant: var(--ui-on-surface-variant-high);
 }
 .event-card.selectable:focus-visible {
   outline: var(--ui-focus-ring);

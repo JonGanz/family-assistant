@@ -90,6 +90,7 @@ const temp = (v: number | undefined) => (v === undefined ? '–' : u.format(v, '
   padding: var(--ui-space-2);
   border-radius: var(--ui-radius-md);
   background: var(--ui-surface-container-high);
+  --ui-on-surface-variant: var(--ui-on-surface-variant-high);
   font: var(--ui-type-body-md);
 }
 </style>

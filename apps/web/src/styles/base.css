@@ -363,3 +363,19 @@ input[type='radio'] {
     color: var(--color-accent);
     font-weight: 600;
 }
+
+/* Extended palette slots (D-106); applyTheme writes them, these are first-paint fallbacks */
+::selection {
+    background: var(
+        --color-selection,
+        color-mix(in srgb, var(--color-accent) 25%, var(--color-bg))
+    );
+    color: var(--color-text);
+}
+::placeholder {
+    color: var(--color-comment, var(--color-muted));
+    opacity: 1;
+}
+:disabled {
+    color: var(--color-comment, var(--color-muted));
+}

@@ -26,12 +26,20 @@ describe('bills store', () => {
   it('filters by status', async () => {
     m.bills.mockResolvedValue({ items: [] })
     const s = useBillsStore()
-    s.filter = 'open'
+    s.filter = ['open']
     await s.load()
     expect(m.bills).toHaveBeenCalledWith('open')
-    s.filter = ''
+    s.filter = []
     await s.load()
     expect(m.bills).toHaveBeenLastCalledWith(undefined)
+  })
+
+  it('sends no status for several chosen states', async () => {
+    m.bills.mockResolvedValue({ items: [] })
+    const s = useBillsStore()
+    s.filter = ['open', 'paid']
+    await s.load()
+    expect(m.bills).toHaveBeenCalledWith(undefined)
   })
 
   it('loads more with the cursor and keeps the soonest due first', async () => {

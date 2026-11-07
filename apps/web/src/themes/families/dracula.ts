@@ -23,6 +23,19 @@ const family: ThemeFamily = {
         text: '#f8f8f2', // Foreground
         onAccent: '#282a36', // Background
       },
+      extended: {
+        layers: [
+          '#282A36', // bg
+          '#3E4452', // visual
+          '#44475A', // selection
+          '#4B5263', // gutter_fg
+        ],
+        selection: '#44475A', // selection
+        highlight: '#3E4452', // visual
+        textStrong: '#FFFFFF', // bright_white
+        textSubtle: '#ABB2BF', // white
+        comment: '#6272A4', // comment
+      },
       hues: {
         red: '#ff5555', // Red
         orange: '#ffb86c', // Orange

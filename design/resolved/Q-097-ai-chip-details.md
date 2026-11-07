@@ -1,12 +1,12 @@
 ---
 id: Q-097
 title: How the inbox shows AI-made items
-status: open
+status: resolved
 batch: 23
 area: frontend
 created: 2026-11-04
-resolved:
-decisions: []
+resolved: 2026-11-07
+decisions: [D-104]
 ---
 
 # Q-097: How the inbox shows AI-made items

@@ -51,18 +51,18 @@ beforeEach(() => {
 })
 
 describe('Mail filters', () => {
-  it('selects a category chip and clears it on a second tap', async () => {
+  it('selects a category chip and returns to All on a second tap', async () => {
     m.messages.mockResolvedValue({ items: [], next_before: null } as never)
     m.categories.mockResolvedValue([{ id: 'c1', key: 'school', label: 'School' }] as never)
     const w = mount(MailView, { global: { stubs } })
     await flushPromises()
-    const chip = () => w.get('[aria-label="Category"] [role="checkbox"]')
-    expect(chip().attributes('aria-checked')).toBe('false')
+    const chip = () => w.findAll('[aria-label="Category"] button')[1]!
+    expect(chip().attributes('aria-pressed')).toBe('false')
     await chip().trigger('click')
-    expect(useMailStore().filters.category).toBe('school')
-    expect(chip().attributes('aria-checked')).toBe('true')
+    expect(useMailStore().filters.category).toEqual(['school'])
+    expect(chip().attributes('aria-pressed')).toBe('true')
     await chip().trigger('click')
-    expect(useMailStore().filters.category).toBe('')
+    expect(useMailStore().filters.category).toEqual([])
   })
 })
 

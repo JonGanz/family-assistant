@@ -2,7 +2,7 @@ import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ApiError } from '../api/http'
 import { dispatchLive } from './live'
-import { useTasksStore } from './tasks'
+import { parseFilter, useTasksStore } from './tasks'
 import { useListsStore } from './lists'
 import { useRoutinesStore } from './routines'
 
@@ -113,9 +113,26 @@ describe('tasks filter', () => {
   it('defaults to All with no signed-in member, and sends no member', async () => {
     m.tasks.mockResolvedValue({ items: [] })
     const s = useTasksStore()
-    expect(s.filter).toBe('all')
+    expect(s.filter).toEqual([])
     await s.load('all')
     expect(m.tasks).toHaveBeenCalledWith({ view: 'all', status: 'open' })
+  })
+
+  it('migrates old stored strings', () => {
+    expect(parseFilter('all', ['x'])).toEqual([])
+    expect(parseFilter('k', ['x'])).toEqual(['k'])
+    expect(parseFilter('mine', ['x'], 'me')).toEqual(['me'])
+    expect(parseFilter('["a","b"]', ['x'])).toEqual(['a', 'b'])
+    expect(parseFilter(null, ['x'])).toEqual(['x'])
+  })
+
+  it('validateFilter drops unknown ids and falls back to the default', () => {
+    const s = useTasksStore()
+    s.filter = ['a', 'gone']
+    s.validateFilter(['a', 'b'])
+    expect(s.filter).toEqual(['a'])
+    s.validateFilter(['b'])
+    expect(s.filter).toEqual([])
   })
 
   it('setFilter remembers the choice, restarts paging and reloads with member=', async () => {
@@ -128,23 +145,33 @@ describe('tasks filter', () => {
     expect(s.nextBefore.all).toBeTruthy()
     m.tasks.mockClear()
     m.tasks.mockResolvedValue({ items: [] })
-    await s.setFilter('k')
+    await s.setFilter(['k'])
     expect(m.tasks).toHaveBeenCalledWith({ view: 'all', status: 'open', member: 'k' })
     expect(s.nextBefore.all).toBeUndefined()
-    expect(localStorage.getItem('fa.tasks.filter')).toBe('k')
+    expect(localStorage.getItem('fa.tasks.filter')).toBe('["k"]')
+  })
+
+  it('fetches each chosen member and merges by id', async () => {
+    m.tasks.mockImplementation((async (q: { member?: string }) => ({
+      items: q.member === 'a' ? [{ id: 't1' }, { id: 't2' }] : [{ id: 't2' }, { id: 't3' }],
+    })) as never)
+    const s = useTasksStore()
+    await s.setFilter(['a', 'b'])
+    await s.load('all')
+    expect(s.tabs.all?.map((t) => t.id).sort()).toEqual(['t1', 't2', 't3'])
   })
 
   it('does not filter suggestions and survives a throwing localStorage', async () => {
     m.tasks.mockResolvedValue({ items: [] })
     const s = useTasksStore()
-    await s.setFilter('k')
+    await s.setFilter(['k'])
     m.tasks.mockClear()
     await s.load('suggested')
     expect(m.tasks).toHaveBeenCalledWith({ view: 'all', status: 'suggested' })
     const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('blocked')
     })
-    await expect(s.setFilter('all')).resolves.toBeUndefined()
+    await expect(s.setFilter([])).resolves.toBeUndefined()
     spy.mockRestore()
   })
 })

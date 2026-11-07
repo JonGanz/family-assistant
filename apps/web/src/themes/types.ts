@@ -16,6 +16,18 @@ export interface ThemeVariant {
     onAccent: string
   }
   hues: Record<Hue, string>
+  /** Richer palette from the Neovim ports (R-006, D-106); `layers[0]` equals `neutrals.bg`. */
+  extended?: {
+    layers: [string, string, string, string]
+    textStrong?: string
+    textSubtle?: string
+    comment?: string
+    selection?: string
+    highlight?: string
+    accents?: Record<string, string>
+  }
+  /** Percent of `text` mixed into `bg` for layers 1..3 when `extended` is absent (default 5/10/15). */
+  layerMix?: [number, number, number]
 }
 
 export interface ThemeFamily {

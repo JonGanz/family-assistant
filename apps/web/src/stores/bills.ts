@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { api, type BillPatch, type BillView } from '../api/client'
 import { isConflict } from '../api/http'
 
-export type BillFilter = '' | 'proposed' | 'open' | 'paid' | 'dismissed'
+export type BillFilter = 'proposed' | 'open' | 'paid' | 'dismissed'
 
 /** Money from minor units with the bill's own currency. */
 export function formatMoney(amountMinor: number, currency: string, locale?: string): string {
@@ -22,7 +22,9 @@ export function formatMoney(amountMinor: number, currency: string, locale?: stri
 
 export const useBillsStore = defineStore('bills', () => {
   const items = ref<BillView[]>([])
-  const filter = ref<BillFilter>('')
+  /** The chosen states (D-105); empty means All. One is sent to the server, several filter in the view. */
+  const filter = ref<BillFilter[]>([])
+  const statusParam = () => (filter.value.length === 1 ? filter.value[0] : undefined)
   const loading = ref(false)
   const error = ref<string | null>(null)
   /** Cursor of the next page; null when everything is loaded. */
@@ -40,10 +42,10 @@ export const useBillsStore = defineStore('bills', () => {
     loading.value = true
     try {
       const shown = items.value.length
-      let page = await api.bills(filter.value || undefined)
+      let page = await api.bills(statusParam())
       const all = [...page.items]
       while (page.next_before && all.length < shown) {
-        page = await api.bills(filter.value || undefined, page.next_before)
+        page = await api.bills(statusParam(), page.next_before)
         all.push(...page.items)
       }
       items.value = all.sort(byDue)
@@ -60,7 +62,7 @@ export const useBillsStore = defineStore('bills', () => {
     if (!nextBefore.value) return
     loading.value = true
     try {
-      const page = await api.bills(filter.value || undefined, nextBefore.value)
+      const page = await api.bills(statusParam(), nextBefore.value)
       items.value = [...items.value, ...page.items].sort(byDue)
       nextBefore.value = page.next_before ?? null
       error.value = null

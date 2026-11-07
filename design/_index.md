@@ -1,6 +1,6 @@
 ---
 title: Design Questions Index
-updated: 2026-11-04
+updated: 2026-11-07
 ---
 
 # Design Questions
@@ -27,29 +27,8 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Batch 21, open
-| ID | Title | Area |
-|---|---|---|
-| [Q-078](Q-078-email-origin-task-scope.md) | Visibility of tasks made from a private mailbox's mail | tasks |
-| [Q-079](Q-079-caldav-other-hosts.md) | CalDAV servers that send the client to another host | feeds |
-| [Q-080](Q-080-lan-imap-tls.md) | Self-hosted IMAP on the LAN: certificate pinning and plain IMAP | ingest |
-| [Q-081](Q-081-max-message-size.md) | What happens to a mail message over the size limit | ingest |
-| [Q-082](Q-082-ntfy-generic-text.md) | A generic-text mode for notifications sent through ntfy | notify |
-
-## Batch 23, open
-| ID | Title | Area |
-|---|---|---|
-| [Q-087](Q-087-calendar-view-switch.md) | Where the Calendar's view switch goes, and the default view | frontend |
-| [Q-088](Q-088-today-now-card.md) | A 'Now' card on the Today page | frontend |
-| [Q-089](Q-089-inbox-approve-reject.md) | How Inbox approve and reject apply | frontend |
-| [Q-090](Q-090-bills-grouping.md) | Bills: grouped by state, and a state filter | frontend |
-| [Q-091](Q-091-tasks-tabs-after-filter.md) | Tasks tabs once the member filter exists | frontend |
-| [Q-092](Q-092-theme-accent-contrast.md) | Darker accents in three light themes for AA contrast | frontend |
-| [Q-093](Q-093-member-editor-and-password.md) | Member editor as a sheet; password change through the Save bar | frontend |
-| [Q-094](Q-094-system-settings-apply.md) | How Settings → System applies switches | frontend |
-| [Q-095](Q-095-eval-threshold.md) | Which threshold the eval uses when the llm stage is off | tech |
-| [Q-096](Q-096-ai-settings-placement.md) | Where Settings → AI lives, and whether a new endpoint starts enabled | frontend |
-| [Q-097](Q-097-ai-chip-details.md) | How the inbox shows AI-made items | frontend |
+## Open
+_None. The next question number is Q-098._
 
 ## Resolved
 | ID | Title | Decisions |
@@ -131,7 +110,23 @@ decisions: []
 | [Q-075](resolved/Q-075-theme-scope.md) | Who chooses the theme: household, member, or device? | D-081 |
 | [Q-076](resolved/Q-076-custom-themes.md) | Can a household add its own themes? | D-079 |
 | [Q-077](resolved/Q-077-adding-another-adult.md) | How is a second adult added and set up? | D-088 |
+| [Q-078](resolved/Q-078-email-origin-task-scope.md) | Visibility of tasks made from a private mailbox's mail | D-098 |
+| [Q-079](resolved/Q-079-caldav-other-hosts.md) | CalDAV servers that send the client to another host | D-099 |
+| [Q-080](resolved/Q-080-lan-imap-tls.md) | Self-hosted IMAP on the LAN: certificate pinning and plain IMAP | D-100 |
+| [Q-081](resolved/Q-081-max-message-size.md) | What happens to a mail message over the size limit | D-101 |
+| [Q-082](resolved/Q-082-ntfy-generic-text.md) | A generic-text mode for notifications sent through ntfy | D-102 |
 | [Q-083](resolved/Q-083-llm-transport.md) | How the core talks to the LLM on a GPU node | D-093 |
 | [Q-084](resolved/Q-084-m4-ai-scope.md) | How much AI goes into M4 | D-094 |
 | [Q-085](resolved/Q-085-ui-component-basis.md) | What the revamped UI components are built on | D-095 |
 | [Q-086](resolved/Q-086-apply-changes-model.md) | How pages apply changes | D-096 |
+| [Q-087](resolved/Q-087-calendar-view-switch.md) | Where the Calendar's view switch goes, and the default view | D-103 |
+| [Q-088](resolved/Q-088-today-now-card.md) | A 'Now' card on the Today page | D-104 |
+| [Q-089](resolved/Q-089-inbox-approve-reject.md) | How Inbox approve and reject apply | D-104 |
+| [Q-090](resolved/Q-090-bills-grouping.md) | Bills: grouped by state, and a state filter | D-105 |
+| [Q-091](resolved/Q-091-tasks-tabs-after-filter.md) | Tasks tabs once the member filter exists | D-105 |
+| [Q-092](resolved/Q-092-theme-accent-contrast.md) | Darker accents in three light themes for AA contrast | D-106 |
+| [Q-093](resolved/Q-093-member-editor-and-password.md) | Member editor as a sheet; password change through the Save bar | D-104 |
+| [Q-094](resolved/Q-094-system-settings-apply.md) | How Settings → System applies switches | D-104 |
+| [Q-095](resolved/Q-095-eval-threshold.md) | Which threshold the eval uses when the llm stage is off | D-104 |
+| [Q-096](resolved/Q-096-ai-settings-placement.md) | Where Settings → AI lives, and whether a new endpoint starts enabled | D-104 |
+| [Q-097](resolved/Q-097-ai-chip-details.md) | How the inbox shows AI-made items | D-104 |

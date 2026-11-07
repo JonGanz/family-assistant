@@ -1,25 +1,31 @@
 /*
  * UI tokens (M4, D-095). Every colour is a color-mix() of the theme variables that applyTheme
  * (src/themes/index.ts) writes, so all theme families and variants work unchanged:
+ *   --color-layer-0..3  --color-on-layer-0..3-subtle  --color-text-strong  --color-text-subtle  --color-comment  --color-selection  --color-highlight
  *   --color-bg  --color-surface  --color-surface-2  --color-border  --color-muted  --color-text
  *   --color-on-accent  --color-accent  --color-danger  --color-success  --color-warning
- * Tone steps run bg -> surface -> surface-2, the direction each theme already defines as "raised".
+ * Tone steps are the layers: page 0, card 1, raised 2, dialog or sheet 3.
  * Colour tokens use only `var(--color-y)` and `color-mix(in srgb, A p%, B)`: ui/tokens.test.ts parses this file to check contrast for every theme variant.
  */
 :root {
     /* Colour */
-    --ui-surface: var(--color-bg);
-    --ui-surface-container-lowest: var(--color-bg);
-    --ui-surface-container-low: color-mix(in srgb, var(--color-bg) 50%, var(--color-surface));
-    --ui-surface-container-mid: var(--color-surface);
-    --ui-surface-container-high: color-mix(
-        in srgb,
-        var(--color-surface) 50%,
-        var(--color-surface-2)
-    );
-    --ui-surface-container-highest: var(--color-surface-2);
+    /* Tones are the theme layers (D-106): page 0, card 1, raised 2, dialog or sheet 3 */
+    --ui-surface: var(--color-layer-0);
+    --ui-surface-container-lowest: var(--color-layer-0);
+    --ui-surface-container-low: var(--color-layer-1);
+    --ui-surface-container-mid: var(--color-layer-1);
+    --ui-surface-container-high: var(--color-layer-2);
+    --ui-surface-container-highest: var(--color-layer-3);
     --ui-on-surface: var(--color-text);
-    --ui-on-surface-variant: var(--color-muted);
+    /* Secondary text: the plain token is safe on the page and on cards; use the -high and
+       -highest variants on raised and dialog tones. Each is the first of subtle, muted, text to reach 4.5:1 */
+    --ui-on-surface-variant: var(--color-on-layer-1-subtle);
+    --ui-on-surface-variant-low: var(--color-on-layer-1-subtle);
+    --ui-on-surface-variant-high: var(--color-on-layer-2-subtle);
+    --ui-on-surface-variant-highest: var(--color-on-layer-3-subtle);
+    --ui-on-surface-faint: var(--color-comment); /* placeholder and disabled text only */
+    --ui-selection: var(--color-selection);
+    --ui-highlight: var(--color-highlight);
     --ui-outline: color-mix(in srgb, var(--color-muted) 70%, var(--color-bg));
     --ui-outline-variant: var(--color-border);
     --ui-primary: var(--color-accent);

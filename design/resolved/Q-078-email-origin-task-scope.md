@@ -1,12 +1,12 @@
 ---
 id: Q-078
 title: Visibility of tasks made from a private mailbox's mail
-status: open
+status: resolved
 batch: 21
 area: tasks
 created: 2026-11-02
-resolved:
-decisions: []
+resolved: 2026-11-07
+decisions: [D-098]
 ---
 
 # Q-078: Visibility of tasks made from a private mailbox's mail

@@ -147,16 +147,19 @@ test('Settings -> Mail: add an IMAP source with Test connection', async () => {
 test('Mail list: filter by child, open a message', async () => {
   await page.goto('/mail')
   const member = (name: string) =>
-    page.getByRole('group', { name: 'Member' }).getByRole('checkbox', { name })
-  await member('Riley').check()
+    page.getByRole('group', { name: 'Member' }).getByRole('button', { name, exact: true })
+  await member('Riley').click()
   const row = page.getByRole('link', { name: /Spring Concert for grade 3/ })
   await expect(row).toBeVisible()
   await expect(row.getByText('School')).toBeVisible()
-  await member('Jordan').check()
+  // Chips are additive (D-105): drop Riley, then pick Jordan alone.
+  await member('Riley').click()
+  await member('Jordan').click()
   await expect(page.getByRole('link', { name: /Spring Concert for grade 3/ })).toHaveCount(0)
   await expect(page.getByText('No messages.')).toBeVisible()
 
-  await member('Riley').check()
+  await member('Jordan').click()
+  await member('Riley').click()
   await page.getByRole('link', { name: /Grade 3 news from class 3B/ }).click()
   await expect(page).toHaveURL(/\/mail\/[0-9a-f-]+$/)
   await expect(page.getByRole('heading', { name: /Grade 3 news from class 3B/ })).toBeVisible()

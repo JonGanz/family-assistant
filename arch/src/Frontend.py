@@ -17,13 +17,13 @@ client = b("api/client.ts + http.ts\nX-FA-Request · bearer opt-in · If-Match",
 gen = b("gen/api.d.ts\n(generated from openapi.json)", 780, 440, 200, 60, COMP)
 sw = b("service worker (vite-plugin-pwa)\nsecure contexts only · shell + avatar cache", 60, 440, 240, 60, COMP)
 ls = b("localStorage\ndevice token · dashboard snapshot · fa.theme", 60, 560, 240, 50, COMP)
-themes = b("themes/ (D-079..D-081)\ncatalogue as data · applyTheme → CSS tokens\nper-device choice · kiosk: device.settings.theme", 800, 650, 200, 90, COMP)
+themes = b("themes/ (D-079..D-081, D-106)\ncatalogue as data · extended layers/text slots · applyTheme → CSS tokens\nper-device choice · kiosk: device.settings.theme", 800, 650, 200, 90, COMP)
 srv = b("«external» fa-api /api/v1 (REST, SSE)", 1080, 400, 280, 60, EXT)
 for s, t, l in [(router, setup, ""), (setup, stores, ""), (router, app, ""), (router, kiosk, ""), (app, stores, ""), (kiosk, stores, ""), (kiosk, kmod, ""),
                 (stores, client, ""), (live, stores, "invalidate"), (client, gen, "types"), (kmod, ls, ""), (stores, ls, "snapshot cache"), (themes, ls, "fa.theme"), (app, themes, ""), (kiosk, themes, "")]:
     e(s, t, l)
 e(client, srv, "HTTP(S) JSON", False); e(live, srv, "SSE /stream", False)
-ui = b("ui/ design system (D-095)\ntokens.css (color-mix of theme vars) · Ui* components: Page, TopAppBar, Card, List, Button, TextField, Switch, Segmented, Chip, Dialog, Sheet, Snackbar, SaveBar, NavBar/Rail/Drawer\nicons.ts (Material Symbols) · useBreakpoint · useInstantSave · useFormDraft (D-096) · UiGallery (dev)", 340, 770, 660, 80, COMP)
+ui = b("ui/ design system (D-095)\ntokens.css (color-mix of theme vars) · Ui* components: Page, TopAppBar, Card, List, Button, TextField, Switch, Segmented, Chip, FilterChips (D-105), Dialog, Sheet, Snackbar, SaveBar, NavBar/Rail/Drawer\nicons.ts (Material Symbols) · useBreakpoint · useInstantSave · useFormDraft (D-096) · UiGallery (dev)", 340, 770, 660, 80, COMP)
 nav = b("app/navigation.ts\ndestinations as data\ncompact: bottom bar + More sheet\nmedium: rail · expanded: drawer", 60, 660, 240, 90, COMP)
 for s, t_, l in [(app, ui, "renders with"), (setup, ui, ""), (app, nav, "navigation"), (nav, ui, "NavBar/Rail/Drawer"), (ui, themes, "colour tokens")]:
     e(s, t_, l)

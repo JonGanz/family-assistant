@@ -10,6 +10,7 @@ import {
   UiChip,
   UiEmptyState,
   UiErrorState,
+  UiFilterChips,
   UiPage,
   UiSection,
   UiSkeleton,
@@ -22,12 +23,11 @@ const bills = useBillsStore()
 const router = useRouter()
 const snackbar = useSnackbar()
 
-const FILTERS: { v: BillFilter; label: string }[] = [
-  { v: '', label: 'All' },
-  { v: 'proposed', label: 'Proposed' },
-  { v: 'open', label: 'Open' },
-  { v: 'paid', label: 'Paid' },
-  { v: 'dismissed', label: 'Dismissed' },
+const FILTERS: { value: BillFilter; label: string }[] = [
+  { value: 'proposed', label: 'Proposed' },
+  { value: 'open', label: 'Open' },
+  { value: 'paid', label: 'Paid' },
+  { value: 'dismissed', label: 'Dismissed' },
 ]
 const GROUPS: { status: string; heading: string }[] = [
   { status: 'open', heading: 'Open' },
@@ -36,9 +36,9 @@ const GROUPS: { status: string; heading: string }[] = [
   { status: 'dismissed', heading: 'Dismissed' },
 ]
 const groups = computed(() =>
-  GROUPS.map((g) => ({ ...g, items: bills.items.filter((b) => b.status === g.status) })).filter(
-    (g) => g.items.length > 0,
-  ),
+  GROUPS.filter((g) => !bills.filter.length || (bills.filter as string[]).includes(g.status))
+    .map((g) => ({ ...g, items: bills.items.filter((b) => b.status === g.status) }))
+    .filter((g) => g.items.length > 0),
 )
 
 onMounted(() => void bills.load())
@@ -85,16 +85,12 @@ async function change(b: BillView, status: 'open' | 'dismissed') {
       <UiTopAppBar title="Bills" />
     </template>
 
-    <div class="chips" role="group" aria-label="Show">
-      <UiChip
-        v-for="f in FILTERS"
-        :key="f.v"
-        variant="filter"
-        :selected="bills.filter === f.v"
-        @click="bills.filter = f.v"
-        >{{ f.label }}</UiChip
-      >
-    </div>
+    <UiFilterChips
+      :model-value="bills.filter"
+      :options="FILTERS"
+      label="Show"
+      @update:model-value="bills.filter = $event as BillFilter[]"
+    />
 
     <UiSkeleton v-if="bills.loading && !bills.items.length" :lines="5" />
     <UiErrorState v-else-if="bills.error" :message="bills.error" @retry="bills.load()" />
@@ -156,12 +152,6 @@ async function change(b: BillView, status: 'open' | 'dismissed') {
 </template>
 
 <style scoped>
-.chips {
-  display: flex;
-  gap: var(--ui-space-2);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
 .bill {
   display: grid;
   gap: var(--ui-space-1);

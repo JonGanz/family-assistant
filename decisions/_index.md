@@ -1,6 +1,6 @@
 ---
 title: Decisions Index
-updated: 2026-11-04
+updated: 2026-11-07
 ---
 
 # Decisions
@@ -106,3 +106,12 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-095](D-095-ui-component-library.md) | The app UI is a home-grown Material 3-style component library on the theme variables, with Material Symbols | accepted | Q-085 | arch/Frontend.md |
 | [D-096](D-096-apply-changes-model.md) | Single controls apply instantly with Undo; multi-field forms use a Save/Discard bar | accepted | Q-086 | arch/Frontend.md |
 | [D-097](D-097-m4-two-tracks.md) | M4 runs the UI revamp and the AI slice as two parallel tracks | accepted | (instruction) | arch/Overall.md, README.md |
+| [D-098](D-098-mail-task-visibility.md) | Mail-derived tasks follow the mailbox per source, default until accepted | accepted | Q-078 | arch/Tasks.md, arch/Ingest.md |
+| [D-099](D-099-caldav-host-scope.md) | CalDAV follows hrefs within the source's registrable domain, per-source override | accepted | Q-079 | arch/Feeds.md |
+| [D-100](D-100-imap-pem-pinning.md) | Per-source PEM for IMAP TLS; plain IMAP stays off | accepted | Q-080 | arch/Ingest.md |
+| [D-101](D-101-mail-size-limit.md) | Configurable message size limit; oversized mail kept as headers only | accepted | Q-081 | arch/Ingest.md |
+| [D-102](D-102-ntfy-generic-text.md) | Generic-text notifications through ntfy outside the LAN | accepted | Q-082 | arch/Platform.md |
+| [D-103](D-103-calendar-last-view.md) | Calendar view switch under the top bar; reopen the last used view | accepted | Q-087 | arch/Frontend.md |
+| [D-104](D-104-m4-batch23-confirmed.md) | M4 applied choices confirmed (Q-088, Q-089, Q-093 to Q-097) | accepted | Q-088, Q-089, Q-093, Q-094, Q-095, Q-096, Q-097 | arch/Frontend.md, arch/AI.md |
+| [D-105](D-105-additive-filter-chips.md) | Every filter row is an additive multi-select with All first | accepted | Q-090, Q-091 | arch/Frontend.md |
+| [D-106](D-106-neovim-theme-palettes.md) | Canonical accents; extended theme palettes from the Neovim ports | accepted | Q-092 | arch/Frontend.md |

@@ -1,12 +1,12 @@
 ---
 id: Q-093
 title: Member editor as a sheet; password change through the Save bar
-status: open
+status: resolved
 batch: 23
 area: frontend
 created: 2026-11-04
-resolved:
-decisions: []
+resolved: 2026-11-07
+decisions: [D-104]
 ---
 
 # Q-093: Member editor as a sheet; password change through the Save bar

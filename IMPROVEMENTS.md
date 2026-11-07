@@ -74,4 +74,4 @@ Outstanding findings and suggestions from the 2026-10-26 repository review (full
 2. ~~M3.5 code~~ (done 2026-10-26: every item listed for it above is closed; see [plan/M3.5.md](plan/M3.5.md), *Outcome*).
 3. The M3.5 shakedown (R-01 to R-04, U-16).
 4. ~~The M4 plan picks up the deferred items~~ (done 2026-11-02, M3.7).
-5. The M4 plan picks up the LARGER findings of code review 2 (C2-02, C2-05, C2-08, C2-09, C2-15, C2-19, C2-21, C2-30) once Q-078 to Q-082 are answered.
+5. The milestone after M4 picks up the LARGER findings of code review 2 (C2-02, C2-05, C2-08, C2-09, C2-15, C2-19, C2-21, C2-30). Q-078 to Q-082 were answered on 2026-11-07 (D-098 to D-102), and the arch docs describe the result.

@@ -13,20 +13,36 @@ const QUERY = {
   suggested: { view: 'all', status: 'suggested' },
 } as const
 
-/** Who the task lists show: everyone, the signed-in member, or one member by id. */
-export type TaskFilter = 'all' | 'mine' | (string & {})
+/** Who the task lists show (D-105): member ids; empty means everyone. */
+export type TaskFilter = string[]
 export const FILTER_KEY = 'fa.tasks.filter'
 
-function readFilter(fallback: TaskFilter): TaskFilter {
+/**
+ * Reads the stored filter. Old values were a string: 'all' is `[]`, 'mine' and a member id are
+ * `[id]`. Ids that are not members are dropped by `validateFilter`.
+ */
+export function parseFilter(raw: string | null, fallback: TaskFilter, myId?: string): TaskFilter {
+  if (raw === null || raw === '') return fallback
+  if (raw === 'all') return []
+  if (raw === 'mine') return myId ? [myId] : fallback
   try {
-    return localStorage.getItem(FILTER_KEY) || fallback
+    const v: unknown = JSON.parse(raw)
+    if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string')
+  } catch {
+    // Not JSON: an old plain member id.
+  }
+  return [raw]
+}
+function readFilter(fallback: TaskFilter, myId?: string): TaskFilter {
+  try {
+    return parseFilter(localStorage.getItem(FILTER_KEY), fallback, myId)
   } catch {
     return fallback
   }
 }
 function writeFilter(f: TaskFilter): void {
   try {
-    localStorage.setItem(FILTER_KEY, f)
+    localStorage.setItem(FILTER_KEY, JSON.stringify(f))
   } catch {
     // Private mode or blocked storage: the choice simply is not remembered.
   }
@@ -58,34 +74,30 @@ export const useTasksStore = defineStore('tasks', () => {
   const undo = ref<UndoState | null>(null)
   const wanted = new Set<TaskTab>()
   const session = useSessionStore()
-  /** Per device (D-096 style): default Mine, or All when nobody is signed in as a member. */
-  const filter = ref<TaskFilter>(readFilter(session.member ? 'mine' : 'all'))
+  /** Per device: default is the viewer's own member (Mine), or everyone with no signed-in member. */
+  const mine = (): TaskFilter => (session.member ? [session.member.id] : [])
+  const filter = ref<TaskFilter>(readFilter(mine(), session.member?.id))
 
-  /** The `member=` query value for the current filter; undefined means no filter. */
-  function memberParam(): string | undefined {
-    if (filter.value === 'all') return undefined
-    if (filter.value === 'mine') return session.member?.id
-    return filter.value
-  }
-  /** Suggestions are household-wide, so the filter does not apply to them. */
-  function query(tab: TaskTab) {
-    const member = tab === 'suggested' ? undefined : memberParam()
+  /** The API takes one member: several are fetched one by one and merged. */
+  function query(tab: TaskTab, member?: string) {
     return member ? { ...QUERY[tab], member } : { ...QUERY[tab] }
   }
+  const memberIds = (tab: TaskTab): (string | undefined)[] =>
+    tab === 'suggested' || filter.value.length === 0 ? [undefined] : filter.value
 
   /** Picks a filter, remembers it, drops the pages loaded so far (paging restarts) and reloads. */
   async function setFilter(f: TaskFilter): Promise<void> {
-    filter.value = f
-    writeFilter(f)
+    filter.value = [...f]
+    writeFilter(filter.value)
     tabs.value = {}
     nextBefore.value = {}
     await refresh()
   }
-  /** An id that is no longer a member falls back to Mine (or All with no signed-in member). */
-  function validateFilter(memberIds: string[]): void {
-    const f = filter.value
-    if (f === 'all' || f === 'mine' || memberIds.includes(f)) return
-    filter.value = session.member ? 'mine' : 'all'
+  /** Ids that are no longer members are dropped; none left falls back to Mine. */
+  function validateFilter(ids: string[]): void {
+    const kept = filter.value.filter((id) => ids.includes(id))
+    if (kept.length === filter.value.length) return
+    filter.value = kept.length ? kept : mine()
     writeFilter(filter.value)
   }
 
@@ -97,19 +109,38 @@ export const useTasksStore = defineStore('tasks', () => {
     else delete nextBefore.value[tab]
   }
 
+  /** Every page for each chosen member, merged by id (several members have no single cursor). */
+  async function loadMerged(tab: TaskTab, ids: string[]): Promise<TaskView[]> {
+    const byId = new Map<string, TaskView>()
+    for (const id of ids) {
+      let page = await api.tasks(query(tab, id))
+      for (const t of page.items) byId.set(t.id, t)
+      for (let n = 0; page.next_before && n < 20; n++) {
+        page = await api.tasks({ ...query(tab, id), before: page.next_before })
+        for (const t of page.items) byId.set(t.id, t)
+      }
+    }
+    return [...byId.values()]
+  }
+
   /** Reloads the tab's first page, and further pages until as many rows as were shown are back. */
   async function load(tab: TaskTab): Promise<void> {
     wanted.add(tab)
     pending.value++
     try {
-      const shown = tabs.value[tab]?.length ?? 0
-      let page = await api.tasks(query(tab))
-      const items = [...page.items]
-      while (page.next_before && items.length < shown) {
-        page = await api.tasks({ ...query(tab), before: page.next_before })
-        items.push(...page.items)
+      const ids = memberIds(tab)
+      if (ids.length > 1) {
+        setTab(tab, await loadMerged(tab, ids as string[]), null)
+      } else {
+        const shown = tabs.value[tab]?.length ?? 0
+        let page = await api.tasks(query(tab, ids[0]))
+        const items = [...page.items]
+        while (page.next_before && items.length < shown) {
+          page = await api.tasks({ ...query(tab, ids[0]), before: page.next_before })
+          items.push(...page.items)
+        }
+        setTab(tab, items, page.next_before)
       }
-      setTab(tab, items, page.next_before)
       error.value = null
     } catch (e) {
       error.value = msg(e)
@@ -124,7 +155,7 @@ export const useTasksStore = defineStore('tasks', () => {
     if (!before) return
     pending.value++
     try {
-      const page = await api.tasks({ ...query(tab), before })
+      const page = await api.tasks({ ...query(tab, memberIds(tab)[0]), before })
       setTab(tab, [...(tabs.value[tab] ?? []), ...page.items], page.next_before)
       error.value = null
     } catch (e) {

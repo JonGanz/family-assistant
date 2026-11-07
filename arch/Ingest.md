@@ -2,14 +2,16 @@
 title: Ingest — email, rules pipeline, bills, linking, approvals
 scope: Mail sources (Gmail API and IMAP) and sync, message storage and retention, the decision pipeline engine (rules-only preset), deterministic classifiers and extractors, orgs, contacts and enrollments, bills, event proposals and calendar writes, the approval inbox, email tasks, the labelling view
 status: draft
-updated: 2026-11-04
+updated: 2026-11-07
 drawio: Ingest.drawio
 drawio_src: src/Ingest.py
-depends_on: [D-001, D-004, D-006, D-007, D-008, D-009, D-010, D-012, D-013, D-014, D-018, D-019, D-023, D-024, D-027, D-028, D-029, D-034, D-035, D-036, D-044, D-045, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-068, D-070, D-071, D-078, D-093, D-094]
+depends_on: [D-001, D-004, D-006, D-007, D-008, D-009, D-010, D-012, D-013, D-014, D-018, D-019, D-023, D-024, D-027, D-028, D-029, D-034, D-035, D-036, D-044, D-045, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-068, D-070, D-071, D-078, D-093, D-094, D-098, D-100, D-101]
 milestone: M3
 ---
 
 # Ingest: email, rules pipeline, bills, linking, approvals (DRAFT v1.2)
+
+**v1.3 (2026-11-07):** per-source task visibility (D-098), per-source IMAP PEM (D-100) and the message size limit (D-101), all **planned for the milestone after M4** (code review 2: C2-21, C2-01/C2-05).
 
 **v1.2 (2026-11-04, M4):** the `llm` stage and the `mail.llm` job (§5, §7, §13) and `ai_settings` (§14), from D-093 and D-094. Detail is in [AI.md](AI.md).
 
@@ -77,11 +79,11 @@ This refines the Organizations & Mail and AI & Pipelines packages of [Domain.md]
 | `org` (+col) | contact_mode: `suggest\|auto\|manual` (default `suggest`) | D-056 |
 | `contact_suggestion` | org, email, name?, member?, message, status: `proposed\|accepted\|rejected\|expired` | Unique `(org, lower(email))`, so a rejected address isn't proposed again |
 | `member` (+cols) | `aliases[]` (nicknames to match in mail), `gender?`: `female\|male\|other`, `relevance_tags[]` | D-055. Used by member linking (§6.3) |
-| `household` (+settings) | `gender_terms{female[], male[]}`, `events.auto_write` (false), `events.thresholds{extract: 0.9, route: 0.9}`, `inbox.expiry{task_days: 14, contact_days: 14}`, `dashboard_pending_approvals` (true) | D-055, D-057, D-061, D-078 |
-| `mail_source` | provider: `gmail\|imap` (default `gmail`), address, read_only (true), visibility: `owners\|household` (default `owners`), backfill_days (30), query? (Gmail search string), poll_minutes (5), state: `ok\|needs_reauth\|error\|paused`, last_synced_at?, last_error?, archived_at?, version. **Gmail:** oauth_account, history_id?. **IMAP:** host, port (993), username, secret (app password), folders[] (default `INBOX`; `[Gmail]/All Mail` on Gmail), archive_folder?, gmail_ext (detected) | D-007, D-052, D-053, D-063. Gmail reuses `oauth_account` (Feeds.md §2) with incremental consent for `gmail.readonly`, or `gmail.modify` when read-only is off |
+| `household` (+settings) | `mail.max_message_bytes` (default 40 MB, D-101, planned; Settings → Mail), `gender_terms{female[], male[]}`, `events.auto_write` (false), `events.thresholds{extract: 0.9, route: 0.9}`, `inbox.expiry{task_days: 14, contact_days: 14}`, `dashboard_pending_approvals` (true) | D-055, D-057, D-061, D-078 |
+| `mail_source` | provider: `gmail\|imap` (default `gmail`), address, read_only (true), visibility: `owners\|household` (default `owners`), backfill_days (30), query? (Gmail search string), poll_minutes (5), state: `ok\|needs_reauth\|error\|paused`, last_synced_at?, last_error?, archived_at?, version. **Gmail:** oauth_account, history_id?. **IMAP:** host, port (993), username, secret (app password), folders[] (default `INBOX`; `[Gmail]/All Mail` on Gmail), archive_folder?, gmail_ext (detected), `imap_pem?` (Secret, D-100: a server certificate or CA bundle, planned). **All sources:** `task_visibility: follow_until_accepted\|follow_until_done\|household` (default `follow_until_accepted`, D-098, planned; written by `POST/PATCH /mail-sources` and Settings → Mail) | D-007, D-052, D-053, D-063, D-098, D-100. Gmail reuses `oauth_account` (Feeds.md §2) with incremental consent for `gmail.readonly`, or `gmail.modify` when read-only is off |
 | `mail_folder_state` | source, folder, uidvalidity, uidnext | IMAP incremental sync state |
 | `mail_source_owner` | mail_source ↔ member (1..*) | The owners are the classification context, and the visibility boundary unless the source is `household` (D-063) |
-| `message` | source, remote_id (Gmail id, hex `X-GM-MSGID`, or `uidvalidity:uid`), folder?, thread_id?, rfc822_id?, received_at, from_addr, from_name?, to[], cc[], subject, gmail_labels[], has_attachments, category?, time_sensitive?, is_bill?, processing_state: `pending\|processed\|expired`, **content** (body_text?, snippet?, headers jsonb?, attachments jsonb?), is_learning_example, content_purged_at?, in_eval_sample | Unique `(source, remote_id)`. Mail sent to several of the household's sources is one message per source; the derived items are deduped (§8) |
+| `message` | source, remote_id (Gmail id, hex `X-GM-MSGID`, or `uidvalidity:uid`), folder?, thread_id?, rfc822_id?, received_at, from_addr, from_name?, to[], cc[], subject, gmail_labels[], has_attachments, category?, time_sensitive?, is_bill?, processing_state: `pending\|processed\|expired`, **content** (body_text?, snippet?, headers jsonb?, attachments jsonb?), is_learning_example, content_purged_at?, in_eval_sample, `size_bytes?`, `too_large` (bool, default false; D-101, planned) | Unique `(source, remote_id)`. Mail sent to several of the household's sources is one message per source; the derived items are deduped (§8) |
 | `message_member` | message ↔ member, decided_by: `rule\|user` | Result of `email.member_link`, which can give several members |
 | `decision_point`, `pipeline_version`, `stage`, `decision` | As in Domain.md (AI & Pipelines) | Created in M3, so M4 only adds stage kinds |
 | `mail_rule` | decision_point, name, priority, conditions jsonb (§6.1), value, confidence, enabled, origin: `builtin\|user`, version | User rules for the `rules` stage. Built-in rules are code with listed defaults, and can be disabled |
@@ -116,6 +118,8 @@ Both providers implement `MailProvider { initial(window, filter), incremental(st
    - the text body: the `text/plain` part, or the HTML converted with `html2text`;
    - the snippet (the first 200 characters of the body for IMAP) and the selected headers (`List-Id`, `List-Unsubscribe`, `Precedence`, `Auto-Submitted`, `Reply-To`, `In-Reply-To`);
    - attachment metadata (name, MIME type, size, part id).
+
+   **Size limit (D-101, planned):** `household.mail.max_message_bytes` (default 40 MB) applies to Gmail and IMAP alike. Gmail checks `sizeEstimate` before `messages.get?format=raw`; IMAP fetches `RFC822.SIZE` first and fetches the body only when it fits. A message over the limit is stored as a headers-only row (`too_large = true`, `size_bytes`, from, to, subject, date and the selected headers; no body, no attachments), so the rules and the classifier can still categorise it. Settings → Mail lists the too-large messages per source. Before D-101 the limit was a 40 MB constant for Gmail with a per-message skip, and IMAP had no bound.
 
    ICS parts are stored whole. PDF text is extracted only on demand (bill extraction, ≤ 5 MB) and stored in `attachments` jsonb as content.
 
@@ -228,6 +232,7 @@ Summarising a long newsletter per child is System 2 work (after M4).
   - `create`: the same task is created `open`;
   - `off`: nothing automatic.
   - "Make task" on any message is always available to adults who can see it.
+  - **Visibility (D-098, planned):** a task derived from a message follows its source's `task_visibility`: `follow_until_accepted` (default) hides it from adults who cannot see the source until it is accepted, `follow_until_done` until it is closed, `household` never. The check is in the task queries and routes (Tasks.md §7.1).
 
 ## 10. The approval inbox and the labelling view
 - **Inbox** (`/inbox` in the app only; nothing derived from email is on the dashboard, D-068) holds four kinds:
@@ -308,5 +313,5 @@ No dashboard panel: the dashboard is at-a-glance only (D-068). The M3 `inbox` pa
 - Message content never appears in logs. Log lines carry ids, counts and timings only (D-035 and the no-real-data rule).
 - `matches` regexes are length-limited and compiled with a size limit, so a bad user rule can't stall the worker.
 - PDF parsing runs with a size cap and a timeout in a blocking task. A failure leaves the bill `proposed`.
-- IMAP connections require TLS (port 993, or STARTTLS on 143); plain-text login is refused.
+- IMAP connections require TLS (port 993, or STARTTLS on 143); plain-text login is refused for every source. **Private CA (D-100, planned):** an IMAP source may carry a PEM (a server certificate or a CA bundle) in `imap_pem`, entered in Settings → Mail and stored as a `Secret`; when set, a rustls verifier built per source checks the server against it instead of the system roots. `FA_ALLOW_PLAIN_IMAP` and `FA_IMAP_TLS_INSECURE` stay process-wide, tests-only switches.
 - Calendar writes and mail actions are audited (D-013 audit log) and limited to sources an adult has made writable.

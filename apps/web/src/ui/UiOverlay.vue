@@ -64,6 +64,8 @@ useFocusTrap(toRef(props, 'open'), el, close)
   border-radius: var(--ui-radius-xl);
   background: var(--ui-surface-container-high);
   color: var(--ui-on-surface);
+  /* secondary text on the raised tone keeps 4.5:1 (D-106) */
+  --ui-on-surface-variant: var(--ui-on-surface-variant-high);
   box-shadow: var(--ui-elev-3);
   animation: ui-pop var(--ui-motion-medium) var(--ui-ease);
 }
@@ -74,6 +76,7 @@ useFocusTrap(toRef(props, 'open'), el, close)
   padding-bottom: calc(var(--ui-space-5) + env(safe-area-inset-bottom));
   border-radius: var(--ui-radius-xl) var(--ui-radius-xl) 0 0;
   background: var(--ui-surface-container-low);
+  --ui-on-surface-variant: var(--ui-on-surface-variant-low);
   animation-name: ui-rise;
 }
 .ui-overlay__panel:focus {

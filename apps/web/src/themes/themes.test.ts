@@ -5,6 +5,7 @@ import {
   FAMILIES,
   HUES,
   applyTheme,
+  resolveExtended,
   loadDeviceChoice,
   resolveVariant,
   saveDeviceChoice,
@@ -56,6 +57,56 @@ describe('contrast rules', () => {
           expect(contrastRatio(n.onAccent, v.hues.blue)).toBeGreaterThanOrEqual(4.5)
         })
       })
+})
+
+describe('extended palettes', () => {
+  it('are well formed or absent', () => {
+    for (const f of FAMILIES)
+      for (const v of f.variants) {
+        const x = v.extended
+        if (!x) continue
+        const id = `${f.id}/${v.id}`
+        expect(x.layers, id).toHaveLength(4)
+        for (const l of x.layers) expect(l, id).toMatch(HEX)
+        expect(x.layers[0].toLowerCase(), id).toBe(v.neutrals.bg.toLowerCase())
+        for (const k of ['textStrong', 'textSubtle', 'comment', 'selection', 'highlight'] as const)
+          if (x[k] !== undefined) expect(x[k], `${id} ${k}`).toMatch(HEX)
+      }
+  })
+  it('leaves out Alucard and Nord Snow Storm', () => {
+    const find = (f: string, v: string) =>
+      FAMILIES.find((x) => x.id === f)!.variants.find((x) => x.id === v)!
+    expect(find('dracula', 'alucard').extended).toBeUndefined()
+    expect(find('nord', 'snow-storm').extended).toBeUndefined()
+  })
+  for (const f of FAMILIES)
+    for (const v of f.variants)
+      it(`${f.id}/${v.id}: text and the chosen subtle token reach 4.5:1 on every layer`, () => {
+        const x = resolveExtended(v)
+        x.layers.forEach((l, i) => {
+          expect(contrastRatio(v.neutrals.text, l), `text on layer ${i}`).toBeGreaterThanOrEqual(
+            4.5,
+          )
+          expect(
+            contrastRatio(x.onLayerSubtle[i]!, l),
+            `subtle on layer ${i}`,
+          ).toBeGreaterThanOrEqual(4.5)
+        })
+      })
+  it('applyTheme writes the layer variables', () => {
+    const el = document.createElement('div')
+    applyTheme(FAMILIES[0]!.variants[0]!, el)
+    for (const k of [
+      '--color-layer-0',
+      '--color-layer-3',
+      '--color-on-layer-2-subtle',
+      '--color-comment',
+      '--color-selection',
+      '--color-highlight',
+      '--color-text-strong',
+    ])
+      expect(el.style.getPropertyValue(k), k).toMatch(HEX)
+  })
 })
 
 describe('resolveVariant', () => {

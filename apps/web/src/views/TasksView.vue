@@ -13,7 +13,7 @@ import { addableLists, memberRefs, toTaskItem, type Viewer } from '../stores/tas
 import { useTasksStore, type TaskTab } from '../stores/tasks'
 import {
   UiButton,
-  UiChip,
+  UiFilterChips,
   UiEmptyState,
   UiErrorState,
   UiFab,
@@ -55,14 +55,17 @@ const tabOptions = computed(() =>
 const refs = computed(() => memberRefs(members.items))
 const canAdd = computed(() => addableLists(lists.items, viewer.value).length > 0)
 
-// The filter chips (R2): All, Mine, then each member. Applied by the server (`member=`).
-const hasMe = computed(() => !!session.member)
-const activeFilter = computed(() =>
-  tasks.filter === 'mine' && !hasMe.value ? 'all' : tasks.filter,
-)
+// The filter chips (D-105): additive, empty is All. The default is the viewer's own member.
 const showFilter = computed(() => tab.value !== 'suggested')
-function pick(f: string) {
-  if (f !== activeFilter.value) void tasks.setFilter(f)
+const filterOptions = computed(() =>
+  members.items.map((m) => ({
+    value: m.id,
+    label: session.member?.id === m.id ? 'Mine' : m.display_name,
+    color: refs.value.get(m.id)?.color,
+  })),
+)
+function pick(f: string[]) {
+  void tasks.setFilter(f)
 }
 
 const dataTab = computed<TaskTab>(() => (tab.value === 'lists' ? 'all' : tab.value))
@@ -129,33 +132,14 @@ const loadingFirst = computed(() => tasks.loading && !tasks.tabs[dataTab.value])
       @update:model-value="tab = $event as Tab"
     />
 
-    <div v-if="showFilter" class="filter" role="group" aria-label="Show tasks for">
-      <UiChip variant="filter" :selected="activeFilter === 'all'" @click="pick('all')">
-        All
-      </UiChip>
-      <UiChip
-        v-if="hasMe"
-        variant="filter"
-        :selected="activeFilter === 'mine'"
-        @click="pick('mine')"
-      >
-        Mine
-      </UiChip>
-      <UiChip
-        v-for="m in members.items"
-        :key="m.id"
-        variant="filter"
-        :selected="activeFilter === m.id"
-        @click="pick(m.id)"
-      >
-        <span
-          class="filter__dot"
-          :style="{ background: refs.get(m.id)?.color }"
-          aria-hidden="true"
-        />
-        {{ m.display_name }}
-      </UiChip>
-    </div>
+    <UiFilterChips
+      v-if="showFilter"
+      class="filter"
+      :model-value="tasks.filter"
+      :options="filterOptions"
+      label="Show tasks for"
+      @update:model-value="pick"
+    />
 
     <UiSkeleton v-if="loadingFirst" :lines="5" />
     <UiErrorState v-else-if="tasks.error" :message="tasks.error" @retry="load" />
@@ -244,22 +228,6 @@ const loadingFirst = computed(() => tasks.loading && !tasks.tabs[dataTab.value])
   right: calc(var(--ui-space-4) + env(safe-area-inset-right));
   bottom: calc(var(--ui-bottom-offset, 0px) + var(--ui-space-4) + env(safe-area-inset-bottom));
   z-index: 15;
-}
-.filter {
-  display: flex;
-  gap: var(--ui-space-2);
-  overflow-x: auto;
-  padding-bottom: var(--ui-space-1);
-  scrollbar-width: none;
-}
-.filter > * {
-  flex: none;
-}
-.filter__dot {
-  display: inline-block;
-  width: 0.75rem;
-  height: 0.75rem;
-  border-radius: var(--ui-radius-full);
 }
 .suggestion {
   display: grid;

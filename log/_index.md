@@ -1,6 +1,6 @@
 ---
 title: Log Index
-updated: 2026-11-05
+updated: 2026-11-07
 ---
 
 # Daily Logs
@@ -18,3 +18,4 @@ updated: 2026-11-05
 - [2026-11-02](2026-11-02.md): IMPROVEMENTS.md re-checked; M3.7 review follow-ups (C-10 secrets AAD, C-14 list envelopes, C-13 route conventions, P-06 fa.py CLI, P-07 skills, second code review)
 - [2026-11-04](2026-11-04.md): plan; M4; ai; ui
 - [2026-11-05](2026-11-05.md): M4; wave-3; wave-4; ci
+- [2026-11-07](2026-11-07.md): M4; wave-5; decisions; themes

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
+import type { EventView } from '../api/client'
 import DateRangeNav from '../components/DateRangeNav.vue'
 import EventCard from '../components/EventCard.vue'
 import { rangeFor, shiftAnchor } from '../composables/useRange'
@@ -13,7 +14,7 @@ import { chipsByDay, memberRefs, type TaskChip } from '../stores/taskMap'
 import { useTasksStore } from '../stores/tasks'
 import {
   UiCheckbox,
-  UiChip,
+  UiFilterChips,
   UiErrorState,
   UiPage,
   UiSegmented,
@@ -36,10 +37,29 @@ const snackbar = useSnackbar()
 const bp = useBreakpoint()
 
 const tz = computed(() => household.tz)
-// Agenda on phones, week on wider screens; the segmented control overrides.
-const view = ref<View>(bp.value === 'compact' ? 'agenda' : 'week')
+// The view a person last used is reopened (D-103); with none stored, Agenda on phones and Week
+// on wider screens.
+const VIEW_KEY = 'fa.calendar.view'
+function readView(): View | null {
+  try {
+    const v = localStorage.getItem(VIEW_KEY)
+    return v === 'agenda' || v === 'week' || v === 'month' ? v : null
+  } catch {
+    return null
+  }
+}
+const view = ref<View>(readView() ?? (bp.value === 'compact' ? 'agenda' : 'week'))
+function setView(v: View) {
+  view.value = v
+  try {
+    localStorage.setItem(VIEW_KEY, v)
+  } catch {
+    // Blocked storage: the choice is simply not remembered.
+  }
+}
 const anchor = ref(dayKey(new Date(), household.tz))
-const member = ref('')
+/** The chosen members (D-105); empty means everyone. */
+const chosen = ref<string[]>([])
 const detail = ref<EventLike | null>(null)
 const detailOpen = computed({
   get: () => detail.value !== null,
@@ -69,8 +89,19 @@ const days = computed(() => {
   return Math.round((Date.UTC(ty!, tm! - 1, td!) - Date.UTC(fy!, fm! - 1, fd!)) / 86_400_000)
 })
 const likes = computed(() => memberLikes(members.items))
-const events = computed(() =>
-  calendar.eventsIn(grid.value.from, grid.value.to, tz.value, member.value || undefined),
+// The API filters by one member: each chosen member is fetched and the results merged.
+const memberKeys = computed<(string | undefined)[]>(() =>
+  chosen.value.length ? chosen.value : [undefined],
+)
+const events = computed(() => {
+  const byId = new Map<string, EventView>()
+  for (const m of memberKeys.value)
+    for (const e of calendar.eventsIn(grid.value.from, grid.value.to, tz.value, m))
+      byId.set(e.id, e)
+  return [...byId.values()].sort((a, b) => a.start_at.localeCompare(b.start_at))
+})
+const memberOptions = computed(() =>
+  members.items.map((m) => ({ value: m.id, label: m.display_name })),
 )
 const byDay = computed(() =>
   groupByDay(
@@ -147,14 +178,15 @@ watch(
 )
 
 function load() {
-  void calendar.ensureRange(grid.value.from, grid.value.to, tz.value, member.value || undefined)
+  for (const m of memberKeys.value)
+    void calendar.ensureRange(grid.value.from, grid.value.to, tz.value, m)
   void tasks.loadRange(rangeInstants.value.from, rangeInstants.value.to)
 }
 onMounted(() => {
   void members.load()
   load()
 })
-watch([() => grid.value.from, () => grid.value.to, member, tz], load)
+watch([() => grid.value.from, () => grid.value.to, chosen, tz], load)
 
 const dayNumber = (k: string) => Number(k.slice(8))
 const loadingFirst = computed(() => calendar.loading && events.value.length === 0)
@@ -177,20 +209,9 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
         :model-value="view"
         :options="VIEWS"
         label="View"
-        @update:model-value="view = $event as View"
+        @update:model-value="setView($event as View)"
       />
-      <div class="members" role="group" aria-label="Member">
-        <UiChip variant="filter" :selected="member === ''" @click="member = ''">Everyone</UiChip>
-        <UiChip
-          v-for="m in members.items"
-          :key="m.id"
-          variant="filter"
-          :selected="member === m.id"
-          @click="member = member === m.id ? '' : m.id"
-        >
-          {{ m.display_name }}
-        </UiChip>
-      </div>
+      <UiFilterChips v-model="chosen" :options="memberOptions" label="Member" />
     </div>
 
     <UiErrorState v-if="calendar.error" :message="calendar.error" @retry="load" />
@@ -314,11 +335,6 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
 }
 .controls > :first-child {
   width: 100%;
-}
-.members {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--ui-space-2);
 }
 h2 {
   margin: 0 0 var(--ui-space-2);

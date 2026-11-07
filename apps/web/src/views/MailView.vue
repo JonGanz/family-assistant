@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import MessageRow from '../components/mail/MessageRow.vue'
 import { useHouseholdStore } from '../stores/household'
@@ -10,6 +10,7 @@ import {
   UiChip,
   UiEmptyState,
   UiErrorState,
+  UiFilterChips,
   UiIconButton,
   UiPage,
   UiSkeleton,
@@ -22,6 +23,14 @@ const household = useHouseholdStore()
 const members = useMembersStore()
 const router = useRouter()
 
+const categoryOptions = computed(() =>
+  mail.categories.map((c) => ({ value: c.key, label: c.label })),
+)
+const memberOptions = computed(() =>
+  members.items.map((m) => ({ value: m.id, label: m.display_name })),
+)
+const sourceOptions = computed(() => mail.sources.map((s) => ({ value: s.id, label: s.name })))
+
 onMounted(() => {
   void members.load()
   void mail.loadFilters()
@@ -29,18 +38,13 @@ onMounted(() => {
 })
 watch(
   () => [
-    mail.filters.category,
-    mail.filters.member,
-    mail.filters.source,
+    mail.filters.category.join(),
+    mail.filters.member.join(),
+    mail.filters.source.join(),
     mail.filters.includeIgnored,
   ],
   () => void mail.load(),
 )
-
-/** Single choice per row: tapping the selected chip clears it. */
-function pick(key: 'category' | 'member' | 'source', value: string) {
-  mail.filters[key] = mail.filters[key] === value ? '' : value
-}
 </script>
 
 <template>
@@ -58,35 +62,10 @@ function pick(key: 'category' | 'member' | 'source', value: string) {
       <UiButton type="submit" variant="tonal" icon="search">Search</UiButton>
     </form>
 
-    <div class="chips" role="group" aria-label="Category">
-      <UiChip
-        v-for="c in mail.categories"
-        :key="c.id"
-        variant="filter"
-        :selected="mail.filters.category === c.key"
-        @click="pick('category', c.key)"
-        >{{ c.label }}</UiChip
-      >
-    </div>
-    <div class="chips" role="group" aria-label="Member">
-      <UiChip
-        v-for="m in members.items"
-        :key="m.id"
-        variant="filter"
-        :selected="mail.filters.member === m.id"
-        @click="pick('member', m.id)"
-        >{{ m.display_name }}</UiChip
-      >
-    </div>
-    <div class="chips" role="group" aria-label="Source">
-      <UiChip
-        v-for="s in mail.sources"
-        :key="s.id"
-        variant="filter"
-        :selected="mail.filters.source === s.id"
-        @click="pick('source', s.id)"
-        >{{ s.name }}</UiChip
-      >
+    <UiFilterChips v-model="mail.filters.category" :options="categoryOptions" label="Category" />
+    <UiFilterChips v-model="mail.filters.member" :options="memberOptions" label="Member" />
+    <div class="chips">
+      <UiFilterChips v-model="mail.filters.source" :options="sourceOptions" label="Source" />
       <UiChip
         variant="filter"
         :selected="mail.filters.includeIgnored"
@@ -130,10 +109,9 @@ function pick(key: 'category' | 'member' | 'source', value: string) {
 }
 .chips {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
+  align-items: center;
   gap: var(--ui-space-2);
-  overflow-x: auto;
-  scrollbar-width: none;
 }
 .stack {
   display: grid;

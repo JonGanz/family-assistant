@@ -1,12 +1,12 @@
 ---
 id: Q-090
 title: "Bills: grouped by state, and a state filter"
-status: open
+status: resolved
 batch: 23
 area: frontend
 created: 2026-11-04
-resolved:
-decisions: []
+resolved: 2026-11-07
+decisions: [D-105]
 ---
 
 # Q-090: Bills: grouped by state, and a state filter
