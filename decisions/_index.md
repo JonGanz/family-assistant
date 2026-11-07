@@ -115,3 +115,4 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-104](D-104-m4-batch23-confirmed.md) | M4 applied choices confirmed (Q-088, Q-089, Q-093 to Q-097) | accepted | Q-088, Q-089, Q-093, Q-094, Q-095, Q-096, Q-097 | arch/Frontend.md, arch/AI.md |
 | [D-105](D-105-additive-filter-chips.md) | Every filter row is an additive multi-select with All first | accepted | Q-090, Q-091 | arch/Frontend.md |
 | [D-106](D-106-neovim-theme-palettes.md) | Canonical accents; extended theme palettes from the Neovim ports | accepted | Q-092 | arch/Frontend.md |
+| [D-107](D-107-llm-first-mail.md) | LLM-first mail processing with rules fallback and catch-up queue | accepted | (instruction) | arch/AI.md, arch/Ingest.md, arch/Frontend.md |

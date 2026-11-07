@@ -9,6 +9,8 @@ superseded_by:
 affects: [arch/AI.md, arch/Overall.md, arch/Ingest.md, README.md]
 ---
 
+> Refined by D-107 (2026-11-07): llm_first mode (default) sends every message to the LLM, with the rules as fallback and a catch-up queue.
+
 # D-094: M4's AI track is the LLM extraction slice; System One and the agent move to M4.1
 
 ## Context
