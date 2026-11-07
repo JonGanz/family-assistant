@@ -27,8 +27,26 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Open
-_None. The next question number is Q-098._
+## Batch 24, open
+| ID | Title | Area |
+|---|---|---|
+| [Q-098](Q-098-recipe-import-sources.md) | Recipe import: which ways in | ingest |
+| [Q-099](Q-099-recipe-images.md) | Recipe images: store a copy or link to the source | domain |
+| [Q-100](Q-100-meals-permissions.md) | Who can edit recipes, the meal plan and the grocery list | security |
+| [Q-101](Q-101-meal-cook.md) | Name a cook per meal, and should it become a task | domain |
+| [Q-102](Q-102-meal-slots.md) | Meal slots: names, order and times | domain |
+| [Q-103](Q-103-meal-plan-entries.md) | Meal-plan entries: free text, leftovers, repeating meals | domain |
+| [Q-104](Q-104-servings-scaling.md) | Servings: default and scaling on the list | domain |
+| [Q-105](Q-105-unit-conversion.md) | Units on the grocery list: what gets converted | domain |
+| [Q-106](Q-106-ingredient-catalogue-seed.md) | Ingredient catalogue: ship a seed or start empty | domain |
+| [Q-107](Q-107-unmatched-ingredients.md) | Ingredient lines the rules cannot match | ingest |
+| [Q-108](Q-108-grocery-sections.md) | Grocery list order: aisles, stores | frontend |
+| [Q-109](Q-109-plan-changes-after-generate.md) | When the plan changes after the list was generated | domain |
+| [Q-110](Q-110-meals-dashboard.md) | Meals and grocery on the dashboard | frontend |
+| [Q-111](Q-111-grocery-offline.md) | Shopping with poor signal | frontend |
+| [Q-112](Q-112-meal-reminders.md) | Meal reminders and notifications | domain |
+| [Q-113](Q-113-recipe-library.md) | Recipe library: tags, search, favourites, notes | frontend |
+| [Q-114](Q-114-m5-carry-overs.md) | M5 scope: food only, or also the M4 follow-ups | infra |
 
 ## Resolved
 | ID | Title | Decisions |

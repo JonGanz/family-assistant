@@ -2,10 +2,10 @@
 title: Overall Architecture
 scope: system
 status: draft
-updated: 2026-11-04
+updated: 2026-11-07
 drawio: Overall.drawio
 drawio_src: src/Overall.py
-depends_on: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012, D-013, D-014, D-015, D-017, D-018, D-019, D-020, D-021, D-023, D-024, D-025, D-026, D-027, D-028, D-029, D-031, D-032, D-033, D-034, D-035, D-036, D-037, D-038, D-039, D-040, D-041, D-042, D-043, D-044, D-045, D-046, D-047, D-048, D-049, D-050, D-051, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-064, D-065, D-066, D-067, D-068, D-069, D-070, D-071, D-072, D-073, D-074, D-075, D-076, D-077, D-093, D-094, D-095, D-096, D-097]
+depends_on: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012, D-013, D-014, D-015, D-017, D-018, D-019, D-020, D-021, D-023, D-024, D-025, D-026, D-027, D-028, D-029, D-031, D-032, D-033, D-034, D-035, D-036, D-037, D-038, D-039, D-040, D-041, D-042, D-043, D-044, D-045, D-046, D-047, D-048, D-049, D-050, D-051, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-064, D-065, D-066, D-067, D-068, D-069, D-070, D-071, D-072, D-073, D-074, D-075, D-076, D-077, D-093, D-094, D-095, D-096, D-097, D-108]
 research: [R-001, R-004, R-005]
 ---
 
@@ -100,7 +100,7 @@ The detailed model is in **[Domain.md](Domain.md)**. Summary:
 
 Platform details (layout, security, deployment, backups) are in **[Platform.md](Platform.md)**.
 
-## Roadmap (D-023, adjusted by D-029, D-050, D-066, D-094 and D-097)
+## Roadmap (D-023, adjusted by D-029, D-050, D-066, D-094, D-097 and D-108)
 | Milestone | Content | Arch docs needed first |
 |---|---|---|
 | M0 | Skeleton: workspace, DB, config, auth/RBAC, devices, Vue shell, compose, backups | `Domain.md`, `Platform.md` |
@@ -109,10 +109,10 @@ Platform details (layout, security, deployment, backups) are in **[Platform.md](
 | M3 | Email ingest, **pipeline engine with the 'Rules only' preset**, bills, linking, approvals, **labelling view** | `Ingest.md` |
 | M3.5 | **Onboarding** (D-065): one compose file with an optional Tailscale sidecar, optional HTTPS, generated secrets, the first-run wizard, Settings, System. **Shakedown** (D-066): H-02..H-11 on the real server through the new install, a week of approval-inbox measurement, the M3 known gaps | `Platform.md` v4, `Frontend.md` v4 |
 | M4 | Two parallel tracks (D-097). **AI: LLM extraction slice** (D-093, D-094): a configurable OpenAI-compatible endpoint (default Ollama on the GPU node), the `llm` stage for the email decision points and extraction (`mail.llm`), the recipe-extraction contract for M5, basic eval, Settings → AI. **UI revamp** (D-095, D-096): a Material 3-style component library on the theme variables, Material Symbols, new navigation, one apply-changes model, every non-dashboard view migrated | `AI.md`, `Frontend.md` v5 |
+| M5 | Recipes, meal plan, grocery | `Meals.md` (draft, D-108: before M4.1) |
 | M4.1 | System One sidecar (CPU) and `fa-decide`, kNN and `embed`, backend registry and profile suggester, sysprobe, `fa-gpu-agent` (optional) with WoL, gaming yield and suspend, `s1-large`, full eval, **Pipeline and Backends settings**, S2 advisories, first member-interest feature (D-071) | `AI.md` update |
-| M5 | Recipes, meal plan, grocery | `Meals.md` |
 | M6 | Smart assignment, learned calendar routing | updates |
 | M7 | Goals: count or quantity targets, weekly cadence with reset, progress bars (D-048, D-051) | `Goals.md` |
 | M8 | TUI (stretch) | updates |
 
-The M6 to M8 split is D-050; M3.5 is D-066; the M4/M4.1 split is D-094 (superseding D-067) and M4's two tracks are D-097.
+The M6 to M8 split is D-050; M3.5 is D-066; the M4/M4.1 split is D-094 (superseding D-067) and M4's two tracks are D-097; M5 before M4.1 is D-108.

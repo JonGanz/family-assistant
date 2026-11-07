@@ -15,3 +15,4 @@ Each file is `R-NNN-slug.md`. These are external research notes that decisions c
 | [R-004](R-004-openai-compatible-llm-api.md) | OpenAI-compatible LLM API from Rust (Ollama, llama.cpp, vLLM, LM Studio) | 2026-11-04 | M4 plan |
 | [R-005](R-005-material-symbols-vue.md) | Material Symbols in Vue 3 + Vite | 2026-11-04 | M4 plan |
 | [R-006](R-006-neovim-theme-palettes.md) | Neovim theme palettes (richer neutrals for the app themes) | 2026-11-07 | theme palette slots |
+| [R-007](R-007-ingredient-normalisation.md) | Ingredient normalisation, unit conversion and seed data for the grocery list | 2026-11-07 | M5 (D-015, D-021) |
