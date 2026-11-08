@@ -25,4 +25,4 @@ How should recipe images be handled?
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

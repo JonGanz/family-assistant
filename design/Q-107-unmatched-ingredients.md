@@ -25,4 +25,4 @@ What happens to an unmatched line?
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

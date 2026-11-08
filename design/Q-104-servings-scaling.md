@@ -25,4 +25,4 @@ How are servings set per entry?
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

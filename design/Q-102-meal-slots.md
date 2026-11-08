@@ -24,4 +24,4 @@ How are slots modelled?
 
 ## Answer
 <!-- answer below this line -->
-
+Option A, but default only to Dinner.

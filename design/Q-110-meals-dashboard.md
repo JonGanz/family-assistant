@@ -25,4 +25,8 @@ What appears on the dashboard?
 
 ## Answer
 <!-- answer below this line -->
+The day's meals should show up on the Home screen. A "Food" view should offer a few tabs: Shopping List, and Meal Plan.
 
+Shopping List will show the lists (perhaps grouped by store) where items can be added or if needed, removed.
+
+Meal Plan will show a month view grid of the meal plan starting with the previous week, the current date highlighted (probably using the same inversion of light/dark), and continuing on until the screen is full.

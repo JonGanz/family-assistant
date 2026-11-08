@@ -25,4 +25,4 @@ Who may do what?
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

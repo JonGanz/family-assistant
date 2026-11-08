@@ -25,4 +25,4 @@ Should M5 send meal notifications?
 
 ## Answer
 <!-- answer below this line -->
-
+A.

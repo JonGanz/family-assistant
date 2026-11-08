@@ -25,4 +25,4 @@ Should a meal-plan entry carry a cook?
 
 ## Answer
 <!-- answer below this line -->
-
+C.

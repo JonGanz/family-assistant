@@ -25,4 +25,4 @@ What happens to the items it contributed?
 
 ## Answer
 <!-- answer below this line -->
-
+Option C.

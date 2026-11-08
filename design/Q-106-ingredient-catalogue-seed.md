@@ -25,4 +25,4 @@ What does a new household start with?
 
 ## Answer
 <!-- answer below this line -->
-
+Option A, within licences requirements.

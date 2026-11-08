@@ -25,4 +25,4 @@ How is the list ordered?
 
 ## Answer
 <!-- answer below this line -->
-
+Option A. Though there is also the idea that certain items will often come from different stores, so grouping that way would be nice too. For instance, maybe you get your milk at a standard grocery store, but eggs in bulk from a bulk-style store such as Costco.

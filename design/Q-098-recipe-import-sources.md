@@ -25,4 +25,4 @@ Which import paths should M5 offer?
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

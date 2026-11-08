@@ -24,4 +24,4 @@ What else goes into M5?
 
 ## Answer
 <!-- answer below this line -->
-
+Option A.

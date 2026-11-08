@@ -24,4 +24,4 @@ What does the library offer?
 
 ## Answer
 <!-- answer below this line -->
-
+Option B.
