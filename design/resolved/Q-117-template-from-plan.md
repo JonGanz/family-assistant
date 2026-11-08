@@ -1,12 +1,12 @@
 ---
 id: Q-117
 title: Create a template from the plan
-status: open
+status: resolved
 batch: 25
 area: frontend
 created: 2026-11-08
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-122]
 ---
 
 # Q-117: Create a template from the plan

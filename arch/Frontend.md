@@ -5,7 +5,7 @@ status: draft
 updated: 2026-11-08
 drawio: Frontend.drawio
 drawio_src: src/Frontend.py
-depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078, D-079, D-080, D-081, D-093, D-094, D-095, D-096, D-097, D-098, D-099, D-100, D-101, D-102, D-103, D-104, D-105, D-106, D-109, D-110, D-111, D-112, D-115, D-116, D-117, D-118]
+depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078, D-079, D-080, D-081, D-093, D-094, D-095, D-096, D-097, D-098, D-099, D-100, D-101, D-102, D-103, D-104, D-105, D-106, D-109, D-110, D-111, D-112, D-115, D-116, D-117, D-118, D-120, D-121, D-122]
 milestone: M5
 ---
 
@@ -248,16 +248,16 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 
 **Meal plan** (`/food/plan`, adults edit, everyone reads; D-110, D-111, D-112, D-116):
 - A grid of **week rows**: seven day columns starting on the household's `week_start`; the first row is the **previous week**, then the current week, then following weeks, scrolling on to the end of the horizon (`meal_plan_horizon_weeks`); scrolling up shows past weeks read-only. Today's cell is drawn **inverted** (text and background swapped), the same marker as today on the calendar. On compact the grid becomes a day list (one card per day, the same order).
-- Each cell shows the **visible slots** in slot order (only Dinner by default, D-111), each with a recipe title (thumbnail on expanded) or free text, or an empty "+" for adults. Working assumption until Q-115: **one entry per date and slot**.
-- Adults add an entry from a sheet (recipe search or free text, servings defaulting to the recipe's), edit it, delete it with Undo, and **move or swap** entries by drag on pointer devices and by "Move to…" (date and slot picker) everywhere; dropping on a filled slot swaps.
-- **Apply template:** pick a template and a start date; the sheet previews the slots it fills and lists every **conflict** (a slot that already has an entry) with a keep/replace choice per slot. Free-text entries are preselected **keep**, recipe entries **replace**. Applying is one change with Undo (D-096). Applied entries are detached from the template (D-112).
+- Each cell shows the **visible slots** in slot order (only Dinner by default, D-111), each with a recipe title (thumbnail on expanded) or free text; a slot may hold **several entries**, listed in order, with a "+" for adults to add another (D-120).
+- Adults add an entry from a sheet (recipe search or free text, servings defaulting to the recipe's), edit it, delete it with Undo, and **move or swap** entries by drag on pointer devices and by "Move to…" (date and slot picker) everywhere; dropping an entry on a slot appends it there, and dropping it on another entry swaps the two (D-120).
+- **Apply template:** pick a template and a start date. The sheet previews the slots it fills and lists every **conflict** (a slot that already has entries, shown with them) with a **Replace / Add** choice per slot. Slots holding any free-text entry are preselected **Add**, others **Replace** (D-120). Applying is one change with Undo (D-096). Applied entries are detached from the template (D-112).
 - **Make grocery list:** choose a date range (default the coming week) or pick meals in the grid (selection mode); a summary shows items to add and the Staples check; applying shows Undo.
 - **Plan change with list impact (D-116):** when an edit, delete, move, swap, servings change or template apply touches an entry that contributed to unchecked list items, the server returns its `grocery_impact` and a dialog lists the items that would be reduced or removed, with **Update the list** and **Leave the list**. Nothing is asked when there is no impact.
-- Working assumption until Q-117: templates are created only in the template editor.
+- **Save as template** (adults): pick a date range and the slots to include, name it, save. Every entry in those slots becomes a template item (D-122).
 
 **Shopping list** (`/food/list`, D-021, D-110, D-115, D-118):
 - An **add box** at the top (text; suggestions from the ingredient catalogue as you type; the item takes the ingredient's default store).
-- Items grouped **by store** (store order, "Any store" last), then **by aisle** in the household's aisle order (working assumption until Q-116: one aisle order for all stores), "Other" for unmatched items. A household with no stores sees aisles only. Each row: text, quantity and unit in household units, a source hint ("for Tue dinner, Thu dinner") when generated.
+- Items grouped **by store** (store order, "Any store" last), then **by aisle** in **that store's** aisle order ("Any store" uses the household order). Aisles a store hides, and unmatched items, go to that store's "Other" (D-121). A household with no stores sees aisles only. Each row: text, quantity and unit in household units, a source hint ("for Tue dinner, Thu dinner") when generated.
 - **Store filter** as a `UiFilterChips` row (§1.5) to shop one store; remembered per device (`fa.grocery.stores`).
 - **Check off** is instant with Undo; checked items fall to a collapsed "Checked" group until archived (default 24 h, D-021).
 - The **Staples check** section (D-021) sits below, listing staples with the meals that need them and a **Low** button that moves one onto the list.
@@ -270,13 +270,13 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 - **New recipe** (adults): a sheet with three ways in, **From a link**, **Paste text**, **Type it in**; the first two show progress and open the **editor** on the returned draft (nothing is stored until Save). Errors (no recipe found, LLM not available) are shown with the fallback "Type it in".
 - **Editor:** a form with the Save bar: title, servings, times, tags, note, image (keep the imported one, upload, or remove), ingredient lines, steps. **Unmatched lines** are highlighted; a line with an LLM proposal shows it as a chip ("tomato, canned?") with Accept, Pick another (catalogue search) and New ingredient; a picked match becomes an alias (D-113).
 
-**Templates** (`/food/templates`, adults, D-112): a list of templates (name, length, slots used), and an editor: name, length in days, and a grid of days × slots where each cell holds a recipe, free text or nothing; days are numbered (Day 1…) and shown in week rows when the length is a multiple of 7. Delete asks first.
+**Templates** (`/food/templates`, adults, D-112): a list of templates (name, length, slots used), and an editor: name, length in days, and a grid of days × slots where each cell holds a recipe, free text or nothing; a cell can hold several items (D-120). Days are numbered (Day 1…) and shown in week rows when the length is a multiple of 7. **Duplicate** copies a template under a new name (D-122). Delete asks first.
 
 **Settings → Meals** (`/settings/meals`, adults): cards for
 - **Slots:** name, `"HH:MM"` time, shown switch (instant), order; add and rename. A new household has Breakfast, Lunch, Dinner and Snack with only Dinner shown (D-111);
 - **Plan horizon:** `meal_plan_horizon_weeks`;
-- **Stores:** name and order, add, delete (items move to "Any store");
-- **Aisles:** name and order;
+- **Stores:** name and order, add, delete (items move to "Any store"). Per store, an **aisle order** editor (drag to reorder, a switch to hide an aisle the store does not have), starting from the household order (D-121);
+- **Aisles:** name and the household order (used for "Any store" and new stores);
 - **Ingredients:** the catalogue with search; per ingredient the canonical name, aliases, aisle, default store, default unit and the **staple** switch (instant); add and merge.
 
 ## 4. Dashboard (kiosk shell)
@@ -343,7 +343,7 @@ The layout is data held in `device.settings` and edited by adults in Settings �
   - stores (invalidation logic);
   - the layout engine (presets, unknown panels);
   - unit conversion;
-  - (M5) the meal-plan grid (week rows from the previous week on `week_start`, today inverted, visible slots only), the template conflict list (free text preselected keep), the grocery grouping (store then aisle, Any store last, Other), the offline queue (order, idempotent replay, 404 drop), the plan-change impact dialog, the rating control;
+  - (M5) the meal-plan grid (week rows from the previous week on `week_start`, today inverted, visible slots only), several entries per slot, the template conflict list (Add preselected for slots with free text), save as template, the grocery grouping (store, then that store's aisle order, hidden aisles to Other, Any store last), the offline queue (order, idempotent replay, 404 drop), the plan-change impact dialog, the rating control;
   - day grouping across DST changes, using a fixed tz.
 - **Playwright** against the e2e stack, which has a seeded household, an ICS fixture, and an Open-Meteo stub:
   - the dashboard renders the agenda, weather, and advisory;

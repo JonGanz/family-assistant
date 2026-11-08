@@ -7,7 +7,7 @@ depends_on: []
 agent: {model: opus, effort: medium}
 status: done
 owns: ["plan/**", "Cargo.toml", "crates/fa-meals/Cargo.toml", "crates/fa-meals/src/lib.rs", "crates/fa-meals/src/seed_data.rs", "apps/web/src/gen/**", "apps/web/src/api/food.ts", "apps/web/src/router/index.ts", "apps/web/src/ui/icons.ts"]
-decisions: [D-108, D-109, D-110, D-111, D-112, D-113, D-114, D-115, D-116, D-117, D-118, D-119]
+decisions: [D-108, D-109, D-110, D-111, D-112, D-113, D-114, D-115, D-116, D-117, D-118, D-119, D-120, D-121, D-122]
 ---
 
 # T-01: Main session
@@ -18,7 +18,7 @@ Planning was done on 2026-11-08 and produced:
 - research R-007;
 - `arch/Meals.md` v1, `Frontend.md` v5.2 and `Domain.md` v5.2.
 
-Batch 25 (Q-115 to Q-117) is open. The briefs build its working assumptions.
+Batch 25 was answered on 2026-11-08 (D-120 to D-122), and the briefs build it.
 
 Integration rows. Tick each one in `plan/M5.md` *Task status* when it is done.
 1. **Before wave 1:**

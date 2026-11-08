@@ -1,12 +1,12 @@
 ---
 id: Q-115
 title: One meal per slot, or several
-status: open
+status: resolved
 batch: 25
 area: domain
 created: 2026-11-08
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-120]
 ---
 
 # Q-115: One meal per slot, or several

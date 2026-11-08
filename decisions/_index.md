@@ -128,3 +128,6 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-117](D-117-food-view-dashboard.md) | Food view with Meal Plan and Shopping List; today's meals on the home screens | accepted | Q-110 | arch/Meals.md, arch/Frontend.md |
 | [D-118](D-118-grocery-offline-queue.md) | Grocery list works offline: local queue, and a full offline app over HTTPS | accepted | Q-111 | arch/Meals.md, arch/Frontend.md |
 | [D-119](D-119-m5-scope-boundaries.md) | M5 is food only, with no meal notifications; M4 follow-ups go to M4.2 | accepted | Q-112, Q-114 | arch/Overall.md, arch/Meals.md |
+| [D-120](D-120-several-entries-per-slot.md) | Several meals per slot; template apply replaces or adds per slot | accepted | Q-115 | arch/Meals.md, arch/Frontend.md, arch/Domain.md |
+| [D-121](D-121-aisle-order-per-store.md) | Each store has its own aisle order and hidden aisles | accepted | Q-116 | arch/Meals.md, arch/Frontend.md, arch/Domain.md |
+| [D-122](D-122-templates-from-plan-duplicate.md) | Templates from the editor, from a plan range, or by duplicating | accepted | Q-117 | arch/Meals.md, arch/Frontend.md |

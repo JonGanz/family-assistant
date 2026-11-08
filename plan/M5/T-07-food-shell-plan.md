@@ -7,7 +7,7 @@ depends_on: [T-06]
 agent: {model: sonnet, effort: high}
 status: todo
 owns: ["apps/web/src/app/navigation.ts", "apps/web/src/stores/live.ts", "apps/web/src/stores/mealPlan.ts", "apps/web/src/views/food/MealPlanView.vue", "apps/web/src/views/food/TemplatesView.vue", "apps/web/src/views/food/TemplateEditView.vue", "apps/web/src/components/food/FoodTabs.vue", "apps/web/src/components/food/plan/**", "apps/web/src/views/food/plan.test.ts"]
-decisions: [D-112, D-116, D-117, D-111, D-110, D-096, D-105]
+decisions: [D-112, D-116, D-117, D-111, D-110, D-120, D-122, D-096, D-105]
 ---
 
 # T-07: Food shell, Meal plan and Templates
@@ -33,7 +33,7 @@ The paths in `owns`. The main session's scaffold already holds `api/food.ts`, ev
 3. **Live:** add `mealplan.updated`, `grocery.updated` and `recipes.updated` to `AppLiveKind` and `KINDS`, and dispatch them to `useMealPlanStore().invalidate`, `useGroceryStore().invalidate` and `useRecipesStore().invalidate`. The stores exist as scaffold stubs, so import them by name.
 4. **`FoodTabs.vue`:** `UiSegmented` on compact, a tab row otherwise. Templates is shown to adults only. It writes `fa.food.tab`. `data-test` keys `food-tab-*`.
 5. **`stores/mealPlan.ts`:** `entries` by date range, `templates`, `load(from, to)`, `add`, `update`, `remove`, `swap`, `preview`, `apply`, `undo(changeId)`, and `invalidate(kind)` (refetch on `mealplan.updated` and `resync`). Plan writes return `grocery_impact`; expose it to the view.
-6. **`components/food/plan/MealPlanGrid.vue`:** props `{from, weeks, editable, fill?}`. Week rows start on `week_start`, with seven columns on medium and expanded windows and a day list on compact. Each cell shows the visible slots in order (`useMealsSettingsStore().visibleSlots`, T-10). Today is drawn inverted like the calendar's. With `fill`, rows fit the height with no scrolling (the kiosk). Entry chips, empty "+" slots when `editable`, and drag-to-move/swap on pointer devices plus a "Move to…" menu.
+6. **`components/food/plan/MealPlanGrid.vue`:** props `{from, weeks, editable, fill?}`. Week rows start on `week_start`, with seven columns on medium and expanded windows and a day list on compact. Each cell shows the visible slots in order (`useMealsSettingsStore().visibleSlots`, T-10), each listing its entries in `ord` order; a slot can hold several (D-120). Today is drawn inverted like the calendar's. With `fill`, rows fit the height with no scrolling (the kiosk). Entry chips, empty "+" slots when `editable`, and drag on pointer devices (onto a slot appends there, onto an entry swaps) plus a "Move to…" menu.
 7. **`MealPlanView.vue`:**
    - the grid from the previous week to the horizon, scrolling up for past weeks (read-only);
    - `?add=<recipe id>` (from T-09's "Add to plan") opens the add sheet with that recipe;
@@ -41,14 +41,17 @@ The paths in `owns`. The main session's scaffold already holds `api/food.ts`, ev
    - delete with Undo; swap/move with Undo (`change_id`);
    - the **impact dialog** (D-116: lists items; "Update the list" calls `reconcile`, "Leave the list" does nothing);
    - **Make grocery list:** a range (default the coming week) or a selection mode in the grid; a summary; Undo;
-   - **Apply template:** pick a template and a start date, then the preview with a conflict list (free text preselected keep, recipe replace), then apply with Undo;
+   - **Apply template:** pick a template and a start date, then the preview with a conflict list per slot showing its entries and a Replace/Add choice (Add preselected when the slot holds free text), then apply with Undo (D-120);
+   - **Save as template:** a range (from, to) and slot picker plus a name; `POST /meal-templates/from-plan`, then open the new template (D-122);
    - children see it read-only.
-8. **Templates:** `TemplatesView.vue` (list: name, length, slots used; new; delete with confirm) and `TemplateEditView.vue` (a form with `useFormDraft` and `UiSaveBar`: name, days, and a grid of day × visible slots where each cell holds a recipe, free text or nothing; week rows when `days` is a multiple of 7). Working assumption Q-117: no "save plan as template".
+8. **Templates:** `TemplatesView.vue` (list: name, length, slots used; new; **Duplicate** with a name prompt; delete with confirm) and `TemplateEditView.vue` (a form with `useFormDraft` and `UiSaveBar`: name, days, and a grid of day × visible slots where each cell holds zero or more items (recipe or free text), in order; week rows when `days` is a multiple of 7). 
 9. **Tests** (`views/food/plan.test.ts`, vitest):
     - the grid's start row and today marker;
     - only visible slots drawn;
     - the impact dialog shows and calls reconcile;
-    - template conflicts preselect keep for free text;
+    - template conflicts preselect Add for slots with free text and Replace otherwise;
+    - a slot with two entries renders both in order;
+    - save as template sends the range and slots;
     - the Food tab redirect memory;
     - children get no edit controls.
 

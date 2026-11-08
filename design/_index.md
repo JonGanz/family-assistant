@@ -27,12 +27,8 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Batch 25, open
-| ID | Title | Area |
-|---|---|---|
-| [Q-115](Q-115-entries-per-slot.md) | One meal per slot, or several | domain |
-| [Q-116](Q-116-aisle-order-per-store.md) | Aisle order: one for all stores, or per store | domain |
-| [Q-117](Q-117-template-from-plan.md) | Create a template from the plan | frontend |
+## Open
+_None. The next question number is Q-118._
 
 ## Resolved
 | ID | Title | Decisions |
@@ -151,3 +147,6 @@ decisions: []
 | [Q-112](resolved/Q-112-meal-reminders.md) | Meal reminders and notifications | D-119 |
 | [Q-113](resolved/Q-113-recipe-library.md) | Recipe library: tags, search, favourites, notes | D-109 |
 | [Q-114](resolved/Q-114-m5-carry-overs.md) | M5 scope: food only, or also the M4 follow-ups | D-119 |
+| [Q-115](resolved/Q-115-entries-per-slot.md) | One meal per slot, or several | D-120 |
+| [Q-116](resolved/Q-116-aisle-order-per-store.md) | Aisle order: one for all stores, or per store | D-121 |
+| [Q-117](resolved/Q-117-template-from-plan.md) | Create a template from the plan | D-122 |

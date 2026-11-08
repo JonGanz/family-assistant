@@ -7,7 +7,7 @@ depends_on: [T-02, T-04]
 agent: {model: sonnet, effort: high}
 status: todo
 owns: ["crates/fa-meals/Cargo.toml", "crates/fa-meals/src/**", "crates/fa-meals/tests/**"]
-decisions: [D-015, D-021, D-109, D-111, D-112, D-113, D-114, D-115, D-116, D-118, D-119]
+decisions: [D-015, D-021, D-109, D-111, D-112, D-113, D-114, D-115, D-116, D-118, D-119, D-120, D-121, D-122]
 ---
 
 # T-05: `fa-meals`
@@ -48,9 +48,10 @@ You are a sub-agent implementing one task of milestone M5 of the Family Assistan
    - range (at most 62 days), add, update, delete, swap/move;
    - writes are only allowed from today (household tz) to the horizon end; earlier dates are `Invalid{field: "date"}`;
    - every write computes `grocery_impact` (§4.6) for touched entries with unchecked, unarchived contributions;
-   - templates: list, get, create, update, delete, `preview`, and `apply` (one transaction, `keep` honoured, a `meals_change` row with the inverse).
+   - add appends (`ord` = max + 1); move appends to the target slot; swap exchanges two entries (D-120);
+   - templates: list, get, create, update, delete, `preview`, `apply`, `from_plan` and `duplicate`. `apply` runs in one transaction: slots in `add_slots` keep their entries and get the items appended, other target slots are replaced; it writes a `meals_change` row with the inverse. `from_plan` copies every entry in the given slots and range as cells (day = date − from + 1, same ord); `duplicate` copies under a new name (D-120, D-122).
 6. **`GroceryService`:**
-   - `view` (grouped data plus `display` strings), `add` (normalise and match the text, then take the default store and aisle; a client id makes it idempotent), `check`/`uncheck` (whatever the version), `low`, `update`, `delete`;
+   - `view` (grouped data plus `display` strings; per store, its aisle order from `GroceryStoreRepo::aisles_for`, with hidden aisles and no aisle under that store's "Other", D-121), `add` (normalise and match the text, then take the default store and aisle; a client id makes it idempotent), `check`/`uncheck` (whatever the version), `low`, `update`, `delete`;
    - `generate` (§4.5: scaling, staples section, merge rules, idempotent sources, `meals_change`);
    - `reconcile` (recompute the given entries' contributions from the current plan; deleted entries contribute zero; manual and checked items untouched; `meals_change`);
    - `undo` (apply `inverse`; 10-minute expiry; by the same member or device, or any adult).
@@ -65,7 +66,8 @@ You are a sub-agent implementing one task of milestone M5 of the Family Assistan
 - **Normaliser table tests:** at least 40 lines, covering fractions, ranges, `1 (14 oz) can`, plurals and the exceptions, descriptors, alias and trigram matches, conversion and both display systems, and that volume and weight never merge.
 - **Generation:** merge across two recipes; scaling 4 → 6 servings; staples go to the section; running twice adds nothing; hidden slots are skipped; undo restores.
 - **Reconcile:** a deleted entry reduces and removes items; checked and manual items are untouched.
-- **Templates:** preview lists conflicts; apply with `keep` preserves a free-text entry; undo; editing the template leaves applied entries unchanged.
+- **Templates:** preview lists the existing entries per slot; apply with a slot in `add_slots` keeps its free-text entry and appends; other slots are replaced; undo; `from_plan` with two entries in one slot keeps both in order; `duplicate`; editing the template leaves applied entries unchanged.
+- **Grouping:** a store with its own aisle order and a hidden aisle (that item goes to the store's Other); "Any store" uses the household order.
 - **The list:** a repeated client-id add; check-off on a stale version still checks; `low`; archive.
 - **Jobs:** `ingredient.llm` against an axum stub stores a proposal and writes no ingredient; with no client it is a no-op. `recipe.image` with a generated in-memory PNG served by a stub; a private host is refused when `allow_private_hosts` is false.
 - `ensure_defaults` twice gives the same counts.

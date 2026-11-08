@@ -7,7 +7,7 @@ depends_on: [T-05, T-03]
 agent: {model: sonnet, effort: medium}
 status: todo
 owns: ["crates/fa-api/**", "bins/fa-server/**"]
-decisions: [D-109, D-110, D-112, D-116, D-117, D-118, D-015, D-019]
+decisions: [D-109, D-110, D-112, D-116, D-117, D-118, D-120, D-121, D-122, D-015, D-019]
 ---
 
 # T-06: Meals API and wiring
@@ -48,7 +48,9 @@ You are a sub-agent implementing one task of milestone M5 of the Family Assistan
    - an authz matrix sample: a child adds and checks but cannot delete (403); a device adds without a PIN; an elevated device deletes; a child rates their own;
    - `If-Match` 428 and 409;
    - import of a local fixture page served by an axum stub, with `allow_private_hosts` on;
-   - the template preview/apply flow;
+   - the template preview/apply flow with one `add_slots` slot, `from-plan` and `duplicate`;
+   - two entries in one slot;
+   - a store's aisle order round trip;
    - generate, then undo;
    - a plan delete returns `grocery_impact`, and reconcile applies it;
    - the dashboard carries `meals`;

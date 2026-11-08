@@ -7,7 +7,7 @@ depends_on: [T-01]
 agent: {model: sonnet, effort: high}
 status: todo
 owns: ["crates/fa-domain/**", "crates/fa-store/**", "crates/fa-recipe/src/types.rs", "crates/fa-recipe/Cargo.toml", "crates/fa-api/src/feeds.rs"]
-decisions: [D-109, D-110, D-111, D-112, D-113, D-115, D-116, D-118, D-021, D-015]
+decisions: [D-109, D-110, D-111, D-112, D-113, D-115, D-116, D-118, D-120, D-121, D-122, D-021, D-015]
 ---
 
 # T-02: Domain and store for meals
@@ -58,8 +58,9 @@ You are a sub-agent implementing one task of milestone M5 of the Family Assistan
    - versioned `update` where the table has `version`;
    - `RecipeLineRepo::replace_for_recipe(conn, recipe, lines)`. It keeps the id and match of a line whose `raw_text` is unchanged;
    - `IngredientRepo::{match_exact, match_alias, nearest, add_alias, merge, insert_many}`. `nearest` orders by `similarity(canonical_name, $1)` desc and returns the score;
-   - `MealPlanRepo::{range, get, insert, update, delete, swap, entry_at}`. `swap` exchanges `(date, slot_id)` of two rows in one statement or with a deferred step, without tripping the unique index;
-   - `MealTemplateRepo::{list, get_with_cells, insert, update_with_cells, delete}`;
+   - `MealPlanRepo::{range, get, insert (ord = max + 1 in its date and slot), update, delete, swap, entries_at(date, slot), next_ord}`. `swap` exchanges `(date, slot_id, ord)` of two rows. There is no unique on (date, slot) (D-120);
+   - `MealTemplateRepo::{list, get_with_cells, insert, update_with_cells, delete, duplicate}`;
+   - `GroceryStoreRepo::{list, replace (a new store gets `grocery_store_aisle` rows copied from `aisle.ord`), aisles_for(store) (every aisle in that store's order, missing rows falling back to `aisle.ord`, not hidden), set_aisles}` (D-121);
    - `GroceryRepo::{list_id, items_open, insert_item (with an optional client id; ON CONFLICT (id) DO NOTHING plus a returned flag), check, uncheck, set_section, update_item, delete_item, sources_for_entries, upsert_source, delete_source, archive_checked_before}`;
    - `MealsChangeRepo::{insert, get, mark_undone, prune_before}`;
    - `MealsSettingsRepo::{get_or_default, update}`;
@@ -67,7 +68,8 @@ You are a sub-agent implementing one task of milestone M5 of the Family Assistan
 8. **Tests** (`crates/fa-store/tests/m5.rs`, `#[sqlx::test]`, fictional data):
    - the migration applies and reverts;
    - RLS hides another household's recipe, item and entry;
-   - the unique (date, slot) rule;
+   - several entries in one slot keep their `ord`;
+   - `aisles_for` falls back to the household order for a missing row and honours `hidden`;
    - `swap`;
    - `insert_item` with a repeated client id is idempotent;
    - the version conflict;

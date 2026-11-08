@@ -27,7 +27,7 @@ ui = b("ui/ design system (D-095)\ntokens.css (color-mix of theme vars) · Ui* c
 nav = b("app/navigation.ts\ndestinations as data\ncompact: top bar + modal drawer\nmedium: rail · expanded: drawer\ngroups: Plan · Food · Mail", 60, 660, 240, 90, COMP)
 for s, t_, l in [(app, ui, "renders with"), (setup, ui, ""), (app, nav, "navigation"), (nav, ui, "NavBar/Rail/Drawer"), (ui, themes, "colour tokens")]:
     e(s, t_, l)
-food = b("Food views (M5, D-109..D-118)\n/food tabs: Meal plan (week rows from previous week, today inverted, template apply with keep/replace, make list, list-impact ask) · Shopping list (store → aisle, staples check, add, check-off) · Recipes (library, ratings, import → editor) · Templates (adults)\ncomponents/food/: MealPlanGrid · GroceryList · RecipeCard · RatingStars · TemplateGrid (shared with the kiosk)", 340, 900, 660, 90, COMP)
+food = b("Food views (M5, D-109..D-118)\n/food tabs: Meal plan (week rows from previous week, today inverted, several entries per slot, template apply with Replace/Add, save as template, make list, list-impact ask) · Shopping list (store → aisle, staples check, add, check-off) · Recipes (library, ratings, import → editor) · Templates (adults)\ncomponents/food/: MealPlanGrid · GroceryList · RecipeCard · RatingStars · TemplateGrid (shared with the kiosk)", 340, 900, 660, 90, COMP)
 oq = b("lib/offlineQueue (D-118)\ngrocery adds and check-offs while offline · replay by version · client ids from lib/ids", 60, 900, 240, 90, COMP)
 for s_, t_, l in [(app, food, "/food/*"), (kiosk, food, "Food view, meals panel"), (food, ui, ""), (food, stores, ""), (food, oq, "offline writes"), (oq, ls, "fa.grocery.queue"), (oq, client, "replay")]:
     e(s_, t_, l)

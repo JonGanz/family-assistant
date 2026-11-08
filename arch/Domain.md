@@ -5,7 +5,7 @@ status: draft
 updated: 2026-11-08
 drawio: Domain.drawio
 drawio_src: src/Domain.py
-depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-037, D-038, D-039, D-040, D-041, D-044, D-045, D-046, D-050, D-051, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034, D-036, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-068, D-070, D-071, D-078, D-109, D-110, D-111, D-112, D-113, D-114, D-115, D-116]
+depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-037, D-038, D-039, D-040, D-041, D-044, D-045, D-046, D-050, D-051, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034, D-036, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-068, D-070, D-071, D-078, D-109, D-110, D-111, D-112, D-113, D-114, D-115, D-116, D-120, D-121, D-122]
 milestone: M0
 ---
 
@@ -136,10 +136,10 @@ Table-level detail, behaviour and API are in [Meals.md](Meals.md).
 | `RecipeStep` | recipe, order, text | |
 | `RecipeRating` | recipe, member, stars 1–5 | Each member rates for themself (D-109) |
 | `Ingredient` | canonical_name, aliases[], is_staple, aisle?, default_store?, default_unit? | Seeded from a hand-written list (D-021, D-114) |
-| `Store`, `Aisle` | name, order | The list groups by store, then aisle (D-115) |
+| `Store`, `Aisle`, `StoreAisle` | name, order; per store: aisle order and hidden | The list groups by store, then that store's aisle order (D-115, D-121) |
 | `MealSlot` | name, order, time, visible | Editable; only Dinner visible by default (D-111) |
-| `MealPlanEntry` | date, slot, recipe? xor free_text, servings? | No cook (D-110); one per date and slot until Q-115 |
-| `MealTemplate`, `MealTemplateCell` | name, days; cell: day, slot, recipe? xor free_text | Applied from a start date; entries are detached copies (D-112) |
+| `MealPlanEntry` | date, slot, ord, recipe? xor free_text, servings? | No cook (D-110); several per date and slot (D-120) |
+| `MealTemplate`, `MealTemplateCell` | name, days; cell: day, slot, ord, recipe? xor free_text | Made in the editor, from a plan range or by duplicating; applied from a start date, replacing or adding per slot; entries are detached copies (D-112, D-120, D-122) |
 | `GroceryList` | exactly one per household | D-021 |
 | `GroceryItem` | list, ingredient?, text, qty?, unit?, store?, section: `list\|staples`, sources (M:N MealPlanEntry with the contribution), manual, added_by, added_via_device?, checked_at?, archived_at? | D-015, D-021, D-116 |
 

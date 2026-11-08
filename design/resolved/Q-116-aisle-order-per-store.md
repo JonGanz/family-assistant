@@ -1,12 +1,12 @@
 ---
 id: Q-116
 title: "Aisle order: one for all stores, or per store"
-status: open
+status: resolved
 batch: 25
 area: domain
 created: 2026-11-08
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-121]
 ---
 
 # Q-116: Aisle order: one for all stores, or per store

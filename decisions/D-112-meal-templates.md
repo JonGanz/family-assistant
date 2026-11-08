@@ -9,6 +9,8 @@ superseded_by:
 affects: [arch/Meals.md, arch/Frontend.md]
 ---
 
+> Refined by D-120 (several entries per slot; apply replaces or adds per slot) and D-122 (templates from a plan range and by duplicating).
+
 # D-112: Meal templates applied from a start date; no repeating entries
 
 ## Context

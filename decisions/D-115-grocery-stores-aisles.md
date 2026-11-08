@@ -9,6 +9,8 @@ superseded_by:
 affects: [arch/Meals.md, arch/Frontend.md]
 ---
 
+> Refined by D-121: each store has its own aisle order and hidden aisles.
+
 # D-115: Grocery list grouped by store, then aisle
 
 ## Context

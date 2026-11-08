@@ -7,7 +7,7 @@ depends_on: [T-06]
 agent: {model: sonnet, effort: high}
 status: todo
 owns: ["apps/web/src/stores/grocery.ts", "apps/web/src/lib/offlineQueue.ts", "apps/web/src/lib/offlineQueue.test.ts", "apps/web/src/views/food/ShoppingListView.vue", "apps/web/src/components/food/grocery/**", "apps/web/src/views/food/grocery.test.ts", "apps/web/vite.config.ts", "apps/web/src/lib/pwa.ts"]
-decisions: [D-021, D-015, D-019, D-110, D-115, D-118, D-072, D-096, D-105]
+decisions: [D-021, D-015, D-019, D-110, D-115, D-121, D-118, D-072, D-096, D-105]
 ---
 
 # T-08: Shopping list and offline use
@@ -40,7 +40,7 @@ The paths in `owns`. The scaffold (main session) already has your route, stub vi
    - `undo(changeId)`.
 3. **`components/food/grocery/ShoppingList.vue`** (props `{canEdit, kiosk?}`):
    - the add box with catalogue suggestions (`GET /ingredients?q=`);
-   - groups by store in order ("Any store" last, and aisles only when the household has no stores), then by aisle ("Other" last);
+   - groups by store in order ("Any store" last, and aisles only when the household has no stores), then by aisle in **that store's** order (from the view; hidden aisles and no aisle go to that store's "Other", last; D-121);
    - rows with text, `display` quantity and a source hint ("for Tue dinner");
    - check-off is instant with Undo, and checked items go to a collapsed "Checked" group;
    - the **Staples check** section with Low buttons;
@@ -52,7 +52,7 @@ The paths in `owns`. The scaffold (main session) already has your route, stub vi
 5. **Service worker (secure context only):** extend the VitePWA config so the app shell is precached (if not already) and `GET /api/v1/grocery`, `/api/v1/meals/stores` and `/api/v1/meals/aisles` use a NetworkFirst runtime cache with a short timeout. Never cache other API routes or anything authenticated beyond these. Keep `lib/pwa.ts`'s rule that registration only happens in a secure context.
 6. **Tests:**
    - `offlineQueue.test.ts`: order, persistence, 404 drop, 409 on check, the in-memory fallback when `localStorage` throws;
-   - `grocery.test.ts`: grouping order; no stores means aisles only; the staples section; Low; a child gets no edit controls; queued adds show the offline note and flush.
+   - `grocery.test.ts`: grouping order, including a per-store aisle order and a hidden aisle; no stores means aisles only; the staples section; Low; a child gets no edit controls; queued adds show the offline note and flush.
 
 ## Acceptance
 - [ ] In `apps/web`: `corepack pnpm@9 run lint`, `typecheck`, `test` and `build` pass, then `format`.

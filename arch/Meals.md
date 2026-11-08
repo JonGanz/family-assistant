@@ -5,14 +5,14 @@ status: draft
 updated: 2026-11-08
 drawio: Meals.drawio
 drawio_src: src/Meals.py
-depends_on: [D-006, D-015, D-019, D-021, D-035, D-068, D-072, D-075, D-093, D-094, D-096, D-105, D-108, D-109, D-110, D-111, D-112, D-113, D-114, D-115, D-116, D-117, D-118, D-119]
+depends_on: [D-006, D-015, D-019, D-021, D-035, D-068, D-072, D-075, D-093, D-094, D-096, D-105, D-108, D-109, D-110, D-111, D-112, D-113, D-114, D-115, D-116, D-117, D-118, D-119, D-120, D-121, D-122]
 milestone: M5
 research: [R-007]
 ---
 
-# Meals: recipes, meal plan, templates, living grocery list (DRAFT v1)
+# Meals: recipes, meal plan, templates, living grocery list (DRAFT v1.1)
 
-This doc covers M5 (D-023, D-108). v1 is re-derived from the requirements, D-015, D-021 and the batch 24 answers (D-109 to D-119); it replaces the pre-answer v0. Three points wait on batch 25 and are marked **(open: Q-NNN)** with the working assumption: one entry per slot (Q-115), one shared aisle order (Q-116), templates made only in the editor (Q-117).
+This doc covers M5 (D-023, D-108). v1 is re-derived from the requirements, D-015, D-021 and the batch 24 answers (D-109 to D-119); it replaces the pre-answer v0. v1.1 adds the batch 25 answers: several entries per slot (D-120), an aisle order per store (D-121), and templates saved from the plan or duplicated (D-122).
 
 **Not in M5:** meal suggestions and dietary preferences (D-021), export (D-015), pantry inventory beyond the staples flag (D-021), a cook per meal (D-110), repeating entries (D-112), meal notifications (D-119). The M4 follow-ups go to M4.2 (D-119).
 
@@ -24,12 +24,12 @@ This doc covers M5 (D-023, D-108). v1 is re-derived from the requirements, D-015
 | **Ingredient** | Catalogue entry: canonical name, aliases, staple flag, aisle, default store, default unit. Seeded per household from a hand-written list by `ensure_defaults` | D-021, D-114, D-115 |
 | **Normaliser** | Deterministic: parse → clean → singularise → alias or trigram match → convert within a dimension. The LLM only proposes matches for lines the rules miss; an adult confirms | D-015, D-113, R-007 |
 | **Meal slot** | Named part of the day with a time; editable; only Dinner shown by default | D-015, D-111 |
-| **Meal plan entry** | A date + slot holding a recipe or free text, with servings. Movable and swappable | D-112, D-113 |
-| **Meal template** | Named, N days long; each day × slot cell holds a recipe, free text or nothing. Applied from a start date with a per-slot conflict choice; applied entries are detached | D-112 |
+| **Meal plan entry** | A recipe or free text with servings, at a date and slot. A slot holds any number of entries, in order. Movable and swappable | D-112, D-113, D-120 |
+| **Meal template** | Named, N days long; each day × slot holds zero or more items (recipe or free text). Made in the editor, saved from a plan range, or duplicated. Applied from a start date with a per-slot Replace/Add choice; applied entries are detached | D-112, D-120, D-122 |
 | **Grocery list** | One per household, never closes; checked items archive after `grocery_archive_hours` (default 24) | D-021 |
 | **Grocery item** | Text, optional ingredient, quantities, store, the meals it came from, manual or generated, checked state | D-015, D-021, D-115 |
 | **Staples check** | Generated staple lines go to a separate section listing the meals that need them; "low" moves one onto the list | D-021 |
-| **Store / aisle** | Editable lists; the list groups by store, then aisle | D-115 |
+| **Store / aisle** | Editable lists. The household aisle order is the default, and each store has its own order and hidden aisles. The list groups by store, then aisle | D-115, D-121 |
 
 ## 2. Crates (page "Components")
 | Crate | Role |
@@ -57,12 +57,13 @@ Every table has `id uuid`, `household_id` (RLS like the rest of the schema), `cr
 | `recipe_step` | recipe, ord, text | |
 | `recipe_rating` | recipe, member, stars 1–5 | Unique (recipe, member); a member rates for themself (D-109, D-110) |
 | `ingredient` | canonical_name (singular, lower case, unique per household), aliases text[], is_staple bool default false, aisle?, default_store?, default_unit?, origin `seed\|user\|llm` | `origin = llm` only after an adult confirms a proposal |
-| `aisle` | name, ord | Seeded with the seed's aisles; one shared order (open: Q-116) |
+| `aisle` | name, ord | Seeded with the seed's aisles. `ord` is the household order ("Any store" and new stores) |
+| `grocery_store_aisle` | store, aisle, ord, hidden bool | PK (store, aisle). A store's own order (D-121). Copied from `aisle.ord` when the store is created; a missing row means the household order, not hidden |
 | `grocery_store` | name, ord | None by default (D-115). Not `store`: `Store` is the DB handle type in Rust |
 | `meal_slot` | name, ord, time `"HH:MM"` local, visible bool | Seeded Breakfast 07:30, Lunch 12:00, Dinner 18:00, Snack 15:30; only Dinner visible (D-111) |
-| `meal_plan_entry` | date, slot, recipe? xor free_text?, servings?, created_by, version | Unique (household, date, slot) (open: Q-115) |
+| `meal_plan_entry` | date, slot, ord, recipe? xor free_text?, servings?, created_by, version | Several per (date, slot), ordered by `ord` (D-120) |
 | `meal_template` | name, days int ≥ 1, note?, version | D-112 |
-| `meal_template_cell` | template, day int (1..days), slot, recipe? xor free_text?, servings? | Unique (template, day, slot); empty cells are absent |
+| `meal_template_cell` | template, day int (1..days), slot, ord, recipe? xor free_text?, servings? | Several per (day, slot), ordered; empty slots have no rows (D-120) |
 | `grocery_list` | — | Exactly one per household, created with it |
 | `grocery_item` | list, ingredient?, text, qty?, unit?, store?, aisle? (cached from ingredient), section `list\|staples`, manual bool, added_by?, added_via_device?, checked_at?, checked_by?, archived_at?, version | `id` may be client-generated (D-118) |
 | `grocery_item_source` | item, entry (meal_plan_entry), qty?, unit?, generated_for `daterange` | One per item and entry; drives D-116 |
@@ -94,15 +95,16 @@ Each new column's writer: recipe columns and images by the recipe editor (`PUT /
 ### 4.3 Meal plan (D-112, D-113)
 - The plan covers today to `meal_plan_horizon_weeks` ahead for writes; earlier dates are read-only history.
 - An entry is a recipe or free text; servings default to the recipe's.
-- **Move** an entry to an empty slot, or **swap** two entries (`POST /meal-plan/swap {a, b}`), each one change with Undo.
+- **Move** an entry to another date and slot (appended after the entries there), or **swap** two entries (`POST /meal-plan/swap {a, b}`). Each is one change with Undo (D-120).
 - Any change to an entry that has unchecked grocery contributions returns a `grocery_impact` (§4.6).
 
 ### 4.4 Meal templates (D-112)
-- A template has a name, a length in days and cells (day × slot) holding a recipe or free text; empty cells are absent.
-- **Preview** `POST /meal-templates/{id}/preview {start}` (`YYYY-MM-DD`) → for every cell its target `(date, slot)` and the existing entry there, if any. Hidden slots are included and marked.
-- **Apply** `POST /meal-templates/{id}/apply {start, keep: [entry_id]}`: in one transaction, every cell fills its slot; an existing entry is replaced unless listed in `keep`. The UI preselects keep for free-text entries. The result is one change with Undo and a `grocery_impact` for replaced entries (§4.6).
+- A template has a name, a length in days and cells (day × slot × ord) holding a recipe or free text.
+- **Made** in the editor, by **Save as template** from the plan (`POST /meal-templates/from-plan {name, from, to, slot_ids}`: length = days in the range, at most 366; every entry in those slots becomes a cell with the same order, recipe or text and servings), or by **Duplicate** (`POST /meal-templates/{id}/duplicate {name}`) (D-122). All copies are detached.
+- **Preview** `POST /meal-templates/{id}/preview {start}` (`YYYY-MM-DD`) → for every target `(date, slot)` the template's items and the existing entries there. Hidden slots are included and marked.
+- **Apply** `POST /meal-templates/{id}/apply {start, add_slots: [{date, slot_id}]}`, in one transaction. For every target slot, its existing entries are **replaced** (deleted) unless the slot is listed in `add_slots`, in which case the template's items are **added** after them. The UI preselects Add for slots holding any free-text entry and Replace otherwise (D-120). The result is one change with Undo and a `grocery_impact` for the replaced entries (§4.6).
 - Applied entries copy the cell's content and keep no link to the template; editing either side never affects the other.
-- No repeating entries; re-apply by hand. Saving a plan range as a template is (open: Q-117).
+- No repeating entries; re-apply by hand.
 
 ### 4.5 Grocery generation (D-015, D-021, D-113)
 1. Input: `{entry_ids[]}` or `{from, to}` (`YYYY-MM-DD`; visible slots only).
@@ -119,7 +121,7 @@ Each new column's writer: recipe columns and images by the recipe editor (`PUT /
 ### 4.7 The living list (D-015, D-021, D-115, D-118)
 - **Add** from any view, the kiosk included without a PIN: free text matched through the normaliser to an ingredient when possible (store and aisle from it), else aisle "Other", "Any store".
 - **Check off / uncheck**, **low** (staple → list): anyone. **Edit, delete, move store:** adults (D-110).
-- **Grouping:** store (in `store.ord`, "Any store" last), then aisle (`aisle.ord`, "Other" last); the Staples check section after. A store filter shows one store.
+- **Grouping:** by store (in `grocery_store.ord`, "Any store" last), then by aisle. Within a store, aisles follow that store's order (`grocery_store_aisle`, falling back to `aisle.ord`). An aisle the store hides, or no aisle, goes to that store's "Other" (last). "Any store" uses `aisle.ord`. The Staples check section comes after. A store filter shows one store (D-121).
 - **Archive:** the `grocery.archive` cron (every 15 min) sets `archived_at` on items checked more than `grocery_archive_hours` ago; archived items stay for history and are never shown on the list.
 - **Offline (D-118):** the web client queues adds (with a client-generated `id`) and check-offs, and replays them in order. The API treats a replayed add with a known id as success, and a check-off on a newer `version` as still applied (check-offs win); a change to a deleted item is dropped. Over HTTPS the service worker also caches the shell and the last list (Frontend.md §1.1).
 
@@ -134,9 +136,10 @@ Each new column's writer: recipe columns and images by the recipe editor (`PUT /
 | `POST /recipes/{id}/lines/{line_id}/match` | `{ingredient_id}` or `{new_name, aisle?}`: accept or pick; adds the alias |
 | `GET/POST /ingredients`, `PUT/DELETE /ingredients/{id}` | Catalogue, staples, aliases, aisle, default store |
 | `GET/PUT /meals/settings`, `GET/PUT /meals/slots`, `GET/PUT /meals/aisles`, `GET/PUT /meals/stores` | Settings → Meals (lists replaced whole, ordered) |
+| `GET/PUT /meals/stores/{id}/aisles` | A store's aisle order and hidden aisles (D-121) |
 | `GET /meal-plan?from=&to=` | Entries in range; any member, the dashboard too |
 | `POST /meal-plan`, `PUT/DELETE /meal-plan/{id}`, `POST /meal-plan/swap` | Write; each returns `{entry(s), grocery_impact}` |
-| `GET/POST /meal-templates`, `GET/PUT/DELETE /meal-templates/{id}`, `POST /meal-templates/{id}/preview`, `POST /meal-templates/{id}/apply` | Templates |
+| `GET/POST /meal-templates`, `GET/PUT/DELETE /meal-templates/{id}`, `POST /meal-templates/{id}/preview`, `POST /meal-templates/{id}/apply`, `POST /meal-templates/from-plan`, `POST /meal-templates/{id}/duplicate` | Templates |
 | `GET /grocery` | `{stores, aisles, items, staples}`; any member and the dashboard |
 | `POST /grocery/items` | Add (optional client `id`); anyone |
 | `POST /grocery/items/{id}/check`, `/uncheck`, `/low` | Anyone |
@@ -173,7 +176,7 @@ Every toggle is in `meals_settings` and edited in Settings → Meals (D-075); no
 ## 10. Testing
 - Normaliser table tests: fractions, ranges, `1 (14 oz) can`, plurals, aliases, descriptors, trigram threshold, conversion and rounding, no volume↔weight.
 - Seed: unique canonical names, no alias shared by two ingredients, every aisle exists.
-- Generation: merge, staples, idempotency, scaling, hidden slots skipped; impact and reconcile; template preview, apply with keep, Undo.
+- Generation: merge, staples, idempotency, scaling, hidden slots skipped; impact and reconcile; template preview, apply with Replace and Add, save from plan, duplicate, Undo; per-store aisle order and hidden aisles.
 - Microdata parser and image resize fixtures: fictional recipes and generated images written for the repo (D-035).
 - Offline replay: duplicate add id, check-off against a newer version, change to a deleted item.
 - e2e: import a fixture page served by the test server, plan it, apply a template over a free-text entry kept, generate, check off from the kiosk, add from the kiosk without a PIN.
