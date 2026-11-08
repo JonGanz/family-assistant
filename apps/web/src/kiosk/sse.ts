@@ -3,6 +3,8 @@
  * and devices authenticate with a bearer token, so we parse text/event-stream ourselves
  * (no polyfill). Reconnects with exponential backoff and resumes via `Last-Event-ID`.
  */
+import { noteBuildEvent, noteServerBuild } from '../lib/appUpdate'
+
 export interface SseMessage {
   id?: string
   event: string
@@ -93,6 +95,7 @@ export function connectSse(opts: SseOptions): SseHandle {
           signal: ctl.signal,
         })
         if (!res.ok || !res.body) throw new Error(`stream HTTP ${res.status}`)
+        noteServerBuild(res.headers?.get?.('x-fa-build'))
         opts.onStatus?.('open')
         const reader = res.body.getReader()
         const decoder = new TextDecoder()
@@ -104,6 +107,11 @@ export function connectSse(opts: SseOptions): SseHandle {
           if (done) break
           for (const m of parser.push(decoder.decode(value, { stream: true }))) {
             attempt = 0
+            // The live build, sent on connect (D-123): not a data change, so stores never see it.
+            if (m.event === 'build') {
+              noteBuildEvent(m.data)
+              continue
+            }
             opts.onMessage(m)
           }
         }

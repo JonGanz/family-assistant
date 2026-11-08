@@ -24,7 +24,7 @@ use std::time::Duration;
 use axum::Router;
 use axum::extract::DefaultBodyLimit;
 use axum::extract::{Request, State};
-use axum::http::{HeaderName, HeaderValue, Method, StatusCode};
+use axum::http::{HeaderName, HeaderValue, Method, StatusCode, header};
 use axum::middleware::{self, Next};
 use axum::response::{IntoResponse, Response};
 use axum::routing::{any, delete, get, patch, post, put};
@@ -516,7 +516,68 @@ pub fn router(state: AppState) -> Router {
             .layer(middleware::from_fn(csrf)),
     )
     .layer(middleware::from_fn_with_state(state.clone(), setup_gate))
+    .layer(middleware::from_fn_with_state(state.clone(), shell_headers))
     .with_state(state)
+}
+
+/// Lets open clients notice a deploy and never keeps an old app shell (D-123, Frontend.md §1.0):
+/// `X-FA-Build` on every response, and cache headers on the static web build.
+async fn shell_headers(State(s): State<AppState>, req: Request, next: Next) -> Response {
+    let path = req.uri().path().to_owned();
+    let mut res = next.run(req).await;
+    if s.cfg.web_dist_dir.is_some()
+        && !path.starts_with("/api/")
+        && let Some(cc) = static_cache_control(&path, &res)
+    {
+        if cc == "not-found" {
+            // A hashed asset an older shell still asks for: never answer it with index.html.
+            return (StatusCode::NOT_FOUND, [(header::CACHE_CONTROL, "no-store")]).into_response();
+        }
+        if !res.headers().contains_key(header::CACHE_CONTROL) {
+            res.headers_mut()
+                .insert(header::CACHE_CONTROL, HeaderValue::from_static(cc));
+        }
+    }
+    if let Some(commit) = s.cfg.build.commit.as_deref()
+        && let Ok(v) = HeaderValue::from_str(commit)
+    {
+        res.headers_mut()
+            .insert(HeaderName::from_static("x-fa-build"), v);
+    }
+    res
+}
+
+/// The `Cache-Control` for a static web path, `Some("not-found")` for an `/assets/` miss that the SPA
+/// fallback answered with HTML, or `None` to leave the response alone.
+fn static_cache_control(path: &str, res: &Response) -> Option<&'static str> {
+    if path == "/healthz" || path == "/readyz" {
+        return None;
+    }
+    let html = res
+        .headers()
+        .get(header::CONTENT_TYPE)
+        .and_then(|v| v.to_str().ok())
+        .is_some_and(|v| v.starts_with("text/html"));
+    if path.starts_with("/assets/") {
+        if html {
+            return Some("not-found");
+        }
+        return res
+            .status()
+            .is_success()
+            .then_some("public, max-age=31536000, immutable");
+    }
+    let last = path.rsplit('/').next().unwrap_or("");
+    let shell = matches!(
+        last,
+        "" | "index.html" | "sw.js" | "registerSW.js" | "manifest.webmanifest"
+    ) || !last.contains('.')
+        || html;
+    Some(if shell {
+        "no-cache"
+    } else {
+        "public, max-age=3600"
+    })
 }
 
 /// Until the household and its first adult exist, every `/api/v1` call except `/setup*` answers

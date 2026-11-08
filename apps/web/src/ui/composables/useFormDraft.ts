@@ -18,6 +18,12 @@ export function deepEqual(a: unknown, b: unknown): boolean {
   )
 }
 
+/** How many forms currently hold unsaved changes; an update reload waits while any do (D-123). */
+const dirtyForms = ref(0)
+export function hasUnsavedForms(): boolean {
+  return dirtyForms.value > 0
+}
+
 export interface FormDraftOptions {
   /** Ask before leaving with unsaved changes; default `window.confirm`. */
   confirmLeave?: () => boolean | Promise<boolean>
@@ -75,6 +81,7 @@ export function useFormDraft<T>(
   if (getCurrentInstance()) {
     onBeforeRouteLeave(async () => (dirty.value ? await confirmLeave() : true))
   }
+  let counted = false
   const beforeUnload = (e: BeforeUnloadEvent) => {
     e.preventDefault()
     e.returnValue = ''
@@ -82,13 +89,21 @@ export function useFormDraft<T>(
   watch(
     dirty,
     (d) => {
+      if (d !== counted) {
+        dirtyForms.value += d ? 1 : -1
+        counted = d
+      }
       if (typeof window === 'undefined') return
       if (d) window.addEventListener('beforeunload', beforeUnload)
       else window.removeEventListener('beforeunload', beforeUnload)
     },
     { immediate: true },
   )
-  onScopeDispose(() => window.removeEventListener('beforeunload', beforeUnload))
+  onScopeDispose(() => {
+    if (counted) dirtyForms.value -= 1
+    counted = false
+    window.removeEventListener('beforeunload', beforeUnload)
+  })
 
   return { draft, dirty, saving, error, save: doSave, discard }
 }

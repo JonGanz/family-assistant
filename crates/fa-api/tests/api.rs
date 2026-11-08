@@ -1111,3 +1111,72 @@ async fn adult_sets_up_unclaimed_adult(pool: PgPool) {
     .await;
     assert_eq!(reset_first.status, StatusCode::FORBIDDEN);
 }
+
+/// D-123: the app shell is always revalidated, hashed assets are immutable, an old asset is a 404
+/// (never the SPA fallback), and every response and the live stream name the running build.
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn web_shell_cache_headers_and_build_marker(pool: PgPool) {
+    let fx = seed(pool).await;
+    let dir = std::env::temp_dir().join(format!("fa-web-{}", uuid::Uuid::new_v4()));
+    std::fs::create_dir_all(dir.join("assets")).unwrap();
+    std::fs::write(dir.join("index.html"), "<!doctype html><title>t</title>").unwrap();
+    std::fs::write(dir.join("sw.js"), "self.x = 1").unwrap();
+    std::fs::write(dir.join("assets/app-abc123.js"), "export {}").unwrap();
+    std::fs::write(dir.join("icon-192.png"), [137u8, 80, 78, 71]).unwrap();
+    let mut st = fx.state.clone();
+    st.cfg = std::sync::Arc::new(ApiConfig {
+        web_dist_dir: Some(dir.clone()),
+        build: fa_api::BuildInfo {
+            commit: Some("abc123def456".into()),
+            ..Default::default()
+        },
+        ..(*fx.state.cfg).clone()
+    });
+    let app = router(st);
+    let cc = |r: &Resp| {
+        r.headers
+            .get("cache-control")
+            .map(|v| v.to_str().unwrap().to_owned())
+    };
+
+    for path in ["/", "/index.html", "/food/plan", "/sw.js"] {
+        let r = send(&app, Method::GET, path, &[], None).await;
+        assert_eq!(r.status, StatusCode::OK, "{path}");
+        assert_eq!(cc(&r).as_deref(), Some("no-cache"), "{path}");
+        assert_eq!(
+            r.headers.get("x-fa-build").unwrap(),
+            "abc123def456",
+            "{path}"
+        );
+    }
+    let r = send(&app, Method::GET, "/assets/app-abc123.js", &[], None).await;
+    assert_eq!(r.status, StatusCode::OK);
+    assert_eq!(
+        cc(&r).as_deref(),
+        Some("public, max-age=31536000, immutable")
+    );
+    let r = send(&app, Method::GET, "/assets/app-old999.js", &[], None).await;
+    assert_eq!(r.status, StatusCode::NOT_FOUND);
+    assert_eq!(cc(&r).as_deref(), Some("no-store"));
+    let r = send(&app, Method::GET, "/icon-192.png", &[], None).await;
+    assert_eq!(cc(&r).as_deref(), Some("public, max-age=3600"));
+    let r = send(&app, Method::GET, "/api/v1/openapi.json", &[], None).await;
+    assert_eq!(r.headers.get("x-fa-build").unwrap(), "abc123def456");
+
+    let adult = login(&fx, "alex", ADULT_PW).await;
+    let res = app
+        .clone()
+        .oneshot(request(
+            Method::GET,
+            "/api/v1/stream",
+            &[("cookie", &adult)],
+            None,
+        ))
+        .await
+        .unwrap();
+    let mut stream = res.into_body().into_data_stream();
+    let mut buf = String::new();
+    read_until(&mut stream, &mut buf, "event: build").await;
+    read_until(&mut stream, &mut buf, "abc123def456").await;
+    let _ = std::fs::remove_dir_all(dir);
+}

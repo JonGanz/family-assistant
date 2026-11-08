@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, provide, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, provide, ref, watch } from 'vue'
 import I_menu from '~icons/material-symbols/menu-rounded'
 import { useRoute, useRouter } from 'vue-router'
 import { useNavigation } from '../app/navigation'
 import { getNavCollapsed, setNavCollapsed } from '../app/navPrefs'
+import { applyUpdate, watchForUpdates } from '../lib/appUpdate'
 import { useInboxStore } from '../stores/inbox'
 import { useSessionStore } from '../stores/session'
 import {
@@ -12,7 +13,9 @@ import {
   UiNavDrawer,
   UiNavRail,
   UiSnackbarHost,
+  hasUnsavedForms,
   useBreakpoint,
+  useSnackbar,
 } from '../ui'
 import { navControlKey } from '../ui/nav'
 
@@ -27,6 +30,35 @@ const navOpen = ref(false)
 const collapsed = ref(getNavCollapsed())
 
 provide(navControlKey, { openNav: () => (navOpen.value = true) })
+
+// A deploy (D-123): say so once, then reload by itself on the next foreground return or navigation,
+// never over a form with unsaved changes.
+const snackbar = useSnackbar()
+// The notice waits for a free snackbar, so it never holds back an Undo the user is waiting for.
+function showUpdateNotice() {
+  const busy = () => !!snackbar.state.current || snackbar.state.queue.length > 0
+  const show = () =>
+    snackbar.show({
+      text: 'A new version is available',
+      action: { label: 'Reload', run: () => applyUpdate() },
+    })
+  if (!busy()) return show()
+  const stop = watch(busy, (b) => {
+    if (!b) {
+      stop()
+      show()
+    }
+  })
+}
+const updates = watchForUpdates({
+  canReload: () => !hasUnsavedForms(),
+  onPending: showUpdateNotice,
+})
+const stopNavHook = router.afterEach(() => updates.tryNow())
+onBeforeUnmount(() => {
+  updates.stop()
+  stopNavHook()
+})
 
 // Adults only: the inbox badge loads once and then follows SSE `inbox.updated` (stores/live.ts).
 watch(

@@ -11,6 +11,7 @@ import { S } from '../dashboard/strings'
 import { getDeviceToken } from '../kiosk/deviceToken'
 import { startKeepAlive } from '../kiosk/keepAlive'
 import { startWatchdog, type Watchdog } from '../kiosk/watchdog'
+import { watchForUpdates } from '../lib/appUpdate'
 import { useDashboardStore } from '../stores/dashboard'
 
 const store = useDashboardStore()
@@ -65,6 +66,7 @@ async function toggleFullscreen(): Promise<void> {
   syncFullscreen()
 }
 
+let stopUpdates: (() => void) | undefined
 onMounted(() => {
   // The page itself must not scroll: a drag that scrolls it brings the browser bar back.
   document.documentElement.classList.add('kiosk-lock')
@@ -72,6 +74,15 @@ onMounted(() => {
   if (!hasToken.value) return
   stopKeepAlive = startKeepAlive()
   watchdog = startWatchdog()
+  // A deploy (D-123): reload as soon as nobody is mid-action (no dialog open, not unlocked with a PIN).
+  stopUpdates = watchForUpdates({
+    eager: true,
+    canReload: () => {
+      const until = store.elevatedUntil
+      const elevated = until !== null && until > Date.now()
+      return !elevated && !document.querySelector('[role="dialog"], dialog[open]')
+    },
+  }).stop
   void store.start(() => watchdog?.heartbeat())
 })
 onUnmounted(() => {
@@ -80,6 +91,7 @@ onUnmounted(() => {
   clearInterval(remainingTimer)
   stopKeepAlive?.()
   watchdog?.stop()
+  stopUpdates?.()
   store.stop()
 })
 

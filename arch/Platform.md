@@ -2,10 +2,10 @@
 title: Platform
 scope: code layout, runtime, security, deployment, backups, dev workflow
 status: draft
-updated: 2026-11-07
+updated: 2026-11-08
 drawio: Platform.drawio
 drawio_src: src/Platform.py
-depends_on: [D-002, D-003, D-004, D-005, D-006, D-010, D-018, D-019, D-020, D-023, D-025, D-026, D-031, D-032, D-033, D-034, D-035, D-064, D-065, D-069, D-072, D-073, D-074, D-075, D-076, D-077, D-093, D-094, D-102]
+depends_on: [D-002, D-003, D-004, D-005, D-006, D-010, D-018, D-019, D-020, D-023, D-025, D-026, D-031, D-032, D-033, D-034, D-035, D-064, D-065, D-069, D-072, D-073, D-074, D-075, D-076, D-077, D-093, D-094, D-102, D-123]
 milestone: M0
 ---
 
@@ -50,7 +50,7 @@ The platform that M0 builds and every later milestone depends on. **v4 is the M3
 ## 2. Key libraries
 | Concern | Choice |
 |---|---|
-| Async / HTTP | tokio, axum, tower-http (compression, trace, static files, timeouts) |
+| Async / HTTP | tokio, axum, tower-http (compression, trace, static files, timeouts). Static files (`FA_WEB_DIST_DIR`) carry cache headers: `no-cache` for `index.html`, `sw.js`, `registerSW.js` and `manifest.webmanifest`; `public, max-age=31536000, immutable` for `/assets/*`; `max-age=3600` otherwise. Every response carries `X-FA-Build: <commit>` when the build commit is known (D-123, Frontend.md §1.0) |
 | DB | sqlx (postgres, uuid, chrono, json, migrate), with compile-time checked queries (offline `.sqlx` data kept in git) |
 | Time | chrono + chrono-tz, rrule |
 | Serialisation | serde, serde_json |

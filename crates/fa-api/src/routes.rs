@@ -1046,7 +1046,7 @@ fn to_event(e: &HubEvent) -> Event {
 
 #[utoipa::path(get, path = "/api/v1/stream", tag = "stream", security(("cookie" = []), ("bearer" = [])),
     responses((status = 200, content_type = "text/event-stream",
-               description = "`heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `mail.updated` `{source?}`, `inbox.updated` `{}`, `bills.updated` `{}`, `mealplan.updated` `{}`, `grocery.updated` `{}`, `recipes.updated` `{}`, `resync`), bridged from `fa_change`; honours Last-Event-ID")))]
+               description = "`build` `{commit}` on connect (D-123), `heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `mail.updated` `{source?}`, `inbox.updated` `{}`, `bills.updated` `{}`, `mealplan.updated` `{}`, `grocery.updated` `{}`, `recipes.updated` `{}`, `resync`), bridged from `fa_change`; honours Last-Event-ID")))]
 pub async fn stream(
     State(s): State<AppState>,
     auth: Auth,
@@ -1060,7 +1060,12 @@ pub async fn stream(
     let (replay, mut rx) = s.hub.subscribe(hid, last);
     let shutdown = s.shutdown.clone();
     let period = s.cfg.heartbeat_interval;
+    let build = s.cfg.build.commit.clone();
     let stream = async_stream::stream! {
+        // Which build is live, so an open client notices a deploy on reconnect (D-123).
+        if let Some(commit) = &build {
+            yield Ok(Event::default().event("build").data(serde_json::json!({ "commit": commit }).to_string()));
+        }
         for e in &replay {
             yield Ok(to_event(e));
         }

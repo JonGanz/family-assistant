@@ -5,7 +5,7 @@ status: draft
 updated: 2026-11-08
 drawio: Frontend.drawio
 drawio_src: src/Frontend.py
-depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078, D-079, D-080, D-081, D-093, D-094, D-095, D-096, D-097, D-098, D-099, D-100, D-101, D-102, D-103, D-104, D-105, D-106, D-109, D-110, D-111, D-112, D-115, D-116, D-117, D-118, D-120, D-121, D-122]
+depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078, D-079, D-080, D-081, D-093, D-094, D-095, D-096, D-097, D-098, D-099, D-100, D-101, D-102, D-103, D-104, D-105, D-106, D-109, D-110, D-111, D-112, D-115, D-116, D-117, D-118, D-120, D-121, D-122, D-123]
 milestone: M5
 ---
 
@@ -36,6 +36,19 @@ apps/web/src/
 - **State:** stores fetch over REST and keep normalised data by ID. They never poll. They refresh when an SSE event invalidates their data (§5).
 - **No UI framework** (D-095). The app shell uses the home-grown component library in `ui/` (§1.2), whose colours all come from the active theme (§3d). `styles/base.css` keeps the theme aliases, resets and the `kiosk` scale for viewing distance. That keeps the bundle small for Silk on Fire OS.
 - **Dates:** `Intl.DateTimeFormat` in the household tz (from `/household`, not the browser's tz), with no date library. Recurrence is already expanded by the server.
+
+### 1.0 Picking up a new version (D-123)
+After a deploy, open clients must not keep running the old app, in either context:
+- **Caching:** the server sends `Cache-Control: no-cache` for `index.html`, `sw.js`, `registerSW.js` and `manifest.webmanifest`; `public, max-age=31536000, immutable` for the hashed `/assets/*`; `max-age=3600` for other static files (Platform.md). A reload therefore always gets the current shell, with or without a service worker.
+- **Detection:** every API response carries `X-FA-Build: <commit>`, and `/api/v1/stream` sends a `build` event `{commit}` on connect. `lib/appUpdate.ts` compares it with `__APP_COMMIT__`. An unknown build on either side, a prefix match (short and long hashes), and the Vite dev server all mean "same".
+- **App shell:**
+  - a newer build shows a snackbar "A new version is available · Reload";
+  - the app reloads by itself on the next return to the foreground (`visibilitychange` to visible) or the next route change, unless a form has unsaved changes (`useFormDraft` keeps a global dirty count);
+  - before reloading in a secure context, it asks the service worker to update (`registration.update()`) and waits for the new worker to take control (at most 5 s).
+- **Kiosk:** reloads by itself when no dialog is open and the device is not elevated, or as soon as both are true.
+- **Loop guard:** an automatic reload is tried once per server build and tab (`sessionStorage` `fa.update.tried`). If the mismatch survives it (a web build older than the server, say), only the snackbar's manual Reload remains.
+- **Checks:** in a secure context the service worker is asked to `update()` on every return to the foreground and hourly.
+- **Escape hatch:** Settings → About has **Reload app**. It unregisters nothing, deletes the Workbox precache and runtime caches except `fa-grocery`, and reloads. The offline queue (`fa.grocery.queue`) is kept.
 
 ### 1.1 Secure and insecure contexts (D-072)
 The whole app must work over plain HTTP on a LAN address, where the browser is in an **insecure context**:
@@ -330,7 +343,8 @@ The layout is data held in `device.settings` and edited by adults in Settings �
 3. `/api/v1/stream` sends it to every connected client of that household.
 4. The `useLiveStream` composable maps the event kind to the affected stores. Each store refetches only if it holds overlapping data.
 5. If the stream disconnects, the client reconnects with `Last-Event-ID`. If the hub can't replay that far, it sends `resync`.
-6. M5 kinds: `mealplan.updated {from, to}` (the plan stores and the dashboard refetch when the range overlaps), `grocery.updated` (the grocery store refetches the list; queued offline writes replay first, §1.1), `recipes.updated` (library).
+6. On connect the stream first sends `build {commit}` (D-123, §1.0); it is not a data change and no store refetches.
+7. M5 kinds: `mealplan.updated {from, to}` (the plan stores and the dashboard refetch when the range overlaps), `grocery.updated` (the grocery store refetches the list; queued offline writes replay first, §1.1), `recipes.updated` (library).
 
 ## 6. Accessibility & i18n
 - Every interactive element is reachable by keyboard, with visible focus rings (a `ui/` token, never removed). Touch targets are at least 48 px in the app shell and on the kiosk. Icon-only buttons have an accessible name; snackbars use `role=status`; dialogs and sheets trap focus and close on Escape.

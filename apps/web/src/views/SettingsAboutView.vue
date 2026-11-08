@@ -2,8 +2,9 @@
 import { computed, onMounted, ref } from 'vue'
 import { api, type AboutView } from '../api/client'
 import SettingsPage from '../app/SettingsPage.vue'
+import { reloadApp } from '../lib/appUpdate'
 import { useHouseholdStore } from '../stores/household'
-import { UiCard, UiErrorState, UiIcon, UiSkeleton } from '../ui'
+import { UiButton, UiCard, UiErrorState, UiIcon, UiSkeleton } from '../ui'
 import { buildsDiffer, builtAtText } from './aboutModel'
 import { describeError } from './shared'
 
@@ -15,6 +16,11 @@ const loading = ref(true)
 // Stamped into this bundle by vite.config.ts.
 const web = { commit: __APP_COMMIT__, builtAt: __APP_BUILT_AT__ }
 const stale = computed(() => buildsDiffer(about.value?.commit, web.commit))
+const reloading = ref(false)
+async function reload() {
+  reloading.value = true
+  await reloadApp()
+}
 
 async function load() {
   loading.value = true
@@ -36,11 +42,26 @@ onMounted(load)
       <div class="warn__row">
         <UiIcon name="warning" />
         <p>
-          This page was built from a different commit than the server. Reload without the cache
-          (Shift+F5), or unregister the service worker in the browser's developer tools.
+          This page was built from a different commit than the server. It reloads by itself the next
+          time the app comes back to the foreground, or reload now.
         </p>
       </div>
     </UiCard>
+
+    <div class="reload">
+      <UiButton
+        variant="tonal"
+        icon="refresh"
+        :disabled="reloading"
+        data-testid="reload-app"
+        @click="reload"
+      >
+        Reload app
+      </UiButton>
+      <p class="muted">
+        Fetches the newest version. Use it if the app looks out of date; nothing you saved is lost.
+      </p>
+    </div>
 
     <UiErrorState v-if="error" :message="error" @retry="load" />
     <UiSkeleton v-else-if="loading" :lines="4" />
@@ -96,6 +117,16 @@ dd {
   align-items: flex-start;
 }
 .warn__row p {
+  margin: 0;
+}
+
+.reload {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+.reload .muted {
   margin: 0;
 }
 </style>

@@ -1,4 +1,5 @@
 import { getDeviceToken } from '../kiosk/deviceToken'
+import { noteServerBuild } from '../lib/appUpdate'
 
 export interface ProblemDetails {
   type?: string
@@ -69,6 +70,8 @@ export async function request<T>(path: string, opts: RequestOptions = {}): Promi
 
   const init: RequestInit = { method, headers, body, credentials: 'include', signal: opts.signal }
   const res = SAFE_METHODS.has(method) ? await fetchRetrying(path, init) : await fetch(path, init)
+  // A deploy shows up here first: the server names its build on every response (D-123).
+  noteServerBuild(res.headers?.get?.('x-fa-build'))
   if (!res.ok) {
     const problem = await parseProblem(res)
     if (res.status === 409 && problem.code === 'setup_required') setupRequiredHandler?.()

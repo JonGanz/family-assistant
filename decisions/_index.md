@@ -131,3 +131,4 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-120](D-120-several-entries-per-slot.md) | Several meals per slot; template apply replaces or adds per slot | accepted | Q-115 | arch/Meals.md, arch/Frontend.md, arch/Domain.md |
 | [D-121](D-121-aisle-order-per-store.md) | Each store has its own aisle order and hidden aisles | accepted | Q-116 | arch/Meals.md, arch/Frontend.md, arch/Domain.md |
 | [D-122](D-122-templates-from-plan-duplicate.md) | Templates from the editor, from a plan range, or by duplicating | accepted | Q-117 | arch/Meals.md, arch/Frontend.md |
+| [D-123](D-123-ui-update-after-deploy.md) | The app and kiosk pick up a new version after a deploy | accepted | (instruction) | arch/Frontend.md, arch/Platform.md |

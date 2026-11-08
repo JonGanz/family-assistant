@@ -15,7 +15,7 @@ stores = b("stores (Pinia)\nsetup · session · members · household · calendar
 live = b("composables\nuseLiveStream · useUnits · useRange · useClock", 60, 320, 240, 60, COMP)
 client = b("api/client.ts + http.ts\nX-FA-Request · bearer opt-in · If-Match", 340, 440, 400, 60, COMP)
 gen = b("gen/api.d.ts\n(generated from openapi.json)", 780, 440, 200, 60, COMP)
-sw = b("service worker (vite-plugin-pwa)\nsecure contexts only · shell + avatar cache · last shopping list (M5)", 60, 440, 240, 60, COMP)
+sw = b("service worker (vite-plugin-pwa)\nsecure contexts only · shell + avatar cache · last shopping list (M5) · update() on foreground (D-123)", 60, 440, 240, 60, COMP)
 ls = b("localStorage\ndevice token · dashboard snapshot · fa.theme · fa.grocery.queue", 60, 560, 240, 50, COMP)
 themes = b("themes/ (D-079..D-081, D-106)\ncatalogue as data · extended layers/text slots · applyTheme → CSS tokens\nper-device choice · kiosk: device.settings.theme", 800, 650, 200, 90, COMP)
 srv = b("«external» fa-api /api/v1 (REST, SSE)", 1080, 400, 280, 60, EXT)
@@ -32,7 +32,7 @@ oq = b("lib/offlineQueue (D-118)\ngrocery adds and check-offs while offline · r
 for s_, t_, l in [(app, food, "/food/*"), (kiosk, food, "Food view, meals panel"), (food, ui, ""), (food, stores, ""), (food, oq, "offline writes"), (oq, ls, "fa.grocery.queue"), (oq, client, "replay")]:
     e(s_, t_, l)
 b("No UI framework: home-grown ui/ library, Intl dates in household tz", 780, 560, 220, 70, NOTE)
-b("Insecure context (plain HTTP): no service worker, lib/ids instead of randomUUID, lib/copy clipboard fallback, Google shown as needs HTTPS", 340, 640, 440, 70, NOTE)
+b("Insecure context (plain HTTP): no service worker, lib/ids instead of randomUUID, lib/copy clipboard fallback, Google shown as needs HTTPS. New version (D-123): X-FA-Build header + SSE build event vs __APP_COMMIT__ → lib/appUpdate reloads on foreground (no unsaved form) or kiosk idle; shell no-cache, /assets immutable", 340, 640, 440, 70, NOTE)
 
 # Page 2: Deployment of clients
 pd = Page("clients", "Clients", 1200, 600)

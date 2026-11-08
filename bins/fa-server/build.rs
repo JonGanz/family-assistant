@@ -12,6 +12,15 @@ fn run(cmd: &str, args: &[&str]) -> Option<String> {
 fn main() {
     println!("cargo:rerun-if-env-changed=FA_GIT_COMMIT");
     println!("cargo:rerun-if-changed=../../.git/HEAD");
+    // HEAD only names the branch (`ref: refs/heads/master`), so a new commit on the same branch
+    // leaves it unchanged: watch the branch ref too, or the stamped commit goes stale and the
+    // web app's update check (D-123) sees a mismatch that is not there.
+    if let Ok(head) = std::fs::read_to_string("../../.git/HEAD")
+        && let Some(r) = head.trim().strip_prefix("ref: ")
+    {
+        println!("cargo:rerun-if-changed=../../.git/{r}");
+    }
+    println!("cargo:rerun-if-changed=../../.git/packed-refs");
     let commit = std::env::var("FA_GIT_COMMIT")
         .ok()
         .filter(|c| !c.trim().is_empty())
