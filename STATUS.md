@@ -25,9 +25,7 @@ None.
 
 ## Tasks not done (plans not closed)
 - M5 (planned (briefs written; all questions answered, D-108 to D-122))
-  - T-02: Domain and store: meals types, recipe draft move, authz, migration, repos (todo)
   - T-03: fa-recipe: schema.org microdata, ingredient parser extensions (todo)
-  - T-04: Ingredient and aisle seed data (hand-written, AGPL) (todo)
   - T-05: fa-meals: normaliser, recipe, plan, template and grocery services, jobs, seeding (todo)
   - T-06: fa-api meals routes, dashboard meals, wiring and seeding hook (todo)
   - T-07: Food shell, navigation and routes, Meal plan, Templates (todo)

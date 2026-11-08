@@ -5,7 +5,7 @@ milestone: M5
 wave: 1
 depends_on: [T-01]
 agent: {model: sonnet, effort: high}
-status: todo
+status: done
 owns: ["crates/fa-domain/**", "crates/fa-store/**", "crates/fa-recipe/src/types.rs", "crates/fa-recipe/Cargo.toml", "crates/fa-api/src/feeds.rs"]
 decisions: [D-109, D-110, D-111, D-112, D-113, D-115, D-116, D-118, D-120, D-121, D-122, D-021, D-015]
 ---
@@ -90,3 +90,41 @@ You are a sub-agent implementing one task of milestone M5 of the Family Assistan
   - whether `JsonSchema` was kept;
   - "list what outside your paths needs changing";
   - README changes needed: none.
+
+## Outcome (T-02 report, 2026-11-08)
+- **Built:**
+  - migration `20261108000001_m5_meals` with `pg_trgm`, 18 tables, one RLS block, and `set_updated_at` triggers;
+  - in `fa-domain`: `recipe.rs` (the moved draft types plus `Microdata`), `meals_api.rs` (every DTO, `parse_slot_time` and `format_slot_time`), 10 ids, 6 enums, `DashboardSettings.food_view`, `DashboardView.meals`, and the five authz actions with `Resource::Meals` (`Action::ALL` = 37);
+  - in `fa-store`: `repo/meals_recipe.rs`, `meals_plan.rs`, `meals_grocery.rs`, `HouseholdRepo::set_meal_plan_horizon`, and `tests/m5.rs` (16 tests).
+- **Results** (reported, fresh Postgres): fa-domain 359 passed; fa-store 94 passed; clippy and fmt clean; `cargo check --workspace` clean.
+- **Deviations:**
+  - `RecipeRepo::delete` writes the title into the entries' `free_text` first, because the xor CHECK forbids the FK's SET NULL alone.
+  - `MealSlotRepo::replace` returns `SlotReplace::InUse(id)` rather than a store error.
+  - `JsonSchema` was dropped from the moved types; `fa-domain` needs no `schemars`.
+  - The repos return `*Row` types; patch structs are named `*Edit` to avoid clashing with the `fa_domain` DTOs.
+- **For T-05 and T-06:**
+  - `fa_domain::RecipeInput` (the DTO) and `fa_recipe::RecipeInput` (the enum) coexist; import them by path.
+  - The archive job loops households with `tx_for`.
+  - The updates return `StoreError::Conflict` or `NotFound`.
+  - The repo signatures are below; the code is the final word.
+
+### Repo signatures (`fa_store`; every fn takes `conn: &mut PgConnection` first)
+- **`RecipeRepo`:**
+  - `insert(id, household, &RecipeFields, ImportMethod, created_by)` → `RecipeRow`; `get`; `update(id, &RecipeFields, expected_version)` → i32; `set_favourite`; `delete` (entries become free text);
+  - `list(&RecipeQuery{q, tag, favourite, me, today, after: Option<(String, RecipeId)>, limit})` → `Vec<RecipeListRow>`; `all_tags`; `count`.
+- **`RecipeImageRepo`:** `put(recipe, mime, bytes, sha256, source)`, `get`, `sha`, `delete`.
+- **`RecipeLineRepo`:** `for_recipe`, `get`, `replace_for_recipe(recipe, &[NewLine])` → `Vec<ReplacedLine{row, kept}>`, `set_match(id, ingredient, MatchState, proposal)`, `unmatched(limit)`.
+- **`RecipeStepRepo`:** `for_recipe`, `replace_for_recipe`.
+- **`RecipeRatingRepo`:** `set(recipe, member, stars)`, `clear`, `for_recipe`.
+- **`IngredientRepo`:** `insert`, `insert_many(household, &[NewIngredient])` (skips existing), `get`, `list`, `search(q, threshold, limit)`, `match_exact`, `match_alias`, `nearest(name, limit)` → `Vec<(IngredientId, String, f32)>`, `add_alias`, `update`, `set_staple`, `delete`, `merge(from, into)`, `count`.
+- **`AisleRepo`:** `list`, `count`, `replace(household, &[(Option<AisleId>, String)])`.
+- **`GroceryStoreRepo`:** `list`, `replace(household, &[(Option<GroceryStoreId>, String)])` (a new store copies the aisle order), `aisles_for(store)` → `Vec<StoreAisleRow{aisle_id, ord, hidden}>`, `set_aisles(store, &[(AisleId, hidden)])`.
+- **`MealSlotRepo`:** `list`, `get`, `count`, `insert(household, name, ord, NaiveTime, visible)`, `in_use`, `replace(household, &[SlotInput])` → `SlotReplace::{Done(rows), InUse(id)}`.
+- **`MealPlanRepo`:** `range(from, to)` (inclusive), `get`, `many`, `entries_at(date, slot)`, `next_ord`, `insert(household, &NewEntry{date, slot_id, content: EntryContent::{Recipe, FreeText}, servings, created_by})`, `restore`, `update(id, &EntryPatch, expected_version)` (a new date or slot appends), `delete`, `delete_at(date, slot)` → deleted rows, `swap(a, b)`, `day_meals(date)` → `Vec<DayMealRow{slot_name, slot_time, title, recipe_id}>`.
+- **`MealTemplateRepo`:** `list` → `Vec<MealTemplateListRow{row, slot_ids}>`, `get`, `cells`, `get_with_cells`, `insert(household, &NewTemplate, &[NewTemplateCell{day, slot_id, ord, content, servings}])`, `update_with_cells(id, t, cells, expected_version)`, `delete`, `duplicate(id, name)`.
+- **`GroceryRepo`:**
+  - `list_id(household)` (lazy), `items_open(list)`, `get_item`, `insert_item(household, list, &NewGroceryItem{id: Option, …})` → `(row, created)`, `check(id, by)`, `uncheck`, `set_section` (also unchecks), `update_item(id, &GroceryItemEdit, expected_version)`, `set_quantities(id, qty, unit, qty2, unit2)`, `delete_item`;
+  - `sources_for_entries`, `hints_for_items` → `SourceHintRow{item_id, entry_id, date, slot_name}`, `upsert_source(household, &GrocerySourceRow)`, `delete_source(item, entry)`, `archive_checked_before(cutoff)`.
+- **`MealsChangeRepo`:** `insert(household, kind, actor_member, actor_device, &inverse, expires_at)`, `get`, `mark_undone`, `prune_before`.
+- **`MealsSettingsRepo`:** `get_or_default(household)`, `update(household, &MealsSettingsPatchRow)`.
+- **`HouseholdRepo`:** `set_meal_plan_horizon(id, weeks)`.

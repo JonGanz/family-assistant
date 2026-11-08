@@ -102,6 +102,16 @@ id_type!(CategoryId);
 id_type!(BillId);
 id_type!(MailActionId);
 id_type!(LlmEndpointId);
+id_type!(RecipeId);
+id_type!(RecipeLineId);
+id_type!(IngredientId);
+id_type!(AisleId);
+id_type!(GroceryStoreId);
+id_type!(MealSlotId);
+id_type!(MealPlanEntryId);
+id_type!(MealTemplateId);
+id_type!(GroceryItemId);
+id_type!(MealsChangeId);
 
 #[cfg(test)]
 mod tests {

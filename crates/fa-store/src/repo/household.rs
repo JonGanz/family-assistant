@@ -111,6 +111,27 @@ impl TryFrom<Row> for Versioned<Household> {
 }
 
 impl HouseholdRepo {
+    /// Sets the meal plan horizon in weeks (`> 0`) and bumps the household version.
+    pub async fn set_meal_plan_horizon(
+        conn: &mut PgConnection,
+        id: fa_domain::HouseholdId,
+        weeks: i32,
+    ) -> Result<()> {
+        let n = sqlx::query(
+            "UPDATE household SET meal_plan_horizon_weeks = $2, version = version + 1 WHERE id = $1",
+        )
+        .bind(id.as_uuid())
+        .bind(weeks)
+        .execute(conn)
+        .await?
+        .rows_affected();
+        if n == 0 {
+            Err(StoreError::NotFound)
+        } else {
+            Ok(())
+        }
+    }
+
     pub async fn insert(conn: &mut PgConnection, h: &Household) -> Result<Versioned<Household>> {
         let (lat, lon, label) = match &h.location {
             Some(l) => (Some(l.lat), Some(l.lon), Some(l.label.clone())),

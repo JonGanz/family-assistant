@@ -393,6 +393,9 @@ pub struct DashboardView {
     /// Pending approvals per adult; empty when the household setting is off.
     #[serde(default)]
     pub pending_approvals: Vec<PendingApprovals>,
+    /// Today's visible meal slots with their planned entries; empty when nothing is planned.
+    #[serde(default)]
+    pub meals: Vec<crate::meals_api::DashboardMeal>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]

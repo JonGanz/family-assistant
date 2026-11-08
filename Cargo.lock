@@ -1307,6 +1307,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "fa-meals"
+version = "0.1.0"
+dependencies = [
+ "fa-domain",
+ "fa-store",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tracing",
+]
+
+[[package]]
 name = "fa-notify"
 version = "0.1.0"
 dependencies = [
@@ -1349,6 +1361,7 @@ version = "0.1.0"
 dependencies = [
  "axum",
  "fa-connectors",
+ "fa-domain",
  "fa-llm",
  "schemars",
  "scraper",

@@ -1,0 +1,3257 @@
+[
+  {
+    "canonical_name": "tomato",
+    "aliases": [
+      "tomatoes",
+      "roma tomato",
+      "plum tomato"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "cherry tomato",
+    "aliases": [
+      "cherry tomatoes",
+      "grape tomato",
+      "grape tomatoes"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "onion",
+    "aliases": [
+      "onions",
+      "yellow onion",
+      "brown onion"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "red onion",
+    "aliases": [
+      "red onions"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "green onion",
+    "aliases": [
+      "green onions",
+      "scallion",
+      "scallions",
+      "spring onion",
+      "spring onions"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "shallot",
+    "aliases": [
+      "shallots"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "garlic",
+    "aliases": [
+      "garlic cloves",
+      "garlic clove",
+      "cloves garlic"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "leek",
+    "aliases": [
+      "leeks"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "potato",
+    "aliases": [
+      "potatoes",
+      "russet potato",
+      "russet potatoes",
+      "yukon gold potato"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "sweet potato",
+    "aliases": [
+      "sweet potatoes",
+      "yam",
+      "yams"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "carrot",
+    "aliases": [
+      "carrots"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "celery",
+    "aliases": [
+      "celery stalks",
+      "celery stalk",
+      "celery ribs"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "cucumber",
+    "aliases": [
+      "cucumbers"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "bell pepper",
+    "aliases": [
+      "bell peppers",
+      "red bell pepper",
+      "green bell pepper",
+      "sweet pepper"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "jalapeno",
+    "aliases": [
+      "jalapenos",
+      "jalapeno pepper",
+      "jalapeno peppers"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "chili pepper",
+    "aliases": [
+      "chili peppers",
+      "chile pepper",
+      "red chili",
+      "red chilli"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "zucchini",
+    "aliases": [
+      "zucchinis",
+      "courgette",
+      "courgettes"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "eggplant",
+    "aliases": [
+      "eggplants",
+      "aubergine",
+      "aubergines"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "broccoli",
+    "aliases": [
+      "broccoli florets"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cauliflower",
+    "aliases": [
+      "cauliflower florets"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cabbage",
+    "aliases": [
+      "green cabbage"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "red cabbage",
+    "aliases": [
+      "purple cabbage"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "brussels sprout",
+    "aliases": [
+      "brussels sprouts"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "spinach",
+    "aliases": [
+      "baby spinach"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "kale",
+    "aliases": [
+      "curly kale"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "lettuce",
+    "aliases": [
+      "romaine lettuce",
+      "romaine",
+      "iceberg lettuce",
+      "butter lettuce"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "arugula",
+    "aliases": [
+      "rocket"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "mixed greens",
+    "aliases": [
+      "salad greens",
+      "spring mix",
+      "mesclun"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "asparagus",
+    "aliases": [
+      "asparagus spears"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "green bean",
+    "aliases": [
+      "green beans",
+      "string beans",
+      "french beans"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "snap pea",
+    "aliases": [
+      "snap peas",
+      "sugar snap peas"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "snow pea",
+    "aliases": [
+      "snow peas"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "pea",
+    "aliases": [
+      "peas",
+      "green peas"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "corn",
+    "aliases": [
+      "corn on the cob",
+      "ears of corn",
+      "sweet corn"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "mushroom",
+    "aliases": [
+      "mushrooms",
+      "button mushroom",
+      "button mushrooms",
+      "cremini mushroom",
+      "cremini mushrooms"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "radish",
+    "aliases": [
+      "radishes"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "beet",
+    "aliases": [
+      "beets",
+      "beetroot",
+      "beetroots"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "turnip",
+    "aliases": [
+      "turnips"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "parsnip",
+    "aliases": [
+      "parsnips"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "butternut squash",
+    "aliases": [
+      "butternut"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "fennel",
+    "aliases": [
+      "fennel bulb"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "avocado",
+    "aliases": [
+      "avocados"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "apple",
+    "aliases": [
+      "apples",
+      "granny smith apple",
+      "gala apple"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "pear",
+    "aliases": [
+      "pears"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "banana",
+    "aliases": [
+      "bananas"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "orange",
+    "aliases": [
+      "oranges",
+      "navel orange"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "mandarin",
+    "aliases": [
+      "mandarins",
+      "clementine",
+      "clementines",
+      "tangerine",
+      "tangerines"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "lemon",
+    "aliases": [
+      "lemons"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "lime",
+    "aliases": [
+      "limes"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "grapefruit",
+    "aliases": [
+      "grapefruits"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "grape",
+    "aliases": [
+      "grapes"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "strawberry",
+    "aliases": [
+      "strawberries"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "blueberry",
+    "aliases": [
+      "blueberries"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "raspberry",
+    "aliases": [
+      "raspberries"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "blackberry",
+    "aliases": [
+      "blackberries"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cherry",
+    "aliases": [
+      "cherries"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "peach",
+    "aliases": [
+      "peaches"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "plum",
+    "aliases": [
+      "plums"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "mango",
+    "aliases": [
+      "mangoes",
+      "mangos"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "pineapple",
+    "aliases": [
+      "pineapples"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "watermelon",
+    "aliases": [
+      "watermelons"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "kiwi",
+    "aliases": [
+      "kiwis",
+      "kiwifruit"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "pomegranate",
+    "aliases": [
+      "pomegranates"
+    ],
+    "aisle": "Produce",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "ginger",
+    "aliases": [
+      "ginger root",
+      "gingerroot"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "parsley",
+    "aliases": [
+      "flat-leaf parsley",
+      "italian parsley"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cilantro",
+    "aliases": [
+      "coriander leaves",
+      "fresh coriander"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "basil",
+    "aliases": [
+      "basil leaves"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "mint",
+    "aliases": [
+      "mint leaves"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "dill",
+    "aliases": [],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "thyme",
+    "aliases": [
+      "thyme sprigs",
+      "thyme sprig"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "rosemary",
+    "aliases": [
+      "rosemary sprigs"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "sage",
+    "aliases": [
+      "sage leaves"
+    ],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "chives",
+    "aliases": [],
+    "aisle": "Produce",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "bread",
+    "aliases": [
+      "loaf of bread",
+      "sandwich bread",
+      "white bread"
+    ],
+    "aisle": "Bakery",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "whole wheat bread",
+    "aliases": [
+      "wholemeal bread",
+      "whole grain bread"
+    ],
+    "aisle": "Bakery",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "sourdough bread",
+    "aliases": [
+      "sourdough"
+    ],
+    "aisle": "Bakery",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "baguette",
+    "aliases": [
+      "baguettes",
+      "french bread"
+    ],
+    "aisle": "Bakery",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "dinner roll",
+    "aliases": [
+      "dinner rolls",
+      "bread rolls"
+    ],
+    "aisle": "Bakery",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "bagel",
+    "aliases": [
+      "bagels"
+    ],
+    "aisle": "Bakery",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "english muffin",
+    "aliases": [
+      "english muffins"
+    ],
+    "aisle": "Bakery",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "tortilla",
+    "aliases": [
+      "tortillas",
+      "flour tortilla",
+      "flour tortillas"
+    ],
+    "aisle": "Bakery",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "corn tortilla",
+    "aliases": [
+      "corn tortillas"
+    ],
+    "aisle": "Bakery",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "pita bread",
+    "aliases": [
+      "pita",
+      "pitas",
+      "pita breads"
+    ],
+    "aisle": "Bakery",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "naan",
+    "aliases": [
+      "naan bread"
+    ],
+    "aisle": "Bakery",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "croissant",
+    "aliases": [
+      "croissants"
+    ],
+    "aisle": "Bakery",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "chicken breast",
+    "aliases": [
+      "chicken breasts",
+      "boneless chicken breast"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "chicken thigh",
+    "aliases": [
+      "chicken thighs"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "chicken drumstick",
+    "aliases": [
+      "chicken drumsticks"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "chicken wing",
+    "aliases": [
+      "chicken wings"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "whole chicken",
+    "aliases": [
+      "roasting chicken"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "ground chicken",
+    "aliases": [
+      "minced chicken"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "ground beef",
+    "aliases": [
+      "minced beef",
+      "beef mince",
+      "hamburger meat"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "beef steak",
+    "aliases": [
+      "steak",
+      "steaks",
+      "sirloin steak",
+      "ribeye steak"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "stew beef",
+    "aliases": [
+      "beef stew meat",
+      "stewing beef",
+      "chuck roast"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "beef roast",
+    "aliases": [
+      "pot roast"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "pork chop",
+    "aliases": [
+      "pork chops"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "pork tenderloin",
+    "aliases": [
+      "pork loin"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "ground pork",
+    "aliases": [
+      "minced pork"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "pork shoulder",
+    "aliases": [
+      "pork butt"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "bacon",
+    "aliases": [
+      "bacon strips",
+      "bacon slices"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "sausage",
+    "aliases": [
+      "sausages",
+      "italian sausage",
+      "pork sausage"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "bratwurst",
+    "aliases": [
+      "brats"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "ham",
+    "aliases": [
+      "ham steak"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "ground turkey",
+    "aliases": [
+      "minced turkey"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "turkey breast",
+    "aliases": [
+      "turkey cutlet"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "lamb chop",
+    "aliases": [
+      "lamb chops"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "salmon",
+    "aliases": [
+      "salmon fillet",
+      "salmon fillets"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cod",
+    "aliases": [
+      "cod fillet",
+      "cod fillets"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "tilapia",
+    "aliases": [
+      "tilapia fillet",
+      "tilapia fillets"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "white fish",
+    "aliases": [
+      "white fish fillet",
+      "white fish fillets"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "tuna steak",
+    "aliases": [
+      "tuna steaks"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "shrimp",
+    "aliases": [
+      "prawns",
+      "prawn",
+      "large shrimp"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "scallop",
+    "aliases": [
+      "scallops",
+      "sea scallops"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "crab",
+    "aliases": [
+      "crab meat",
+      "crabmeat"
+    ],
+    "aisle": "Meat & Seafood",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "deli turkey",
+    "aliases": [
+      "sliced turkey",
+      "turkey slices"
+    ],
+    "aisle": "Deli",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "deli ham",
+    "aliases": [
+      "sliced ham",
+      "ham slices"
+    ],
+    "aisle": "Deli",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "salami",
+    "aliases": [
+      "salami slices"
+    ],
+    "aisle": "Deli",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "pepperoni",
+    "aliases": [
+      "pepperoni slices"
+    ],
+    "aisle": "Deli",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "prosciutto",
+    "aliases": [],
+    "aisle": "Deli",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "hot dog",
+    "aliases": [
+      "hot dogs",
+      "frankfurter",
+      "frankfurters",
+      "wieners"
+    ],
+    "aisle": "Deli",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "hummus",
+    "aliases": [],
+    "aisle": "Deli",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "olive",
+    "aliases": [
+      "olives",
+      "green olives",
+      "black olives",
+      "kalamata olives"
+    ],
+    "aisle": "Deli",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "milk",
+    "aliases": [
+      "whole milk",
+      "skim milk",
+      "semi-skimmed milk"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "buttermilk",
+    "aliases": [],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "heavy cream",
+    "aliases": [
+      "heavy whipping cream",
+      "double cream",
+      "whipping cream"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "half and half",
+    "aliases": [
+      "half-and-half"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "sour cream",
+    "aliases": [
+      "soured cream"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cream cheese",
+    "aliases": [],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "butter",
+    "aliases": [
+      "unsalted butter",
+      "salted butter"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "egg",
+    "aliases": [
+      "eggs",
+      "large egg",
+      "large eggs"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "egg white",
+    "aliases": [
+      "egg whites"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "egg yolk",
+    "aliases": [
+      "egg yolks"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "plain yogurt",
+    "aliases": [
+      "yogurt",
+      "yoghurt",
+      "natural yogurt"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "greek yogurt",
+    "aliases": [
+      "greek yoghurt"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cheddar cheese",
+    "aliases": [
+      "cheddar",
+      "shredded cheddar",
+      "sharp cheddar"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "mozzarella cheese",
+    "aliases": [
+      "mozzarella",
+      "shredded mozzarella",
+      "fresh mozzarella"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "parmesan cheese",
+    "aliases": [
+      "parmesan",
+      "grated parmesan",
+      "parmigiano reggiano"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "feta cheese",
+    "aliases": [
+      "feta",
+      "crumbled feta"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "goat cheese",
+    "aliases": [
+      "chevre"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "swiss cheese",
+    "aliases": [
+      "swiss",
+      "gruyere",
+      "gruyere cheese"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "monterey jack cheese",
+    "aliases": [
+      "monterey jack",
+      "pepper jack"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "provolone cheese",
+    "aliases": [
+      "provolone"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cottage cheese",
+    "aliases": [],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "ricotta cheese",
+    "aliases": [
+      "ricotta"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cheese",
+    "aliases": [
+      "shredded cheese",
+      "grated cheese"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "whipped cream",
+    "aliases": [
+      "whipped topping"
+    ],
+    "aisle": "Dairy & Eggs",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "frozen peas",
+    "aliases": [],
+    "aisle": "Frozen",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "frozen corn",
+    "aliases": [],
+    "aisle": "Frozen",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "frozen mixed vegetables",
+    "aliases": [
+      "mixed vegetables"
+    ],
+    "aisle": "Frozen",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "frozen berries",
+    "aliases": [
+      "frozen mixed berries"
+    ],
+    "aisle": "Frozen",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "frozen pizza",
+    "aliases": [],
+    "aisle": "Frozen",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "frozen french fries",
+    "aliases": [
+      "french fries",
+      "fries"
+    ],
+    "aisle": "Frozen",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "frozen fish sticks",
+    "aliases": [
+      "fish sticks",
+      "fish fingers"
+    ],
+    "aisle": "Frozen",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "frozen chicken nuggets",
+    "aliases": [
+      "chicken nuggets"
+    ],
+    "aisle": "Frozen",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "frozen dumplings",
+    "aliases": [
+      "dumplings"
+    ],
+    "aisle": "Frozen",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "ice cream",
+    "aliases": [],
+    "aisle": "Frozen",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "frozen pie crust",
+    "aliases": [
+      "pie crust",
+      "pie shell"
+    ],
+    "aisle": "Frozen",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "puff pastry",
+    "aliases": [
+      "frozen puff pastry"
+    ],
+    "aisle": "Frozen",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "white rice",
+    "aliases": [
+      "rice",
+      "long grain rice",
+      "long-grain rice"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "brown rice",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "basmati rice",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "jasmine rice",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "arborio rice",
+    "aliases": [
+      "risotto rice"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "wild rice",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "quinoa",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "couscous",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "bulgur",
+    "aliases": [
+      "bulgur wheat"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "rolled oats",
+    "aliases": [
+      "oats",
+      "old-fashioned oats",
+      "porridge oats"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "spaghetti",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "penne",
+    "aliases": [
+      "penne pasta"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "macaroni",
+    "aliases": [
+      "elbow macaroni",
+      "macaroni pasta"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "fusilli",
+    "aliases": [
+      "rotini"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "linguine",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "fettuccine",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "lasagna noodles",
+    "aliases": [
+      "lasagne sheets",
+      "lasagna sheets"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "egg noodles",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "rice noodles",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "ramen noodles",
+    "aliases": [
+      "ramen"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "lentils",
+    "aliases": [
+      "lentil",
+      "red lentils",
+      "green lentils",
+      "brown lentils"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "dried black beans",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "dried chickpeas",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "breadcrumbs",
+    "aliases": [
+      "bread crumbs",
+      "dried breadcrumbs"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "panko",
+    "aliases": [
+      "panko breadcrumbs"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "olive oil",
+    "aliases": [
+      "extra virgin olive oil",
+      "extra-virgin olive oil",
+      "evoo"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "vegetable oil",
+    "aliases": [
+      "canola oil",
+      "cooking oil",
+      "neutral oil",
+      "rapeseed oil"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "sesame oil",
+    "aliases": [
+      "toasted sesame oil"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "coconut oil",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "sunflower oil",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "cooking spray",
+    "aliases": [
+      "nonstick spray"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "white vinegar",
+    "aliases": [
+      "distilled white vinegar"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "apple cider vinegar",
+    "aliases": [
+      "cider vinegar"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "balsamic vinegar",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "red wine vinegar",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "rice vinegar",
+    "aliases": [
+      "rice wine vinegar"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "soy sauce",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "worcestershire sauce",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "hot sauce",
+    "aliases": [
+      "tabasco",
+      "sriracha"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "fish sauce",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "oyster sauce",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "hoisin sauce",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "teriyaki sauce",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "bbq sauce",
+    "aliases": [
+      "barbecue sauce"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "ketchup",
+    "aliases": [
+      "catsup",
+      "tomato ketchup"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "mustard",
+    "aliases": [
+      "yellow mustard"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "dijon mustard",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "mayonnaise",
+    "aliases": [
+      "mayo"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "salad dressing",
+    "aliases": [
+      "ranch dressing",
+      "italian dressing"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "peanut butter",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "almond butter",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "jam",
+    "aliases": [
+      "jelly",
+      "strawberry jam",
+      "fruit preserves"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "honey",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "maple syrup",
+    "aliases": [],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "agave syrup",
+    "aliases": [
+      "agave nectar"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "tahini",
+    "aliases": [
+      "sesame paste"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "vegetable broth",
+    "aliases": [
+      "vegetable stock",
+      "veggie broth"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "chicken broth",
+    "aliases": [
+      "chicken stock"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "beef broth",
+    "aliases": [
+      "beef stock"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "bouillon cube",
+    "aliases": [
+      "bouillon cubes",
+      "stock cube",
+      "stock cubes"
+    ],
+    "aisle": "Pantry",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "canned tomatoes",
+    "aliases": [
+      "diced tomatoes",
+      "canned diced tomatoes",
+      "whole peeled tomatoes"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "crushed tomatoes",
+    "aliases": [
+      "canned crushed tomatoes"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "tomato sauce",
+    "aliases": [],
+    "aisle": "Canned & Jarred",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "tomato paste",
+    "aliases": [
+      "tomato puree"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "pasta sauce",
+    "aliases": [
+      "marinara sauce",
+      "spaghetti sauce"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "salsa",
+    "aliases": [],
+    "aisle": "Canned & Jarred",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "black beans",
+    "aliases": [
+      "canned black beans"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "kidney beans",
+    "aliases": [
+      "red kidney beans"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "chickpeas",
+    "aliases": [
+      "garbanzo beans",
+      "canned chickpeas"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cannellini beans",
+    "aliases": [
+      "white beans",
+      "great northern beans"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "pinto beans",
+    "aliases": [],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "refried beans",
+    "aliases": [],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "baked beans",
+    "aliases": [],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "canned corn",
+    "aliases": [],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "canned tuna",
+    "aliases": [
+      "tuna"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "canned salmon",
+    "aliases": [],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "sardines",
+    "aliases": [
+      "sardine"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "coconut milk",
+    "aliases": [
+      "canned coconut milk"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "evaporated milk",
+    "aliases": [],
+    "aisle": "Canned & Jarred",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "condensed milk",
+    "aliases": [
+      "sweetened condensed milk"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "pumpkin puree",
+    "aliases": [
+      "canned pumpkin"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "applesauce",
+    "aliases": [],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "pickles",
+    "aliases": [
+      "pickle",
+      "dill pickles",
+      "pickled cucumbers"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "capers",
+    "aliases": [
+      "caper"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "roasted red peppers",
+    "aliases": [
+      "roasted peppers"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "artichoke hearts",
+    "aliases": [],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "sun-dried tomatoes",
+    "aliases": [
+      "sundried tomatoes"
+    ],
+    "aisle": "Canned & Jarred",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "all-purpose flour",
+    "aliases": [
+      "flour",
+      "plain flour",
+      "white flour"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "bread flour",
+    "aliases": [
+      "strong flour"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "whole wheat flour",
+    "aliases": [
+      "wholemeal flour"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "self-rising flour",
+    "aliases": [
+      "self-raising flour"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cornstarch",
+    "aliases": [
+      "corn starch",
+      "cornflour"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cornmeal",
+    "aliases": [
+      "polenta"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "white sugar",
+    "aliases": [
+      "sugar",
+      "granulated sugar",
+      "caster sugar"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "brown sugar",
+    "aliases": [
+      "light brown sugar",
+      "dark brown sugar"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "powdered sugar",
+    "aliases": [
+      "confectioners sugar",
+      "icing sugar"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "baking powder",
+    "aliases": [],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "baking soda",
+    "aliases": [
+      "bicarbonate of soda",
+      "bicarb"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "active dry yeast",
+    "aliases": [
+      "yeast",
+      "instant yeast",
+      "dry yeast"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "vanilla extract",
+    "aliases": [
+      "vanilla",
+      "pure vanilla extract"
+    ],
+    "aisle": "Baking",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "almond extract",
+    "aliases": [],
+    "aisle": "Baking",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "cocoa powder",
+    "aliases": [
+      "cocoa",
+      "unsweetened cocoa"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "chocolate chips",
+    "aliases": [
+      "semisweet chocolate chips"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "dark chocolate",
+    "aliases": [
+      "bittersweet chocolate",
+      "baking chocolate"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "shortening",
+    "aliases": [
+      "vegetable shortening"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "molasses",
+    "aliases": [],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "shredded coconut",
+    "aliases": [
+      "desiccated coconut",
+      "coconut flakes"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "walnuts",
+    "aliases": [
+      "walnut",
+      "chopped walnuts"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "pecans",
+    "aliases": [
+      "pecan"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "almonds",
+    "aliases": [
+      "almond",
+      "sliced almonds",
+      "slivered almonds"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cashews",
+    "aliases": [
+      "cashew"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "peanuts",
+    "aliases": [
+      "peanut",
+      "roasted peanuts"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "pine nuts",
+    "aliases": [
+      "pine nut"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "raisins",
+    "aliases": [
+      "raisin"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "dried cranberries",
+    "aliases": [
+      "craisins"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "dates",
+    "aliases": [
+      "date",
+      "medjool dates"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "sunflower seeds",
+    "aliases": [],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "pumpkin seeds",
+    "aliases": [
+      "pepitas"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "sesame seeds",
+    "aliases": [],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "chia seeds",
+    "aliases": [],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "flaxseed",
+    "aliases": [
+      "ground flaxseed",
+      "flax seeds"
+    ],
+    "aisle": "Baking",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "salt",
+    "aliases": [
+      "table salt",
+      "kosher salt",
+      "sea salt",
+      "fine salt"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "black pepper",
+    "aliases": [
+      "pepper",
+      "ground black pepper",
+      "freshly ground black pepper",
+      "peppercorns"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "garlic powder",
+    "aliases": [],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "onion powder",
+    "aliases": [],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "paprika",
+    "aliases": [
+      "sweet paprika"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "smoked paprika",
+    "aliases": [],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "chili powder",
+    "aliases": [],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cayenne pepper",
+    "aliases": [
+      "cayenne"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "red pepper flakes",
+    "aliases": [
+      "crushed red pepper",
+      "chili flakes"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "ground cumin",
+    "aliases": [
+      "cumin"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "ground coriander",
+    "aliases": [],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "ground cinnamon",
+    "aliases": [
+      "cinnamon"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cinnamon stick",
+    "aliases": [
+      "cinnamon sticks"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "nutmeg",
+    "aliases": [
+      "ground nutmeg"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "ground ginger",
+    "aliases": [],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "turmeric",
+    "aliases": [
+      "ground turmeric"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "curry powder",
+    "aliases": [],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "garam masala",
+    "aliases": [],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "italian seasoning",
+    "aliases": [],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "dried oregano",
+    "aliases": [
+      "oregano"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "bay leaf",
+    "aliases": [
+      "bay leaves"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "ground cloves",
+    "aliases": [
+      "cloves"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "allspice",
+    "aliases": [
+      "ground allspice"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cardamom",
+    "aliases": [
+      "ground cardamom",
+      "cardamom pods"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "mustard powder",
+    "aliases": [
+      "dry mustard"
+    ],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "taco seasoning",
+    "aliases": [],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "everything bagel seasoning",
+    "aliases": [],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "saffron",
+    "aliases": [],
+    "aisle": "Spices & Seasonings",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "cereal",
+    "aliases": [
+      "breakfast cereal",
+      "corn flakes"
+    ],
+    "aisle": "Breakfast & Cereal",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "granola",
+    "aliases": [],
+    "aisle": "Breakfast & Cereal",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "oatmeal",
+    "aliases": [
+      "instant oatmeal"
+    ],
+    "aisle": "Breakfast & Cereal",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "pancake mix",
+    "aliases": [],
+    "aisle": "Breakfast & Cereal",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "pancake syrup",
+    "aliases": [],
+    "aisle": "Breakfast & Cereal",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "muesli",
+    "aliases": [],
+    "aisle": "Breakfast & Cereal",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "grits",
+    "aliases": [],
+    "aisle": "Breakfast & Cereal",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "potato chips",
+    "aliases": [
+      "chips",
+      "crisps"
+    ],
+    "aisle": "Snacks",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "tortilla chips",
+    "aliases": [],
+    "aisle": "Snacks",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "popcorn",
+    "aliases": [],
+    "aisle": "Snacks",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "pretzels",
+    "aliases": [],
+    "aisle": "Snacks",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "crackers",
+    "aliases": [
+      "cracker",
+      "saltines"
+    ],
+    "aisle": "Snacks",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "granola bars",
+    "aliases": [
+      "granola bar",
+      "cereal bars"
+    ],
+    "aisle": "Snacks",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "cookies",
+    "aliases": [
+      "cookie",
+      "biscuits"
+    ],
+    "aisle": "Snacks",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "chocolate bar",
+    "aliases": [
+      "chocolate bars",
+      "chocolate"
+    ],
+    "aisle": "Snacks",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "candy",
+    "aliases": [
+      "sweets"
+    ],
+    "aisle": "Snacks",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "rice cakes",
+    "aliases": [],
+    "aisle": "Snacks",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "dried fruit",
+    "aliases": [],
+    "aisle": "Snacks",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "water",
+    "aliases": [
+      "bottled water",
+      "drinking water"
+    ],
+    "aisle": "Beverages",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "sparkling water",
+    "aliases": [
+      "club soda",
+      "seltzer",
+      "soda water"
+    ],
+    "aisle": "Beverages",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "cola",
+    "aliases": [
+      "soda",
+      "soft drink"
+    ],
+    "aisle": "Beverages",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "orange juice",
+    "aliases": [
+      "oj"
+    ],
+    "aisle": "Beverages",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "apple juice",
+    "aliases": [],
+    "aisle": "Beverages",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "lemonade",
+    "aliases": [],
+    "aisle": "Beverages",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "coffee",
+    "aliases": [
+      "ground coffee",
+      "coffee beans"
+    ],
+    "aisle": "Beverages",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "instant coffee",
+    "aliases": [],
+    "aisle": "Beverages",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "tea",
+    "aliases": [
+      "tea bags",
+      "black tea"
+    ],
+    "aisle": "Beverages",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "green tea",
+    "aliases": [],
+    "aisle": "Beverages",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "herbal tea",
+    "aliases": [],
+    "aisle": "Beverages",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "hot chocolate mix",
+    "aliases": [
+      "hot cocoa mix"
+    ],
+    "aisle": "Beverages",
+    "default_unit": "g",
+    "staple": false
+  },
+  {
+    "canonical_name": "red wine",
+    "aliases": [],
+    "aisle": "Beverages",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "white wine",
+    "aliases": [],
+    "aisle": "Beverages",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "beer",
+    "aliases": [],
+    "aisle": "Beverages",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "almond milk",
+    "aliases": [],
+    "aisle": "Beverages",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "oat milk",
+    "aliases": [],
+    "aisle": "Beverages",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "soy milk",
+    "aliases": [],
+    "aisle": "Beverages",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "coconut water",
+    "aliases": [],
+    "aisle": "Beverages",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "juice",
+    "aliases": [
+      "fruit juice"
+    ],
+    "aisle": "Beverages",
+    "default_unit": "ml",
+    "staple": false
+  },
+  {
+    "canonical_name": "paper towels",
+    "aliases": [
+      "paper towel"
+    ],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "toilet paper",
+    "aliases": [],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "napkins",
+    "aliases": [
+      "paper napkins"
+    ],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "tissues",
+    "aliases": [
+      "facial tissues"
+    ],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "dish soap",
+    "aliases": [
+      "dishwashing liquid"
+    ],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "dishwasher tablets",
+    "aliases": [
+      "dishwasher detergent"
+    ],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "laundry detergent",
+    "aliases": [],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "fabric softener",
+    "aliases": [],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "trash bags",
+    "aliases": [
+      "garbage bags",
+      "bin bags"
+    ],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "sponges",
+    "aliases": [
+      "sponge"
+    ],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "aluminum foil",
+    "aliases": [
+      "tin foil",
+      "foil"
+    ],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "plastic wrap",
+    "aliases": [
+      "cling film",
+      "cling wrap"
+    ],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "parchment paper",
+    "aliases": [
+      "baking paper"
+    ],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "sandwich bags",
+    "aliases": [
+      "zip bags",
+      "freezer bags"
+    ],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "hand soap",
+    "aliases": [],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  },
+  {
+    "canonical_name": "all-purpose cleaner",
+    "aliases": [],
+    "aisle": "Household",
+    "default_unit": "count",
+    "staple": false
+  }
+]

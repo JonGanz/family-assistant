@@ -83,3 +83,11 @@ You are a sub-agent implementing one task of milestone M5 of the Family Assistan
   - deviations from `arch/Meals.md`;
   - "list what outside your paths needs changing";
   - README changes needed: none.
+
+## Notes from wave 1 (main session)
+- Build on the repo signatures in T-02's *Outcome* and the code in `crates/fa-store/src/repo/meals_*.rs`. The repos return `*Row` types; your services map them to the `fa_domain` DTOs.
+- Delete a recipe only through `RecipeRepo::delete`: it rewrites planned entries to free text first.
+- `MealSlotRepo::replace` returns `SlotReplace::InUse(id)`. Map it to `MealsError::SlotInUse`.
+- `fa_domain::RecipeInput` (the DTO) differs from `fa_recipe::RecipeInput` (the enum). Import both by path.
+- `grocery.archive` loops households (system tx to list them, then `tx_for` each), because `archive_checked_before` and the archive hours are per household.
+- The seed has 361 ingredients, so the "about 300" in the docs is approximate.

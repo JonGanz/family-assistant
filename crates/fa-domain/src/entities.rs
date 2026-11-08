@@ -710,3 +710,17 @@ pub struct Notification {
     pub last_error: Option<String>,
     pub created_at: DateTime<Utc>,
 }
+
+// ---- M5: meals (values equal the migration CHECKs) ----
+db_enum!(ImportMethod { Jsonld => "jsonld", Microdata => "microdata", Llm => "llm", Manual => "manual" });
+db_enum!(MatchState { Matched => "matched", Unmatched => "unmatched", Proposed => "proposed" });
+db_enum!(IngredientOrigin { Seed => "seed", User => "user", Llm => "llm" });
+db_enum!(BaseUnit { G => "g", Ml => "ml", Count => "count" });
+db_enum!(GrocerySection { List => "list", Staples => "staples" });
+db_enum!(MealsChangeKind {
+    Generate => "generate",
+    Reconcile => "reconcile",
+    TemplateApply => "template_apply",
+    Swap => "swap",
+    Move => "move",
+});

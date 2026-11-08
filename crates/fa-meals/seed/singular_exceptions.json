@@ -1,0 +1,86 @@
+[
+  {
+    "plural": "brussels sprouts",
+    "singular": "brussels sprout"
+  },
+  {
+    "plural": "chickpeas",
+    "singular": "chickpea"
+  },
+  {
+    "plural": "lentils",
+    "singular": "lentil"
+  },
+  {
+    "plural": "oats",
+    "singular": "oat"
+  },
+  {
+    "plural": "tomatoes",
+    "singular": "tomato"
+  },
+  {
+    "plural": "potatoes",
+    "singular": "potato"
+  },
+  {
+    "plural": "mangoes",
+    "singular": "mango"
+  },
+  {
+    "plural": "leaves",
+    "singular": "leaf"
+  },
+  {
+    "plural": "loaves",
+    "singular": "loaf"
+  },
+  {
+    "plural": "halves",
+    "singular": "half"
+  },
+  {
+    "plural": "cloves",
+    "singular": "clove"
+  },
+  {
+    "plural": "peaches",
+    "singular": "peach"
+  },
+  {
+    "keep": "hummus"
+  },
+  {
+    "keep": "couscous"
+  },
+  {
+    "keep": "molasses"
+  },
+  {
+    "keep": "asparagus"
+  },
+  {
+    "keep": "swiss"
+  },
+  {
+    "keep": "grits"
+  },
+  {
+    "keep": "watercress"
+  },
+  {
+    "keep": "citrus"
+  },
+  {
+    "keep": "bass"
+  },
+  {
+    "keep": "hibiscus"
+  },
+  {
+    "keep": "lemongrass"
+  },
+  {
+    "keep": "gruyere"
+  }
+]

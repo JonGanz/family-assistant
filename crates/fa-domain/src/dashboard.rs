@@ -15,6 +15,10 @@ fn default_screensaver_minutes() -> u16 {
     DEFAULT_SCREENSAVER_MINUTES
 }
 
+fn default_true() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
 pub enum AllMarker {
     #[serde(rename = "all")]
@@ -68,6 +72,9 @@ pub struct DashboardSettings {
     pub screensaver_minutes: u16,
     pub members: MemberSelection,
     pub panels: Vec<Panel>,
+    /// Shows the Food view (meal plan and shopping list) on this device (D-117).
+    #[serde(default = "default_true")]
+    pub food_view: bool,
 }
 
 impl DashboardSettings {
@@ -111,6 +118,7 @@ impl Default for DashboardSettings {
                 Panel::new("advisories", json!({})),
                 Panel::new("agenda", json!({})),
             ],
+            food_view: true,
         }
     }
 }
@@ -152,6 +160,21 @@ mod tests {
     }
 
     #[test]
+    fn food_view_defaults_on_for_old_stored_json() {
+        let j = r#"{"theme":"auto","agenda_days":3,"members":"all","panels":[]}"#;
+        let s: DashboardSettings = serde_json::from_str(j).unwrap();
+        assert!(s.food_view);
+        assert!(DashboardSettings::default().food_view);
+        let off =
+            r#"{"theme":"auto","agenda_days":3,"members":"all","panels":[],"food_view":false}"#;
+        assert!(
+            !serde_json::from_str::<DashboardSettings>(off)
+                .unwrap()
+                .food_view
+        );
+    }
+
+    #[test]
     fn unknown_theme_rejected_and_old_orientation_ignored() {
         let j = r#"{"theme":"auto","agenda_days":3,"members":"all","panels":[]}"#;
         assert!(serde_json::from_str::<DashboardSettings>(j).is_ok());
@@ -177,7 +200,7 @@ mod tests {
     fn unknown_panels_round_trip() {
         let j = serde_json::json!({
             "theme": {"family": "catppuccin", "mode": "dark"}, "agenda_days": 5, "screensaver_minutes": 15,
-            "members": "all",
+            "members": "all", "food_view": true,
             "panels": [{"kind": "clock"}, {"kind": "hologram", "depth": 3, "opts": {"a": [1, 2]}}]
         });
         let s: DashboardSettings = serde_json::from_value(j.clone()).unwrap();

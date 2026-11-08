@@ -65,10 +65,16 @@ pub enum Action {
     ClaimTask,
     TickRoutineStep,
     ManageNotifyPrefs,
+    // M5 (D-110)
+    ReadMeals,
+    CheckGroceryItem,
+    RateRecipe,
+    EditGrocery,
+    ManageMeals,
 }
 
 impl Action {
-    pub const ALL: [Action; 32] = [
+    pub const ALL: [Action; 37] = [
         Action::ReadMemberPublic,
         Action::ReadMemberFull,
         Action::ManageMember,
@@ -101,6 +107,11 @@ impl Action {
         Action::ClaimTask,
         Action::TickRoutineStep,
         Action::ManageNotifyPrefs,
+        Action::ReadMeals,
+        Action::CheckGroceryItem,
+        Action::RateRecipe,
+        Action::EditGrocery,
+        Action::ManageMeals,
     ];
 }
 
@@ -127,6 +138,8 @@ pub enum Resource {
         dashboard_add: bool,
     },
     GroceryItem,
+    /// The recipes, meal plan and templates of the household (M5).
+    Meals,
     Event,
     /// A mailbox: its owners and who else may read it.
     MailSource {
@@ -236,7 +249,13 @@ pub fn authorize(
     let is_device = matches!(actor, Actor::Device { .. } | Actor::ElevatedDevice { .. });
 
     match action {
-        Action::ReadMemberPublic | Action::AddGroceryItem => allow(true),
+        Action::ReadMemberPublic
+        | Action::AddGroceryItem
+        | Action::ReadMeals
+        | Action::CheckGroceryItem => allow(true),
+        // Ratings are personal: a member's own session only, never a device (D-110).
+        Action::RateRecipe => allow(user_member.is_some()),
+        Action::EditGrocery | Action::ManageMeals => allow(adult_member.is_some()),
         Action::ReadDashboard => allow(true),
         Action::ReadMemberFull => match resource {
             Resource::Member(id, _) => allow(adult_user.is_some() || user_member == Some(*id)),
@@ -1343,6 +1362,55 @@ mod tests {
             adult_only,
         );
 
+        // M5 (D-110): anyone reads, adds and checks; only a member's own session rates;
+        // an adult (or an elevated device) edits the list and manages meals.
+        for (action, res) in [
+            (Action::ReadMeals, Resource::Meals),
+            (Action::CheckGroceryItem, Resource::GroceryItem),
+        ] {
+            t(
+                action,
+                res,
+                c,
+                [
+                    (Adult, ALLOW),
+                    (Child, ALLOW),
+                    (Device, ALLOW),
+                    (Elevated, ALLOW),
+                    (System, ALLOW),
+                ],
+            );
+        }
+        t(
+            Action::RateRecipe,
+            Resource::Meals,
+            c,
+            [
+                (Adult, ALLOW),
+                (Child, ALLOW),
+                (Device, DENY),
+                (Elevated, DENY),
+                (System, ALLOW),
+            ],
+        );
+        for (action, res) in [
+            (Action::EditGrocery, Resource::GroceryItem),
+            (Action::ManageMeals, Resource::Meals),
+        ] {
+            t(
+                action,
+                res,
+                c,
+                [
+                    (Adult, ALLOW),
+                    (Child, DENY),
+                    (Device, DENY),
+                    (Elevated, ALLOW),
+                    (System, ALLOW),
+                ],
+            );
+        }
+
         let all: HashSet<Action> = Action::ALL.into_iter().collect();
         assert_eq!(covered, all, "every Action variant needs a policy test");
     }
@@ -1383,9 +1451,14 @@ mod tests {
                 | Action::EditTask
                 | Action::ClaimTask
                 | Action::TickRoutineStep
-                | Action::ManageNotifyPrefs => {}
+                | Action::ManageNotifyPrefs
+                | Action::ReadMeals
+                | Action::CheckGroceryItem
+                | Action::RateRecipe
+                | Action::EditGrocery
+                | Action::ManageMeals => {}
             }
         }
-        assert_eq!(Action::ALL.iter().collect::<HashSet<_>>().len(), 32);
+        assert_eq!(Action::ALL.iter().collect::<HashSet<_>>().len(), 37);
     }
 }

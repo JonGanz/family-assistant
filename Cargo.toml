@@ -18,6 +18,7 @@ members = [
     "crates/fa-llm",
     "crates/fa-recipe",
     "crates/fa-eval",
+    "crates/fa-meals",
     "bins/fa-server",
     "bins/fa-gpu-agent",
 ]
@@ -63,6 +64,7 @@ fa-rules = { path = "crates/fa-rules" }
 fa-mail = { path = "crates/fa-mail" }
 fa-llm = { path = "crates/fa-llm" }
 fa-recipe = { path = "crates/fa-recipe" }
+fa-meals = { path = "crates/fa-meals" }
 fa-eval = { path = "crates/fa-eval" }
 
 # async and HTTP
@@ -127,6 +129,9 @@ pdf-extract = "0.12.1"
 regex = "1.13.1"
 aho-corasick = "1.1.5"
 strsim = "0.11.1"
+# meals (M5)
+pluralizer = "0.6.0"
+image = { version = "0.25.10", default-features = false, features = ["jpeg", "png", "webp"] }
 async-imap = { version = "0.12.0", default-features = false, features = ["runtime-tokio"] }
 tokio-rustls = "0.26.6"
 

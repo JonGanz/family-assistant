@@ -5,7 +5,7 @@ milestone: M5
 wave: 1
 depends_on: [T-01]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-meals/seed/**", "crates/fa-meals/tests/seed_data.rs"]
 decisions: [D-114, D-021, D-113, D-115, D-035]
 ---
@@ -47,3 +47,11 @@ You are a sub-agent implementing one task of milestone M5 of the Family Assistan
 - [ ] `cargo test -p fa-meals --test seed_data` passes. Other `fa-meals` tests may not exist yet.
 - [ ] `cargo fmt --check -p fa-meals` passes.
 - [ ] The report gives the entry count per aisle and confirms that no third-party list was used. It says "list what outside your paths needs changing" (normally nothing). README changes needed: none.
+
+## Outcome (T-04 report, 2026-11-08)
+- **Built:** `seed/aisles.json` (14 aisles, no "Other"), `seed/ingredients.json` (361 entries, all `staple: false`), `seed/descriptors.json` (40 words), `seed/singular_exceptions.json` (12 pairs and 12 keeps), and `tests/seed_data.rs` (6 tests, parsing `raw::*`).
+- **Entries per aisle:** Produce 73, Pantry 60, Baking 34, Meat & Seafood 29, Spices & Seasonings 28, Canned & Jarred 27, Dairy & Eggs 24, Beverages 20, Household 16, Bakery 12, Frozen 12, Snacks 11, Deli 8, Breakfast & Cereal 7.
+- **Judgement calls:**
+  - "whole" is not a descriptor (it would break "whole wheat flour" and "whole chicken");
+  - herbs are canonical without "fresh".
+- No third-party list was used.

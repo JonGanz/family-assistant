@@ -35,6 +35,9 @@ mod jobs;
 pub mod mail_defaults;
 mod mail_setup;
 mod mail_source;
+mod meals_grocery;
+mod meals_plan;
+mod meals_recipe;
 mod member;
 mod message;
 mod notification;
@@ -73,6 +76,22 @@ pub use instance_setting::{InstanceSettingRepo, InstanceSettingRow};
 pub use jobs::{Job, JobCounts, JobRepo, NewJob, Schedule, ScheduleRepo};
 pub use mail_setup::{CategoryRepo, MailRuleRepo};
 pub use mail_source::{MailFolderState, MailFolderStateRepo, MailSourceRepo};
+pub use meals_grocery::{
+    GroceryItemEdit, GroceryItemRow, GroceryRepo, GrocerySourceRow, MealsChangeRepo,
+    MealsChangeRow, MealsSettingsPatchRow, MealsSettingsRepo, MealsSettingsRow, NewGroceryItem,
+    SourceHintRow,
+};
+pub use meals_plan::{
+    AisleRepo, AisleRow, DayMealRow, EntryContent, EntryPatch, GroceryStoreRepo, MealEntryRow,
+    MealPlanRepo, MealSlotRepo, MealSlotRow, MealTemplateListRow, MealTemplateRepo,
+    MealTemplateRow, NewEntry, NewTemplate, NewTemplateCell, SlotInput, SlotReplace, StoreAisleRow,
+    StoreRow, TemplateCellRow,
+};
+pub use meals_recipe::{
+    IngredientRepo, IngredientRow, NewIngredient, NewLine, RecipeFields, RecipeImageRepo,
+    RecipeImageRow, RecipeLineRepo, RecipeLineRow, RecipeListRow, RecipeQuery, RecipeRatingRepo,
+    RecipeRepo, RecipeRow, RecipeStepRepo, ReplacedLine,
+};
 pub use member::{MemberLockout, MemberRepo};
 pub use message::{MessageFilter, MessageRepo, NewMessage};
 pub use notification::{NewNotification, NotificationRepo};
