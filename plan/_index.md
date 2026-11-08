@@ -19,7 +19,7 @@ There is one plan per milestone (`M<n>.md`). Its sub-agent task briefs are in `M
 | M3.6 Themes | [M3.6.md](M3.6.md) | code-complete; e2e, clippy and tests green, compose-smoke pending (D-079 to D-081) | [M3.6/](M3.6/): T-01 to T-08 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)); T-09 integration is the main session |
 | M3.7 Review follow-ups | [M3.7.md](M3.7.md) | running (C-10, C-13, C-14, P-06, P-07, second code review) | [M3.7/](M3.7/): T-01 to T-07 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)) |
 | M4 UI revamp and LLM extraction slice | [M4.md](M4.md) | done 2026-11-07 (code-complete; H-15 to H-17 open) | [M4/](M4/): T-01 to T-23 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)), plus human steps H-15 to H-17 |
-| M5 Recipes, meal plan, grocery list | [M5.md](M5.md) | planning: waiting on batch 24 (Q-098 to Q-114); draft [arch/Meals.md](../arch/Meals.md) v0 | briefs after the answers are processed |
+| M5 Recipes, meal plan, grocery list | [M5.md](M5.md) | planned 2026-11-08 (D-108 to D-119; batch 25 Q-115 to Q-117 open, built as working assumptions) | [M5/](M5/): T-01 to T-13 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)), waves 1 to 6 |
 
 ## Reviews
 Time-boxed review sessions (CLAUDE.md workflow 7). Each file has findings tables with IDs, sizes and status.

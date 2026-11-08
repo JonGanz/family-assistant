@@ -8,12 +8,12 @@ b("Meals: recipes, meal plan, grocery (UML 2 component), DRAFT v1 (M5, D-015, D-
 web = b("apps/web\nFood: Meal plan · Shopping list · Recipes · Templates · Settings → Meals · kiosk Food view · meals panel · offline queue", 380, 60, 520, 60, COMP)
 api = b("fa-api\n/recipes · /recipes/import · /ingredients · /meals/* · /meal-plan · /meal-templates · /grocery", 380, 180, 520, 60, COMP)
 srv = b("fa-server\nwiring · worker", 1000, 180, 220, 60, COMP)
-mea = b("fa-meals\nNormaliser · RecipeService (import, image) · PlanService (move, swap, templates) · GroceryService (generate, impact, reconcile)\njobs: recipe.image · ingredient.llm · grocery.archive · meals.seed", 380, 320, 520, 80, COMP)
+mea = b("fa-meals\nNormaliser · RecipeService (import, image) · PlanService (move, swap, templates) · GroceryService (generate, impact, reconcile)\njobs: recipe.image · ingredient.llm · grocery.archive · ensure_defaults (seed)", 380, 320, 520, 80, COMP)
 rec = b("fa-recipe\nfrom_html (JSON-LD, microdata) · from_text · from_llm", 980, 320, 320, 60, COMP)
 llm = b("fa-llm\nProvider (structured JSON)", 980, 450, 320, 50, COMP)
 con = b("fa-connectors\nHttp (private hosts blocked)", 620, 470, 280, 50, COMP)
 dom = b("fa-domain\nRecipeDraft (moved from fa-recipe) · meals types · authz", 40, 320, 280, 60, COMP)
-st = b("fa-store\nrecipe* · ingredient · aisle · store · meal_slot · meal_plan_entry · meal_template(_cell) · grocery_* · meals_change · meals_settings", 40, 470, 520, 60, COMP)
+st = b("fa-store\nrecipe* · ingredient · aisle · grocery_store · meal_slot · meal_plan_entry · meal_template(_cell) · grocery_* · meals_change · meals_settings", 40, 470, 520, 60, COMP)
 page = b("«external» recipe web page / image", 980, 600, 260, 50, EXT)
 for s, t, l in [(web, api, "REST + SSE grocery.updated"), (api, mea, "services"), (srv, mea, "job handlers, cron"), (mea, rec, "import"),
                 (mea, llm, "ingredient.llm"), (rec, llm, "fallback"), (mea, con, "image fetch"), (rec, con, "fetch_page"),

@@ -21,7 +21,7 @@ This doc covers M5 (D-023, D-108). v1 is re-derived from the requirements, D-015
 |---|---|---|
 | **Recipe** | A stored recipe: title, ingredient lines (each keeps its source text), steps, servings, times, tags, an image, a note, favourite, per-member ratings | D-094, D-109 |
 | **Import** | URL (JSON-LD → microdata → LLM), pasted text (LLM), or the manual form; always an editable draft, stored only when an adult saves | D-109 |
-| **Ingredient** | Catalogue entry: canonical name, aliases, staple flag, aisle, default store, default unit. Seeded per household from a hand-written list | D-021, D-114, D-115 |
+| **Ingredient** | Catalogue entry: canonical name, aliases, staple flag, aisle, default store, default unit. Seeded per household from a hand-written list by `ensure_defaults` | D-021, D-114, D-115 |
 | **Normaliser** | Deterministic: parse → clean → singularise → alias or trigram match → convert within a dimension. The LLM only proposes matches for lines the rules miss; an adult confirms | D-015, D-113, R-007 |
 | **Meal slot** | Named part of the day with a time; editable; only Dinner shown by default | D-015, D-111 |
 | **Meal plan entry** | A date + slot holding a recipe or free text, with servings. Movable and swappable | D-112, D-113 |
@@ -35,9 +35,9 @@ This doc covers M5 (D-023, D-108). v1 is re-derived from the requirements, D-015
 | Crate | Role |
 |---|---|
 | `fa-domain` | `RecipeDraft`, `RecipeIngredient` (draft line), `RecipeOrigin` move here from `fa-recipe` (which re-exports them); `RecipeOrigin` gains `microdata`. The meals DTOs and authz actions |
-| `fa-store` | Migration and repos for every §3 table, the seed loader's insert, RLS |
+| `fa-store` | Migration and repos for every §3 table (`GroceryStoreRepo` for `grocery_store`), the seed loader's insert, RLS |
 | `fa-recipe` | Extraction (M4) plus a microdata parser over `scraper` and a pasted-text input; ingredient line parser extended per R-007. Stores nothing |
-| `fa-meals` (new) | `Normaliser`, `RecipeService` (import, save, image), `PlanService` (entries, move/swap, templates preview/apply), `GroceryService` (generate, impact, reconcile, add/check/low, archive), job handlers, the ingredient seed |
+| `fa-meals` (new) | `Normaliser`, `RecipeService` (import, save, image), `PlanService` (entries, move/swap, templates preview/apply), `GroceryService` (generate, impact, reconcile, add/check/low, archive), job handlers, `ensure_defaults` and the ingredient seed |
 | `fa-api` | The §5 routes; the dashboard payload gains today's meals; SSE `grocery.updated`, `mealplan.updated` |
 | `fa-server` | Registers the jobs and the cron |
 | `apps/web` | Food views, Settings → Meals, kiosk Food view and `meals` panel (Frontend.md §3f, §4) |
@@ -47,7 +47,7 @@ New dependencies (verified 2026-11-08 with `cargo search`/`cargo info`): `plural
 Coupling: `fa-meals` depends on `fa-domain`, `fa-store`, `fa-recipe`, `fa-llm`, `fa-connectors` (guarded `Http`). Only `fa-api` and `fa-server` depend on `fa-meals`.
 
 ## 3. Data model (page "Model")
-Every table has `id uuid`, `household_id` (RLS like the rest of the schema), `created_at`, `updated_at`. Entities edited from several clients carry `version int` (optimistic concurrency).
+Every table has `id uuid`, `household_id` (RLS like the rest of the schema), `created_at`, `updated_at`. Entities edited from several clients carry `version int` (optimistic concurrency: `If-Match` on the request, 409 when stale, as for tasks).
 
 | Table | Columns | Notes |
 |---|---|---|
@@ -58,7 +58,7 @@ Every table has `id uuid`, `household_id` (RLS like the rest of the schema), `cr
 | `recipe_rating` | recipe, member, stars 1–5 | Unique (recipe, member); a member rates for themself (D-109, D-110) |
 | `ingredient` | canonical_name (singular, lower case, unique per household), aliases text[], is_staple bool default false, aisle?, default_store?, default_unit?, origin `seed\|user\|llm` | `origin = llm` only after an adult confirms a proposal |
 | `aisle` | name, ord | Seeded with the seed's aisles; one shared order (open: Q-116) |
-| `store` | name, ord | None by default (D-115) |
+| `grocery_store` | name, ord | None by default (D-115). Not `store`: `Store` is the DB handle type in Rust |
 | `meal_slot` | name, ord, time `"HH:MM"` local, visible bool | Seeded Breakfast 07:30, Lunch 12:00, Dinner 18:00, Snack 15:30; only Dinner visible (D-111) |
 | `meal_plan_entry` | date, slot, recipe? xor free_text?, servings?, created_by, version | Unique (household, date, slot) (open: Q-115) |
 | `meal_template` | name, days int ≥ 1, note?, version | D-112 |
@@ -80,9 +80,9 @@ Each new column's writer: recipe columns and images by the recipe editor (`PUT /
 
 ## 4. Behaviour
 ### 4.1 Recipe import, save and images (D-109)
-1. `POST /recipes/import {url}` or `{text}` → `RecipeDraft` (nothing stored): JSON-LD, then microdata (`origin: microdata`), then the LLM (`origin: llm`; needs an endpoint, else `422 llm_unavailable`). Pasted text goes straight to the LLM. The manual form starts from an empty draft.
+1. `POST /recipes/import {url}` or `{text}` → `RecipeDraft` (nothing stored; the page fetch uses the `allow_private_hosts` setting too): JSON-LD, then microdata (`origin: microdata`), then the LLM (`origin: llm`; needs an endpoint, else `422 llm_unavailable`). Pasted text goes straight to the LLM. The manual form starts from an empty draft.
 2. The adult edits and saves (`POST /recipes`). Each line runs through the normaliser (§4.2); unmatched lines are stored with `match_state = unmatched` and queue `ingredient.llm` (§4.2 step 5).
-3. If the draft had an `image_url`, `recipe.image` fetches it through the guarded `Http` (private hosts blocked, body cap 5 MB), decodes it with `image`, resizes to at most 800 px on the long side, encodes WebP (JPEG if WebP is unavailable), and stores it if ≤ 512 KB. Failure leaves no image and logs only the recipe id. Upload: `POST /recipes/{id}/image` (png, jpeg, webp ≤ 5 MB in, same resize).
+3. If the draft had an `image_url`, `recipe.image` fetches it through `Http` with the instance's `allow_private_hosts` setting (off by default, as for calendars; the M4 route hard-coded it off), body cap 5 MB, decodes it with `image`, resizes to at most 800 px on the long side, encodes WebP (JPEG if WebP is unavailable), and stores it if ≤ 512 KB. Failure leaves no image and logs only the recipe id. Upload: `POST /recipes/{id}/image` (png, jpeg, webp ≤ 5 MB in, same resize).
 
 ### 4.2 Normaliser (D-113, R-007)
 1. **Parse** with the `fa-recipe` rule parser, extended with fl oz, pint, quart, gallon and `1 (14 oz) can`: qty (fractions, unicode fractions, ranges → low end), unit, item, note.
@@ -164,7 +164,8 @@ See Frontend.md §3f (Food: Meal Plan, Shopping List, Recipes, Templates; Settin
 | `recipe.image` | recipe saved with an `image_url` | §4.1 step 3; max 3 attempts |
 | `ingredient.llm` | a line saved unmatched | §4.2 step 5; skipped when no endpoint or `ingredient_llm` off; max 3 attempts |
 | `grocery.archive` | cron `*/15 * * * *` | §4.7 |
-| `meals.seed` | household created; once for existing households | Loads the ingredient and aisle seed, the slots, the list and `meals_settings` (D-114) |
+
+**Seeding** is not a job: `fa_meals::ensure_defaults(conn)` (idempotent) loads the aisle and ingredient seed, the slots, the list and `meals_settings` (D-114). It runs next to `fa_weather::ensure_default_rules` in `setup_household` and in the server's startup seeder for every existing household.
 
 ## 9. Configuration
 Every toggle is in `meals_settings` and edited in Settings → Meals (D-075); nothing in TOML. The horizon and units stay on `household`. The seed is a data file in `crates/fa-meals/seed/` (hand-written, AGPL, D-114).
