@@ -1,6 +1,8 @@
 // Fixture server for the e2e stack (no dependencies, Node 18+).
 //   GET /ics/<name>.ics   files from e2e/fixtures/ics with {{d+N}} replaced by the household-local date
 //                         (YYYYMMDD) N days from today, so the fixtures never go stale
+//   GET /recipes/<name>.html|.png   fictional recipe pages and an image from e2e/fixtures/recipes
+//                         ({{origin}} in a page becomes this server's origin)
 //   POST /control/mild?latitude=<lat>&on=1|0   forecasts for that latitude become mild (warm, dry,
 //                         calm) or go back to the freezing default, so a spec can make a rule stop matching
 //   GET /v1/forecast      an Open-Meteo-shaped forecast: freezing and very likely rain all the
@@ -17,6 +19,7 @@ const dir = join(
     "fixtures",
     "ics",
 );
+const recipesDir = join(dir, "..", "recipes");
 const port = Number(process.argv[2] ?? 18091);
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -142,6 +145,20 @@ createServer(async (req, res) => {
                 "content-type": "text/calendar; charset=utf-8",
             });
             res.end(text.replace(/\r?\n/g, "\r\n"));
+            return;
+        }
+        const r = /^\/recipes\/([a-z0-9-]+\.(html|png))$/.exec(url.pathname);
+        if (r) {
+            const file = join(recipesDir, r[1]);
+            if (r[2] === "png") {
+                res.writeHead(200, { "content-type": "image/png" });
+                res.end(await readFile(file));
+            } else {
+                const origin = `http://${req.headers.host ?? `127.0.0.1:${port}`}`;
+                const text = (await readFile(file, "utf8")).replaceAll("{{origin}}", origin);
+                res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+                res.end(text);
+            }
             return;
         }
         res.writeHead(404).end("not found");

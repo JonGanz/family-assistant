@@ -131,7 +131,11 @@ export const useGroceryStore = defineStore('grocery', () => {
   /** The id is made here, so a replay after a lost answer is idempotent (D-118). */
   async function add(text: string, opts: { qty?: number; unit?: string; store_id?: string } = {}) {
     const t = text.trim()
-    if (!t || !view.value) return
+    if (!t) return
+    // An add typed before the list arrived must not be lost (T-12): load first; if that fails the add is queued
+    // below like any offline add.
+    if (!view.value) await load()
+    if (!view.value) view.value = { stores: [], aisles: [], items: [], staples: [] } as GroceryView
     const id = newId()
     const body = { id, text: t, ...opts } as GroceryAddReq
     view.value.items.push({

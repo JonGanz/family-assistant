@@ -23,6 +23,7 @@ Models to copy: `plan/M3.6.md` with `plan/M3.6/_rules.md` and its briefs; `plan/
    - adding a field to a struct that another crate constructs (a deps struct, a view type) keeps the workspace green: the same task owns the construction sites (field-only edits), never "red until the next wave".
    - every time or date field has a wire format;
    - no two tasks in a wave own the same path;
+   - every API route a kiosk component calls is in the LAN listener's allow-list (`crates/fa-api/src/lan.rs` `ALLOWED`), and the brief of the task that adds the route owns that line (M5 shipped the kiosk Food view returning 404 on LAN-paired screens);
    - shared web files (`router/index.ts`, `ui/icons.ts`, the area's `api/*.ts`, stores and components other tasks import) are written as a **main-session scaffold** before a parallel web wave (routes pointing at stub views, stub stores with the contract names), so no task edits another's file (M5); `CLAUDE.md`, the README and the root `Cargo.toml` have exactly one owner (usually the main session or a docs task);
    - tasks that add commands, env vars, ports or setup either own the README or are told to report the README change.
 5. **Write `plan/M<n>/_rules.md`.** Front-matter `title, milestone`. It starts "Read `plan/_rules-common.md` first. These are the M<n> deltas." Then only what differs: which checks can run locally, the contracts pointer, the colour or data rules, the rustc note. No restating of the common rules.

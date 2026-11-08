@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs'
 import { expect, test } from '@playwright/test'
 import ai from './ui-shots.routes/ai'
+import food from './ui-shots.routes/food'
 import mail from './ui-shots.routes/mail'
 import settings1 from './ui-shots.routes/settings1'
 import settings2 from './ui-shots.routes/settings2'
@@ -38,7 +39,16 @@ test.use({ deviceScaleFactor: 2 })
 
 /** App routes captured with `--all` (UI_SHOTS_ALL=1), one file per area so wave-3 tasks own their own list.
  *  UI_SHOTS_AREAS=tasks,mail narrows the run. */
-const AREAS: Record<string, ShotRoute[]> = { today, tasks, mail, settings1, settings2, shell, ai }
+const AREAS: Record<string, ShotRoute[]> = {
+  today,
+  tasks,
+  mail,
+  settings1,
+  settings2,
+  shell,
+  ai,
+  food,
+}
 const areaFilter = (process.env.UI_SHOTS_AREAS ?? '').split(',').filter(Boolean)
 const APP_ROUTES: ShotRoute[] = Object.entries(AREAS)
   .filter(([a]) => areaFilter.length === 0 || areaFilter.includes(a))

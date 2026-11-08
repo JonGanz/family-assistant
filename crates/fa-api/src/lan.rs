@@ -60,6 +60,20 @@ const ALLOWED: &[(Method, &str)] = &[
     (Method::POST, "tasks/*/reopen"),
     (Method::PATCH, "routine-runs/*/steps/*"),
     (Method::POST, ELEVATE),
+    // M5 kiosk Food view, meals panel and Week view meals (D-117). Adding and checking need no PIN (D-015,
+    // D-019); edit and delete pass here but the route's authz still requires an elevated device (D-110).
+    (Method::GET, "meals/slots"),
+    (Method::GET, "meal-plan"),
+    (Method::GET, "grocery"),
+    (Method::GET, "meals/stores/*/aisles"),
+    (Method::GET, "ingredients"),
+    (Method::GET, "recipes/*/image"),
+    (Method::POST, "grocery/items"),
+    (Method::POST, "grocery/items/*/check"),
+    (Method::POST, "grocery/items/*/uncheck"),
+    (Method::POST, "grocery/items/*/low"),
+    (Method::PUT, "grocery/items/*"),
+    (Method::DELETE, "grocery/items/*"),
 ];
 
 fn matches(pattern: &str, path: &str) -> bool {
@@ -118,7 +132,7 @@ async fn guard(State(cfg): State<LanConfig>, mut req: Request, next: Next) -> Re
 
 #[cfg(test)]
 mod tests {
-    use super::matches;
+    use super::{ALLOWED, Method, matches};
 
     #[test]
     fn patterns_match_whole_segments() {
@@ -128,5 +142,26 @@ mod tests {
         assert!(!matches("tasks", "tasks/abc"));
         assert!(matches("routine-runs/*/steps/*", "routine-runs/r/steps/s"));
         assert!(!matches("me", "members"));
+    }
+
+    #[test]
+    fn kiosk_food_routes_are_allowed_and_adult_routes_are_not() {
+        let allowed =
+            |m: Method, p: &str| ALLOWED.iter().any(|(am, ap)| *am == m && matches(ap, p));
+        assert!(allowed(Method::GET, "meals/slots"));
+        assert!(allowed(Method::GET, "meal-plan"));
+        assert!(allowed(Method::GET, "grocery"));
+        assert!(allowed(Method::GET, "meals/stores/s1/aisles"));
+        assert!(allowed(Method::GET, "recipes/r1/image"));
+        assert!(allowed(Method::POST, "grocery/items"));
+        assert!(allowed(Method::POST, "grocery/items/i1/check"));
+        assert!(allowed(Method::POST, "grocery/items/i1/low"));
+        assert!(allowed(Method::DELETE, "grocery/items/i1"));
+        // Adult-only meals routes stay off the home-network listener.
+        assert!(!allowed(Method::POST, "grocery/generate"));
+        assert!(!allowed(Method::POST, "meal-plan"));
+        assert!(!allowed(Method::PUT, "meals/settings"));
+        assert!(!allowed(Method::GET, "recipes"));
+        assert!(!allowed(Method::POST, "recipes/import"));
     }
 }

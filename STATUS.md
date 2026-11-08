@@ -24,8 +24,7 @@ None.
 - H-17 (M4): UI review checkpoints R1 to R4 on the review artifacts (R1 to R3 done; R4 published 2026-11-07)
 
 ## Tasks not done (plans not closed)
-- M5 (planned (briefs written; all questions answered, D-108 to D-122))
-  - T-12: e2e: recipe fixtures, API and UI specs for M5 (running)
+None.
 
 ## Newest log
 [2026-11-08](log/2026-11-08.md)
