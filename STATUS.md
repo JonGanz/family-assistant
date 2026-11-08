@@ -25,8 +25,6 @@ None.
 
 ## Tasks not done (plans not closed)
 - M5 (planned (briefs written; all questions answered, D-108 to D-122))
-  - T-03: fa-recipe: schema.org microdata, ingredient parser extensions (todo)
-  - T-05: fa-meals: normaliser, recipe, plan, template and grocery services, jobs, seeding (todo)
   - T-06: fa-api meals routes, dashboard meals, wiring and seeding hook (todo)
   - T-07: Food shell, navigation and routes, Meal plan, Templates (todo)
   - T-08: Shopping list, offline queue, service worker caching (todo)

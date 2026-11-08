@@ -1,15 +1,17 @@
-//! fa-recipe: recipe extraction: schema.org JSON-LD first, LLM fallback (M4, D-094).
+//! fa-recipe: recipe extraction: schema.org JSON-LD, then microdata, then LLM fallback (M4, M5, D-094, D-109).
 //!
 //! Stores nothing; M5 adds storage and moves the types to `fa-domain`.
 
 mod ingredient;
 mod jsonld;
 mod llm;
+mod microdata;
 mod types;
 
 pub use ingredient::parse_ingredient;
 pub use jsonld::{from_html, parse_iso_duration};
 pub use llm::from_llm;
+pub use microdata::from_microdata;
 pub use types::{RecipeDraft, RecipeError, RecipeIngredient, RecipeInput, RecipeOrigin};
 
 use fa_connectors::http::Http;
@@ -72,7 +74,7 @@ pub fn visible_text(html: &str) -> String {
     raw.split_whitespace().collect::<Vec<_>>().join(" ")
 }
 
-/// JSON-LD first, then the LLM when a client is present.
+/// JSON-LD first, then microdata, then the LLM when a client is present.
 pub async fn extract(
     http: &Http,
     llm: Option<&fa_llm::LlmClient>,
@@ -83,6 +85,9 @@ pub async fn extract(
         RecipeInput::Html { html, source_url } => (html, source_url),
     };
     if let Some(d) = from_html(&html, source_url.as_ref()) {
+        return Ok(d);
+    }
+    if let Some(d) = from_microdata(&html, source_url.as_ref()) {
         return Ok(d);
     }
     let Some(client) = llm else {

@@ -134,7 +134,7 @@ fn minutes(v: Option<&Value>) -> Option<u32> {
     v.and_then(Value::as_str).and_then(parse_iso_duration)
 }
 
-fn leading_int(s: &str) -> Option<u32> {
+pub(crate) fn leading_int(s: &str) -> Option<u32> {
     let t = s.trim_start();
     let n = t.find(|c: char| !c.is_ascii_digit()).unwrap_or(t.len());
     t[..n].parse().ok()

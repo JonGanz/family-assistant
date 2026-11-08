@@ -5,7 +5,7 @@ milestone: M5
 wave: 2
 depends_on: [T-02, T-04]
 agent: {model: sonnet, effort: high}
-status: todo
+status: done
 owns: ["crates/fa-meals/Cargo.toml", "crates/fa-meals/src/**", "crates/fa-meals/tests/**"]
 decisions: [D-015, D-021, D-109, D-111, D-112, D-113, D-114, D-115, D-116, D-118, D-119, D-120, D-121, D-122]
 ---
@@ -91,3 +91,27 @@ You are a sub-agent implementing one task of milestone M5 of the Family Assistan
 - `fa_domain::RecipeInput` (the DTO) differs from `fa_recipe::RecipeInput` (the enum). Import both by path.
 - `grocery.archive` loops households (system tx to list them, then `tx_for` each), because `archive_checked_before` and the archive hours are per household.
 - The seed has 361 ingredients, so the "about 300" in the docs is approximate.
+
+## Outcome (T-05 report, 2026-11-08)
+- **Built:** `crates/fa-meals` with these modules:
+  - `error`; `normalise/` (units, clean, `Normaliser`); `matching`; `service`;
+  - `recipes`, `catalogue`, `settings`, `plan`, `templates`, `grocery`;
+  - `contrib` and `change` (the impact/reconcile planner and undo payloads);
+  - `jobs`, `defaults`, `image`.
+  - Tests: `grocery`, `plan`, `recipes`, `jobs`, `common` (axum stubs).
+- **Results** (reported, fresh Postgres): 57 tests passed, 0 failed (lib 9, grocery 15, jobs 6, plan 12, recipes 9, seed_data 6). Clippy and fmt clean; `cargo check --workspace` clean.
+- **Public API:** `MealsService` with one method per API row (`list_recipes` … `undo`), plus `ActorRef`, `Clock`, `MealsError`, `ensure_defaults`, `handlers`, `default_schedules`, `image::sniff_image` and `normalise`. Signatures are in the T-06 notes below.
+- **Rounding:**
+  - metric volume and weight: 1/5/25 steps, then l or kg to 0.1;
+  - imperial: tsp to ¼, tbsp to ½, cups to ¼ ⅓ ½ ⅔ ¾; oz to ½ below 4, whole oz to 15.5, then lb to ¼;
+  - counts use fraction glyphs, and count words are pluralised;
+  - two dimensions show as "45 ml + 100 g".
+- **Deviations and judgement calls:**
+  1. `grocery_item_source` cascades when its entry is deleted, so the plan routes **park** a deleted or replaced entry's sources as a `meals_change` row (kind `reconcile`, `{"type":"pending"}`, 6 h expiry) for `reconcile` to read. This is a known gap (G5-01): a dedicated table would be cleaner.
+  2. Undo of a move restores the exact date, slot and `ord` (a raw UPDATE).
+  3. `ensure_defaults` seeds each part only while it is empty: aisles and slots when there are none, ingredients when no `origin = seed` row exists. A household's renames and deletes therefore survive restarts. Slots are seeded in time order (Breakfast, Lunch, Snack, Dinner).
+  4. The horizon end is today + 7 × weeks, inclusive. Writes outside today..end are `Invalid{date}`.
+  5. Manual items are never merged into or reconciled. An item holds at most two quantities.
+  6. `GroceryView.items` holds only the list section. An item in an aisle its store hides is returned with `aisle_id = null`.
+  7. Images are lossless WebP, else JPEG at quality 85/70/55, then downscaled. The mime may be `image/jpeg`.
+  8. `checked_at` uses the DB's `now()`, not the service clock.

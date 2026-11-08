@@ -89,7 +89,15 @@ fn normalise_unit(w: &str) -> Option<&'static str> {
         "g" | "gram" | "grams" => "g",
         "kg" | "kilogram" | "kilograms" => "kg",
         "ml" | "milliliter" | "milliliters" => "ml",
-        "l" | "liter" | "liters" => "l",
+        "l" | "liter" | "liters" | "litre" | "litres" => "l",
+        "pint" | "pints" | "pt" => "pint",
+        "quart" | "quarts" | "qt" => "quart",
+        "gallon" | "gallons" | "gal" => "gallon",
+        "piece" | "pieces" => "piece",
+        "stick" | "sticks" => "stick",
+        "bunch" | "bunches" => "bunch",
+        "head" | "heads" => "head",
+        "sprig" | "sprigs" => "sprig",
         "oz" | "ounce" | "ounces" => "oz",
         "lb" | "lbs" | "pound" | "pounds" => "lb",
         "clove" | "cloves" => "clove",
@@ -98,6 +106,37 @@ fn normalise_unit(w: &str) -> Option<&'static str> {
         "slice" | "slices" => "slice",
         _ => return None,
     })
+}
+
+/// `fl oz` / `fluid ounce(s)` at the start of `s`: the unit and the byte length consumed.
+fn fluid_ounce(s: &str) -> Option<usize> {
+    let lower = s.to_ascii_lowercase();
+    for p in ["fluid ounces", "fluid ounce", "fl. oz.", "fl. oz", "fl oz."] {
+        if lower.starts_with(p) {
+            return Some(p.len());
+        }
+    }
+    if let Some(r) = lower.strip_prefix("fl oz")
+        && !r.starts_with(char::is_alphabetic)
+    {
+        return Some(5);
+    }
+    None
+}
+
+/// Drops a leading `(...)` such as `(14 oz)`.
+fn skip_parenthetical(s: &str) -> &str {
+    if s.starts_with('(')
+        && let Some(i) = s.find(')')
+    {
+        return s[i + 1..].trim_start();
+    }
+    s
+}
+
+fn strip_suffix_ci<'a>(s: &'a str, suffix: &str) -> Option<&'a str> {
+    let n = s.len().checked_sub(suffix.len())?;
+    (s.is_char_boundary(n) && s[n..].eq_ignore_ascii_case(suffix)).then(|| &s[..n])
 }
 
 /// Deterministic first pass; fields stay `None` when unsure. `text` is always the line.
@@ -112,11 +151,14 @@ pub fn parse_ingredient(line: &str) -> RecipeIngredient {
         return out;
     };
     out.quantity = Some(q);
-    rest = rest.trim_start();
+    rest = skip_parenthetical(rest.trim_start());
     let word_end = rest
         .find(|c: char| !c.is_alphabetic())
         .unwrap_or(rest.len());
-    if let Some(u) = normalise_unit(&rest[..word_end]) {
+    if let Some(n) = fluid_ounce(rest) {
+        out.unit = Some("fl oz".to_string());
+        rest = rest[n..].trim_start();
+    } else if let Some(u) = normalise_unit(&rest[..word_end]) {
         out.unit = Some(u.to_string());
         rest = rest[word_end..].trim_start_matches('.').trim_start();
     }
@@ -124,7 +166,14 @@ pub fn parse_ingredient(line: &str) -> RecipeIngredient {
     if lower.starts_with("of ") {
         rest = rest[3..].trim_start();
     }
-    let rest = rest.trim();
+    let mut rest = rest.trim();
+    for tail in ["to taste", "as needed"] {
+        if let Some(r) = strip_suffix_ci(rest, tail) {
+            rest = r.trim_end().trim_end_matches(',').trim_end();
+        }
+    }
+    // Preparation notes after the first comma are not part of the item.
+    let rest = rest.split(',').next().unwrap_or(rest).trim();
     if !rest.is_empty() {
         out.item = Some(rest.to_string());
     }

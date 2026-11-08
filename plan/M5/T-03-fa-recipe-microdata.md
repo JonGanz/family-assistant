@@ -5,7 +5,7 @@ milestone: M5
 wave: 2
 depends_on: [T-02]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-recipe/src/jsonld.rs", "crates/fa-recipe/src/microdata.rs", "crates/fa-recipe/src/ingredient.rs", "crates/fa-recipe/src/lib.rs", "crates/fa-recipe/src/llm.rs", "crates/fa-recipe/tests/**"]
 decisions: [D-109, D-113, D-094, D-035]
 ---
@@ -48,3 +48,14 @@ The files in `owns`. `crates/fa-recipe/src/types.rs` and `crates/fa-recipe/Cargo
 - [ ] `cargo test -p fa-recipe`, `cargo clippy -p fa-recipe --all-targets -- -D warnings` and `cargo fmt --check` pass.
 - [ ] `SQLX_OFFLINE=true cargo check --workspace` passes (T-05 runs in parallel; if it is red only inside `fa-meals`, say so).
 - [ ] The report lists the public API changes ("`from_microdata`, `extract` order"), the unit list as shipped, and "list what outside your paths needs changing". README changes needed: none.
+
+## Outcome (T-03 report, 2026-11-08)
+- **Built:**
+  - `src/microdata.rs`, a hand parser over `scraper`: direct itemprops only, plus `HowToStep` and `HowToSection`, no RDFa;
+  - `extract` now tries JSON-LD, then microdata, then the LLM;
+  - `from_microdata` exported;
+  - the parser has the new units (fl oz, pint, quart, gallon, l, piece, stick, bunch, head, sprig) and the `1 (14 oz) can` form, and strips preparation after a comma and "to taste" / "as needed";
+  - fixtures `microdata_flat.html`, `microdata_steps.html` and `both.html`.
+- **Results** (reported): 15 tests passed; clippy and fmt clean; `cargo check --workspace` green.
+- **Deviation:** a line with no leading quantity ("salt and pepper to taste") still parses to all `None`, keeping the M4 test. The normaliser treats it as an unmatched text line.
+- No public signature changed beyond `from_microdata`.

@@ -67,3 +67,29 @@ You are a sub-agent implementing one task of milestone M5 of the Family Assistan
   - the error codes;
   - "list what outside your paths needs changing";
   - README changes needed (expected: none).
+
+## Notes from wave 2 (main session): the `fa-meals` API you build on
+- **Exports:** `MealsService`, `ActorRef{member, device}` (Copy, Default), `Clock`, `MealsError`, `Result`, `RecipeListQuery{q, tag, favourite, before: Option<String>, limit: Option<u32>}`, `RecipeImageData{mime, bytes, sha256}`, `ensure_defaults`, `handlers`, `default_schedules`, `image::sniff_image`.
+- **Constructor:** `MealsService::new(store, Option<Arc<fa_llm::Provider>>, allow_private_hosts)`.
+- **Methods:** `h` is `HouseholdId`, and writes that record who did them take `actor: ActorRef`.
+  - **Recipes:**
+    - `list_recipes(h, me, RecipeListQuery)`, `recipe_tags(h)`, `get_recipe(h, me, id)`;
+    - `create_recipe(h, actor, fa_domain::RecipeInput)`, `update_recipe(h, actor, id, input, if_match)`, `delete_recipe(h, id)`;
+    - `set_favourite(h, id, on)`, `set_rating(h, member, id, Option<u8>)`, `match_line(h, recipe, line, LineMatchReq)`;
+    - `get_image(h, id)`, `image_sha(h, id)`, `put_image(h, id, Vec<u8>)`, `delete_image(h, id)`;
+    - `import(h, RecipeImportReq) -> RecipeDraft`.
+  - **Catalogue:** `list_ingredients(h, Option<&str>)`, `create_ingredient`, `update_ingredient`, `set_ingredient_staple`, `delete_ingredient`, `merge_ingredient(h, id, into)`.
+  - **Settings:** `get_settings`, `update_settings(h, MealsSettingsPatch)`, `list_slots`, `replace_slots`, `list_aisles`, `replace_aisles`, `list_stores`, `replace_stores`, `store_aisles(h, store)`, `set_store_aisles(h, store, list)`.
+    - `update_settings` already handles `meal_plan_horizon_weeks` through `HouseholdRepo`. Check whether it publishes `household.updated`, and publish it from the route if it doesn't.
+  - **Plan:** `plan_range(h, from, to)`, `dashboard_meals(h)`, `plan_add(h, actor, input)`, `plan_update(h, actor, id, patch, if_match)`, `plan_delete(h, actor, id)`, `plan_swap(h, actor, SwapReq)`, each returning `PlanChangeResult`.
+  - **Templates:** `template_list`, `template_get`, `template_create`, `template_update(h, id, input, if_match)`, `template_delete`, `template_from_plan`, `template_duplicate(h, id, req)`, `template_preview(h, id, req)`, `template_apply(h, actor, id, req)`.
+  - **Grocery:**
+    - `grocery_view(h)`;
+    - `grocery_add(h, actor, req) -> (GroceryItemView, created: bool)`: answer 201 when created, else 200;
+    - `grocery_check(h, actor, id)`, `grocery_uncheck(h, id)`, `grocery_low(h, id)`;
+    - `grocery_update(h, id, patch, if_match)`, `grocery_delete(h, id)`;
+    - `generate(h, actor, req)`, `reconcile(h, actor, req)`, `undo(h, actor, change_id)`.
+- **Undo:** `NotFound` also covers a refused undo. For an elevated device, pass the PIN's adult as `actor.member` and the device as `actor.device`.
+- **Images:** use `fa_meals::image::sniff_image` in the upload route (you may drop a duplicate). `put_image` resizes.
+- **Events:** the services already publish `recipes.updated`, `mealplan.updated` and `grocery.updated`. Don't publish them again.
+- **Recipe import:** `import` already uses `allow_private_hosts`, `max_input_chars` and `record_call`. For the `/ai/recipes/extract` alias with `{html}`, use `fa_recipe::extract(…, RecipeInput::Html{…})` as before, with the same policy.

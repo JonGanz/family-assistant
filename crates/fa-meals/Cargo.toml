@@ -14,7 +14,24 @@ workspace = true
 [dependencies]
 fa-domain.workspace = true
 fa-store.workspace = true
+fa-recipe.workspace = true
+fa-llm.workspace = true
+fa-jobs.workspace = true
+fa-connectors.workspace = true
+sqlx.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+schemars.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
+chrono.workspace = true
+chrono-tz.workspace = true
+uuid.workspace = true
+url.workspace = true
+sha2.workspace = true
+pluralizer.workspace = true
+image.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+axum.workspace = true

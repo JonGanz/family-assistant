@@ -187,3 +187,108 @@ async fn fetch_refuses_private_targets() {
         Err(RecipeError::Fetch(_))
     ));
 }
+
+const MD_FLAT: &str = include_str!("fixtures/microdata_flat.html");
+const MD_STEPS: &str = include_str!("fixtures/microdata_steps.html");
+const BOTH: &str = include_str!("fixtures/both.html");
+
+#[test]
+fn microdata_flat() {
+    let u = url::Url::parse("https://example.com/f").unwrap();
+    let d = from_microdata(MD_FLAT, Some(&u)).unwrap();
+    assert_eq!(d.name, "Fictional Flatbread");
+    assert_eq!(d.origin, RecipeOrigin::Microdata);
+    assert_eq!(d.source_url.as_deref(), Some("https://example.com/f"));
+    assert_eq!(d.image_url.as_deref(), Some("https://example.com/flat.jpg"));
+    assert_eq!(
+        (d.prep_minutes, d.cook_minutes, d.total_minutes),
+        (Some(10), Some(65), None)
+    );
+    assert_eq!((d.servings, d.ingredients.len()), (Some(4), 2));
+    assert_eq!(d.ingredients[0].unit.as_deref(), Some("cup"));
+    assert_eq!(d.steps, ["Mix. Bake."]);
+    assert_eq!(d.tags, ["quick", "bread", "Side"]);
+}
+
+#[test]
+fn microdata_nested_steps() {
+    let d = from_microdata(MD_STEPS, None).unwrap();
+    assert_eq!(d.name, "Fictional Pie");
+    assert_eq!(d.steps, ["Slice the tomatoes.", "Bake the pie."]);
+    assert_eq!(d.ingredients[0].unit.as_deref(), Some("pint"));
+}
+
+#[test]
+fn microdata_none_and_precedence() {
+    assert!(from_microdata(NO_LD, None).is_none());
+    assert!(from_microdata(PLAIN, None).is_none());
+    assert_eq!(from_html(BOTH, None).unwrap().name, "From JSON-LD");
+}
+
+#[tokio::test]
+async fn extract_microdata_without_llm() {
+    let http = Http::with_policy(true, false).unwrap();
+    let mk = |h: &str| RecipeInput::Html {
+        html: h.into(),
+        source_url: None,
+    };
+    let d = extract(&http, None, mk(MD_FLAT)).await.unwrap();
+    assert_eq!(d.origin, RecipeOrigin::Microdata);
+    let d = extract(&http, None, mk(BOTH)).await.unwrap();
+    assert_eq!(d.origin, RecipeOrigin::Jsonld);
+}
+
+#[tokio::test]
+async fn llm_pasted_text_without_url() {
+    let c = stub_client(
+        r#"{"name":"Pasted","yield_text":"","servings":0,"prep_minutes":0,"cook_minutes":0,"total_minutes":0,"ingredients":["1 bunch cilantro"],"steps":["Chop."],"tags":[]}"#,
+    )
+    .await;
+    let d = from_llm(&c, "pasted text", None).await.unwrap();
+    assert_eq!(d.source_url, None);
+    assert_eq!(d.ingredients[0].unit.as_deref(), Some("bunch"));
+}
+
+#[test]
+fn ingredients_m5() {
+    assert_eq!(
+        ing("1 (14 oz) can diced tomatoes"),
+        (Some(1.0), Some("can"), Some("diced tomatoes".into()))
+    );
+    assert_eq!(
+        ing("2 (15-ounce) cans black beans, drained"),
+        (Some(2.0), Some("can"), Some("black beans".into()))
+    );
+    assert_eq!(
+        ing("1 pint cherry tomatoes"),
+        (Some(1.0), Some("pint"), Some("cherry tomatoes".into()))
+    );
+    assert_eq!(
+        ing("2 fl oz lime juice"),
+        (Some(2.0), Some("fl oz"), Some("lime juice".into()))
+    );
+    assert_eq!(
+        ing("2 fluid ounces milk"),
+        (Some(2.0), Some("fl oz"), Some("milk".into()))
+    );
+    assert_eq!(
+        ing("1 onion, finely chopped"),
+        (Some(1.0), None, Some("onion".into()))
+    );
+    assert_eq!(ing("salt and pepper to taste"), (None, None, None));
+    assert_eq!(
+        ing("2 tsp salt, to taste"),
+        (Some(2.0), Some("tsp"), Some("salt".into()))
+    );
+    assert_eq!(
+        ing("1 bunch cilantro"),
+        (Some(1.0), Some("bunch"), Some("cilantro".into()))
+    );
+    assert_eq!(
+        ing("3 sprigs thyme"),
+        (Some(3.0), Some("sprig"), Some("thyme".into()))
+    );
+    assert_eq!(ing("2 qt stock").1, Some("quart"));
+    assert_eq!(ing("1 gal water").1, Some("gallon"));
+    assert_eq!(ing("2 litres water").1, Some("l"));
+}

@@ -96,3 +96,8 @@ Source: the *Outcome* of [plan/M4.md](plan/M4.md) and the T-NN outcomes in [plan
 4. ~~The M4 plan picks up the deferred items~~ (done 2026-11-02, M3.7).
 5. The milestone after M4 picks up the LARGER findings of code review 2 (C2-02, C2-05, C2-08, C2-09, C2-15, C2-19, C2-21, C2-30). Q-078 to Q-082 were answered on 2026-11-07 (D-098 to D-102), and the arch docs describe the result.
 6. M4 known gaps G4-01 to G4-15 (above) and item 5: milestone M4.2 after M5 (D-119); G4-03 needs a question first.
+
+## M5 known gaps (open; collected while M5 runs)
+| ID | Area | Gap | Suggested fix | Size |
+|---|---|---|---|---|
+| G5-01 | Meals, grocery | `grocery_item_source` cascades when its plan entry is deleted, so `fa-meals` parks a deleted or replaced entry's contributions as a `meals_change` row (6 h expiry) for the D-116 "update the list?" answer. After 6 h a late reconcile no longer sees them | A small `grocery_pending_source` table (not tied to the entry's lifetime), written by the plan routes and read by `reconcile` | QUICK |
