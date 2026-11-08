@@ -31,6 +31,13 @@ export type DeviceView = Schemas['DeviceView']
 export type DevicePatch = Schemas['DevicePatch']
 export type HouseholdView = Schemas['HouseholdView']
 
+/** One planned meal of a day in the Week view: the slot's name and the entry's title. */
+export interface WeekMeal {
+  date: string
+  slot: string
+  title: string
+}
+
 /** What every panel receives. Panels are pure: they render props and emit events. */
 export interface PanelProps {
   data: DashboardData
@@ -38,6 +45,8 @@ export interface PanelProps {
   settings: DashboardSettings
   panel: PanelConfig
   now: Date
+  /** The shown week's meals (the Week view only). */
+  meals?: WeekMeal[]
 }
 
 /** What a panel asks the canvas to show in a modal. */

@@ -5,7 +5,7 @@ milestone: M5
 wave: 5
 depends_on: [T-07, T-08, T-10]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/dashboard/**", "apps/web/src/stores/dashboard.ts", "apps/web/src/views/DashboardView.vue"]
 decisions: [D-117, D-015, D-019, D-068, D-110, D-111]
 ---
@@ -69,3 +69,15 @@ The paths in `owns`.
 - [ ] In `apps/web`: `lint`, `typecheck`, `test` and `build` pass, then `format`.
 - [ ] Screenshots of the kiosk Food view in landscape and portrait via `scripts/ui-shots.sh` with an ad-hoc route list (T-12 adds the permanent routes in wave 6). If Docker is busy, say so. The report lists the PNG paths.
 - [ ] The report says "list what outside your paths needs changing". README changes needed: none.
+
+## Outcome (T-11 report, 2026-11-08)
+- **Built:**
+  - `dashboard/FoodView.vue` (tabs `food-tab-plan` and `food-tab-shopping`; `MealPlanGrid` with `foodKiosk`, `fill`, 3 weeks from the previous week; `ShoppingList` with `kiosk` and `canEdit` = elevated);
+  - the `food` view in `DashboardCanvas` (`kiosk-view-food`, shown when `food_view !== false`; every bar button has `kiosk-view-<id>`);
+  - `panels/MealsPanel.vue` (`panel-meals`, `meal-row`) with `mealsModel.ts`, added to the Family hub after `agenda`;
+  - Week view `DayCell` meal lines (`meal-line`), counted by the D-087 fit;
+  - `stores/dashboard.ts` (`mealSlots`, the week's plan through `foodKiosk`, `handleEvent` for `mealplan.updated` and `grocery.updated`);
+  - a "Food view" switch in `LayoutEditor`;
+  - `food.test.ts`, with the layout tests updated.
+- **Results** (main session re-ran them): lint 0 errors, typecheck ok, 663 tests in 72 files, build ok. No screenshots.
+- **Judgement call:** the Week view draws meal lines only in each day's first member column, to avoid repeating them per member. To review with the user.

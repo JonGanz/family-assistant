@@ -1,7 +1,10 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 import { api, type DashboardView } from '../api/client'
-import type { DashboardData, TaskView } from '../dashboard/types'
+import { foodKiosk } from '../api/food'
+import { useGroceryStore } from './grocery'
+import { useMealPlanStore } from './mealPlan'
+import type { DashboardData, TaskView, WeekMeal } from '../dashboard/types'
 import { ApiError } from '../api/http'
 import { taskApi } from '../kiosk/taskApi'
 import { getDeviceToken } from '../kiosk/deviceToken'
@@ -65,9 +68,14 @@ export const useDashboardStore = defineStore('dashboard', () => {
   const refused = ref<string[]>([])
   /** The week the Week view shows (its first day), and that week's events and tasks. */
   const weekFrom = ref<string | null>(null)
-  const weekData = ref<{ from: string; events: DashboardData['events']; tasks: TaskView[] } | null>(
-    null,
-  )
+  const weekData = ref<{
+    from: string
+    events: DashboardData['events']
+    tasks: TaskView[]
+    meals: WeekMeal[]
+  } | null>(null)
+  /** The visible meal slots (id, name, time) in order, for the Food view's grid. */
+  const mealSlots = ref<{ id: string; name: string; time: string }[]>([])
   // An elevated (adult) session may complete adults-only tasks; a new one also lifts earlier refusals.
   watch(elevatedUntil, (until) => {
     refused.value = []
@@ -193,14 +201,51 @@ export const useDashboardStore = defineStore('dashboard', () => {
     return true
   }
 
-  /** Fetches the events and tasks of the week being viewed (the snapshot only starts today). */
+  /** The visible meal slots, read with the device token; empty when meals are unavailable. */
+  async function loadSlots(): Promise<void> {
+    try {
+      const l = await foodKiosk.slots()
+      mealSlots.value = [...l]
+        .filter((x) => x.visible && x.id)
+        .sort((a, b) => a.ord - b.ord)
+        .map((x) => ({ id: x.id as string, name: x.name, time: x.time }))
+    } catch {
+      /* keep the previous slots */
+    }
+  }
+
+  /** The week's meal lines (slot order, then entry order); none when meals are unavailable. */
+  async function loadWeekMeals(from: string): Promise<WeekMeal[]> {
+    try {
+      if (mealSlots.value.length === 0) await loadSlots()
+      const entries = await foodKiosk.plan(from, addDays(from, 6))
+      const order = new Map(mealSlots.value.map((x, i) => [x.id, i]))
+      return entries
+        .filter((e) => order.has(e.slot_id))
+        .sort(
+          (a, b) =>
+            a.date.localeCompare(b.date) ||
+            order.get(a.slot_id)! - order.get(b.slot_id)! ||
+            a.ord - b.ord,
+        )
+        .map((e) => ({
+          date: e.date,
+          slot: mealSlots.value[order.get(e.slot_id)!]!.name,
+          title: e.title,
+        }))
+    } catch {
+      return []
+    }
+  }
+
+  /** Fetches the events, tasks and meals of the week being viewed (the snapshot only starts today). */
   async function loadWeek(): Promise<void> {
     const from = weekFrom.value
     if (!from) return
     try {
-      const d = await api.dashboard(7, undefined, from)
+      const [d, meals] = await Promise.all([api.dashboard(7, undefined, from), loadWeekMeals(from)])
       if (weekFrom.value === from) {
-        weekData.value = { from, events: d.events, tasks: d.tasks ?? [] }
+        weekData.value = { from, events: d.events, tasks: d.tasks ?? [], meals }
       }
     } catch {
       /* keep the previous week; the next refresh retries */
@@ -283,6 +328,15 @@ export const useDashboardStore = defineStore('dashboard', () => {
       case 'device.updated':
         if (p.id && deviceId.value && p.id !== deviceId.value) return false
         break
+      case 'mealplan.updated':
+        void useMealPlanStore().invalidate('mealplan.updated')
+        if (weekFrom.value !== null) void loadWeek()
+        // The payload (today's meals) is part of the snapshot.
+        break
+      case 'grocery.updated':
+        // Only the Food list shows groceries; the dashboard snapshot is unchanged.
+        void useGroceryStore().invalidate('grocery.updated')
+        return false
       case 'tasks.updated':
       case 'routines.updated':
       case 'weather.updated':
@@ -291,6 +345,8 @@ export const useDashboardStore = defineStore('dashboard', () => {
       case 'household.updated':
       case 'inbox.updated':
       case 'resync':
+        void useMealPlanStore().invalidate('resync')
+        void useGroceryStore().invalidate('resync')
         break
       default:
         return false
@@ -341,7 +397,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
       },
       onMessage: (m) => onMessage(m, onHeartbeat),
     })
-    await Promise.all([refresh(), loadDeviceId()])
+    await Promise.all([refresh(), loadDeviceId(), loadSlots()])
     scheduleMidnight()
   }
 
@@ -366,6 +422,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     loadError,
     showStaleBadge,
     weekData,
+    mealSlots,
     showWeek,
     refresh,
     handleEvent,

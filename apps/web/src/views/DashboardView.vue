@@ -146,6 +146,7 @@ const mmss = computed(
       burn-in
       page
       :week-data="store.weekData ?? undefined"
+      :food-slots="store.mealSlots"
       @week="(from: string | null) => store.showWeek(from)"
       @pick="pick"
       @complete="(id: string) => flow?.beginComplete(id)"

@@ -3,6 +3,7 @@ import { computed, type Component } from 'vue'
 import type { DetailRequest, PanelProps } from '../types'
 import AgendaPanel from './AgendaPanel.vue'
 import ClockPanel from './ClockPanel.vue'
+import MealsPanel from './MealsPanel.vue'
 import MemberTasksPanel from './MemberTasksPanel.vue'
 import MembersPanel from './MembersPanel.vue'
 import NowPanel from './NowPanel.vue'
@@ -24,6 +25,7 @@ const REGISTRY: Record<string, Component> = {
   clock: ClockPanel,
   weather: WeatherPanel,
   agenda: AgendaPanel,
+  meals: MealsPanel,
   week: WeekPanel,
   /** A navigation view, not a configurable panel: it is not in `KNOWN_PANELS`. */
   week_table: WeekTablePanel,

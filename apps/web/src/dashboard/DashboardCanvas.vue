@@ -3,6 +3,8 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'v
 import { dayKey } from '../lib/time'
 import { applyTheme, loadDeviceChoice, resolveVariant } from '../themes'
 import { panelVisible } from './tasksModel'
+import { mealsPanelVisible } from './mealsModel'
+import FoodView from './FoodView.vue'
 import {
   burnInOffset,
   normalizeTheme,
@@ -20,7 +22,7 @@ import { weekLabel, weekStartKey, type WeekStart } from './weekModel'
 import EventDetail from './details/EventDetail.vue'
 import DayDetail from './details/DayDetail.vue'
 import WeatherDetail from './details/WeatherDetail.vue'
-import type { DashboardData, DashboardSettings, DetailRequest } from './types'
+import type { DashboardData, DashboardSettings, DetailRequest, WeekMeal } from './types'
 
 const props = withDefaults(
   defineProps<{
@@ -30,11 +32,18 @@ const props = withDefaults(
     now: Date
     burnIn?: boolean
     /** Events and tasks of the week the Week view asked for (see the `week` event). */
-    weekData?: { from: string; events: DashboardData['events']; tasks: DashboardData['tasks'] }
+    weekData?: {
+      from: string
+      events: DashboardData['events']
+      tasks: DashboardData['tasks']
+      meals?: WeekMeal[]
+    }
+    /** The visible meal slots for the Food view's plan. */
+    foodSlots?: { id: string; name: string; time?: string }[]
     /** True on the real /dashboard route: the theme is also applied to the page root. */
     page?: boolean
   }>(),
-  { settings: undefined, burnIn: false, page: false, weekData: undefined },
+  { settings: undefined, burnIn: false, page: false, weekData: undefined, foodSlots: () => [] },
 )
 const emit = defineEmits<{
   /** The first day of the week the Week view shows, or null when it is not showing. */
@@ -65,16 +74,18 @@ onMounted(() => {
 })
 onBeforeUnmount(() => sizeObserver?.disconnect())
 /** Panels with nothing to show (an idle routine) are dropped so the others use the space. */
-const areas = computed(() =>
-  resolveLayout(
+const areas = computed(() => {
+  const o = portrait.value ? 'portrait' : 'landscape'
+  const panels = cfg.value.panels.filter((p) => panelVisible(p, props.data, props.now))
+  return resolveLayout(
     {
       ...cfg.value,
       theme: normalizeTheme(cfg.value.theme),
-      panels: cfg.value.panels.filter((p) => panelVisible(p, props.data, props.now)),
+      panels: panels.filter((p) => mealsPanelVisible(p, panels, props.data, o)),
     },
-    portrait.value ? 'portrait' : 'landscape',
-  ),
-)
+    o,
+  )
+})
 /**
  * Landscape: a left and a right stack, each scrolling on its own. Portrait: the clock and weather
  * side by side (50/50), a members strip, then "right now" (now, routines, member tasks) and "coming
@@ -121,13 +132,21 @@ const homeRows = computed(() => {
   const cols = stacks.value.some((s) => s.scroll) ? ' minmax(0, 1fr)' : ''
   return `${'auto '.repeat(bands).trim()}${cols}`
 })
-type View = 'home' | 'week' | 'whiteboard'
-const VIEWS: { id: View; label: string; icon?: boolean }[] = [
+type View = 'home' | 'week' | 'food' | 'whiteboard'
+const ALL_VIEWS: { id: View; label: string; icon?: boolean }[] = [
   { id: 'home', label: S.navHome },
   { id: 'week', label: S.navWeek },
+  { id: 'food', label: S.navFood },
   { id: 'whiteboard', label: S.navWhiteboard, icon: true },
 ]
+/** The Food view is a per-device switch (`food_view`, on unless turned off). */
+const foodOn = computed(() => cfg.value.food_view !== false)
+const VIEWS = computed(() => ALL_VIEWS.filter((v) => v.id !== 'food' || foodOn.value))
 const view = ref<View>('home')
+// The switch turned off while the Food view is open: back to Home.
+watch(foodOn, (on) => {
+  if (!on && view.value === 'food') view.value = 'home'
+})
 function setView(v: View) {
   detail.value = null
   view.value = v
@@ -143,6 +162,9 @@ const today = computed(() => dayKey(props.now, tz.value))
 const shownStart = computed(() => weekStartKey(today.value, weekStart.value, weekOffset.value))
 const weekText = computed(() =>
   weekOffset.value === 0 ? S.currentWeek : weekLabel(shownStart.value),
+)
+const weekMeals = computed(() =>
+  props.weekData && props.weekData.from === shownStart.value ? (props.weekData.meals ?? []) : [],
 )
 const weekPanel = computed(() => ({
   kind: 'week_table',
@@ -204,6 +226,7 @@ const shift = computed(() =>
         :class="{ on: view === v.id }"
         :aria-current="view === v.id ? 'page' : undefined"
         :data-view="v.id"
+        :data-testid="`kiosk-view-${v.id}`"
         :aria-label="v.icon ? v.label : undefined"
         :title="v.icon ? v.label : undefined"
         @click="setView(v.id)"
@@ -217,6 +240,13 @@ const shift = computed(() =>
     </nav>
     <main class="main" :class="{ full: view !== 'home', split: view === 'home' }">
       <Whiteboard v-if="view === 'whiteboard'" :portrait="portrait" />
+      <FoodView
+        v-else-if="view === 'food'"
+        :today="today"
+        :week-start="weekStart"
+        :slots="foodSlots"
+        :elevated="!!data.elevated"
+      />
       <div
         v-else
         class="grid"
@@ -258,6 +288,7 @@ const shift = computed(() =>
               :settings="cfg"
               :panel="weekPanel"
               :now="now"
+              :meals="weekMeals"
               @detail="(d: DetailRequest) => (detail = d)"
             />
           </div>

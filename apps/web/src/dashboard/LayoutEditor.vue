@@ -142,6 +142,16 @@ function preset(e: Event) {
           "
         />
       </label>
+      <label class="check">
+        <input
+          data-testid="food-view"
+          type="checkbox"
+          role="switch"
+          :checked="s.food_view !== false"
+          @change="set({ ...s, food_view: ($event.target as HTMLInputElement).checked })"
+        />
+        {{ S.foodView }}
+      </label>
     </div>
 
     <fieldset v-if="members.length">

@@ -1,7 +1,7 @@
 import type { ThemeChoice } from '../../themes'
 
 export type PanelKind =
-  'clock' | 'weather' | 'agenda' | 'week' | 'members' | 'now' | 'member_tasks' | 'routine'
+  'clock' | 'weather' | 'agenda' | 'meals' | 'week' | 'members' | 'now' | 'member_tasks' | 'routine'
 /** The shape of the screen the dashboard is on; detected, not configured. */
 export type Orientation = 'landscape' | 'portrait'
 
@@ -13,6 +13,8 @@ export interface PanelConfig {
 export interface DashboardSettings {
   theme: ThemeChoice
   agenda_days: number
+  /** Shows the Food view on this device; absent means on. */
+  food_view?: boolean
   /** Minutes without a touch before the screensaver starts; 0 is off. Absent means the default. */
   screensaver_minutes?: number
   members: 'all' | string[]
@@ -29,6 +31,7 @@ export const KNOWN_PANELS: readonly string[] = [
   'clock',
   'weather',
   'agenda',
+  'meals',
   'week',
   'members',
   'now',
@@ -49,6 +52,7 @@ export const PRESETS: Record<string, DashboardSettings> = {
       { kind: 'clock' },
       { kind: 'weather', hourly: true },
       { kind: 'agenda' },
+      { kind: 'meals' },
       { kind: 'now' },
       { kind: 'routine' },
     ],
@@ -103,7 +107,7 @@ export function defaultSettings(): DashboardSettings {
   return structuredClone(PRESETS[DEFAULT_PRESET]!)
 }
 
-const LEFT = new Set(['clock', 'weather', 'members', 'now'])
+export const LEFT_PANELS = new Set(['clock', 'weather', 'members', 'now'])
 
 /**
  * Portrait Home: a top band (clock and weather, 50/50), a thin members strip, then two columns that
@@ -127,8 +131,8 @@ export function resolveLayout(
   if (o === 'portrait') {
     return known.map((panel, i) => ({ panel, column: '1 / 13', row: `${i + 1} / ${i + 2}` }))
   }
-  const left = known.filter((p) => LEFT.has(p.kind))
-  const right = known.filter((p) => !LEFT.has(p.kind))
+  const left = known.filter((p) => LEFT_PANELS.has(p.kind))
+  const right = known.filter((p) => !LEFT_PANELS.has(p.kind))
   const out: GridArea[] = []
   left.forEach((panel, i) => out.push({ panel, column: '1 / 5', row: `${i + 1} / ${i + 2}` }))
   const span = Math.max(left.length, 1)

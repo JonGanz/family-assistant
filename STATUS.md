@@ -25,7 +25,6 @@ None.
 
 ## Tasks not done (plans not closed)
 - M5 (planned (briefs written; all questions answered, D-108 to D-122))
-  - T-11: Kiosk: Food view, meals panel, Week view meals (todo)
   - T-12: e2e: recipe fixtures, API and UI specs for M5 (todo)
   - T-13: Docs: README Food section, roadmap, arch status (todo)
 

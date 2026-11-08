@@ -8,6 +8,7 @@ import { toEventLike, toMemberLike, visibleEvents, visibleMembers } from '../fil
 import DayCell from '../DayCell.vue'
 import { tasksOf } from '../tasksModel'
 import type { DetailRequest, PanelProps } from '../types'
+import { mealLine } from '../mealsModel'
 import { dailyOf } from '../weatherModel'
 
 const DAYS = 7
@@ -76,6 +77,11 @@ const tasksByDay = computed(() => {
 })
 /** The people with a column that an item belongs to. Household-wide items have no column. */
 const owners = (ids: string[]) => ids.filter((id) => people.value.some((m) => m.id === id))
+const mealsByDay = computed(() => {
+  const out = new Map<string, string[]>()
+  for (const m of props.meals ?? []) out.set(m.date, [...(out.get(m.date) ?? []), mealLine(m)])
+  return out
+})
 const rows = computed(() =>
   Array.from({ length: DAYS }, (_, i) => {
     const key = addDays(start.value, i)
@@ -88,6 +94,7 @@ const rows = computed(() =>
       weekday: new Intl.DateTimeFormat(undefined, { weekday: 'short', timeZone: 'UTC' }).format(d),
       dom: d.getUTCDate(),
       fc: forecast.value.get(key),
+      meals: mealsByDay.value.get(key) ?? [],
       cells: columns.value.map((c) => ({
         key: c.key,
         name: c.name,
@@ -128,10 +135,11 @@ const rows = computed(() =>
               </div>
             </div>
           </th>
-          <td v-for="c in r.cells" :key="c.key" role="cell" :data-member="c.key">
+          <td v-for="(c, ci) in r.cells" :key="c.key" role="cell" :data-member="c.key">
             <DayCell
               :events="c.events"
               :tasks="c.tasks"
+              :meals="ci === 0 ? r.meals : []"
               :tz="tz"
               :stripe="c.stripe"
               :color="c.color"
