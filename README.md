@@ -7,7 +7,7 @@ on a wall dashboard and on everyone's phone.
 Everything runs locally. Deterministic rules do most of the work, and local AI models help only
 where rules can't decide.
 
-> **Status:** M3.6 (themes) is code-complete. M3.5 (onboarding) is code-complete: one compose file, a first-run wizard and optional Tailscale and HTTPS. M3 (mail ingest) is code-complete. On top of the M0 platform (login, members, dashboard
+> **Status:** M5 (recipes, meal plan, shopping list) is code-complete. M3.6 (themes) is code-complete. M3.5 (onboarding) is code-complete: one compose file, a first-run wizard and optional Tailscale and HTTPS. M3 (mail ingest) is code-complete. On top of the M0 platform (login, members, dashboard
 > device pairing with PIN elevation, the job queue, backups, CI), M1 (calendars: Google, CalDAV,
 > ICS; the weather forecast with rule-based advisories; a real dashboard) and M2 (task lists,
 > recurring chores, routines, the "Now" list, weather tasks, ntfy push notifications) it reads
@@ -21,6 +21,7 @@ where rules can't decide.
 - [Weather and the household location](#weather-and-the-household-location)
 - [Tasks, routines and notifications](#tasks-routines-and-notifications)
 - [Mail, inbox and bills](#mail-inbox-and-bills)
+- [Food: recipes, meal plan and shopping list](#food-recipes-meal-plan-and-shopping-list)
 - [Local AI (optional)](#local-ai-optional)
 - [The dashboard layout](#the-dashboard-layout)
 - [Configuration reference](#configuration-reference)
@@ -428,6 +429,63 @@ records your confirmation, and fixing a chip records your answer as a human deci
 evaluation sample* to count a message toward the held-out set; the progress bar counts labelled
 messages of that sample (200 by default).
 
+## Food: recipes, meal plan and shopping list
+Open **Food** (everyone; the tabs are Meal plan, Shopping list, Recipes and, for adults, Templates). It works on
+phones, the web app and the kitchen kiosk. Nothing here is exported anywhere (D-015).
+
+### Recipes
+- **Import** (adults): **Recipes, New recipe** offers three ways. *Link* fetches a page and reads its schema.org data
+  (JSON-LD, then microdata), with no AI involved. *Paste* takes copied text. *Type* opens an empty editor. Every
+  way opens a **draft in the editor, and nothing is stored until you press Save**.
+- **What the LLM does** (only with a [local LLM](#local-ai-optional) configured): it reads pasted text and pages
+  without schema.org data, and it proposes a catalogue match for an ingredient line the rules cannot match. An adult
+  accepts a proposal or picks another match; the choice becomes an alias, so the next import matches by rules.
+  The LLM never creates catalogue entries on its own. Without it, those lines stay as plain text and everything else works.
+- **Ingredient lines** are parsed (quantity, unit, name), cleaned and matched to the ingredient catalogue (canonical
+  name, then alias, then fuzzy match). About 360 common ingredients and 14 aisles are seeded.
+- **Images** are fetched when imported (or uploaded by an adult), resized and **stored locally** in the database;
+  nothing is hot-linked.
+- **Library:** search by title and ingredient, tag chips, favourites, "last planned", a household note, and each
+  member's own **1 to 5 star rating**.
+
+### Meal plan and templates
+The plan shows weeks from the previous one to the **horizon** (default 2 weeks, **Settings, Meals**), today
+highlighted, one row per visible meal slot (a new household sees only Dinner). A slot can hold several entries, each a
+recipe or free text. Adults add, edit, move, swap and delete entries; changes that were just made have an Undo.
+
+**Templates** (adults) are reusable N-day patterns, for example a "Fall" rotation of seven dinners. Build one in the
+template editor, save one from a plan range, or duplicate one. **Apply** it from a start date: first you choose, per
+slot, whether to *Replace* or *Add* (Add is preselected for slots that hold free text). The result is a single change
+with Undo, and editing the template afterwards does not touch plans already made from it, nor the reverse.
+
+### The shopping list
+- **Make grocery list** (adults) takes a date range or picked meals, scales quantities by servings, converts units
+  within a dimension (volume or weight), merges duplicates and files the result on **one living list**. Running it
+  twice adds nothing, and it can be undone. When a plan change touches unchecked generated items, you see the impact and
+  choose whether to update the list.
+- **Staples** are catalogue ingredients marked as always at home (salt, oil). They are not added; they appear in a
+  **Staples check** ("Running low on any of these?") where one tap puts a staple on the list.
+- **Anyone** adds and checks items (the kiosk needs no PIN); **only adults** edit and delete. Checked items archive
+  after the configured hours (default 24). Every screen updates live.
+- **Stores and aisles:** items are grouped by store, then by that store's own aisle order, so the list follows your
+  walk through the shop. An aisle a store hides falls into "Other".
+- **Offline:** an open shopping list keeps working without a connection on any origin: adds and check-offs are
+  queued on the device and replayed when it is back (repeats are harmless). Reopening the Food views while offline
+  needs a **secure context** (HTTPS, for example the Tailscale address, or localhost); over plain HTTP the page cache is
+  not available, so open the list before you leave signal. Logging out clears the queue and the cached list.
+
+### On the kitchen kiosk
+The dashboard has a **Food** view (Meal plan and Shopping list tabs; editing the list needs a PIN, adding and
+checking does not) and a **Meals** panel (today's meals, in the Family hub preset). The Week view lists each day's
+meals. Switch the Food view on or off per device in **Settings, Devices, Edit layout**. The Today screen in the web app
+shows today's meals too.
+
+### Settings, Meals (adults)
+Meal **slots** (name, time, visible), the plan **horizon**, **stores** (each with its own aisle order), **aisles**,
+the **ingredient catalogue** (staple switch, aliases, merge), and **matching**: ask the language model about
+unmatched lines (on by default, only used when an endpoint is set), the fuzzy-match threshold, ignored descriptor
+words, and how long checked items stay (hours).
+
 ## Local AI (optional)
 With a local LLM enabled, **every message goes to the LLM** by default (D-107). It decides the category,
 whether the mail is time-sensitive, which members it concerns and whether it is a bill, and it extracts events,
@@ -464,6 +522,12 @@ When the endpoint answers again, a catch-up job (`mail.llm.catchup`, checked eve
 enabling the endpoint) queues the waiting messages, newest first, within the **catch-up window** (default 30 days,
 0 is off). Settings, AI shows how many are waiting. The first enable also queues the last 30 days, so expect the GPU
 to be busy for a while.
+
+**Recipes.** Importing a recipe (`POST /api/v1/recipes/import`, adults) tries schema.org data first and calls the LLM
+only for pasted text or a page without it (purpose `recipe.extract`). Proposing a catalogue match for an unmatched
+ingredient line is a second purpose, `ingredient`, switched by **Settings, Meals, Matching**; an adult confirms every
+proposal. `POST /api/v1/ai/recipes/extract` remains as an alias for one more milestone. The page fetch honours
+`allow_private_hosts` like calendars do (default off).
 
 **Measure it.** `fa-server eval` replays your labelled mail through the pipeline and prints accuracy, coverage and
 latency. It only reads (decisions and messages) and writes nothing; run it yourself on your own data:
@@ -546,7 +610,7 @@ value. Saving a changed setting restarts the app by itself in about a second, on
 | Notifications token (`ntfy_token`) | `FA_NTFY_TOKEN` | unset | Bearer token (secret) for an ntfy server with access control. Never logged |
 | Google client ID, secret (`google_client_id`, `google_client_secret`) | `FA_GOOGLE_CLIENT_ID`, `FA_GOOGLE_CLIENT_SECRET` | unset | Google OAuth client; without it Google is hidden. Needs an `https` redirect, so HTTPS access |
 | Allow plain-HTTP feeds (`allow_http_feeds`) | `FA_ALLOW_HTTP_FEEDS` | `false` | Accept plain `http` for feeds and OAuth redirects (LAN CalDAV, dev) |
-| Allow feeds on private addresses (`allow_private_hosts`) | `FA_ALLOW_PRIVATE_HOSTS` | `false` | Let calendars, feeds and the like reach private and loopback addresses (SSRF guard, C-05). Turn it on for a LAN CalDAV server, or in dev for local stubs (`.env.dev` does). IMAP is not affected |
+| Allow feeds on private addresses (`allow_private_hosts`) | `FA_ALLOW_PRIVATE_HOSTS` | `false` | Let calendars, feeds, recipe pages and recipe images reach private and loopback addresses (SSRF guard, C-05). Turn it on for a LAN CalDAV server, or in dev for local stubs (`.env.dev` does). IMAP is not affected |
 | Trusted proxies (`trusted_proxies`) | `FA_TRUSTED_PROXIES` | loopback only; compose: loopback and the Tailscale sidecar `172.30.89.10/32` | Comma-separated CIDRs whose `X-Forwarded-*` headers are trusted (client IP for login limiting, `https` detection for the cookie). Add your own reverse proxy here |
 | Home-network dashboard address (`lan_dashboard_url`) | `FA_LAN_DASHBOARD_URL` | unset | The dashboard's address on the home network, such as `http://192.168.1.10:8081`. Setting it turns on a **dashboard-only listener** for screens that can't use Tailscale (D-064): device tokens only, only the dashboard's own API. You also publish the port yourself |
 | Allowed networks (`lan_allowed_cidrs`) | `FA_LAN_ALLOWED_CIDRS` | private and loopback ranges | CIDRs allowed to use that listener, by peer address (`X-Forwarded-For` is ignored there) |
@@ -680,7 +744,7 @@ crates/          Rust libraries: fa-domain (types and permissions), fa-store (DB
                  extractors), fa-pipeline (the decision pipeline engine and its decision log),
                  fa-mail (sources, Gmail and IMAP sync, processing, the inbox, bills and
                  actions, labelling), fa-llm (OpenAI-compatible client, the call log), fa-recipe
-                 (recipe extraction: schema.org first, LLM fallback), fa-eval (replay of the labelled sample)
+                 (recipe extraction: JSON-LD, microdata, then LLM), fa-meals (recipes, plan, templates, the grocery list, ingredient matching), fa-eval (replay of the labelled sample)
 bins/            fa-server (server and operator CLI), fa-gpu-agent (optional GPU node helper, M4.1)
 apps/web/        Vue 3 + TypeScript PWA, including the /dashboard kiosk view; src/ui is the component library
                  (dev-only gallery at /ui-gallery)
@@ -721,7 +785,7 @@ repository**. Examples use `example.com`.
 | M3.5 | Onboarding (one compose file, optional Tailscale sidecar, optional HTTPS, first-run wizard) and a real-hardware shakedown (D-065, D-066) | ✅ code-complete; the shakedown on the real server (H-12 to H-14, then H-02 to H-11) is pending ([plan](plan/M3.5.md), [human steps](plan/human-steps.md)) |
 | M3.6 | Themes: eight palette families, a per-device choice, a named hue per member, the kiosk on the same catalogue (D-079 to D-081) | code-complete; integration (CI, e2e, compose smoke) is pending ([plan](plan/M3.6.md)) |
 | M4 | Two tracks (D-094, D-097): UI revamp (component library, navigation, one apply-changes model) and the LLM slice (OpenAI-compatible endpoint, LLM-first mail with rules fallback and catch-up, D-107; recipe extraction for M5; eval) | ✅ code-complete; H-15 to H-17 pending ([plan](plan/M4.md)) |
-| M5 | Recipes, meal plan and templates, grocery list by store and aisle, a Food view (next, D-108 to D-119) | planning ([plan](plan/M5.md)) |
+| M5 | Recipes (link, paste or typed import; ratings; local images), meal plan with templates, one grocery list by store and aisle with staples and offline queue, a Food view on phones and the kiosk, Settings, Meals (D-108 to D-122) | ✅ code-complete ([plan](plan/M5.md)) |
 | M4.2 | M4 follow-ups (G4-01 to G4-15, D-098 to D-102, code review 2 LARGER items; D-119) | |
 | M4.1 | System One sidecar, kNN, backend registry, optional GPU agent with WoL, full eval | |
 | M6 | Smart assignment, learned calendar routing | |

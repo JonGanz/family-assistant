@@ -5,7 +5,7 @@ milestone: M5
 wave: 6
 depends_on: [T-06, T-07, T-08, T-09, T-10, T-11]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["README.md"]
 decisions: [D-108, D-109, D-112, D-113, D-114, D-115, D-117, D-118, D-119]
 ---
@@ -46,3 +46,14 @@ You are a sub-agent implementing one task of milestone M5 of the Family Assistan
 - [ ] `python3 tools/fa.py check` passes.
 - [ ] Every link in the new text resolves (relative paths exist).
 - [ ] The report lists the sections changed, what was verified by running it, and what was not.
+
+## Outcome (T-13 report, 2026-11-08)
+- **Changed in `README.md`:**
+  - the status banner and Contents;
+  - a new "Food: recipes, meal plan and shopping list" section (import paths, LLM role, local images, ratings, plan and templates with Replace/Add, shopping list with staples, stores, aisles and offline, kiosk Food view, meals panel, Settings → Meals);
+  - Local AI (the `ingredient` purpose, `POST /api/v1/recipes/import`, the `/ai/recipes/extract` alias);
+  - the `allow_private_hosts` row (recipe pages and images);
+  - the layout (`fa-meals`, `fa-recipe`);
+  - the Roadmap (M5 ✅ code-complete, then M4.2, M4.1).
+- **Verified:** `fa.py check` was run; the rest was checked by reading the code. The main session confirmed in the code the three claims T-13 could not: the LLM purpose `"ingredient"` (`fa-meals/src/jobs.rs`), the staple Low action (`ShoppingList.vue`), and `TodayMeals` on Today (`HomeView.vue`).
+- **Not verified by running:** the dev-stack walkthrough. The user's standing rule keeps sub-agents off the dev ports, so it is left for the closing checklist.
