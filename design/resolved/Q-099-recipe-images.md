@@ -1,12 +1,12 @@
 ---
 id: Q-099
 title: "Recipe images: store a copy or link to the source"
-status: open
+status: resolved
 batch: 24
 area: domain
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-109]
 ---
 
 # Q-099: Recipe images: store a copy or link to the source

@@ -2,14 +2,14 @@
 title: Domain Model
 scope: domain (all bounded contexts, persistence conventions)
 status: draft
-updated: 2026-10-26
+updated: 2026-11-08
 drawio: Domain.drawio
 drawio_src: src/Domain.py
-depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-037, D-038, D-039, D-040, D-041, D-044, D-045, D-046, D-050, D-051, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034, D-036, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-068, D-070, D-071, D-078]
+depends_on: [D-004, D-006, D-007, D-008, D-009, D-013, D-037, D-038, D-039, D-040, D-041, D-044, D-045, D-046, D-050, D-051, D-015, D-017, D-018, D-019, D-021, D-024, D-026, D-027, D-028, D-029, D-031, D-034, D-036, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-068, D-070, D-071, D-078, D-109, D-110, D-111, D-112, D-113, D-114, D-115, D-116]
 milestone: M0
 ---
 
-# Domain Model (DRAFT v5.1)
+# Domain Model (DRAFT v5.2)
 
 This is the full UML class model, split into packages (bounded contexts). Each package below matches a page in `Domain.drawio`. The model covers every milestone, but **M0 only implements Identity and Audit**. The other packages appear in migrations when their milestone arrives. Items marked **[Q-0xx]** depend on an open question.
 
@@ -49,6 +49,10 @@ This is the full UML class model, split into packages (bounded contexts). Each p
 | Add a one-off task | own, on lists with `child_can_add = own` (D-045) | ✓ | on lists with `dashboard_add` | ✓ |
 | Manage lists, definitions, routines, absences; skip | ✗ | ✓ | ✗ | ✗ |
 | Add a grocery item | ✓ | ✓ | ✓ | ✓ |
+| Read recipes, the meal plan and the grocery list (M5) | ✓ | ✓ | ✓ | ✓ |
+| Check off, uncheck or mark a staple low (M5, D-110) | ✓ | ✓ | ✓ | ✓ |
+| Rate a recipe, own rating only (M5, D-109) | ✓ | ✓ | ✗ | ✗ |
+| Edit or delete grocery items; generate; manage recipes, the plan, templates, catalogue, stores, slots (M5, D-110) | ✗ | ✓ | ✗ | ✓ |
 | Manage members (details, accounts, PINs) (D-070) | ✗ | ✓ for children, themself and an **unclaimed** adult (no account yet, or still on the password another adult set, D-088); never a claimed adult. PINs: own only | ✗ | ✗ |
 | See members (names, avatars, colours) | on the dashboard | ✓ | ✓ | ✓ |
 | Read the approval inbox; approve items; mail actions (D-068, D-078) | ✗ | items from sources they may see | ✗ (pending count per adult only) | ✗ (count only) |
@@ -123,15 +127,21 @@ Full tables, scheduling, strategies, and notifications are in [Tasks.md](Tasks.m
 Progress sources beyond manual entry, and the privacy of adults' goals, are settled before M7 (`Goals.md`).
 
 ## Package: Meals (M5)
-| Class | Key attributes |
-|---|---|
-| `Recipe` | title, source_url?, servings?, image_url?, import_method: `jsonld\|microdata\|llm\|manual` |
-| `RecipeIngredient` | recipe, raw_text, qty?, unit?, ingredient?, note? |
-| `RecipeStep` | recipe, order, text |
-| `Ingredient` | canonical_name, aliases[], is_staple, default_unit? (D-021) |
-| `MealPlanEntry` | date, slot: `breakfast\|lunch\|dinner\|snack`, recipe? or free_text, servings? |
-| `GroceryList` | exactly one per household |
-| `GroceryItem` | list, ingredient?, text, qty?, unit?, source_meals[] (M:N MealPlanEntry), manual, added_by, added_via_device?, checked_at? |
+Table-level detail, behaviour and API are in [Meals.md](Meals.md).
+
+| Class | Key attributes | Notes |
+|---|---|---|
+| `Recipe` | title, source_url?, servings?, times, import_method: `jsonld\|microdata\|llm\|manual`, tags[], note?, favourite, image (stored copy) | D-109 |
+| `RecipeIngredient` | recipe, raw_text, qty?, unit?, item?, note?, ingredient?, match_state: `matched\|unmatched\|proposed` | Unmatched lines get an LLM proposal an adult confirms (D-113) |
+| `RecipeStep` | recipe, order, text | |
+| `RecipeRating` | recipe, member, stars 1–5 | Each member rates for themself (D-109) |
+| `Ingredient` | canonical_name, aliases[], is_staple, aisle?, default_store?, default_unit? | Seeded from a hand-written list (D-021, D-114) |
+| `Store`, `Aisle` | name, order | The list groups by store, then aisle (D-115) |
+| `MealSlot` | name, order, time, visible | Editable; only Dinner visible by default (D-111) |
+| `MealPlanEntry` | date, slot, recipe? xor free_text, servings? | No cook (D-110); one per date and slot until Q-115 |
+| `MealTemplate`, `MealTemplateCell` | name, days; cell: day, slot, recipe? xor free_text | Applied from a start date; entries are detached copies (D-112) |
+| `GroceryList` | exactly one per household | D-021 |
+| `GroceryItem` | list, ingredient?, text, qty?, unit?, store?, section: `list\|staples`, sources (M:N MealPlanEntry with the contribution), manual, added_by, added_via_device?, checked_at?, archived_at? | D-015, D-021, D-116 |
 
 ## Package: Weather (M1)
 | Class | Key attributes |

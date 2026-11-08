@@ -1,30 +1,30 @@
 ---
 title: Frontend
-scope: Vue PWA structure, design system and navigation, routes, first-run wizard, settings structure, dashboard (kiosk) design and layout config, data flow (REST + SSE), offline and insecure-context behaviour
+scope: Vue PWA structure, design system and navigation, routes, Food views (M5), first-run wizard, settings structure, dashboard (kiosk) design and layout config, data flow (REST + SSE), offline and insecure-context behaviour
 status: draft
-updated: 2026-11-07
+updated: 2026-11-08
 drawio: Frontend.drawio
 drawio_src: src/Frontend.py
-depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078, D-079, D-080, D-081, D-093, D-094, D-095, D-096, D-097, D-098, D-099, D-100, D-101, D-102, D-103, D-104, D-105, D-106]
-milestone: M4
+depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078, D-079, D-080, D-081, D-093, D-094, D-095, D-096, D-097, D-098, D-099, D-100, D-101, D-102, D-103, D-104, D-105, D-106, D-109, D-110, D-111, D-112, D-115, D-116, D-117, D-118]
+milestone: M5
 ---
 
-# Frontend (DRAFT v5, M4 design system)
+# Frontend (DRAFT v5.2, M5 Food views)
 
-This doc describes the Vue 3 PWA in `apps/web`: one app with three shells. The **setup shell** is the first-run wizard (`/setup`, D-065). The **app shell** is for signed-in people on phones and desktops. The **kiosk shell** is `/dashboard` on the Echo Show and other wall screens. v4 (M3.5) adds the wizard, the grouped Settings area with Settings, System, moves Members into Settings, makes the dashboard at-a-glance only, and makes the app work over plain HTTP. v5 (M4, D-095 to D-097) adds the design system (`ui/`, §1.2), the adaptive navigation (§1.3), one rule for applying changes (§1.4), list-detail Settings, and the Settings → AI screen with the inbox's AI provenance (§3e). Backend data comes from [Feeds.md](Feeds.md), [Tasks.md](Tasks.md) and [Ingest.md](Ingest.md); the runtime settings and setup API are in [Platform.md](Platform.md).
+This doc describes the Vue 3 PWA in `apps/web`: one app with three shells. The **setup shell** is the first-run wizard (`/setup`, D-065). The **app shell** is for signed-in people on phones and desktops. The **kiosk shell** is `/dashboard` on the Echo Show and other wall screens. v4 (M3.5) adds the wizard, the grouped Settings area with Settings, System, moves Members into Settings, makes the dashboard at-a-glance only, and makes the app work over plain HTTP. v5 (M4, D-095 to D-097) adds the design system (`ui/`, §1.2), the adaptive navigation (§1.3), one rule for applying changes (§1.4), list-detail Settings, and the Settings → AI screen with the inbox's AI provenance (§3e). v5.2 (M5, D-109 to D-118) adds the **Food** destination (meal plan, shopping list, recipes, templates, §3f), Settings → Meals, the kiosk Food view and `meals` panel (§4), and the grocery offline queue (§1.1). Backend data comes from [Feeds.md](Feeds.md), [Tasks.md](Tasks.md), [Ingest.md](Ingest.md) and [Meals.md](Meals.md); the runtime settings and setup API are in [Platform.md](Platform.md).
 
 ## 1. Structure (page "Components")
 ```
 apps/web/src/
 ├─ api/            http.ts (fetch wrapper, X-FA-Request, bearer opt-in), client.ts (typed calls over gen/)
 ├─ gen/            api.d.ts generated from openapi.json (the gen commands in the README). The only source of API types
-├─ stores/         Pinia: setup, session, members, household, calendar, weather, sources, devices, dashboard, tasks, mail, inbox, system
+├─ stores/         Pinia: setup, session, members, household, calendar, weather, sources, devices, dashboard, tasks, mail, inbox, system, mealPlan, grocery, recipes, mealsSettings
 ├─ composables/    useLiveStream (SSE → store invalidation), useUnits, useRange, useClock, useSecureContext
 ├─ ui/             the design system (D-095, §1.2): tokens.css, Ui* components, icons.ts, composables (useBreakpoint, useSnackbar, useInstantSave, useFormDraft), dev-only UiGallery
 ├─ app/            navigation.ts: the destinations list every navigation component renders (§1.3)
-├─ components/     domain components built on ui/: MemberChip, Avatar, PinPad, HuePicker, EventCard, WeatherIcon, DateRangeNav, tasks/, mail/
+├─ components/     domain components built on ui/: MemberChip, Avatar, PinPad, HuePicker, EventCard, WeatherIcon, DateRangeNav, tasks/, mail/, food/ (MealPlanGrid, MealCell, GroceryList, RecipeCard, RatingStars, TemplateGrid; shared by app and kiosk)
 ├─ themes/         theme catalogue as data (D-079): one file per family, the token set, `applyTheme`, the device's saved choice (§3d)
-├─ lib/            platform shims: ids (randomId), copy (clipboard fallback), pwa (conditional service worker)
+├─ lib/            platform shims: ids (randomId), copy (clipboard fallback), pwa (conditional service worker), offlineQueue (grocery writes, §1.1)
 ├─ setup/          the first-run wizard: SetupLayout + one component per step (§2a)
 ├─ views/          app-shell screens (§3); settings/ holds SettingsLayout, SettingsIndexView and the settings pages
 ├─ dashboard/      kiosk panels + layout engine (§4)
@@ -39,7 +39,8 @@ apps/web/src/
 
 ### 1.1 Secure and insecure contexts (D-072)
 The whole app must work over plain HTTP on a LAN address, where the browser is in an **insecure context**:
-- **Service worker** (vite-plugin-pwa) is registered only when `window.isSecureContext`. Without it the app loads normally from the network; the PWA install hint is hidden. The offline dashboard relies on the localStorage snapshot (§4.2), not on the service worker.
+- **Service worker** (vite-plugin-pwa) is registered only when `window.isSecureContext`. Without it the app loads normally from the network; the PWA install hint is hidden. The offline dashboard relies on the localStorage snapshot (§4.2), not on the service worker. In a secure context the service worker also caches the app shell and the last shopping list, so the Food view opens with no connection (D-118).
+- **Grocery offline queue (D-118), both contexts:** an open Shopping List keeps working without a connection. Adds and check-offs go to `lib/offlineQueue` (localStorage `fa.grocery.queue`) and replay in order when the connection returns. A queued add carries a client-made item id from `lib/ids`, so a replay is idempotent; a check-off wins over a concurrent edit; a 404 (item deleted elsewhere) drops that item's queued changes. A note "Offline, N changes waiting" shows above the list until the queue is empty. Deleting needs a connection.
 - **No `crypto.randomUUID`, no `crypto.subtle`:** IDs that the client makes come from `lib/ids` (`crypto.getRandomValues`, available in both contexts). The client never hashes or encrypts.
 - **No async clipboard:** `lib/copy` uses `navigator.clipboard` when available, else a selected read-only text field with a "press Ctrl+C" hint.
 - **No nag banners.** Plain HTTP is the hoster's choice. Settings, System states the connection type as a fact (§3c); the login page shows nothing about it.
@@ -77,8 +78,9 @@ The destinations are data in `app/navigation.ts` (`id`, label, icon key, route, 
 |---|---|
 | compact | **top app bar with a menu button** (hamburger) that opens a **modal navigation drawer** with every destination, grouped as on expanded. There is no bottom bar, so the top bar carries each screen's **contextual actions** (R2 review, 2026-11-04) |
 | medium | **navigation rail** on the left with the primary destinations; More becomes a menu; Settings sits at the rail's foot |
-| expanded | **navigation drawer** (standard) with every destination, grouped: Plan (Today, Calendar, Tasks, Routines), Mail (Inbox, Mail, Bills), Settings. The user can **collapse it to the rail** (a toggle at the drawer's top), which is remembered per device (`localStorage` `fa.nav.collapsed`) (R2) |
-- Children see only the destinations their guards allow (no Inbox, Mail or Bills; D-063).
+| expanded | **navigation drawer** (standard) with every destination, grouped: Plan (Today, Calendar, Tasks, Routines), Food (Meal plan, Shopping list, Recipes, Templates; Templates adults only, M5), Mail (Inbox, Mail, Bills), Settings. The user can **collapse it to the rail** (a toggle at the drawer's top), which is remembered per device (`localStorage` `fa.nav.collapsed`) (R2) |
+- Children see only the destinations their guards allow (no Inbox, Mail or Bills, D-063; no Templates, D-110).
+- **Food (M5, D-117)** is one primary destination `food` (`/food`, icon key `food` in `ui/icons.ts`, the Material Symbol `restaurant`) on the rail; on the drawer it expands into its four entries, which are the tabs of §3f.
 - Each screen has a `UiTopAppBar` with its title, a back arrow on nested pages (`/tasks/:id`, `/settings/*` on compact), and its actions. On compact, the menu button sits at the start of every top-level screen's top bar, and a nested screen shows a back arrow instead. The primary create action of a list screen is a `UiFab` on compact and a top-bar button otherwise.
 - A parent destination is active for its nested paths (§2).
 
@@ -106,6 +108,9 @@ Every filter row is one shared component, `UiFilterChips` (`ui/`; props `options
 | `/` | app | user | **Today**: my agenda (or the whole household for adults), weather card, active advisories, my Now list |
 | `/calendar` | app | user | Agenda, week, and month views. Filter by member. Child users see only what §3.5 of Feeds.md allows |
 | `/tasks`, `/tasks/:id`, `/routines` | app | user | §3a |
+| `/food` | app | user | Redirects to the Food tab last used on this device (`localStorage` `fa.food.tab`), else `/food/plan` (§3f) |
+| `/food/plan`, `/food/list`, `/food/recipes`, `/food/recipes/:id` | app | user | Meal plan, Shopping list, Recipes and a recipe (§3f). Children read; they add and check items and rate recipes (D-110) |
+| `/food/recipes/new`, `/food/recipes/:id/edit`, `/food/templates`, `/food/templates/:id` | app | adult | Recipe import and editor, templates (§3f) |
 | `/mail`, `/mail/:id`, `/mail/label`, `/inbox`, `/bills` | app | adult | §3b |
 | `/settings` | app | user | **Settings index** (§3c): grouped cards; children see only the Personal group |
 | `/settings/<page>` | app | per page | Child routes rendered inside `SettingsLayout` (§3c) |
@@ -115,7 +120,7 @@ Every filter row is one shared component, `UiFilterChips` (`ui/`; props `options
 
 - **Setup guard:** the router asks `GET /api/v1/setup` once at start. While `needed` is true, **every route redirects to `/setup`**, and any API call answering `409 setup_required` does the same. Once setup is done, `/setup` redirects to `/`.
 - **No `/members` route** and no redirect from it (D-070): member management is `/settings/members`, adults only.
-- Nested pages mark their parent nav item active by path prefix (`/tasks/:id` → Tasks, `/settings/*` → Settings).
+- Nested pages mark their parent nav item active by path prefix (`/tasks/:id` → Tasks, `/food/*` → Food, `/settings/*` → Settings).
 - The API enforces every guard as well; the router guard only shapes navigation.
 
 ## 2a. First-run wizard (setup shell, D-065, D-073, D-074)
@@ -136,7 +141,7 @@ Shown when no household exists. It is **open to whoever opens the app first** (D
 - Each step is a card; a failed step shows the server's field errors under their fields, as in Settings (§1.4).
 
 ## 3. App shell screens (M1)
-- **Today:** a merged list of today's and tomorrow's events with member chips, the current weather plus the 7-day strip, and advisories at the top.
+- **Today:** a merged list of today's and tomorrow's events with member chips, the current weather plus the 7-day strip, and advisories at the top. M5 adds a **Today's meals** card (the visible slots; tapping opens `/food/plan`, D-117).
 - **Calendar:**
   - The Agenda, Week and Month switch is a row under the top bar (D-103). The first visit opens Agenda on compact widths and Week on medium and expanded. After that the Calendar reopens in the view last used on that device (`localStorage` key `fa.calendar.view`: `agenda|week|month`; the per-width default applies only when nothing is stored). There is no setting for it.
   - The member filter is a `UiFilterChips` row (§1.5).
@@ -188,6 +193,7 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 |---|---|---|
 | Personal | `account` (password, sessions), `appearance` (this device's theme, §3d), `notifications` (own, plus children's for adults; §3a) | user |
 | Household | `household` (name, tz, location, units, currency, calendar window, Now list weights, quiet hours, dashboard pending-approvals badge), **`members`** (add, edit, avatar, hue, role, account and password reset, PIN, aliases, gender and relevance tags, interests, hobbies and responsibilities), `tasks` (lists, definitions, routines, absences) | adult |
+| Household (M5) | `meals` (§3f: slots, stores, aisles, ingredient catalogue and staples, plan horizon) | adult |
 | Sources and rules | `calendars`, `weather`, `mail`, `orgs` | adult |
 | AI | `ai` (§3e) | adult |
 | System | `system` (below), `devices` (pairing + dashboard layout editor, §4), `status`, `about` (server version, commit and build time, next to the same for this page's bundle; a banner when the two commits differ, which means the browser is showing a stale cached app) | adult |
@@ -237,12 +243,52 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 
 **AI provenance in the inbox:** items whose `extracted_by` is `llm` carry an **"AI" chip** (the `ai` icon) with the confidence as a percentage. Its tooltip, or a tap on compact screens, explains "suggested by the local language model". Approval works exactly as for rule-made items (D-057, D-060). Tasks carry just "AI". Wide screens show a tooltip and phones a sheet (D-104, Q-097). The Inbox has an **"AI only" filter chip**, a separate toggle that is not remembered. The message screen's decision list marks decisions with `stage_kind = llm` the same way.
 
+## 3f. Food (M5, D-109 to D-118; detail in [Meals.md](Meals.md))
+`/food` is one destination with tabs (`UiSegmented` under the top bar on compact, a tab row otherwise): **Meal plan**, **Shopping list**, **Recipes**, and **Templates** for adults. The chosen tab is remembered per device (`fa.food.tab`). All edits follow §1.4.
+
+**Meal plan** (`/food/plan`, adults edit, everyone reads; D-110, D-111, D-112, D-116):
+- A grid of **week rows**: seven day columns starting on the household's `week_start`; the first row is the **previous week**, then the current week, then following weeks, scrolling on to the end of the horizon (`meal_plan_horizon_weeks`); scrolling up shows past weeks read-only. Today's cell is drawn **inverted** (text and background swapped), the same marker as today on the calendar. On compact the grid becomes a day list (one card per day, the same order).
+- Each cell shows the **visible slots** in slot order (only Dinner by default, D-111), each with a recipe title (thumbnail on expanded) or free text, or an empty "+" for adults. Working assumption until Q-115: **one entry per date and slot**.
+- Adults add an entry from a sheet (recipe search or free text, servings defaulting to the recipe's), edit it, delete it with Undo, and **move or swap** entries by drag on pointer devices and by "Move to…" (date and slot picker) everywhere; dropping on a filled slot swaps.
+- **Apply template:** pick a template and a start date; the sheet previews the slots it fills and lists every **conflict** (a slot that already has an entry) with a keep/replace choice per slot. Free-text entries are preselected **keep**, recipe entries **replace**. Applying is one change with Undo (D-096). Applied entries are detached from the template (D-112).
+- **Make grocery list:** choose a date range (default the coming week) or pick meals in the grid (selection mode); a summary shows items to add and the Staples check; applying shows Undo.
+- **Plan change with list impact (D-116):** when an edit, delete, move, swap, servings change or template apply touches an entry that contributed to unchecked list items, the server returns its `grocery_impact` and a dialog lists the items that would be reduced or removed, with **Update the list** and **Leave the list**. Nothing is asked when there is no impact.
+- Working assumption until Q-117: templates are created only in the template editor.
+
+**Shopping list** (`/food/list`, D-021, D-110, D-115, D-118):
+- An **add box** at the top (text; suggestions from the ingredient catalogue as you type; the item takes the ingredient's default store).
+- Items grouped **by store** (store order, "Any store" last), then **by aisle** in the household's aisle order (working assumption until Q-116: one aisle order for all stores), "Other" for unmatched items. A household with no stores sees aisles only. Each row: text, quantity and unit in household units, a source hint ("for Tue dinner, Thu dinner") when generated.
+- **Store filter** as a `UiFilterChips` row (§1.5) to shop one store; remembered per device (`fa.grocery.stores`).
+- **Check off** is instant with Undo; checked items fall to a collapsed "Checked" group until archived (default 24 h, D-021).
+- The **Staples check** section (D-021) sits below, listing staples with the meals that need them and a **Low** button that moves one onto the list.
+- Adults edit an item (text, quantity, unit, store) in a sheet and **delete** it with Undo; children add and check only (D-110).
+- Offline behaviour as in §1.1.
+
+**Recipes** (`/food/recipes`, D-109):
+- **Library:** search (title and ingredient), tag chips (`UiFilterChips`), a favourites chip, cards with image, title, total time, the household's average rating, and "last planned".
+- **Recipe page:** image, servings, times, ingredients (each line with its matched ingredient on wide screens), steps, the household note, **ratings** (every signed-in member sets their own 1 to 5 stars, instant with Undo; the list of members' ratings shows under it), "Add to plan", and for adults Edit and Delete.
+- **New recipe** (adults): a sheet with three ways in, **From a link**, **Paste text**, **Type it in**; the first two show progress and open the **editor** on the returned draft (nothing is stored until Save). Errors (no recipe found, LLM not available) are shown with the fallback "Type it in".
+- **Editor:** a form with the Save bar: title, servings, times, tags, note, image (keep the imported one, upload, or remove), ingredient lines, steps. **Unmatched lines** are highlighted; a line with an LLM proposal shows it as a chip ("tomato, canned?") with Accept, Pick another (catalogue search) and New ingredient; a picked match becomes an alias (D-113).
+
+**Templates** (`/food/templates`, adults, D-112): a list of templates (name, length, slots used), and an editor: name, length in days, and a grid of days × slots where each cell holds a recipe, free text or nothing; days are numbered (Day 1…) and shown in week rows when the length is a multiple of 7. Delete asks first.
+
+**Settings → Meals** (`/settings/meals`, adults): cards for
+- **Slots:** name, `"HH:MM"` time, shown switch (instant), order; add and rename. A new household has Breakfast, Lunch, Dinner and Snack with only Dinner shown (D-111);
+- **Plan horizon:** `meal_plan_horizon_weeks`;
+- **Stores:** name and order, add, delete (items move to "Any store");
+- **Aisles:** name and order;
+- **Ingredients:** the catalogue with search; per ingredient the canonical name, aliases, aisle, default store, default unit and the **staple** switch (instant); add and merge.
+
 ## 4. Dashboard (kiosk shell)
-**Navigation (D-082, D-084, D-090):** a bar along the shorter edge of the screen as detected (left in landscape, top in portrait; same button size in both) switches between **Home** (the configured panels below) and **Week** (a table: a row per day for the calendar week that starts on the household's `week_start` (Monday or Sunday) and holds today, a column per person; each cell lists that person's events, drawn like the calendar page's, and the tasks due that day; the day cell carries the forecast; it fills the view and never scrolls: a cell that cannot fit its items in one column splits them into two half-width columns when each half stays readable, then ends with a "+N" slot that opens a modal listing everything in that cell, D-087). A bottom row has previous and next arrows, a box showing "Current" or the date range of the shown week, and a "Hide past events" switch (ended events go; a task goes only once completed). The view fetches its own week with `GET /api/v1/dashboard?from=`). The view is local state. The Home view scrolls, so no panel is cropped when another needs more room: in landscape each of its two columns (left 4/12, right 8/12) scrolls on its own, in portrait the clock and weather share a fixed top row 50/50, a thin members strip follows, then two columns that each scroll on their own: "right now" (now, routines, member tasks) on the left and "coming up" (agenda, week) on the right, a lone column taking the full width (the groups are `PORTRAIT_*` in `layout/index.ts`); the Week view does not scroll (D-087). The connection status (Connected only while heartbeats arrive: "No data" after 45 s of silence, D-091), the stale badge and the adult unlock button sit at the end of the bar (D-085).
+**Navigation (D-082, D-084, D-090):** a bar along the shorter edge of the screen as detected (left in landscape, top in portrait; same button size in both) switches between **Home** (the configured panels below), **Week** (a table: a row per day for the calendar week that starts on the household's `week_start` (Monday or Sunday) and holds today, a column per person; each cell lists that person's events, drawn like the calendar page's, and the tasks due that day; the day cell carries the forecast and the day's visible meals (M5); it fills the view and never scrolls: a cell that cannot fit its items in one column splits them into two half-width columns when each half stays readable, then ends with a "+N" slot that opens a modal listing everything in that cell, D-087). A bottom row has previous and next arrows, a box showing "Current" or the date range of the shown week, and a "Hide past events" switch (ended events go; a task goes only once completed). The view fetches its own week with `GET /api/v1/dashboard?from=`) and **Food** (M5, D-117, below). The view is local state. The Home view scrolls, so no panel is cropped when another needs more room: in landscape each of its two columns (left 4/12, right 8/12) scrolls on its own, in portrait the clock and weather share a fixed top row 50/50, a thin members strip follows, then two columns that each scroll on their own: "right now" (now, routines, member tasks) on the left and "coming up" (agenda, week) on the right, a lone column taking the full width (the groups are `PORTRAIT_*` in `layout/index.ts`); the Week view does not scroll (D-087). The connection status (Connected only while heartbeats arrive: "No data" after 45 s of silence, D-091), the stale badge and the adult unlock button sit at the end of the bar (D-085).
+
+**Food view (M5, D-117):** a third bar button, shown unless the device setting `food_view` is off (default on). Two tabs:
+- **Meal plan:** the §3f grid read-only, week rows from the previous week with today inverted, as many rows as fit the screen: it **never scrolls** (previous and next arrows page by a week, like the Week view).
+- **Shopping list:** the §3f list grouped by store then aisle, with the add box and check-off, both **without a PIN** (D-015, D-019, D-110); the member picker is not asked. Editing and deleting an item need the adult PIN step-up (D-085 unlock button); Staples **Low** needs no PIN. The store filter chips are local state.
 
 **Screensaver (D-092):** after `screensaver_minutes` (default 15) without a touch, key or pointer event, a black full-screen overlay shows the app icon bouncing off the screen edges like a DVD logo. A tap dismisses it. Data keeps updating underneath.
 
-The dashboard is **at-a-glance only** (D-068): date and time, weather with advisories, agenda, tasks, routines, and the household's members. **Nothing derived from email** appears on it: no inbox panel, no titles, senders or approvals, elevated or not. The one exception is a **pending-approvals count badge per adult** on the `members` strip (D-078), which the household setting `dashboard_pending_approvals` (default on) can turn off.
+The dashboard is **at-a-glance only** (D-068): date and time, weather with advisories, agenda, tasks, routines, meals and the shopping list (M5), and the household's members. **Nothing derived from email** appears on it: no inbox panel, no titles, senders or approvals, elevated or not. The one exception is a **pending-approvals count badge per adult** on the `members` strip (D-078), which the household setting `dashboard_pending_approvals` (default on) can turn off.
 
 ### 4.1 Layout model
 The screen's orientation is not part of the layout: the dashboard detects it (portrait when taller than wide) and picks the panel arrangement and menu edge itself (D-090).
@@ -251,6 +297,7 @@ The layout is data held in `device.settings` and edited by adults in Settings �
 { "theme": { "family": "<id>", "variant": "<id>?", "mode": "auto" | "light" | "dark" },  // §3d; auto = dark between sunset and sunrise (from weather)
   "agenda_days": 3,
   "screensaver_minutes": 15,   // 0 = off, max 240; absent = 15 (D-092)
+  "food_view": true,           // M5, D-117: the Food bar button; absent = true
   "members": "all" | ["<member-id>", ...],
   "panels": [ {"kind": "clock"}, {"kind": "weather", "hourly": true},
               {"kind": "agenda"}, {"kind": "week"}, {"kind": "members"} ] }
@@ -261,16 +308,17 @@ The layout is data held in `device.settings` and edited by adults in Settings �
   - `agenda` (today plus the next N days, grouped by day, with key-date tasks, D-046; each event shows its time with the member chips under it and its title in an aligned column, and opens a modal with the location and details, D-085);
   - `week` (a 7-day column grid, with `until_done` and `always` task chips);
   - `members` (avatars and names of the household, D-070; the entry point for per-member task views and the PIN step-up; adults carry a count-only "to approve" badge when `dashboard_pending_approvals` is on, D-078);
+  - `meals` (M5, D-117: today's entries in the visible slots, in slot order with the slot time, recipe image on wide panels; free text as written; "Nothing planned" when empty; tapping opens the Food view's meal plan);
   - `now` (the Now list, D-042, with optional `members` and `lists` filters), `member_tasks` (one column per member with today's open tasks), `routine` (D-041: shown automatically during a routine window with large step buttons and a progress bar; `pinned: true` keeps it visible).
 - Completing anything on the dashboard opens the member picker ("who did it?", preselecting the assignee) and needs no PIN while the override is on (D-013, D-019). PIN elevation remains for adult actions on tasks (D-019); it is not used for approvals.
 - **Removed in v4:** the `inbox` panel (D-068). A layout that still names it is ignored like any unknown kind, so older saved layouts keep working.
-- **Presets** ("Family hub", "Calendar wall", "Minimal") fill `panels`. Unknown panel kinds are ignored, so an older client survives a newer layout.
+- **Presets** ("Family hub", "Calendar wall", "Minimal") fill `panels`; Family hub includes `meals` (M5). Unknown panel kinds are ignored, so an older client survives a newer layout.
 - **Landscape 1920×1080:** a 12-column grid. The left column (4) holds clock and weather, and the right (8) holds agenda or week. **Portrait** stacks them. Type is sized for 2–3 m (base 28 px on the kiosk scale, one kiosk font system).
 - The layout editor shows a live, scaled preview of the dashboard with the edited settings.
 
 ### 4.2 Data & resilience
-- **One fetch:** `GET /api/v1/dashboard?days=N` returns household (name, tz, units), members (public fields + avatar URL), events in the window (already masked), the latest weather, active advisories, `tasks[]` (open tasks visible now, plus calendar-displayed tasks in the window), `routines[]` (today's runs with steps), and the device settings. Refreshes reuse it. It carries no mail-derived data.
-- **Live:** SSE kinds update the snapshot: `calendar.updated` (refetch when its range overlaps), `weather.updated`, `advisory.updated`, `tasks.updated`, `routines.updated`, `device.updated`, `member.updated`, `household.updated`, and `resync` (full refetch).
+- **One fetch:** `GET /api/v1/dashboard?days=N` returns household (name, tz, units), members (public fields + avatar URL), events in the window (already masked), the latest weather, active advisories, `tasks[]` (open tasks visible now, plus calendar-displayed tasks in the window), `routines[]` (today's runs with steps), `meals[]` (M5: entries in the visible slots for the window), and the device settings. The Food view fetches the plan and the list on its own (`GET /meal-plan`, `GET /grocery`). Refreshes reuse it. It carries no mail-derived data.
+- **Live:** SSE kinds update the snapshot: `calendar.updated` (refetch when its range overlaps), `weather.updated`, `advisory.updated`, `tasks.updated`, `routines.updated`, `device.updated`, `member.updated`, `household.updated`, `mealplan.updated` and `grocery.updated` (M5), and `resync` (full refetch).
 - **Offline:** the last snapshot is saved to localStorage with `savedAt`. While the stream is down, the dashboard shows the cache with a quiet "last updated hh:mm" badge. Where a service worker runs (secure contexts only, §1.1) it also caches the app shell and avatar images; over plain HTTP the snapshot is the offline story.
 - **Access paths:** the dashboard works on the main listener (HTTP or HTTPS, D-072) and on the optional restricted home-network listener (D-064); pairing shows a link and QR code for each available address.
 - **Day rollover:** at midnight in the household tz, the dashboard refetches. The nightly reload (D-011) stays as a backstop.
@@ -282,6 +330,7 @@ The layout is data held in `device.settings` and edited by adults in Settings �
 3. `/api/v1/stream` sends it to every connected client of that household.
 4. The `useLiveStream` composable maps the event kind to the affected stores. Each store refetches only if it holds overlapping data.
 5. If the stream disconnects, the client reconnects with `Last-Event-ID`. If the hub can't replay that far, it sends `resync`.
+6. M5 kinds: `mealplan.updated {from, to}` (the plan stores and the dashboard refetch when the range overlaps), `grocery.updated` (the grocery store refetches the list; queued offline writes replay first, §1.1), `recipes.updated` (library).
 
 ## 6. Accessibility & i18n
 - Every interactive element is reachable by keyboard, with visible focus rings (a `ui/` token, never removed). Touch targets are at least 48 px in the app shell and on the kiosk. Icon-only buttons have an accessible name; snackbars use `role=status`; dialogs and sheets trap focus and close on Escape.
@@ -294,6 +343,7 @@ The layout is data held in `device.settings` and edited by adults in Settings �
   - stores (invalidation logic);
   - the layout engine (presets, unknown panels);
   - unit conversion;
+  - (M5) the meal-plan grid (week rows from the previous week on `week_start`, today inverted, visible slots only), the template conflict list (free text preselected keep), the grocery grouping (store then aisle, Any store last, Other), the offline queue (order, idempotent replay, 404 drop), the plan-change impact dialog, the rating control;
   - day grouping across DST changes, using a fixed tz.
 - **Playwright** against the e2e stack, which has a seeded household, an ICS fixture, and an Open-Meteo stub:
   - the dashboard renders the agenda, weather, and advisory;
@@ -304,5 +354,6 @@ The layout is data held in `device.settings` and edited by adults in Settings �
   - the whole suite runs over plain HTTP from a non-localhost address (insecure context, §1.1);
   - Settings, System shows env-set fields as locked;
   - the dashboard has no advisory dismiss control and no inbox panel; a child sees no `/settings/members`;
-  - (M4) navigation adapts at 360, 800 and 1280 px; an instant switch shows Undo and Undo restores the value; a dirty form blocks navigation until saved or discarded.
+  - (M4) navigation adapts at 360, 800 and 1280 px; an instant switch shows Undo and Undo restores the value; a dirty form blocks navigation until saved or discarded;
+  - (M5) an adult imports a recipe from a fixture page, saves it, plans it, applies a template with one kept conflict, makes the grocery list and sees the staples check; a child adds and checks an item but sees no delete and no Templates; the kiosk Food view adds and checks an item without a PIN and its meal plan does not scroll; the `meals` panel shows today's dinner; an item checked while offline (route blocked) syncs when the route returns.
 - **Screenshots** (`scripts/ui-shots.sh`, tagged `@shots`, not part of the default run) feed the design reviews; they are not compared pixel by pixel.

@@ -721,7 +721,8 @@ repository**. Examples use `example.com`.
 | M3.5 | Onboarding (one compose file, optional Tailscale sidecar, optional HTTPS, first-run wizard) and a real-hardware shakedown (D-065, D-066) | ✅ code-complete; the shakedown on the real server (H-12 to H-14, then H-02 to H-11) is pending ([plan](plan/M3.5.md), [human steps](plan/human-steps.md)) |
 | M3.6 | Themes: eight palette families, a per-device choice, a named hue per member, the kiosk on the same catalogue (D-079 to D-081) | code-complete; integration (CI, e2e, compose smoke) is pending ([plan](plan/M3.6.md)) |
 | M4 | Two tracks (D-094, D-097): UI revamp (component library, navigation, one apply-changes model) and the LLM slice (OpenAI-compatible endpoint, LLM-first mail with rules fallback and catch-up, D-107; recipe extraction for M5; eval) | ✅ code-complete; H-15 to H-17 pending ([plan](plan/M4.md)) |
-| M5 | Recipes, meal plan, grocery list (next, D-108) | planning: questions Q-098 to Q-114 open |
+| M5 | Recipes, meal plan and templates, grocery list by store and aisle, a Food view (next, D-108 to D-119) | planning ([plan](plan/M5.md)) |
+| M4.2 | M4 follow-ups (G4-01 to G4-15, D-098 to D-102, code review 2 LARGER items; D-119) | |
 | M4.1 | System One sidecar, kNN, backend registry, optional GPU agent with WoL, full eval | |
 | M6 | Smart assignment, learned calendar routing | |
 | M7 | Goals with progress (count or quantity, weekly cadence) | |

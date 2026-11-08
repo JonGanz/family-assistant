@@ -1,6 +1,6 @@
 ---
 title: Decisions Index
-updated: 2026-11-07
+updated: 2026-11-08
 ---
 
 # Decisions
@@ -117,3 +117,14 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-106](D-106-neovim-theme-palettes.md) | Canonical accents; extended theme palettes from the Neovim ports | accepted | Q-092 | arch/Frontend.md |
 | [D-107](D-107-llm-first-mail.md) | LLM-first mail processing with rules fallback and catch-up queue | accepted | (instruction) | arch/AI.md, arch/Ingest.md, arch/Frontend.md |
 | [D-108](D-108-m5-before-m41.md) | M5 (food) starts before M4.1 | accepted | (instruction) | arch/Overall.md |
+| [D-109](D-109-recipe-import-images-library.md) | Recipes: three import paths, stored images, a library with per-member ratings | accepted | Q-098, Q-099, Q-113 | arch/Meals.md, arch/AI.md, arch/Frontend.md |
+| [D-110](D-110-meals-permissions-no-cook.md) | Meals permissions; no cook per meal | accepted | Q-100, Q-101 | arch/Meals.md, arch/Domain.md |
+| [D-111](D-111-meal-slots-dinner-default.md) | Editable meal slots; only Dinner shown by default | accepted | Q-102 | arch/Meals.md, arch/Domain.md |
+| [D-112](D-112-meal-templates.md) | Meal templates applied from a start date; no repeating entries | accepted | Q-103 | arch/Meals.md, arch/Frontend.md |
+| [D-113](D-113-servings-units-unmatched.md) | Servings scale the list; units convert within a dimension; the LLM proposes matches for unmatched lines | accepted | Q-104, Q-105, Q-107 | arch/Meals.md, arch/AI.md |
+| [D-114](D-114-ingredient-seed.md) | Ship a hand-written ingredient seed | accepted | Q-106 | arch/Meals.md |
+| [D-115](D-115-grocery-stores-aisles.md) | Grocery list grouped by store, then aisle | accepted | Q-108 | arch/Meals.md, arch/Frontend.md |
+| [D-116](D-116-plan-change-asks.md) | When the plan changes after a list was generated, the app asks | accepted | Q-109 | arch/Meals.md |
+| [D-117](D-117-food-view-dashboard.md) | Food view with Meal Plan and Shopping List; today's meals on the home screens | accepted | Q-110 | arch/Meals.md, arch/Frontend.md |
+| [D-118](D-118-grocery-offline-queue.md) | Grocery list works offline: local queue, and a full offline app over HTTPS | accepted | Q-111 | arch/Meals.md, arch/Frontend.md |
+| [D-119](D-119-m5-scope-boundaries.md) | M5 is food only, with no meal notifications; M4 follow-ups go to M4.2 | accepted | Q-112, Q-114 | arch/Overall.md, arch/Meals.md |

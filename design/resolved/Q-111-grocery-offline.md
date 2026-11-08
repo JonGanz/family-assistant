@@ -1,12 +1,12 @@
 ---
 id: Q-111
 title: Shopping with poor signal
-status: open
+status: resolved
 batch: 24
 area: frontend
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-118]
 ---
 
 # Q-111: Shopping with poor signal

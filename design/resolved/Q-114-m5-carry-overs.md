@@ -1,12 +1,12 @@
 ---
 id: Q-114
 title: "M5 scope: food only, or also the M4 follow-ups"
-status: open
+status: resolved
 batch: 24
 area: infra
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-119]
 ---
 
 # Q-114: M5 scope: food only, or also the M4 follow-ups

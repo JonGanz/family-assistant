@@ -7,7 +7,7 @@ drawio: AI.drawio
 drawio_src: src/AI.py
 depends_on: [Overall.md, Ingest.md, Platform.md]
 milestone: M4
-decisions: [D-002, D-020, D-024, D-025, D-026, D-027, D-028, D-029, D-057, D-060, D-071, D-093, D-094, D-104, D-107]
+decisions: [D-002, D-020, D-024, D-025, D-026, D-027, D-028, D-029, D-057, D-060, D-071, D-093, D-094, D-104, D-107, D-109, D-113]
 research: [R-001, R-004]
 ---
 
@@ -168,6 +168,7 @@ Settings → AI (the web app, Frontend.md, under "Sources and rules" after Mail,
 - **LLM fallback:** `from_llm` gets the page's visible text (truncated to `max_input_chars`) and the `RecipeDraft` schema.
 - **`RecipeDraft`:** `{name, source_url, origin: jsonld|llm, yield_text, servings, prep_minutes, cook_minutes, total_minutes, ingredients[{text, quantity, unit, item}], steps[], tags[], image_url}`.
 - **Fetching:** `fa_connectors::http::Http` with private hosts blocked (on redirects too), its body cap and its timeout. M5 moves `RecipeDraft` into `fa-domain` and adds storage (Domain.md `Recipe.import_method: jsonld|microdata|llm|manual`).
+- **M5 (D-109, D-113; [Meals.md](Meals.md) §4.1, §4.2):** `RecipeDraft` moves to `fa-domain` (re-exported by `fa-recipe`); `fa-recipe` adds schema.org microdata (`origin: microdata`, tried after JSON-LD and before the LLM) and pasted-text input (straight to the LLM); `POST /recipes/import` replaces `POST /ai/recipes/extract`, which stays one milestone as an alias. A second LLM purpose, `ingredient`, proposes a catalogue match for ingredient lines the rules cannot match (`ingredient.llm` job in `fa-meals`); an adult confirms every proposal.
 
 ## 10. Eval (basic, D-028)
 - `fa-server eval --household <id> --decision-point <dp> [--with-llm] [--limit N] [--json]` runs over `message.in_eval_sample` messages.

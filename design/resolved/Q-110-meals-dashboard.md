@@ -1,12 +1,12 @@
 ---
 id: Q-110
 title: Meals and grocery on the dashboard
-status: open
+status: resolved
 batch: 24
 area: frontend
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-117]
 ---
 
 # Q-110: Meals and grocery on the dashboard

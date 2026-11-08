@@ -1,12 +1,12 @@
 ---
 id: Q-113
 title: "Recipe library: tags, search, favourites, notes"
-status: open
+status: resolved
 batch: 24
 area: frontend
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-109]
 ---
 
 # Q-113: Recipe library: tags, search, favourites, notes

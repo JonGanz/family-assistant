@@ -1,6 +1,6 @@
 ---
 title: Log Index
-updated: 2026-11-07
+updated: 2026-11-08
 ---
 
 # Daily Logs
@@ -19,3 +19,4 @@ updated: 2026-11-07
 - [2026-11-04](2026-11-04.md): plan; M4; ai; ui
 - [2026-11-05](2026-11-05.md): M4; wave-3; wave-4; ci
 - [2026-11-07](2026-11-07.md): M4; wave-5; decisions; themes
+- [2026-11-08](2026-11-08.md): decisions; M5; meals; arch

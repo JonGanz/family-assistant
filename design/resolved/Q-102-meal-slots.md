@@ -1,12 +1,12 @@
 ---
 id: Q-102
 title: "Meal slots: names, order and times"
-status: open
+status: resolved
 batch: 24
 area: domain
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-111]
 ---
 
 # Q-102: Meal slots: names, order and times

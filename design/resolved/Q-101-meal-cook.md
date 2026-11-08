@@ -1,12 +1,12 @@
 ---
 id: Q-101
 title: Name a cook per meal, and should it become a task
-status: open
+status: resolved
 batch: 24
 area: domain
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-110]
 ---
 
 # Q-101: Name a cook per meal, and should it become a task

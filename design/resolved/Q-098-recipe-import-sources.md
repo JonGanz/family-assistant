@@ -1,12 +1,12 @@
 ---
 id: Q-098
 title: "Recipe import: which ways in"
-status: open
+status: resolved
 batch: 24
 area: ingest
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-109]
 ---
 
 # Q-098: Recipe import: which ways in

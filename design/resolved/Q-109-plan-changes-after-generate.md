@@ -1,12 +1,12 @@
 ---
 id: Q-109
 title: When the plan changes after the list was generated
-status: open
+status: resolved
 batch: 24
 area: domain
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-116]
 ---
 
 # Q-109: When the plan changes after the list was generated

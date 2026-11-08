@@ -1,12 +1,12 @@
 ---
 id: Q-108
 title: "Grocery list order: aisles, stores"
-status: open
+status: resolved
 batch: 24
 area: frontend
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-115]
 ---
 
 # Q-108: Grocery list order: aisles, stores

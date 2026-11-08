@@ -1,6 +1,6 @@
 ---
 title: Design Questions Index
-updated: 2026-11-07
+updated: 2026-11-08
 ---
 
 # Design Questions
@@ -27,26 +27,12 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Batch 24, open
+## Batch 25, open
 | ID | Title | Area |
 |---|---|---|
-| [Q-098](Q-098-recipe-import-sources.md) | Recipe import: which ways in | ingest |
-| [Q-099](Q-099-recipe-images.md) | Recipe images: store a copy or link to the source | domain |
-| [Q-100](Q-100-meals-permissions.md) | Who can edit recipes, the meal plan and the grocery list | security |
-| [Q-101](Q-101-meal-cook.md) | Name a cook per meal, and should it become a task | domain |
-| [Q-102](Q-102-meal-slots.md) | Meal slots: names, order and times | domain |
-| [Q-103](Q-103-meal-plan-entries.md) | Meal-plan entries: free text, leftovers, repeating meals | domain |
-| [Q-104](Q-104-servings-scaling.md) | Servings: default and scaling on the list | domain |
-| [Q-105](Q-105-unit-conversion.md) | Units on the grocery list: what gets converted | domain |
-| [Q-106](Q-106-ingredient-catalogue-seed.md) | Ingredient catalogue: ship a seed or start empty | domain |
-| [Q-107](Q-107-unmatched-ingredients.md) | Ingredient lines the rules cannot match | ingest |
-| [Q-108](Q-108-grocery-sections.md) | Grocery list order: aisles, stores | frontend |
-| [Q-109](Q-109-plan-changes-after-generate.md) | When the plan changes after the list was generated | domain |
-| [Q-110](Q-110-meals-dashboard.md) | Meals and grocery on the dashboard | frontend |
-| [Q-111](Q-111-grocery-offline.md) | Shopping with poor signal | frontend |
-| [Q-112](Q-112-meal-reminders.md) | Meal reminders and notifications | domain |
-| [Q-113](Q-113-recipe-library.md) | Recipe library: tags, search, favourites, notes | frontend |
-| [Q-114](Q-114-m5-carry-overs.md) | M5 scope: food only, or also the M4 follow-ups | infra |
+| [Q-115](Q-115-entries-per-slot.md) | One meal per slot, or several | domain |
+| [Q-116](Q-116-aisle-order-per-store.md) | Aisle order: one for all stores, or per store | domain |
+| [Q-117](Q-117-template-from-plan.md) | Create a template from the plan | frontend |
 
 ## Resolved
 | ID | Title | Decisions |
@@ -148,3 +134,20 @@ decisions: []
 | [Q-095](resolved/Q-095-eval-threshold.md) | Which threshold the eval uses when the llm stage is off | D-104 |
 | [Q-096](resolved/Q-096-ai-settings-placement.md) | Where Settings → AI lives, and whether a new endpoint starts enabled | D-104 |
 | [Q-097](resolved/Q-097-ai-chip-details.md) | How the inbox shows AI-made items | D-104 |
+| [Q-098](resolved/Q-098-recipe-import-sources.md) | Recipe import: which ways in | D-109 |
+| [Q-099](resolved/Q-099-recipe-images.md) | Recipe images: store a copy or link to the source | D-109 |
+| [Q-100](resolved/Q-100-meals-permissions.md) | Who can edit recipes, the meal plan and the grocery list | D-110 |
+| [Q-101](resolved/Q-101-meal-cook.md) | Name a cook per meal, and should it become a task | D-110 |
+| [Q-102](resolved/Q-102-meal-slots.md) | Meal slots: names, order and times | D-111 |
+| [Q-103](resolved/Q-103-meal-plan-entries.md) | Meal-plan entries: free text, leftovers, repeating meals | D-112 |
+| [Q-104](resolved/Q-104-servings-scaling.md) | Servings: default and scaling on the list | D-113 |
+| [Q-105](resolved/Q-105-unit-conversion.md) | Units on the grocery list: what gets converted | D-113 |
+| [Q-106](resolved/Q-106-ingredient-catalogue-seed.md) | Ingredient catalogue: ship a seed or start empty | D-114 |
+| [Q-107](resolved/Q-107-unmatched-ingredients.md) | Ingredient lines the rules cannot match | D-113 |
+| [Q-108](resolved/Q-108-grocery-sections.md) | Grocery list order: aisles, stores | D-115 |
+| [Q-109](resolved/Q-109-plan-changes-after-generate.md) | When the plan changes after the list was generated | D-116 |
+| [Q-110](resolved/Q-110-meals-dashboard.md) | Meals and grocery on the dashboard | D-117 |
+| [Q-111](resolved/Q-111-grocery-offline.md) | Shopping with poor signal | D-118 |
+| [Q-112](resolved/Q-112-meal-reminders.md) | Meal reminders and notifications | D-119 |
+| [Q-113](resolved/Q-113-recipe-library.md) | Recipe library: tags, search, favourites, notes | D-109 |
+| [Q-114](resolved/Q-114-m5-carry-overs.md) | M5 scope: food only, or also the M4 follow-ups | D-119 |

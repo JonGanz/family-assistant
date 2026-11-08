@@ -1,12 +1,12 @@
 ---
 id: Q-107
 title: Ingredient lines the rules cannot match
-status: open
+status: resolved
 batch: 24
 area: ingest
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-113]
 ---
 
 # Q-107: Ingredient lines the rules cannot match

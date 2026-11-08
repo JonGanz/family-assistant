@@ -1,12 +1,12 @@
 ---
 id: Q-106
 title: "Ingredient catalogue: ship a seed or start empty"
-status: open
+status: resolved
 batch: 24
 area: domain
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-114]
 ---
 
 # Q-106: Ingredient catalogue: ship a seed or start empty

@@ -1,12 +1,12 @@
 ---
 id: Q-105
 title: "Units on the grocery list: what gets converted"
-status: open
+status: resolved
 batch: 24
 area: domain
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-113]
 ---
 
 # Q-105: Units on the grocery list: what gets converted

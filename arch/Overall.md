@@ -5,7 +5,7 @@ status: draft
 updated: 2026-11-07
 drawio: Overall.drawio
 drawio_src: src/Overall.py
-depends_on: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012, D-013, D-014, D-015, D-017, D-018, D-019, D-020, D-021, D-023, D-024, D-025, D-026, D-027, D-028, D-029, D-031, D-032, D-033, D-034, D-035, D-036, D-037, D-038, D-039, D-040, D-041, D-042, D-043, D-044, D-045, D-046, D-047, D-048, D-049, D-050, D-051, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-064, D-065, D-066, D-067, D-068, D-069, D-070, D-071, D-072, D-073, D-074, D-075, D-076, D-077, D-093, D-094, D-095, D-096, D-097, D-108]
+depends_on: [D-001, D-002, D-003, D-004, D-005, D-006, D-007, D-008, D-009, D-010, D-011, D-012, D-013, D-014, D-015, D-017, D-018, D-019, D-020, D-021, D-023, D-024, D-025, D-026, D-027, D-028, D-029, D-031, D-032, D-033, D-034, D-035, D-036, D-037, D-038, D-039, D-040, D-041, D-042, D-043, D-044, D-045, D-046, D-047, D-048, D-049, D-050, D-051, D-052, D-053, D-054, D-055, D-056, D-057, D-058, D-059, D-060, D-061, D-062, D-063, D-064, D-065, D-066, D-067, D-068, D-069, D-070, D-071, D-072, D-073, D-074, D-075, D-076, D-077, D-093, D-094, D-095, D-096, D-097, D-108, D-109, D-110, D-111, D-112, D-113, D-114, D-115, D-116, D-117, D-118, D-119]
 research: [R-001, R-004, R-005]
 ---
 
@@ -60,7 +60,7 @@ The final model choices come from `fa-eval` on the household's labelled sample (
 | `fa-calendar` | Dedupe, approval inbox, writes. Routing is the `event.calendar_route` pipeline (D-008, D-027) |
 | `fa-tasks` | Recurrence, fixed/rotation/pool strategies (smart later), completion policy, priority (urgency from the `task.urgency` pipeline) (D-013) |
 | `fa-weather` | Snapshots, `WeatherRule`s, S2 advisories and suggested rules (D-017) |
-| `fa-meals` | Recipes, meal plan, the living grocery list with the staples check (D-015, D-021) |
+| `fa-meals` (M5) | Recipes and import, the ingredient normaliser, meal plan and templates, the living grocery list with stores, aisles and the staples check (D-015, D-021, D-109 to D-118; [Meals.md](Meals.md)) |
 | `fa-gpu-node` (M4.1) | WoL and agent state for each GPU node (D-020) |
 | `fa-notify` | `Notifier` trait with an ntfy implementation (D-010) |
 | `fa-domain`, `fa-store` | Entities, DTOs (`ts-rs`), SQLx repositories, encrypted secrets |
@@ -109,10 +109,11 @@ Platform details (layout, security, deployment, backups) are in **[Platform.md](
 | M3 | Email ingest, **pipeline engine with the 'Rules only' preset**, bills, linking, approvals, **labelling view** | `Ingest.md` |
 | M3.5 | **Onboarding** (D-065): one compose file with an optional Tailscale sidecar, optional HTTPS, generated secrets, the first-run wizard, Settings, System. **Shakedown** (D-066): H-02..H-11 on the real server through the new install, a week of approval-inbox measurement, the M3 known gaps | `Platform.md` v4, `Frontend.md` v4 |
 | M4 | Two parallel tracks (D-097). **AI: LLM extraction slice** (D-093, D-094): a configurable OpenAI-compatible endpoint (default Ollama on the GPU node), the `llm` stage for the email decision points and extraction (`mail.llm`), the recipe-extraction contract for M5, basic eval, Settings → AI. **UI revamp** (D-095, D-096): a Material 3-style component library on the theme variables, Material Symbols, new navigation, one apply-changes model, every non-dashboard view migrated | `AI.md`, `Frontend.md` v5 |
-| M5 | Recipes, meal plan, grocery | `Meals.md` (draft, D-108: before M4.1) |
+| M5 | Recipes (URL, microdata, LLM and manual import; stored images; ratings), the ingredient catalogue and normaliser, meal slots, the meal plan and meal templates, the living grocery list grouped by store and aisle with the staples check, offline shopping, a Food view in the app and the kiosk (D-109 to D-119) | `Meals.md` v1 |
+| M4.2 | M4 follow-ups: G4-01 to G4-15 in IMPROVEMENTS.md, D-098 to D-102 and the code review 2 LARGER items (D-119) | updates to `Ingest.md`, `Tasks.md`, `AI.md` |
 | M4.1 | System One sidecar (CPU) and `fa-decide`, kNN and `embed`, backend registry and profile suggester, sysprobe, `fa-gpu-agent` (optional) with WoL, gaming yield and suspend, `s1-large`, full eval, **Pipeline and Backends settings**, S2 advisories, first member-interest feature (D-071) | `AI.md` update |
 | M6 | Smart assignment, learned calendar routing | updates |
 | M7 | Goals: count or quantity targets, weekly cadence with reset, progress bars (D-048, D-051) | `Goals.md` |
 | M8 | TUI (stretch) | updates |
 
-The M6 to M8 split is D-050; M3.5 is D-066; the M4/M4.1 split is D-094 (superseding D-067) and M4's two tracks are D-097; M5 before M4.1 is D-108.
+The M6 to M8 split is D-050; M3.5 is D-066; the M4/M4.1 split is D-094 (superseding D-067) and M4's two tracks are D-097; M5 before M4.1 is D-108; M4.2 is D-119.

@@ -1,12 +1,12 @@
 ---
 id: Q-104
 title: "Servings: default and scaling on the list"
-status: open
+status: resolved
 batch: 24
 area: domain
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-113]
 ---
 
 # Q-104: Servings: default and scaling on the list

@@ -70,7 +70,7 @@ Outstanding findings and suggestions from the 2026-10-26 repository review (full
 | P-16 ✅ done 2026-10-26 (M3.5) | Not run during the review: `scripts/ci-local.sh`, `scripts/e2e.sh`, `scripts/compose-smoke.sh`, the DB-backed Rust tests | Run before the next milestone starts | — |
 
 ## M4 known gaps and follow-ups (2026-11-07)
-Source: the *Outcome* of [plan/M4.md](plan/M4.md) and the T-NN outcomes in [plan/M4/](plan/M4/). Open until a milestone takes them.
+Source: the *Outcome* of [plan/M4.md](plan/M4.md) and the T-NN outcomes in [plan/M4/](plan/M4/). **D-119 (2026-11-08):** these, with D-098 to D-102 and the code review 2 LARGER items, form milestone M4.2 after M5.
 | ID | Area | Gap | Suggested fix | Size |
 |---|---|---|---|---|
 | G4-01 | AI, notify | When the LLM sets `email.time_sensitive` to true after `mail.process` has run, no notification is created (the rules' path is the only one that notifies) | The `mail.llm` job raises the same notification when the decision flips to true and none was sent | QUICK |
@@ -95,4 +95,4 @@ Source: the *Outcome* of [plan/M4.md](plan/M4.md) and the T-NN outcomes in [plan
 3. The M3.5 shakedown (R-01 to R-04, U-16).
 4. ~~The M4 plan picks up the deferred items~~ (done 2026-11-02, M3.7).
 5. The milestone after M4 picks up the LARGER findings of code review 2 (C2-02, C2-05, C2-08, C2-09, C2-15, C2-19, C2-21, C2-30). Q-078 to Q-082 were answered on 2026-11-07 (D-098 to D-102), and the arch docs describe the result.
-6. M4 known gaps G4-01 to G4-15 (above): QUICK ones as a follow-up wave or with the next milestone; G4-03 needs a question first.
+6. M4 known gaps G4-01 to G4-15 (above) and item 5: milestone M4.2 after M5 (D-119); G4-03 needs a question first.

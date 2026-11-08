@@ -1,12 +1,12 @@
 ---
 id: Q-103
 title: "Meal-plan entries: free text, leftovers, repeating meals"
-status: open
+status: resolved
 batch: 24
 area: domain
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-112]
 ---
 
 # Q-103: Meal-plan entries: free text, leftovers, repeating meals

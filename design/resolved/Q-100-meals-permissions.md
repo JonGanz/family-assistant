@@ -1,12 +1,12 @@
 ---
 id: Q-100
 title: Who can edit recipes, the meal plan and the grocery list
-status: open
+status: resolved
 batch: 24
 area: security
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-110]
 ---
 
 # Q-100: Who can edit recipes, the meal plan and the grocery list

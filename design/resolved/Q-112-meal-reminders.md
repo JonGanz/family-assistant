@@ -1,12 +1,12 @@
 ---
 id: Q-112
 title: Meal reminders and notifications
-status: open
+status: resolved
 batch: 24
 area: domain
 created: 2026-11-07
-resolved:
-decisions: []
+resolved: 2026-11-08
+decisions: [D-119]
 ---
 
 # Q-112: Meal reminders and notifications
