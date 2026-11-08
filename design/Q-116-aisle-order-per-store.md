@@ -25,4 +25,4 @@ Is the aisle order shared or per store?
 
 ## Answer
 <!-- answer below this line -->
-
+B

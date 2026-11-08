@@ -25,4 +25,4 @@ How are templates created?
 
 ## Answer
 <!-- answer below this line -->
-
+C.

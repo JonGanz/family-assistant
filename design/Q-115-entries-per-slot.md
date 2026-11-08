@@ -25,4 +25,4 @@ How many entries can one date and slot hold?
 
 ## Answer
 <!-- answer below this line -->
-
+Option B.
