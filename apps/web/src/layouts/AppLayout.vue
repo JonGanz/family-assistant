@@ -42,9 +42,9 @@ watch(
 )
 watch(bp, () => (navOpen.value = false))
 
-/** The drawer groups the destinations the way the old bar and More did. */
+/** The drawer groups the destinations the way the old bar and More did; Food shows its tabs as its own group (M5). */
 const drawerItems = computed(() =>
-  nav.value.all.map((d) => ({ ...d, group: d.primary ? '' : 'More' })),
+  nav.value.drawer.map((d) => ({ ...d, group: d.group ?? (d.primary ? '' : 'More') })),
 )
 
 function setCollapsed(v: boolean) {

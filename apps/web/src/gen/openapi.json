@@ -2395,6 +2395,571 @@
         ]
       }
     },
+    "/api/v1/grocery": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "get_grocery",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroceryView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/grocery/generate": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "From `entry_ids`, or from the plan between `from` and `to`. Running it twice adds nothing.",
+        "operationId": "generate_grocery",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GenerateResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/grocery/items": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "201 when created, 200 when the client-generated `id` already exists (offline replay).",
+        "operationId": "add_grocery_item",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroceryAddReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroceryItemView"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroceryItemView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/grocery/items/{id}": {
+      "put": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "put_grocery_item",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "item id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GroceryItemPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroceryItemView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "404 is expected when an offline replay deletes an item that is already gone.",
+        "operationId": "delete_grocery_item",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "item id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/grocery/items/{id}/check": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "check_grocery_item",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "item id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroceryItemView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/grocery/items/{id}/low": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Moves a staples-check item onto the list.",
+        "operationId": "low_grocery_item",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "item id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroceryItemView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/grocery/items/{id}/uncheck": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "uncheck_grocery_item",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "item id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GroceryItemView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/grocery/reconcile": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Recomputes the entries' contributions from the current plan.",
+        "operationId": "reconcile_grocery",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconcileReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReconcileResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/household": {
       "get": {
         "tags": [
@@ -2736,6 +3301,343 @@
           },
           "409": {
             "description": "the item is not awaiting a decision",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ingredients": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "list_ingredients",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Filters by trigram and alias.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IngredientView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "create_ingredient",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngredientInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ingredients/{id}": {
+      "put": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "put_ingredient",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ingredient id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngredientInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Lines and items lose the link.",
+        "operationId": "delete_ingredient",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ingredient id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/ingredients/{id}/merge": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "merge_ingredient",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ingredient id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IngredientMergeReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IngredientView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
             "content": {
               "application/json": {
                 "schema": {
@@ -3633,6 +4535,1620 @@
             }
           },
           "401": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/meal-plan": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "get_meal_plan",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "description": "`YYYY-MM-DD`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "`YYYY-MM-DD`, at most 62 days from `from`.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MealPlanEntryView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Appended to the slot. Several entries may share a slot.",
+        "operationId": "add_plan_entry",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MealPlanEntryInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanChangeResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/meal-plan/swap": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "`{a, b}` swaps two entries; `{a, date, slot_id}` moves `a` into an empty slot.",
+        "operationId": "swap_plan_entries",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwapReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanChangeResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/meal-plan/{id}": {
+      "put": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Moving to another date or slot appends there.",
+        "operationId": "put_plan_entry",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "plan entry id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MealPlanEntryPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanChangeResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "delete_plan_entry",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "plan entry id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanChangeResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/meal-templates": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "list_templates",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MealTemplateSummary"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "create_template",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MealTemplateInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealTemplateView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/meal-templates/from-plan": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "The range is at most 366 days.",
+        "operationId": "template_from_plan",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateFromPlanReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealTemplateView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/meal-templates/{id}": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "get_template",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "template id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealTemplateView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "put_template",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "template id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MealTemplateInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealTemplateView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "delete_template",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "template id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/meal-templates/{id}/apply": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Slots in `add_slots` keep their entries; every other target slot is replaced. The result\ncarries a `change_id` to undo.",
+        "operationId": "apply_template",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "template id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateApplyReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanChangeResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/meal-templates/{id}/duplicate": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "duplicate_template",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "template id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplateDuplicateReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealTemplateView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/meal-templates/{id}/preview": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "preview_template",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "template id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TemplatePreviewReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TemplatePreview"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/meals/aisles": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "get_meal_aisles",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AisleView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Replaces the list; \"Other\" is implicit.",
+        "operationId": "put_meal_aisles",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AisleView"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AisleView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/meals/changes/{id}/undo": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "An adult, or the member or device that made the change, within ten minutes.",
+        "operationId": "undo_meals_change",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "change id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "code `already_undone`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "code `expired`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/meals/settings": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "get_meals_settings",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealsSettingsView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Absent fields keep their value. The horizon (1 to 52 weeks) is stored on the household.",
+        "operationId": "put_meals_settings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MealsSettingsPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealsSettingsView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/meals/slots": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "get_meal_slots",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MealSlotView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Replaces the ordered list. A slot in use is removed with 409 `slot_in_use`.",
+        "operationId": "put_meal_slots",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/MealSlotView"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MealSlotView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "code `slot_in_use`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/meals/stores": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "get_meal_stores",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StoreView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Replaces the list; removing a store clears it from its items and ingredients.",
+        "operationId": "put_meal_stores",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/StoreView"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StoreView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/meals/stores/{id}/aisles": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "get_store_aisles",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "store id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StoreAisleView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Every aisle of the household, in this store's order, with `hidden`.",
+        "operationId": "put_store_aisles",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "store id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/StoreAisleView"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/StoreAisleView"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
             "description": "",
             "content": {
               "application/json": {
@@ -5940,6 +8456,913 @@
         ]
       }
     },
+    "/api/v1/recipes": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "list_recipes",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "description": "Title or ingredient search.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "tag",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "favourite",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "description": "The opaque `next_cursor` of the previous page.",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Page size, default 50, at most 200.",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipePage"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "`image_url` queues the `recipe.image` job.",
+        "operationId": "create_recipe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/recipes/import": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "`{url}` or `{text}` to an editable draft; nothing is stored.",
+        "operationId": "import_recipe",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeImportReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeDraft"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "codes `no_recipe`, `fetch_failed`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "code `llm_failed`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "code `llm_unavailable`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/recipes/tags": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "list_recipe_tags",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/recipes/{id}": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "get_recipe",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "recipe id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "The lines are replaced whole: unchanged `raw_text` lines keep their match.",
+        "operationId": "put_recipe",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "recipe id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "If-Match",
+            "in": "header",
+            "description": "record version",
+            "required": false,
+            "schema": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RecipeInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "428": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Plan entries keep the recipe title as free text.",
+        "operationId": "delete_recipe",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "recipe id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/recipes/{id}/favourite": {
+      "put": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "put_favourite",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "recipe id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FavouriteReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/recipes/{id}/image": {
+      "get": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "get_recipe_image",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "recipe id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "the image; ETag is its sha256",
+            "content": {
+              "image/*": {}
+            }
+          },
+          "304": {
+            "description": ""
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "post_recipe_image",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "recipe id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "raw image bytes (png, jpeg or webp), at most 5 MB; stored resized",
+          "content": {
+            "image/png": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "type": "integer",
+                  "format": "int32",
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "415": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "code `bad_image`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "meals"
+        ],
+        "operationId": "delete_recipe_image",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "recipe id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/recipes/{id}/lines/{line_id}/match": {
+      "post": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "Adds the line's `item` as an alias of the chosen ingredient.",
+        "operationId": "match_recipe_line",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "recipe id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "line_id",
+            "in": "path",
+            "description": "ingredient line id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LineMatchReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecipeLineView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/recipes/{id}/rating": {
+      "put": {
+        "tags": [
+          "meals"
+        ],
+        "summary": "A member rates for themself; devices cannot rate.",
+        "operationId": "put_rating",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "recipe id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RatingReq"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RatingsView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/routine-runs/{id}/steps/{step_id}": {
       "patch": {
         "tags": [
@@ -6673,7 +10096,7 @@
         "operationId": "stream",
         "responses": {
           "200": {
-            "description": "`heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `mail.updated` `{source?}`, `inbox.updated` `{}`, `bills.updated` `{}`, `resync`), bridged from `fa_change`; honours Last-Event-ID",
+            "description": "`heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `mail.updated` `{source?}`, `inbox.updated` `{}`, `bills.updated` `{}`, `mealplan.updated` `{}`, `grocery.updated` `{}`, `recipes.updated` `{}`, `resync`), bridged from `fa_change`; honours Last-Event-ID",
             "content": {
               "text/event-stream": {}
             }
@@ -9099,6 +12522,37 @@
           }
         }
       },
+      "AisleId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "AisleView": {
+        "type": "object",
+        "required": [
+          "name",
+          "ord"
+        ],
+        "properties": {
+          "id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AisleId"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "ord": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
       "AllMarker": {
         "type": "string",
         "enum": [
@@ -9139,6 +12593,14 @@
             "type": "boolean"
           }
         }
+      },
+      "BaseUnit": {
+        "type": "string",
+        "enum": [
+          "g",
+          "ml",
+          "count"
+        ]
       },
       "BillId": {
         "type": "string",
@@ -9948,6 +13410,36 @@
           }
         }
       },
+      "DashboardMeal": {
+        "type": "object",
+        "description": "One planned meal on the dashboard; `time` is local `\"HH:MM\"`.",
+        "required": [
+          "slot_name",
+          "time",
+          "title"
+        ],
+        "properties": {
+          "recipe_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RecipeId"
+              }
+            ]
+          },
+          "slot_name": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
       "DashboardSettings": {
         "type": "object",
         "required": [
@@ -9961,6 +13453,10 @@
             "type": "integer",
             "format": "int32",
             "minimum": 0
+          },
+          "food_view": {
+            "type": "boolean",
+            "description": "Shows the Food view (meal plan and shopping list) on this device (D-117)."
           },
           "members": {
             "$ref": "#/components/schemas/MemberSelection"
@@ -10009,6 +13505,13 @@
           },
           "household": {
             "$ref": "#/components/schemas/DashboardHousehold"
+          },
+          "meals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardMeal"
+            },
+            "description": "Today's visible meal slots with their planned entries; empty when nothing is planned."
           },
           "members": {
             "type": "array",
@@ -10822,6 +14325,17 @@
           "llm"
         ]
       },
+      "FavouriteReq": {
+        "type": "object",
+        "required": [
+          "favourite"
+        ],
+        "properties": {
+          "favourite": {
+            "type": "boolean"
+          }
+        }
+      },
       "Gender": {
         "type": "string",
         "enum": [
@@ -10848,6 +14362,338 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          }
+        }
+      },
+      "GenerateReq": {
+        "type": "object",
+        "description": "A range (`from`..`to`, `YYYY-MM-DD`) or picked entries.",
+        "properties": {
+          "entry_ids": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/MealPlanEntryId"
+            }
+          },
+          "from": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "to": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "GenerateResult": {
+        "type": "object",
+        "required": [
+          "change_id",
+          "added",
+          "merged",
+          "staples"
+        ],
+        "properties": {
+          "added": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "change_id": {
+            "$ref": "#/components/schemas/MealsChangeId"
+          },
+          "merged": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "staples": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "GroceryAddReq": {
+        "type": "object",
+        "description": "`id` may be client-generated so a replayed offline add is idempotent (D-118).",
+        "required": [
+          "text"
+        ],
+        "properties": {
+          "id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GroceryItemId"
+              }
+            ]
+          },
+          "qty": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "store_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GroceryStoreId"
+              }
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "GroceryImpact": {
+        "type": "object",
+        "description": "A generated grocery item that a plan change touches.",
+        "required": [
+          "item_id",
+          "entry_id",
+          "text",
+          "remove"
+        ],
+        "properties": {
+          "entry_id": {
+            "$ref": "#/components/schemas/MealPlanEntryId"
+          },
+          "from_qty": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "item_id": {
+            "$ref": "#/components/schemas/GroceryItemId"
+          },
+          "remove": {
+            "type": "boolean"
+          },
+          "text": {
+            "type": "string"
+          },
+          "to_qty": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "GroceryItemId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "GroceryItemPatch": {
+        "type": "object",
+        "properties": {
+          "qty": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "store_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GroceryStoreId"
+              }
+            ]
+          },
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "GroceryItemView": {
+        "type": "object",
+        "description": "`display` is the quantity text in household units, e.g. `\"2 ½ cups\"`, `\"750 g\"`, `\"3\"`.",
+        "required": [
+          "id",
+          "text",
+          "display",
+          "section",
+          "manual",
+          "sources",
+          "version"
+        ],
+        "properties": {
+          "aisle_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AisleId"
+              }
+            ]
+          },
+          "checked_at": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "display": {
+            "type": "string"
+          },
+          "id": {
+            "$ref": "#/components/schemas/GroceryItemId"
+          },
+          "ingredient_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/IngredientId"
+              }
+            ]
+          },
+          "manual": {
+            "type": "boolean"
+          },
+          "qty": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "qty2": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "section": {
+            "$ref": "#/components/schemas/GrocerySection"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceHint"
+            }
+          },
+          "store_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GroceryStoreId"
+              }
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "unit2": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "GrocerySection": {
+        "type": "string",
+        "enum": [
+          "list",
+          "staples"
+        ]
+      },
+      "GroceryStoreId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "GroceryView": {
+        "type": "object",
+        "required": [
+          "stores",
+          "aisles",
+          "items",
+          "staples"
+        ],
+        "properties": {
+          "aisles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AisleView"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroceryItemView"
+            }
+          },
+          "staples": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StapleView"
+            }
+          },
+          "stores": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StoreView"
             }
           }
         }
@@ -11302,6 +15148,15 @@
           }
         }
       },
+      "ImportMethod": {
+        "type": "string",
+        "enum": [
+          "jsonld",
+          "microdata",
+          "llm",
+          "manual"
+        ]
+      },
       "InboxCounts": {
         "type": "object",
         "required": [
@@ -11467,6 +15322,176 @@
           }
         }
       },
+      "IngredientId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "IngredientInput": {
+        "type": "object",
+        "required": [
+          "canonical_name",
+          "aliases",
+          "is_staple"
+        ],
+        "properties": {
+          "aisle_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AisleId"
+              }
+            ]
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "canonical_name": {
+            "type": "string"
+          },
+          "default_store_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GroceryStoreId"
+              }
+            ]
+          },
+          "default_unit": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BaseUnit"
+              }
+            ]
+          },
+          "is_staple": {
+            "type": "boolean"
+          }
+        }
+      },
+      "IngredientMergeReq": {
+        "type": "object",
+        "required": [
+          "into"
+        ],
+        "properties": {
+          "into": {
+            "$ref": "#/components/schemas/IngredientId"
+          }
+        }
+      },
+      "IngredientOrigin": {
+        "type": "string",
+        "enum": [
+          "seed",
+          "user",
+          "llm"
+        ]
+      },
+      "IngredientProposal": {
+        "type": "object",
+        "description": "An LLM proposal for an unmatched line. An adult accepts it or picks another match.",
+        "required": [
+          "confidence"
+        ],
+        "properties": {
+          "aisle": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "confidence": {
+            "type": "number",
+            "format": "float"
+          },
+          "ingredient_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/IngredientId"
+              }
+            ]
+          },
+          "new_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "IngredientView": {
+        "type": "object",
+        "required": [
+          "id",
+          "canonical_name",
+          "aliases",
+          "is_staple",
+          "origin"
+        ],
+        "properties": {
+          "aisle_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AisleId"
+              }
+            ]
+          },
+          "aliases": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "canonical_name": {
+            "type": "string"
+          },
+          "default_store_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GroceryStoreId"
+              }
+            ]
+          },
+          "default_unit": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BaseUnit"
+              }
+            ]
+          },
+          "id": {
+            "$ref": "#/components/schemas/IngredientId"
+          },
+          "is_staple": {
+            "type": "boolean"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/IngredientOrigin"
+          }
+        }
+      },
       "LabelInput": {
         "type": "object",
         "required": [
@@ -11494,6 +15519,38 @@
           },
           "progress": {
             "$ref": "#/components/schemas/EvalProgress"
+          }
+        }
+      },
+      "LineMatchReq": {
+        "type": "object",
+        "description": "Pick an existing ingredient, or create `new_name` (in `aisle_id`).",
+        "properties": {
+          "aisle_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AisleId"
+              }
+            ]
+          },
+          "ingredient_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/IngredientId"
+              }
+            ]
+          },
+          "new_name": {
+            "type": [
+              "string",
+              "null"
+            ]
           }
         }
       },
@@ -12359,6 +16416,14 @@
           }
         }
       },
+      "MatchState": {
+        "type": "string",
+        "enum": [
+          "matched",
+          "unmatched",
+          "proposed"
+        ]
+      },
       "MeResponse": {
         "type": "object",
         "required": [
@@ -12376,6 +16441,385 @@
           "must_change_password": {
             "type": "boolean",
             "description": "True while the signed-in account still has the password another adult set."
+          }
+        }
+      },
+      "MealPlanEntryId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "MealPlanEntryInput": {
+        "type": "object",
+        "description": "Either `recipe_id` or `free_text`. The entry is appended to the slot.",
+        "required": [
+          "date",
+          "slot_id"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "free_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "recipe_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RecipeId"
+              }
+            ]
+          },
+          "servings": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "slot_id": {
+            "$ref": "#/components/schemas/MealSlotId"
+          }
+        }
+      },
+      "MealPlanEntryPatch": {
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "free_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "recipe_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RecipeId"
+              }
+            ]
+          },
+          "servings": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "slot_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MealSlotId"
+              }
+            ]
+          }
+        }
+      },
+      "MealPlanEntryView": {
+        "type": "object",
+        "description": "`date` is `YYYY-MM-DD`. `title` is the recipe title, or the free text.",
+        "required": [
+          "id",
+          "date",
+          "slot_id",
+          "ord",
+          "title",
+          "version"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "free_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "$ref": "#/components/schemas/MealPlanEntryId"
+          },
+          "ord": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "recipe_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RecipeId"
+              }
+            ]
+          },
+          "servings": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "slot_id": {
+            "$ref": "#/components/schemas/MealSlotId"
+          },
+          "title": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "MealSlotId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "MealSlotView": {
+        "type": "object",
+        "description": "`time` is local `\"HH:MM\"`. `id` absent on a new slot in `PUT /meals/slots`.",
+        "required": [
+          "name",
+          "time",
+          "visible",
+          "ord"
+        ],
+        "properties": {
+          "id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MealSlotId"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "ord": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "time": {
+            "type": "string"
+          },
+          "visible": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MealTemplateId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "MealTemplateInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "days",
+          "cells"
+        ],
+        "properties": {
+          "cells": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateCellInput"
+            }
+          },
+          "days": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "name": {
+            "type": "string"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "MealTemplateSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "days",
+          "slot_ids",
+          "version"
+        ],
+        "properties": {
+          "days": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "id": {
+            "$ref": "#/components/schemas/MealTemplateId"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slot_ids": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MealSlotId"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "MealTemplateView": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "days",
+          "cells",
+          "version"
+        ],
+        "properties": {
+          "cells": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateCellView"
+            }
+          },
+          "days": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "id": {
+            "$ref": "#/components/schemas/MealTemplateId"
+          },
+          "name": {
+            "type": "string"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "MealsChangeId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "MealsSettingsPatch": {
+        "type": "object",
+        "description": "Every field optional; absent keeps the stored value.",
+        "properties": {
+          "descriptors": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "grocery_archive_hours": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "ingredient_llm": {
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "meal_plan_horizon_weeks": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "trigram_threshold": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          }
+        }
+      },
+      "MealsSettingsView": {
+        "type": "object",
+        "required": [
+          "grocery_archive_hours",
+          "ingredient_llm",
+          "trigram_threshold",
+          "descriptors",
+          "meal_plan_horizon_weeks"
+        ],
+        "properties": {
+          "descriptors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "grocery_archive_hours": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "ingredient_llm": {
+            "type": "boolean"
+          },
+          "meal_plan_horizon_weeks": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "trigram_threshold": {
+            "type": "number",
+            "format": "float"
           }
         }
       },
@@ -12573,6 +17017,23 @@
           },
           "role": {
             "$ref": "#/components/schemas/Role"
+          }
+        }
+      },
+      "MemberRating": {
+        "type": "object",
+        "required": [
+          "member_id",
+          "stars"
+        ],
+        "properties": {
+          "member_id": {
+            "$ref": "#/components/schemas/MemberId"
+          },
+          "stars": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
           }
         }
       },
@@ -14009,6 +18470,37 @@
           }
         }
       },
+      "PlanChangeResult": {
+        "type": "object",
+        "required": [
+          "entries",
+          "grocery_impact"
+        ],
+        "properties": {
+          "change_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MealsChangeId"
+              }
+            ]
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MealPlanEntryView"
+            }
+          },
+          "grocery_impact": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/GroceryImpact"
+            }
+          }
+        }
+      },
       "PriorityFlag": {
         "type": "string",
         "enum": [
@@ -14108,6 +18600,49 @@
           "running": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "RatingReq": {
+        "type": "object",
+        "properties": {
+          "stars": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "description": "1 to 5, or null to remove the rating.",
+            "minimum": 0
+          }
+        }
+      },
+      "RatingsView": {
+        "type": "object",
+        "required": [
+          "by_member"
+        ],
+        "properties": {
+          "avg": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "by_member": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberRating"
+            }
+          },
+          "mine": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
           }
         }
       },
@@ -14216,6 +18751,28 @@
           }
         }
       },
+      "RecipeId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "RecipeImportReq": {
+        "type": "object",
+        "description": "`url` or `text`.",
+        "properties": {
+          "text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "RecipeIngredient": {
         "type": "object",
         "required": [
@@ -14247,12 +18804,404 @@
           }
         }
       },
+      "RecipeInput": {
+        "type": "object",
+        "description": "Create and update body. `lines` are the raw ingredient lines; `steps` are the step texts.",
+        "required": [
+          "title",
+          "import_method",
+          "tags",
+          "lines",
+          "steps"
+        ],
+        "properties": {
+          "cook_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "image_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "import_method": {
+            "$ref": "#/components/schemas/ImportMethod"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "prep_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "servings": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "source_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "title": {
+            "type": "string"
+          },
+          "total_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "yield_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "RecipeLineId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "RecipeLineView": {
+        "type": "object",
+        "required": [
+          "id",
+          "ord",
+          "raw_text",
+          "match_state"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/RecipeLineId"
+          },
+          "ingredient_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/IngredientId"
+              }
+            ]
+          },
+          "ingredient_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "item": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "match_state": {
+            "$ref": "#/components/schemas/MatchState"
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ord": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "proposal": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/IngredientProposal"
+              }
+            ]
+          },
+          "qty": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "double"
+          },
+          "raw_text": {
+            "type": "string"
+          },
+          "unit": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "RecipeOrigin": {
         "type": "string",
         "enum": [
           "jsonld",
+          "microdata",
           "llm"
         ]
+      },
+      "RecipePage": {
+        "type": "object",
+        "description": "One page of `GET /recipes`; `next_cursor` is opaque.",
+        "required": [
+          "items"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipeSummary"
+            }
+          },
+          "next_cursor": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "RecipeSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "has_image",
+          "tags",
+          "favourite"
+        ],
+        "properties": {
+          "favourite": {
+            "type": "boolean"
+          },
+          "has_image": {
+            "type": "boolean"
+          },
+          "id": {
+            "$ref": "#/components/schemas/RecipeId"
+          },
+          "last_planned": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "my_rating": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "rating_avg": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float"
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "title": {
+            "type": "string"
+          },
+          "total_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "RecipeView": {
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "import_method",
+          "tags",
+          "favourite",
+          "has_image",
+          "lines",
+          "steps",
+          "ratings",
+          "version"
+        ],
+        "properties": {
+          "cook_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "favourite": {
+            "type": "boolean"
+          },
+          "has_image": {
+            "type": "boolean"
+          },
+          "id": {
+            "$ref": "#/components/schemas/RecipeId"
+          },
+          "import_method": {
+            "$ref": "#/components/schemas/ImportMethod"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipeLineView"
+            }
+          },
+          "note": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "prep_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "ratings": {
+            "$ref": "#/components/schemas/RatingsView"
+          },
+          "servings": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "source_url": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "tags": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "title": {
+            "type": "string"
+          },
+          "total_minutes": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "yield_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "ReconcileReq": {
+        "type": "object",
+        "required": [
+          "entry_ids"
+        ],
+        "properties": {
+          "entry_ids": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MealPlanEntryId"
+            }
+          }
+        }
+      },
+      "ReconcileResult": {
+        "type": "object",
+        "required": [
+          "change_id",
+          "changed"
+        ],
+        "properties": {
+          "change_id": {
+            "$ref": "#/components/schemas/MealsChangeId"
+          },
+          "changed": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
       },
       "Relevance": {
         "type": "string",
@@ -15132,6 +20081,22 @@
           }
         }
       },
+      "SlotRef": {
+        "type": "object",
+        "required": [
+          "date",
+          "slot_id"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "slot_id": {
+            "$ref": "#/components/schemas/MealSlotId"
+          }
+        }
+      },
       "SourceCreated": {
         "type": "object",
         "description": "Source plus its discovered calendars (POST /calendar-sources).",
@@ -15172,6 +20137,27 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "SourceHint": {
+        "type": "object",
+        "description": "One place an item came from, for the \"for Tue dinner\" hint.",
+        "required": [
+          "entry_id",
+          "date",
+          "slot_name"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "entry_id": {
+            "$ref": "#/components/schemas/MealPlanEntryId"
+          },
+          "slot_name": {
+            "type": "string"
           }
         }
       },
@@ -15433,6 +20419,32 @@
           "llm"
         ]
       },
+      "StapleView": {
+        "type": "object",
+        "required": [
+          "item_id",
+          "ingredient_id",
+          "name",
+          "needed_for"
+        ],
+        "properties": {
+          "ingredient_id": {
+            "$ref": "#/components/schemas/IngredientId"
+          },
+          "item_id": {
+            "$ref": "#/components/schemas/GroceryItemId"
+          },
+          "name": {
+            "type": "string"
+          },
+          "needed_for": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SourceHint"
+            }
+          }
+        }
+      },
       "StatusParam": {
         "type": "string",
         "enum": [
@@ -15490,6 +20502,55 @@
           }
         }
       },
+      "StoreAisleView": {
+        "type": "object",
+        "description": "One aisle in a store's own order (D-121).",
+        "required": [
+          "aisle_id",
+          "ord",
+          "hidden"
+        ],
+        "properties": {
+          "aisle_id": {
+            "$ref": "#/components/schemas/AisleId"
+          },
+          "hidden": {
+            "type": "boolean"
+          },
+          "ord": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "StoreView": {
+        "type": "object",
+        "required": [
+          "name",
+          "ord"
+        ],
+        "properties": {
+          "id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/GroceryStoreId"
+              }
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "ord": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
       "Strategy": {
         "type": "string",
         "enum": [
@@ -15505,6 +20566,44 @@
           "s2",
           "user"
         ]
+      },
+      "SwapReq": {
+        "type": "object",
+        "description": "Swap `a` with `b`, or move `a` into the (empty) slot `date` + `slot_id`.",
+        "required": [
+          "a"
+        ],
+        "properties": {
+          "a": {
+            "$ref": "#/components/schemas/MealPlanEntryId"
+          },
+          "b": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MealPlanEntryId"
+              }
+            ]
+          },
+          "date": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "slot_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MealSlotId"
+              }
+            ]
+          }
+        }
       },
       "SystemSettingsPatch": {
         "type": "object",
@@ -16470,6 +21569,224 @@
               "null"
             ],
             "format": "date-time"
+          }
+        }
+      },
+      "TemplateApplyReq": {
+        "type": "object",
+        "description": "Slots in `add_slots` keep their entries and get the items appended; every other target slot is replaced.",
+        "required": [
+          "start",
+          "add_slots"
+        ],
+        "properties": {
+          "add_slots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SlotRef"
+            }
+          },
+          "start": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "TemplateCellInput": {
+        "type": "object",
+        "required": [
+          "day",
+          "slot_id",
+          "ord"
+        ],
+        "properties": {
+          "day": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "free_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ord": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "recipe_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RecipeId"
+              }
+            ]
+          },
+          "servings": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "slot_id": {
+            "$ref": "#/components/schemas/MealSlotId"
+          }
+        }
+      },
+      "TemplateCellView": {
+        "type": "object",
+        "required": [
+          "day",
+          "slot_id",
+          "title"
+        ],
+        "properties": {
+          "day": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "free_text": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "recipe_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RecipeId"
+              }
+            ]
+          },
+          "servings": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
+          "slot_id": {
+            "$ref": "#/components/schemas/MealSlotId"
+          },
+          "title": {
+            "type": "string"
+          }
+        }
+      },
+      "TemplateDuplicateReq": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "TemplateFromPlanReq": {
+        "type": "object",
+        "description": "Save a template from a plan range; `from` and `to` are `YYYY-MM-DD`, at most 366 days.",
+        "required": [
+          "name",
+          "from",
+          "to",
+          "slot_ids"
+        ],
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slot_ids": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MealSlotId"
+            }
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "TemplatePreview": {
+        "type": "object",
+        "required": [
+          "targets"
+        ],
+        "properties": {
+          "targets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateTarget"
+            }
+          }
+        }
+      },
+      "TemplatePreviewReq": {
+        "type": "object",
+        "required": [
+          "start"
+        ],
+        "properties": {
+          "start": {
+            "type": "string",
+            "format": "date"
+          }
+        }
+      },
+      "TemplateTarget": {
+        "type": "object",
+        "required": [
+          "day",
+          "date",
+          "slot_id",
+          "slot_visible",
+          "items",
+          "existing"
+        ],
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "day": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "existing": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MealPlanEntryView"
+            }
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TemplateCellView"
+            }
+          },
+          "slot_id": {
+            "$ref": "#/components/schemas/MealSlotId"
+          },
+          "slot_visible": {
+            "type": "boolean"
           }
         }
       },

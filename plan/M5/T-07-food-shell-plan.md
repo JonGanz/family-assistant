@@ -5,7 +5,7 @@ milestone: M5
 wave: 4
 depends_on: [T-06]
 agent: {model: sonnet, effort: high}
-status: todo
+status: done
 owns: ["apps/web/src/app/navigation.ts", "apps/web/src/stores/live.ts", "apps/web/src/stores/mealPlan.ts", "apps/web/src/views/food/MealPlanView.vue", "apps/web/src/views/food/TemplatesView.vue", "apps/web/src/views/food/TemplateEditView.vue", "apps/web/src/components/food/FoodTabs.vue", "apps/web/src/components/food/plan/**", "apps/web/src/views/food/plan.test.ts"]
 decisions: [D-112, D-116, D-117, D-111, D-110, D-120, D-122, D-096, D-105]
 ---
@@ -23,6 +23,9 @@ You are a sub-agent implementing one task of milestone M5 of the Family Assistan
   - `stores/lists.ts`, `stores/live.ts`, `app/navigation.ts`;
   - `views/CalendarView.vue` (today's inverted marker, week rows);
   - `ui/composables/useInstantSave.ts` and `useFormDraft.ts`, `ui/UiSheet`, `UiFilterChips`, `UiSegmented`.
+
+## Note from the scaffold
+`api/food.ts` exports `food` (app) and `foodKiosk` (device token). T-11 reuses your shared component on the kiosk, so give it an optional `api?: FoodApi` prop (default `food`), and make your store accept it too, or take it from the component.
 
 ## You own
 The paths in `owns`. The main session's scaffold already holds `api/food.ts`, every route (`router/index.ts`), stub views and stores, and the icon keys (`ui/icons.ts`); those three files are frozen: report anything missing. Replace the `FoodTabs.vue` stub **first**, since T-08 to T-10 use it (props: none; it reads the route and the role).
@@ -62,3 +65,23 @@ The paths in `owns`. The main session's scaffold already holds `api/food.ts`, ev
   - the shared names created (live kinds, `FoodTabs`, `MealPlanGrid` props);
   - "list what outside your paths needs changing";
   - README changes needed: none.
+
+## Outcome (T-07 report, 2026-11-08)
+- **Built:**
+  - `FoodTabs.vue`, the Food destination and `FOOD_ENTRIES` / `NavModel.drawer` in `app/navigation.ts`;
+  - `stores/live.ts` (the three kinds, dispatched to the plan, grocery, recipes and meals-settings stores);
+  - `stores/mealPlan.ts` (chunked ranges, impact, generate, templates);
+  - `components/food/plan/` (`MealPlanGrid`, `EntrySheet`, `ContentPicker`, `ImpactDialog`, `ApplyTemplateSheet`, `MakeListSheet`, `SaveAsTemplateSheet`, `planModel.ts`);
+  - `MealPlanView`, `TemplatesView` and `TemplateEditView`;
+  - `plan.test.ts` (10 tests);
+  - `app/navigation.test.ts` updated, outside its owns at the main session's request.
+- **Results** (reported): lint 0 errors, typecheck ok, 651 tests in 71 files, build ok before a final prop-default tweak.
+- **Deviations:**
+  - past weeks come through a "Show earlier weeks" button;
+  - "Move to…" is the date and slot fields in the edit sheet;
+  - delete's Undo re-adds the entry, at the end of its slot (the server returns no `change_id` for a delete);
+  - add has no Undo;
+  - it used `data-testid`.
+- **Main session at integration:**
+  - `AppLayout.vue` now builds the drawer from `nav.drawer`, so the Food group lists its tabs;
+  - every Food file was normalised from `data-test` to `data-testid`.

@@ -5,7 +5,7 @@ milestone: M5
 wave: 4
 depends_on: [T-06]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/stores/mealsSettings.ts", "apps/web/src/views/SettingsMealsView.vue", "apps/web/src/views/parts/meals/**", "apps/web/src/views/settingsNav.ts", "apps/web/src/views/HomeView.vue", "apps/web/src/components/food/TodayMeals.vue", "apps/web/src/views/settingsMeals.test.ts"]
 decisions: [D-111, D-114, D-115, D-121, D-021, D-015, D-113, D-117, D-096]
 ---
@@ -52,3 +52,14 @@ The paths in `owns`. The scaffold (main session) already has the `/settings/meal
 ## Acceptance
 - [ ] In `apps/web`: `lint`, `typecheck`, `test` and `build` pass, then `format`.
 - [ ] The report lists the exact store API (T-07, T-08 and T-11 use it), "list what outside your paths needs changing", and README changes needed: none.
+
+## Outcome (T-10 report, 2026-11-08)
+- **Built:**
+  - `stores/mealsSettings.ts` (the real store; scaffold names kept; adds `storeAisles`, `saveStoreAisles` and `isSlotTime`);
+  - `views/settingsNav.ts` (Meals entry);
+  - `SettingsMealsView.vue` with cards in `views/parts/meals/`: Slots, Stores (with a per-store aisle-order sheet), Aisles, Ingredients (staple switch with Undo, aliases, merge), Matching;
+  - `components/food/TodayMeals.vue` on `HomeView.vue`;
+  - `views/settingsMeals.test.ts` (its own tests pass).
+- **Notes:**
+  - the `live.ts` dispatch to `useMealsSettingsStore().invalidate` was passed to T-07;
+  - `TodayMeals` loads the whole settings store, including the catalogue, to get the slots (acceptable; a later trim could fetch only `/meals/slots`).

@@ -4,7 +4,7 @@ use utoipa::{Modify, OpenApi};
 use crate::error::Problem;
 use crate::feeds;
 use crate::routes::{self, *};
-use crate::{ai, mail, notify, tasks};
+use crate::{ai, mail, meals, notify, tasks};
 use fa_domain::system_api::*;
 use fa_domain::*;
 
@@ -75,12 +75,15 @@ impl Modify for Security {
         ai::get_endpoint, ai::put_endpoint, ai::test_endpoint, ai::list_models,
         ai::get_settings, ai::put_settings, ai::get_pipeline, ai::put_pipeline,
         ai::get_stats, ai::get_backlog, ai::extract_recipe,
+        meals::list_recipes, meals::list_recipe_tags, meals::create_recipe, meals::get_recipe, meals::put_recipe, meals::delete_recipe, meals::put_favourite, meals::put_rating, meals::get_recipe_image, meals::post_recipe_image, meals::delete_recipe_image, meals::import_recipe, meals::match_recipe_line, meals::list_ingredients, meals::create_ingredient, meals::put_ingredient, meals::delete_ingredient, meals::merge_ingredient, meals::get_meals_settings, meals::put_meals_settings, meals::get_meal_slots, meals::put_meal_slots, meals::get_meal_aisles, meals::put_meal_aisles, meals::get_meal_stores, meals::put_meal_stores, meals::get_store_aisles, meals::put_store_aisles, meals::get_meal_plan, meals::add_plan_entry, meals::put_plan_entry, meals::delete_plan_entry, meals::swap_plan_entries, meals::list_templates, meals::create_template, meals::get_template, meals::put_template, meals::delete_template, meals::preview_template, meals::template_from_plan, meals::duplicate_template, meals::apply_template, meals::get_grocery, meals::add_grocery_item, meals::check_grocery_item, meals::uncheck_grocery_item, meals::low_grocery_item, meals::put_grocery_item, meals::delete_grocery_item, meals::generate_grocery, meals::reconcile_grocery, meals::undo_meals_change,
     ),
     components(schemas(
         crate::tasks::ViewParam, crate::tasks::StatusParam,
         EventApproval, TaskApproval, ContactApproval, BillPatch, BillPatchStatus, InboxItem,
         crate::feeds::PurposeParam, crate::feeds::SourceViewExt, crate::feeds::SourcePatchExt,
         crate::feeds::CalendarViewExt, crate::feeds::CalendarPatchExt,
+        RecipeSummary, RecipePage, RecipeView, RecipeLineView, IngredientProposal, RecipeInput, MemberRating, RatingsView, RecipeImportReq, LineMatchReq, IngredientView, IngredientInput, IngredientMergeReq, MealsSettingsView, MealsSettingsPatch, MealSlotView, AisleView, StoreView, StoreAisleView, MealPlanEntryView, MealPlanEntryInput, MealPlanEntryPatch, SwapReq, GroceryImpact, PlanChangeResult, MealTemplateSummary, TemplateCellView, MealTemplateView, TemplateCellInput, MealTemplateInput, TemplateFromPlanReq, TemplateDuplicateReq, TemplatePreviewReq, SlotRef, TemplateApplyReq, TemplateTarget, TemplatePreview, SourceHint, GroceryItemView, StapleView, GroceryView, GroceryAddReq, GroceryItemPatch, GenerateReq, GenerateResult, ReconcileReq, ReconcileResult, DashboardMeal,
+        meals::FavouriteReq, meals::RatingReq,
         Problem, MemberView, MemberPublic, MemberFull, DashboardSettings,
         LoginReq, LoginResp, MeResponse, ActorView, CreateMemberReq, PatchMemberReq,
         CreateAccountReq, PasswordReq, PinReq, PairDeviceReq, PairDeviceResp, ElevateReq,

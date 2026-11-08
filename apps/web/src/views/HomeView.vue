@@ -2,6 +2,7 @@
 import { computed, onMounted, watch } from 'vue'
 import type { TaskView } from '../api/client'
 import { addDays, dayKey } from '../lib/time'
+import TodayMeals from '../components/food/TodayMeals.vue'
 import { useCalendarStore } from '../stores/calendar'
 import { useHouseholdStore } from '../stores/household'
 import { useMembersStore } from '../stores/members'
@@ -130,6 +131,8 @@ watch(
         </UiList>
       </UiCard>
     </UiSection>
+
+    <TodayMeals />
 
     <UiErrorState v-if="calendar.error" :message="calendar.error" @retry="loadRange" />
     <UiSkeleton v-else-if="loadingEvents" :lines="4" />

@@ -64,6 +64,69 @@ export const routes: RouteRecordRaw[] = [
   { path: '/inbox', name: 'inbox', component: () => import('../views/InboxView.vue'), meta: adult },
   { path: '/bills', name: 'bills', component: () => import('../views/BillsView.vue'), meta: adult },
   {
+    path: '/food',
+    name: 'food',
+    redirect: () => {
+      let tab: string | null
+      try {
+        tab = localStorage.getItem('fa.food.tab')
+      } catch {
+        tab = null
+      }
+      const tabs = ['plan', 'list', 'recipes', 'templates']
+      return `/food/${tab && tabs.includes(tab) ? tab : 'plan'}`
+    },
+    meta: user,
+  },
+  {
+    path: '/food/plan',
+    name: 'food-plan',
+    component: () => import('../views/food/MealPlanView.vue'),
+    meta: user,
+  },
+  {
+    path: '/food/list',
+    name: 'food-list',
+    component: () => import('../views/food/ShoppingListView.vue'),
+    meta: user,
+  },
+  {
+    path: '/food/recipes',
+    name: 'food-recipes',
+    component: () => import('../views/food/RecipesView.vue'),
+    meta: user,
+  },
+  {
+    path: '/food/recipes/new',
+    name: 'food-recipe-new',
+    component: () => import('../views/food/RecipeEditView.vue'),
+    meta: adult,
+  },
+  {
+    path: '/food/recipes/:id',
+    name: 'food-recipe',
+    component: () => import('../views/food/RecipeView.vue'),
+    meta: user,
+  },
+  {
+    path: '/food/recipes/:id/edit',
+    name: 'food-recipe-edit',
+    component: () => import('../views/food/RecipeEditView.vue'),
+    meta: adult,
+  },
+  {
+    path: '/food/templates',
+    name: 'food-templates',
+    component: () => import('../views/food/TemplatesView.vue'),
+    meta: adult,
+  },
+  {
+    path: '/food/templates/:id',
+    name: 'food-template',
+    component: () => import('../views/food/TemplateEditView.vue'),
+    meta: adult,
+  },
+  {
     path: '/oauth/done',
     name: 'oauth-done',
     component: () => import('../views/OAuthDoneView.vue'),
@@ -102,6 +165,12 @@ export const routes: RouteRecordRaw[] = [
         path: 'household',
         name: 'settings-household',
         component: () => import('../views/SettingsHouseholdView.vue'),
+        meta: adult,
+      },
+      {
+        path: 'meals',
+        name: 'settings-meals',
+        component: () => import('../views/SettingsMealsView.vue'),
         meta: adult,
       },
       {

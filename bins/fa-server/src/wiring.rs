@@ -132,6 +132,11 @@ pub fn build_services(cfg: &ProcessConfig, store: &Store, llm: &Arc<Provider>) -
         weather,
         oauth,
         tasks: Arc::new(fa_tasks::TaskService::new(store.clone())),
+        meals: Arc::new(fa_meals::MealsService::new(
+            store.clone(),
+            Some(llm.clone()),
+            cfg.allow_private_hosts,
+        )),
         notify: fa_notify::NotifyService::new(store.clone(), notify_config(cfg)),
     })
 }
@@ -147,6 +152,7 @@ pub fn feature_handlers(
     all.extend(fa_weather::handlers(weather_config(cfg))?);
     all.extend(fa_auth::handlers());
     all.extend(fa_tasks::handlers(services.tasks.clone()));
+    all.extend(fa_meals::handlers(services.meals.clone()));
     all.extend(fa_notify::handlers(services.notify.clone()));
     all.extend(crate::mail::handlers(&mail_deps(
         cfg,
@@ -165,6 +171,7 @@ pub async fn ensure_feature_schedules(store: &Store) -> Result<()> {
         .chain(fa_auth::default_schedules())
         .chain(fa_tasks::default_schedules())
         .chain(fa_notify::default_schedules())
+        .chain(fa_meals::default_schedules())
         .chain(fa_mail::default_schedules());
     let mut tx = store.tx_system().await?;
     for (kind, cron) in schedules {
@@ -185,6 +192,12 @@ pub async fn seed_default_rules(store: &Store) -> Result<()> {
         tx.commit().await?;
         if n > 0 {
             tracing::info!(household = %h.value.id, added = n, "default weather rules added");
+        }
+        let mut tx = store.tx_for(h.value.id).await?;
+        let n = fa_meals::ensure_defaults(&mut tx).await?;
+        tx.commit().await?;
+        if n > 0 {
+            tracing::info!(household = %h.value.id, added = n, "meals defaults added");
         }
     }
     Ok(())

@@ -494,6 +494,139 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/grocery": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_grocery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/grocery/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** From `entry_ids`, or from the plan between `from` and `to`. Running it twice adds nothing. */
+        post: operations["generate_grocery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/grocery/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** 201 when created, 200 when the client-generated `id` already exists (offline replay). */
+        post: operations["add_grocery_item"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/grocery/items/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["put_grocery_item"];
+        post?: never;
+        /** 404 is expected when an offline replay deletes an item that is already gone. */
+        delete: operations["delete_grocery_item"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/grocery/items/{id}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["check_grocery_item"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/grocery/items/{id}/low": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Moves a staples-check item onto the list. */
+        post: operations["low_grocery_item"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/grocery/items/{id}/uncheck": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["uncheck_grocery_item"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/grocery/reconcile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Recomputes the entries' contributions from the current plan. */
+        post: operations["reconcile_grocery"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/household": {
         parameters: {
             query?: never;
@@ -556,6 +689,55 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["reject_inbox"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingredients": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_ingredients"];
+        put?: never;
+        post: operations["create_ingredient"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingredients/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["put_ingredient"];
+        post?: never;
+        /** Lines and items lose the link. */
+        delete: operations["delete_ingredient"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ingredients/{id}/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["merge_ingredient"];
         delete?: never;
         options?: never;
         head?: never;
@@ -747,6 +929,260 @@ export interface paths {
         };
         get: operations["me"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meal-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_meal_plan"];
+        put?: never;
+        /** Appended to the slot. Several entries may share a slot. */
+        post: operations["add_plan_entry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meal-plan/swap": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** `{a, b}` swaps two entries; `{a, date, slot_id}` moves `a` into an empty slot. */
+        post: operations["swap_plan_entries"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meal-plan/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Moving to another date or slot appends there. */
+        put: operations["put_plan_entry"];
+        post?: never;
+        delete: operations["delete_plan_entry"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meal-templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_templates"];
+        put?: never;
+        post: operations["create_template"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meal-templates/from-plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** The range is at most 366 days. */
+        post: operations["template_from_plan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meal-templates/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_template"];
+        put: operations["put_template"];
+        post?: never;
+        delete: operations["delete_template"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meal-templates/{id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Slots in `add_slots` keep their entries; every other target slot is replaced. The result
+         *     carries a `change_id` to undo.
+         */
+        post: operations["apply_template"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meal-templates/{id}/duplicate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["duplicate_template"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meal-templates/{id}/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post: operations["preview_template"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meals/aisles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_meal_aisles"];
+        /** Replaces the list; "Other" is implicit. */
+        put: operations["put_meal_aisles"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meals/changes/{id}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** An adult, or the member or device that made the change, within ten minutes. */
+        post: operations["undo_meals_change"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meals/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_meals_settings"];
+        /** Absent fields keep their value. The horizon (1 to 52 weeks) is stored on the household. */
+        put: operations["put_meals_settings"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meals/slots": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_meal_slots"];
+        /** Replaces the ordered list. A slot in use is removed with 409 `slot_in_use`. */
+        put: operations["put_meal_slots"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meals/stores": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_meal_stores"];
+        /** Replaces the list; removing a store clears it from its items and ingredients. */
+        put: operations["put_meal_stores"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/meals/stores/{id}/aisles": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_store_aisles"];
+        /** Every aisle of the household, in this store's order, with `hidden`. */
+        put: operations["put_store_aisles"];
         post?: never;
         delete?: never;
         options?: never;
@@ -1149,6 +1585,140 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["add_org_contact"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_recipes"];
+        put?: never;
+        /** `image_url` queues the `recipe.image` job. */
+        post: operations["create_recipe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipes/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** `{url}` or `{text}` to an editable draft; nothing is stored. */
+        post: operations["import_recipe"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipes/tags": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["list_recipe_tags"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_recipe"];
+        /** The lines are replaced whole: unchanged `raw_text` lines keep their match. */
+        put: operations["put_recipe"];
+        post?: never;
+        /** Plan entries keep the recipe title as free text. */
+        delete: operations["delete_recipe"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipes/{id}/favourite": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put: operations["put_favourite"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipes/{id}/image": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: operations["get_recipe_image"];
+        put?: never;
+        post: operations["post_recipe_image"];
+        delete: operations["delete_recipe_image"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipes/{id}/lines/{line_id}/match": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Adds the line's `item` as an alias of the chosen ingredient. */
+        post: operations["match_recipe_line"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/recipes/{id}/rating": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** A member rates for themself; devices cannot rate. */
+        put: operations["put_rating"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1870,6 +2440,14 @@ export interface components {
             since: string;
             stages: components["schemas"]["StageCount"][];
         };
+        /** Format: uuid */
+        AisleId: string;
+        AisleView: {
+            id?: null | components["schemas"]["AisleId"];
+            name: string;
+            /** Format: int32 */
+            ord: number;
+        };
         /** @enum {string} */
         AllMarker: "all";
         /** @enum {string} */
@@ -1881,6 +2459,8 @@ export interface components {
             last_at?: string | null;
             ok: boolean;
         };
+        /** @enum {string} */
+        BaseUnit: "g" | "ml" | "count";
         /** Format: uuid */
         BillId: string;
         /** @description One page of `GET /bills`, newest created first. */
@@ -2089,9 +2669,18 @@ export interface components {
             /** @description First day of the week (`monday` or `sunday`). */
             week_start?: components["schemas"]["WeekStart"];
         };
+        /** @description One planned meal on the dashboard; `time` is local `"HH:MM"`. */
+        DashboardMeal: {
+            recipe_id?: null | components["schemas"]["RecipeId"];
+            slot_name: string;
+            time: string;
+            title: string;
+        };
         DashboardSettings: {
             /** Format: int32 */
             agenda_days: number;
+            /** @description Shows the Food view (meal plan and shopping list) on this device (D-117). */
+            food_view?: boolean;
             members: components["schemas"]["MemberSelection"];
             panels: components["schemas"]["Panel"][];
             /**
@@ -2105,6 +2694,8 @@ export interface components {
             advisories: components["schemas"]["AdvisoryView"][];
             events: components["schemas"]["EventView"][];
             household: components["schemas"]["DashboardHousehold"];
+            /** @description Today's visible meal slots with their planned entries; empty when nothing is planned. */
+            meals?: components["schemas"]["DashboardMeal"][];
             members: components["schemas"]["MemberPublicDto"][];
             /** @description Pending approvals per adult; empty when the household setting is off. */
             pending_approvals?: components["schemas"]["PendingApprovals"][];
@@ -2351,12 +2942,92 @@ export interface components {
          * @enum {string}
          */
         ExtractOrigin: "rules" | "llm";
+        FavouriteReq: {
+            favourite: boolean;
+        };
         /** @enum {string} */
         Gender: "female" | "male" | "other";
         /** @description Words in mail that point at a gender-specific group ("girls' soccer"). */
         GenderTerms: {
             female: string[];
             male: string[];
+        };
+        /** @description A range (`from`..`to`, `YYYY-MM-DD`) or picked entries. */
+        GenerateReq: {
+            entry_ids?: components["schemas"]["MealPlanEntryId"][] | null;
+            from?: string | null;
+            to?: string | null;
+        };
+        GenerateResult: {
+            /** Format: int32 */
+            added: number;
+            change_id: components["schemas"]["MealsChangeId"];
+            /** Format: int32 */
+            merged: number;
+            /** Format: int32 */
+            staples: number;
+        };
+        /** @description `id` may be client-generated so a replayed offline add is idempotent (D-118). */
+        GroceryAddReq: {
+            id?: null | components["schemas"]["GroceryItemId"];
+            /** Format: double */
+            qty?: number | null;
+            store_id?: null | components["schemas"]["GroceryStoreId"];
+            text: string;
+            unit?: string | null;
+        };
+        /** @description A generated grocery item that a plan change touches. */
+        GroceryImpact: {
+            entry_id: components["schemas"]["MealPlanEntryId"];
+            /** Format: double */
+            from_qty?: number | null;
+            item_id: components["schemas"]["GroceryItemId"];
+            remove: boolean;
+            text: string;
+            /** Format: double */
+            to_qty?: number | null;
+            unit?: string | null;
+        };
+        /** Format: uuid */
+        GroceryItemId: string;
+        GroceryItemPatch: {
+            /** Format: double */
+            qty?: number | null;
+            store_id?: null | components["schemas"]["GroceryStoreId"];
+            text?: string | null;
+            unit?: string | null;
+        };
+        /** @description `display` is the quantity text in household units, e.g. `"2 ½ cups"`, `"750 g"`, `"3"`. */
+        GroceryItemView: {
+            aisle_id?: null | components["schemas"]["AisleId"];
+            /** Format: date-time */
+            checked_at?: string | null;
+            display: string;
+            id: components["schemas"]["GroceryItemId"];
+            ingredient_id?: null | components["schemas"]["IngredientId"];
+            manual: boolean;
+            /** Format: double */
+            qty?: number | null;
+            /** Format: double */
+            qty2?: number | null;
+            section: components["schemas"]["GrocerySection"];
+            sources: components["schemas"]["SourceHint"][];
+            store_id?: null | components["schemas"]["GroceryStoreId"];
+            text: string;
+            unit?: string | null;
+            unit2?: string | null;
+            /** Format: int32 */
+            version: number;
+        };
+        /** @enum {string} */
+        GrocerySection: "list" | "staples";
+        /** Format: uuid */
+        GroceryStoreId: string;
+        GroceryView: {
+            aisles: components["schemas"]["AisleView"][];
+            items: components["schemas"]["GroceryItemView"][];
+            staples: components["schemas"]["StapleView"][];
+            stores: components["schemas"]["StoreView"][];
         };
         HouseholdDto: {
             dashboard_completion_override: boolean;
@@ -2476,6 +3147,8 @@ export interface components {
             gmail_ext: boolean;
             ok: boolean;
         };
+        /** @enum {string} */
+        ImportMethod: "jsonld" | "microdata" | "llm" | "manual";
         InboxCounts: {
             /** Format: int64 */
             bill: number;
@@ -2528,6 +3201,39 @@ export interface components {
              */
             task_expiry_days: number;
         };
+        /** Format: uuid */
+        IngredientId: string;
+        IngredientInput: {
+            aisle_id?: null | components["schemas"]["AisleId"];
+            aliases: string[];
+            canonical_name: string;
+            default_store_id?: null | components["schemas"]["GroceryStoreId"];
+            default_unit?: null | components["schemas"]["BaseUnit"];
+            is_staple: boolean;
+        };
+        IngredientMergeReq: {
+            into: components["schemas"]["IngredientId"];
+        };
+        /** @enum {string} */
+        IngredientOrigin: "seed" | "user" | "llm";
+        /** @description An LLM proposal for an unmatched line. An adult accepts it or picks another match. */
+        IngredientProposal: {
+            aisle?: string | null;
+            /** Format: float */
+            confidence: number;
+            ingredient_id?: null | components["schemas"]["IngredientId"];
+            new_name?: string | null;
+        };
+        IngredientView: {
+            aisle_id?: null | components["schemas"]["AisleId"];
+            aliases: string[];
+            canonical_name: string;
+            default_store_id?: null | components["schemas"]["GroceryStoreId"];
+            default_unit?: null | components["schemas"]["BaseUnit"];
+            id: components["schemas"]["IngredientId"];
+            is_staple: boolean;
+            origin: components["schemas"]["IngredientOrigin"];
+        };
         LabelInput: {
             decision_point: components["schemas"]["DecisionPointKey"];
             /** @description `email.member_link`: an array of member ids. */
@@ -2536,6 +3242,12 @@ export interface components {
         LabelQueueItem: {
             message: components["schemas"]["MessageDetail"];
             progress: components["schemas"]["EvalProgress"];
+        };
+        /** @description Pick an existing ingredient, or create `new_name` (in `aisle_id`). */
+        LineMatchReq: {
+            aisle_id?: null | components["schemas"]["AisleId"];
+            ingredient_id?: null | components["schemas"]["IngredientId"];
+            new_name?: string | null;
         };
         /** @enum {string} */
         ListCompletionPolicy: "assignee" | "adult_only";
@@ -2798,11 +3510,111 @@ export interface components {
             /** @description Standard base64 of the 32 raw key bytes. */
             key_base64: string;
         };
+        /** @enum {string} */
+        MatchState: "matched" | "unmatched" | "proposed";
         MeResponse: {
             actor: components["schemas"]["ActorView"];
             household: components["schemas"]["HouseholdDto"];
             /** @description True while the signed-in account still has the password another adult set. */
             must_change_password: boolean;
+        };
+        /** Format: uuid */
+        MealPlanEntryId: string;
+        /** @description Either `recipe_id` or `free_text`. The entry is appended to the slot. */
+        MealPlanEntryInput: {
+            /** Format: date */
+            date: string;
+            free_text?: string | null;
+            recipe_id?: null | components["schemas"]["RecipeId"];
+            /** Format: int32 */
+            servings?: number | null;
+            slot_id: components["schemas"]["MealSlotId"];
+        };
+        MealPlanEntryPatch: {
+            date?: string | null;
+            free_text?: string | null;
+            recipe_id?: null | components["schemas"]["RecipeId"];
+            /** Format: int32 */
+            servings?: number | null;
+            slot_id?: null | components["schemas"]["MealSlotId"];
+        };
+        /** @description `date` is `YYYY-MM-DD`. `title` is the recipe title, or the free text. */
+        MealPlanEntryView: {
+            /** Format: date */
+            date: string;
+            free_text?: string | null;
+            id: components["schemas"]["MealPlanEntryId"];
+            /** Format: int32 */
+            ord: number;
+            recipe_id?: null | components["schemas"]["RecipeId"];
+            /** Format: int32 */
+            servings?: number | null;
+            slot_id: components["schemas"]["MealSlotId"];
+            title: string;
+            /** Format: int32 */
+            version: number;
+        };
+        /** Format: uuid */
+        MealSlotId: string;
+        /** @description `time` is local `"HH:MM"`. `id` absent on a new slot in `PUT /meals/slots`. */
+        MealSlotView: {
+            id?: null | components["schemas"]["MealSlotId"];
+            name: string;
+            /** Format: int32 */
+            ord: number;
+            time: string;
+            visible: boolean;
+        };
+        /** Format: uuid */
+        MealTemplateId: string;
+        MealTemplateInput: {
+            cells: components["schemas"]["TemplateCellInput"][];
+            /** Format: int32 */
+            days: number;
+            name: string;
+            note?: string | null;
+        };
+        MealTemplateSummary: {
+            /** Format: int32 */
+            days: number;
+            id: components["schemas"]["MealTemplateId"];
+            name: string;
+            slot_ids: components["schemas"]["MealSlotId"][];
+            /** Format: int32 */
+            version: number;
+        };
+        MealTemplateView: {
+            cells: components["schemas"]["TemplateCellView"][];
+            /** Format: int32 */
+            days: number;
+            id: components["schemas"]["MealTemplateId"];
+            name: string;
+            note?: string | null;
+            /** Format: int32 */
+            version: number;
+        };
+        /** Format: uuid */
+        MealsChangeId: string;
+        /** @description Every field optional; absent keeps the stored value. */
+        MealsSettingsPatch: {
+            descriptors?: string[] | null;
+            /** Format: int32 */
+            grocery_archive_hours?: number | null;
+            ingredient_llm?: boolean | null;
+            /** Format: int32 */
+            meal_plan_horizon_weeks?: number | null;
+            /** Format: float */
+            trigram_threshold?: number | null;
+        };
+        MealsSettingsView: {
+            descriptors: string[];
+            /** Format: int32 */
+            grocery_archive_hours: number;
+            ingredient_llm: boolean;
+            /** Format: int32 */
+            meal_plan_horizon_weeks: number;
+            /** Format: float */
+            trigram_threshold: number;
         };
         /** Format: uuid */
         MemberAwayId: string;
@@ -2853,6 +3665,11 @@ export interface components {
             display_name: string;
             id: components["schemas"]["MemberId"];
             role: components["schemas"]["Role"];
+        };
+        MemberRating: {
+            member_id: components["schemas"]["MemberId"];
+            /** Format: int32 */
+            stars: number;
         };
         /** @description `"all"` or a list of member IDs. */
         MemberSelection: components["schemas"]["AllMarker"] | components["schemas"]["MemberId"][];
@@ -3179,6 +3996,11 @@ export interface components {
         PinReq: {
             pin: string;
         };
+        PlanChangeResult: {
+            change_id?: null | components["schemas"]["MealsChangeId"];
+            entries: components["schemas"]["MealPlanEntryView"][];
+            grocery_impact: components["schemas"]["GroceryImpact"][];
+        };
         /** @enum {string} */
         PriorityFlag: "normal" | "high";
         /** @description The `application/problem+json` body (RFC 9457). Invalid weather rules add `position` and `message`. */
@@ -3215,6 +4037,20 @@ export interface components {
             /** Format: int64 */
             running: number;
         };
+        RatingReq: {
+            /**
+             * Format: int32
+             * @description 1 to 5, or null to remove the rating.
+             */
+            stars?: number | null;
+        };
+        RatingsView: {
+            /** Format: float */
+            avg?: number | null;
+            by_member: components["schemas"]["MemberRating"][];
+            /** Format: int32 */
+            mine?: number | null;
+        };
         /** @description A recipe extracted from a page. Minutes are integers; `source_url` is an absolute URL. */
         RecipeDraft: {
             /** Format: int32 */
@@ -3239,6 +4075,13 @@ export interface components {
             html?: string | null;
             url?: string | null;
         };
+        /** Format: uuid */
+        RecipeId: string;
+        /** @description `url` or `text`. */
+        RecipeImportReq: {
+            text?: string | null;
+            url?: string | null;
+        };
         RecipeIngredient: {
             item?: string | null;
             /** Format: double */
@@ -3247,8 +4090,96 @@ export interface components {
             text: string;
             unit?: string | null;
         };
+        /** @description Create and update body. `lines` are the raw ingredient lines; `steps` are the step texts. */
+        RecipeInput: {
+            /** Format: int32 */
+            cook_minutes?: number | null;
+            image_url?: string | null;
+            import_method: components["schemas"]["ImportMethod"];
+            lines: string[];
+            note?: string | null;
+            /** Format: int32 */
+            prep_minutes?: number | null;
+            /** Format: int32 */
+            servings?: number | null;
+            source_url?: string | null;
+            steps: string[];
+            tags: string[];
+            title: string;
+            /** Format: int32 */
+            total_minutes?: number | null;
+            yield_text?: string | null;
+        };
+        /** Format: uuid */
+        RecipeLineId: string;
+        RecipeLineView: {
+            id: components["schemas"]["RecipeLineId"];
+            ingredient_id?: null | components["schemas"]["IngredientId"];
+            ingredient_name?: string | null;
+            item?: string | null;
+            match_state: components["schemas"]["MatchState"];
+            note?: string | null;
+            /** Format: int32 */
+            ord: number;
+            proposal?: null | components["schemas"]["IngredientProposal"];
+            /** Format: double */
+            qty?: number | null;
+            raw_text: string;
+            unit?: string | null;
+        };
         /** @enum {string} */
-        RecipeOrigin: "jsonld" | "llm";
+        RecipeOrigin: "jsonld" | "microdata" | "llm";
+        /** @description One page of `GET /recipes`; `next_cursor` is opaque. */
+        RecipePage: {
+            items: components["schemas"]["RecipeSummary"][];
+            next_cursor?: string | null;
+        };
+        RecipeSummary: {
+            favourite: boolean;
+            has_image: boolean;
+            id: components["schemas"]["RecipeId"];
+            last_planned?: string | null;
+            /** Format: int32 */
+            my_rating?: number | null;
+            /** Format: float */
+            rating_avg?: number | null;
+            tags: string[];
+            title: string;
+            /** Format: int32 */
+            total_minutes?: number | null;
+        };
+        RecipeView: {
+            /** Format: int32 */
+            cook_minutes?: number | null;
+            favourite: boolean;
+            has_image: boolean;
+            id: components["schemas"]["RecipeId"];
+            import_method: components["schemas"]["ImportMethod"];
+            lines: components["schemas"]["RecipeLineView"][];
+            note?: string | null;
+            /** Format: int32 */
+            prep_minutes?: number | null;
+            ratings: components["schemas"]["RatingsView"];
+            /** Format: int32 */
+            servings?: number | null;
+            source_url?: string | null;
+            steps: string[];
+            tags: string[];
+            title: string;
+            /** Format: int32 */
+            total_minutes?: number | null;
+            /** Format: int32 */
+            version: number;
+            yield_text?: string | null;
+        };
+        ReconcileReq: {
+            entry_ids: components["schemas"]["MealPlanEntryId"][];
+        };
+        ReconcileResult: {
+            change_id: components["schemas"]["MealsChangeId"];
+            /** Format: int32 */
+            changed: number;
+        };
         /** @enum {string} */
         Relevance: "relevant" | "general" | "other";
         RemoteCalendar: {
@@ -3489,6 +4420,11 @@ export interface components {
             enabled: boolean;
             key: string;
         };
+        SlotRef: {
+            /** Format: date */
+            date: string;
+            slot_id: components["schemas"]["MealSlotId"];
+        };
         /** @description Source plus its discovered calendars (POST /calendar-sources). */
         SourceCreated: {
             calendars: components["schemas"]["CalendarView"][];
@@ -3499,6 +4435,13 @@ export interface components {
             password?: string | null;
             url?: string | null;
             username?: string | null;
+        };
+        /** @description One place an item came from, for the "for Tue dinner" hint. */
+        SourceHint: {
+            /** Format: date */
+            date: string;
+            entry_id: components["schemas"]["MealPlanEntryId"];
+            slot_name: string;
         };
         /** @enum {string} */
         SourceKind: "google" | "caldav" | "ics";
@@ -3565,6 +4508,12 @@ export interface components {
         };
         /** @enum {string} */
         StageKind: "rules" | "human" | "knn" | "system_one" | "llm";
+        StapleView: {
+            ingredient_id: components["schemas"]["IngredientId"];
+            item_id: components["schemas"]["GroceryItemId"];
+            name: string;
+            needed_for: components["schemas"]["SourceHint"][];
+        };
         /** @enum {string} */
         StatusParam: "open" | "done" | "skipped" | "suggested" | "any";
         StatusView: {
@@ -3577,10 +4526,30 @@ export interface components {
             done: boolean;
             member?: null | components["schemas"]["MemberId"];
         };
+        /** @description One aisle in a store's own order (D-121). */
+        StoreAisleView: {
+            aisle_id: components["schemas"]["AisleId"];
+            hidden: boolean;
+            /** Format: int32 */
+            ord: number;
+        };
+        StoreView: {
+            id?: null | components["schemas"]["GroceryStoreId"];
+            name: string;
+            /** Format: int32 */
+            ord: number;
+        };
         /** @enum {string} */
         Strategy: "fixed" | "rotation" | "pool";
         /** @enum {string} */
         SuggestedBy: "default" | "s2" | "user";
+        /** @description Swap `a` with `b`, or move `a` into the (empty) slot `date` + `slot_id`. */
+        SwapReq: {
+            a: components["schemas"]["MealPlanEntryId"];
+            b?: null | components["schemas"]["MealPlanEntryId"];
+            date?: string | null;
+            slot_id?: null | components["schemas"]["MealSlotId"];
+        };
         SystemSettingsPatch: {
             /** @description `null` resets a key to the default; a secret takes a string. */
             values: {
@@ -3808,6 +4777,62 @@ export interface components {
             version: number;
             /** Format: date-time */
             visible_from?: string | null;
+        };
+        /** @description Slots in `add_slots` keep their entries and get the items appended; every other target slot is replaced. */
+        TemplateApplyReq: {
+            add_slots: components["schemas"]["SlotRef"][];
+            /** Format: date */
+            start: string;
+        };
+        TemplateCellInput: {
+            /** Format: int32 */
+            day: number;
+            free_text?: string | null;
+            /** Format: int32 */
+            ord: number;
+            recipe_id?: null | components["schemas"]["RecipeId"];
+            /** Format: int32 */
+            servings?: number | null;
+            slot_id: components["schemas"]["MealSlotId"];
+        };
+        TemplateCellView: {
+            /** Format: int32 */
+            day: number;
+            free_text?: string | null;
+            recipe_id?: null | components["schemas"]["RecipeId"];
+            /** Format: int32 */
+            servings?: number | null;
+            slot_id: components["schemas"]["MealSlotId"];
+            title: string;
+        };
+        TemplateDuplicateReq: {
+            name: string;
+        };
+        /** @description Save a template from a plan range; `from` and `to` are `YYYY-MM-DD`, at most 366 days. */
+        TemplateFromPlanReq: {
+            /** Format: date */
+            from: string;
+            name: string;
+            slot_ids: components["schemas"]["MealSlotId"][];
+            /** Format: date */
+            to: string;
+        };
+        TemplatePreview: {
+            targets: components["schemas"]["TemplateTarget"][];
+        };
+        TemplatePreviewReq: {
+            /** Format: date */
+            start: string;
+        };
+        TemplateTarget: {
+            /** Format: date */
+            date: string;
+            /** Format: int32 */
+            day: number;
+            existing: components["schemas"]["MealPlanEntryView"][];
+            items: components["schemas"]["TemplateCellView"][];
+            slot_id: components["schemas"]["MealSlotId"];
+            slot_visible: boolean;
         };
         /** @description A device's theme. Reads the legacy string form; always writes the object. */
         ThemeChoice: {
@@ -5519,6 +6544,377 @@ export interface operations {
             };
         };
     };
+    get_grocery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroceryView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    generate_grocery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GenerateReq"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GenerateResult"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    add_grocery_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroceryAddReq"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroceryItemView"];
+                };
+            };
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroceryItemView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_grocery_item: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description item id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GroceryItemPatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroceryItemView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_grocery_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description item id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    check_grocery_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description item id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroceryItemView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    low_grocery_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description item id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroceryItemView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    uncheck_grocery_item: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description item id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GroceryItemView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reconcile_grocery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReconcileReq"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReconcileResult"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     get_household: {
         parameters: {
             query?: never;
@@ -5737,6 +7133,227 @@ export interface operations {
             };
             /** @description the item is not awaiting a decision */
             409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_ingredients: {
+        parameters: {
+            query?: {
+                /** @description Filters by trigram and alias. */
+                q?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_ingredient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IngredientInput"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_ingredient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ingredient id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IngredientInput"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_ingredient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ingredient id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    merge_ingredient: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ingredient id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IngredientMergeReq"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IngredientView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -6368,6 +7985,1052 @@ export interface operations {
                 };
             };
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_meal_plan: {
+        parameters: {
+            query: {
+                /** @description `YYYY-MM-DD`. */
+                from: string;
+                /** @description `YYYY-MM-DD`, at most 62 days from `from`. */
+                to: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MealPlanEntryView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    add_plan_entry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MealPlanEntryInput"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangeResult"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    swap_plan_entries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SwapReq"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangeResult"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_plan_entry: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description plan entry id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MealPlanEntryPatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangeResult"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_plan_entry: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description plan entry id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangeResult"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_templates: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MealTemplateSummary"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MealTemplateInput"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MealTemplateView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    template_from_plan: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateFromPlanReq"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MealTemplateView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MealTemplateView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_template: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MealTemplateInput"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MealTemplateView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    apply_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateApplyReq"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanChangeResult"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    duplicate_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplateDuplicateReq"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MealTemplateView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    preview_template: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description template id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TemplatePreviewReq"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TemplatePreview"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_meal_aisles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AisleView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_meal_aisles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AisleView"][];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AisleView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    undo_meals_change: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description change id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description code `already_undone` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description code `expired` */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_meals_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MealsSettingsView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_meals_settings: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MealsSettingsPatch"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MealsSettingsView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_meal_slots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MealSlotView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_meal_slots: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MealSlotView"][];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MealSlotView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description code `slot_in_use` */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_meal_stores: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoreView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_meal_stores: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreView"][];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoreView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_store_aisles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description store id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoreAisleView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_store_aisles: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description store id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StoreAisleView"][];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StoreAisleView"][];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -7870,6 +10533,590 @@ export interface operations {
             };
         };
     };
+    list_recipes: {
+        parameters: {
+            query?: {
+                /** @description Title or ingredient search. */
+                q?: string;
+                tag?: string;
+                favourite?: boolean;
+                /** @description The opaque `next_cursor` of the previous page. */
+                before?: string;
+                /** @description Page size, default 50, at most 200. */
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipePage"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    create_recipe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeInput"];
+            };
+        };
+        responses: {
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    import_recipe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeImportReq"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeDraft"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description codes `no_recipe`, `fetch_failed` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description code `llm_failed` */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description code `llm_unavailable` */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    list_recipe_tags: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_recipe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description recipe id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_recipe: {
+        parameters: {
+            query?: never;
+            header?: {
+                /** @description record version */
+                "If-Match"?: string | null;
+            };
+            path: {
+                /** @description recipe id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecipeInput"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            428: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_recipe: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description recipe id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_favourite: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description recipe id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FavouriteReq"];
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_recipe_image: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description recipe id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description the image; ETag is its sha256 */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/*": unknown;
+                };
+            };
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    post_recipe_image: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description recipe id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        /** @description raw image bytes (png, jpeg or webp), at most 5 MB; stored resized */
+        requestBody: {
+            content: {
+                "image/png": number[];
+            };
+        };
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            415: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description code `bad_image` */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    delete_recipe_image: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description recipe id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    match_recipe_line: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description recipe id */
+                id: string;
+                /** @description ingredient line id */
+                line_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LineMatchReq"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecipeLineView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    put_rating: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description recipe id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RatingReq"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RatingsView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     tick_routine_step: {
         parameters: {
             query?: never;
@@ -8365,7 +11612,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description `heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `mail.updated` `{source?}`, `inbox.updated` `{}`, `bills.updated` `{}`, `resync`), bridged from `fa_change`; honours Last-Event-ID */
+            /** @description `heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `mail.updated` `{source?}`, `inbox.updated` `{}`, `bills.updated` `{}`, `mealplan.updated` `{}`, `grocery.updated` `{}`, `recipes.updated` `{}`, `resync`), bridged from `fa_change`; honours Last-Event-ID */
             200: {
                 headers: {
                     [name: string]: unknown;

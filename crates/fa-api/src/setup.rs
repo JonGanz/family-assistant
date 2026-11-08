@@ -115,6 +115,16 @@ pub async fn setup_household(
     if let Err(e) = seeded {
         tracing::warn!(error = %e, "default weather rules not added");
     }
+    let seeded = async {
+        let mut tx = s.store.tx_for(hid).await?;
+        fa_meals::ensure_defaults(&mut tx).await?;
+        tx.commit().await?;
+        Ok::<_, ApiError>(())
+    }
+    .await;
+    if let Err(e) = seeded {
+        tracing::warn!(error = %e, "meals defaults not added");
+    }
     Ok((
         StatusCode::CREATED,
         Json(SetupHouseholdCreated { household_id: hid }),

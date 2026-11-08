@@ -5,7 +5,7 @@ milestone: M5
 wave: 4
 depends_on: [T-06]
 agent: {model: sonnet, effort: high}
-status: todo
+status: done
 owns: ["apps/web/src/stores/grocery.ts", "apps/web/src/lib/offlineQueue.ts", "apps/web/src/lib/offlineQueue.test.ts", "apps/web/src/views/food/ShoppingListView.vue", "apps/web/src/components/food/grocery/**", "apps/web/src/views/food/grocery.test.ts", "apps/web/vite.config.ts", "apps/web/src/lib/pwa.ts"]
 decisions: [D-021, D-015, D-019, D-110, D-115, D-121, D-118, D-072, D-096, D-105]
 ---
@@ -19,6 +19,9 @@ You are a sub-agent implementing one task of milestone M5 of the Family Assistan
 - `plan/M5.md`: the *API* table (`/grocery*`, `/meals/changes`), *Web* (stores, shared components, e2e selectors) and *Domain types* (`GroceryView`, `GroceryItemView`, `StapleView`).
 - `arch/Frontend.md` §1.1 (secure and insecure contexts, the offline queue) and §3f (Shopping list); `arch/Meals.md` §4.7.
 - `apps/web/src/api/food.ts`, `apps/web/src/lib/ids.ts` (`newId()`), `apps/web/src/lib/pwa.ts`, `apps/web/vite.config.ts` (VitePWA, registered by hand only in a secure context), `stores/lists.ts`, `ui/UiFilterChips.vue`.
+
+## Note from the scaffold
+`api/food.ts` exports `food` (app) and `foodKiosk` (device token). T-11 reuses your shared component on the kiosk, so give it an optional `api?: FoodApi` prop (default `food`), and make your store accept it too, or take it from the component.
 
 ## You own
 The paths in `owns`. The scaffold (main session) already has your route, stub view and stub store; replace the stubs. Don't edit `router/index.ts`, `api/food.ts` or `ui/icons.ts`.
@@ -62,3 +65,18 @@ The paths in `owns`. The scaffold (main session) already has your route, stub vi
   - the cached routes;
   - "list what outside your paths needs changing";
   - README changes needed: none.
+
+## Outcome (T-08 report, 2026-11-08)
+- **Built:**
+  - `lib/offlineQueue.ts`: `fa.grocery.queue` with an in-memory fallback. A 404 or a 409 on check drops the op, so does another 4xx; a 5xx or 408/429 stays queued;
+  - `stores/grocery.ts`: optimistic add, check and low; `use(api)` for the kiosk; delete as a 5 s delayed DELETE (Undo); a 15 s retry while changes wait; per-store aisle orders from `/meals/stores/{id}/aisles`;
+  - `components/food/grocery/` (`ShoppingList`, `GroceryRow`, `grouping.ts`);
+  - `ShoppingListView`;
+  - a `vite.config.ts` runtime cache `fa-grocery` (NetworkFirst, 3 s, secure context only) for `/grocery`, `/meals/stores` and `/meals/aisles`;
+  - 6 + 9 tests.
+- **Props for T-11:** `ShoppingList {canEdit, kiosk?, api?: FoodApi}`, no events.
+- **Results** (reported): typecheck, test and build pass; ESLint 0 errors. Prettier flagged only T-07's in-progress files.
+- **Gaps:**
+  - offline cold start shows the household aisle order (the per-store routes are not cached);
+  - the edit sheet cannot clear a quantity or reset the store (`GroceryItemPatch` cannot express null): G5-02;
+  - logout did not clear the `fa-grocery` cache. Fixed by the main session: `stores/session.ts` `logout` now deletes the cache and the queue.

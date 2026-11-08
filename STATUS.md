@@ -25,11 +25,6 @@ None.
 
 ## Tasks not done (plans not closed)
 - M5 (planned (briefs written; all questions answered, D-108 to D-122))
-  - T-06: fa-api meals routes, dashboard meals, wiring and seeding hook (todo)
-  - T-07: Food shell, navigation and routes, Meal plan, Templates (todo)
-  - T-08: Shopping list, offline queue, service worker caching (todo)
-  - T-09: Recipes: library, recipe page, import, editor (todo)
-  - T-10: Settings → Meals, the meals settings store, Today's meals card (todo)
   - T-11: Kiosk: Food view, meals panel, Week view meals (todo)
   - T-12: e2e: recipe fixtures, API and UI specs for M5 (todo)
   - T-13: Docs: README Food section, roadmap, arch status (todo)

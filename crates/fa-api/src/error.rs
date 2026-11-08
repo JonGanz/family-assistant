@@ -311,3 +311,39 @@ impl From<fa_mail::MailError> for ApiError {
         }
     }
 }
+
+impl From<fa_meals::MealsError> for ApiError {
+    fn from(e: fa_meals::MealsError) -> Self {
+        use fa_meals::MealsError as M;
+        match e {
+            M::Store(s) => s.into(),
+            M::NotFound => Self::NotFound,
+            M::Conflict(m) => Self::Conflict(m),
+            M::Invalid { field, message } => Self::FieldInvalid {
+                field: field.to_owned(),
+                position: None,
+                message,
+            },
+            e @ M::SlotInUse => Self::coded(StatusCode::CONFLICT, "slot_in_use", e.to_string()),
+            e @ M::AlreadyUndone => {
+                Self::coded(StatusCode::CONFLICT, "already_undone", e.to_string())
+            }
+            e @ M::NoRecipe => {
+                Self::coded(StatusCode::UNPROCESSABLE_ENTITY, "no_recipe", e.to_string())
+            }
+            M::FetchFailed(_) => Self::coded(
+                StatusCode::UNPROCESSABLE_ENTITY,
+                "fetch_failed",
+                "the page could not be fetched",
+            ),
+            e @ M::LlmUnavailable => Self::coded(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "llm_unavailable",
+                e.to_string(),
+            ),
+            M::LlmFailed(m) => Self::coded(StatusCode::BAD_GATEWAY, "llm_failed", m),
+            e @ M::Expired => Self::coded(StatusCode::GONE, "expired", e.to_string()),
+            M::Image(m) => Self::coded(StatusCode::UNPROCESSABLE_ENTITY, "bad_image", m),
+        }
+    }
+}

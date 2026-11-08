@@ -9,6 +9,7 @@ mod feeds;
 mod hub;
 mod lan;
 mod mail;
+mod meals;
 mod notify;
 mod openapi;
 mod routes;
@@ -120,6 +121,7 @@ pub struct Services {
     pub weather: WeatherService,
     pub oauth: OAuthService,
     pub tasks: Arc<fa_tasks::TaskService>,
+    pub meals: Arc<fa_meals::MealsService>,
     pub notify: fa_notify::NotifyService,
     pub mail: MailServices,
 }
@@ -369,6 +371,104 @@ pub fn router(state: AppState) -> Router {
             get(notify::get_prefs).put(notify::put_prefs),
         )
         .route("/members/{id}/notify-prefs/test", post(notify::test_prefs))
+        .route(
+            "/recipes",
+            get(meals::list_recipes).post(meals::create_recipe),
+        )
+        .route("/recipes/tags", get(meals::list_recipe_tags))
+        .route("/recipes/import", post(meals::import_recipe))
+        .route(
+            "/recipes/{id}",
+            get(meals::get_recipe)
+                .put(meals::put_recipe)
+                .delete(meals::delete_recipe),
+        )
+        .route("/recipes/{id}/favourite", put(meals::put_favourite))
+        .route("/recipes/{id}/rating", put(meals::put_rating))
+        .route(
+            "/recipes/{id}/image",
+            get(meals::get_recipe_image)
+                .post(meals::post_recipe_image)
+                .delete(meals::delete_recipe_image)
+                .layer(DefaultBodyLimit::max(meals::IMAGE_MAX_BYTES)),
+        )
+        .route(
+            "/recipes/{id}/lines/{line_id}/match",
+            post(meals::match_recipe_line),
+        )
+        .route(
+            "/ingredients",
+            get(meals::list_ingredients).post(meals::create_ingredient),
+        )
+        .route(
+            "/ingredients/{id}",
+            put(meals::put_ingredient).delete(meals::delete_ingredient),
+        )
+        .route("/ingredients/{id}/merge", post(meals::merge_ingredient))
+        .route(
+            "/meals/settings",
+            get(meals::get_meals_settings).put(meals::put_meals_settings),
+        )
+        .route(
+            "/meals/slots",
+            get(meals::get_meal_slots).put(meals::put_meal_slots),
+        )
+        .route(
+            "/meals/aisles",
+            get(meals::get_meal_aisles).put(meals::put_meal_aisles),
+        )
+        .route(
+            "/meals/stores",
+            get(meals::get_meal_stores).put(meals::put_meal_stores),
+        )
+        .route(
+            "/meals/stores/{id}/aisles",
+            get(meals::get_store_aisles).put(meals::put_store_aisles),
+        )
+        .route("/meals/changes/{id}/undo", post(meals::undo_meals_change))
+        .route(
+            "/meal-plan",
+            get(meals::get_meal_plan).post(meals::add_plan_entry),
+        )
+        .route("/meal-plan/swap", post(meals::swap_plan_entries))
+        .route(
+            "/meal-plan/{id}",
+            put(meals::put_plan_entry).delete(meals::delete_plan_entry),
+        )
+        .route(
+            "/meal-templates",
+            get(meals::list_templates).post(meals::create_template),
+        )
+        .route("/meal-templates/from-plan", post(meals::template_from_plan))
+        .route(
+            "/meal-templates/{id}",
+            get(meals::get_template)
+                .put(meals::put_template)
+                .delete(meals::delete_template),
+        )
+        .route(
+            "/meal-templates/{id}/preview",
+            post(meals::preview_template),
+        )
+        .route(
+            "/meal-templates/{id}/duplicate",
+            post(meals::duplicate_template),
+        )
+        .route("/meal-templates/{id}/apply", post(meals::apply_template))
+        .route("/grocery", get(meals::get_grocery))
+        .route("/grocery/items", post(meals::add_grocery_item))
+        .route(
+            "/grocery/items/{id}",
+            put(meals::put_grocery_item).delete(meals::delete_grocery_item),
+        )
+        .route("/grocery/items/{id}/check", post(meals::check_grocery_item))
+        .route(
+            "/grocery/items/{id}/uncheck",
+            post(meals::uncheck_grocery_item),
+        )
+        .route("/grocery/items/{id}/low", post(meals::low_grocery_item))
+        .route("/grocery/generate", post(meals::generate_grocery))
+        .route("/grocery/reconcile", post(meals::reconcile_grocery))
         .route("/dashboard", get(feeds::get_dashboard))
         .route("/status", get(feeds::get_status))
         .route("/devices/elevate", post(routes::elevate))

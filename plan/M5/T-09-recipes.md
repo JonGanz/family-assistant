@@ -5,7 +5,7 @@ milestone: M5
 wave: 4
 depends_on: [T-06]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/stores/recipes.ts", "apps/web/src/views/food/RecipesView.vue", "apps/web/src/views/food/RecipeView.vue", "apps/web/src/views/food/RecipeEditView.vue", "apps/web/src/components/food/recipes/**", "apps/web/src/views/food/recipes.test.ts"]
 decisions: [D-109, D-110, D-113, D-096, D-105]
 ---
@@ -56,3 +56,19 @@ The paths in `owns`. The scaffold (main session) already has your routes, stub v
 - [ ] In `apps/web`: `lint`, `typecheck`, `test` and `build` pass, then `format`.
 - [ ] Your e2e `data-test` keys are present.
 - [ ] The report lists "list what outside your paths needs changing" and README changes needed: none.
+
+## Outcome (T-09 report, 2026-11-08)
+- **Built:**
+  - `stores/recipes.ts` (paging, query, current, `pendingDraft`, save with 409 → `conflict`, favourite, rate, matchLine, importDraft, `invalidate`);
+  - `RecipesView`, `RecipeView` and `RecipeEditView`;
+  - `components/food/recipes/` (`StarRating`, `NewRecipeSheet`, `LineMatch`);
+  - `recipes.test.ts` (6 tests).
+- **Results** (reported, final run): lint 0 errors, typecheck ok, 641 tests in 70 files, build ok.
+- **Deviations:**
+  - lines and steps are edited as text, so the match chips show only while a line's text is unchanged;
+  - the imported draft lives in the store (lost on reload);
+  - the API takes one tag, so further tag chips filter on the client;
+  - `recipe-save` is on the `UiSaveBar` root: e2e clicks the Save button inside it;
+  - Accept sends `ingredient_id` or `new_name`, without the proposal's aisle;
+  - no image preview;
+  - "last planned" shows the raw date.

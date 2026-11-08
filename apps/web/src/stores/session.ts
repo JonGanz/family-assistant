@@ -42,6 +42,17 @@ export const useSessionStore = defineStore('session', () => {
     } finally {
       me.value = null
       loaded.value = true
+      // The service worker's grocery cache (secure context only, T-08) must not outlive the session on a shared phone.
+      try {
+        if (typeof caches !== 'undefined') await caches.delete('fa-grocery')
+      } catch {
+        // No Cache Storage (plain HTTP): nothing was cached.
+      }
+      try {
+        localStorage.removeItem('fa.grocery.queue')
+      } catch {
+        // Storage blocked: nothing was queued.
+      }
     }
   }
 

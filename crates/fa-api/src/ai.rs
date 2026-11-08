@@ -751,14 +751,6 @@ pub async fn get_stats(
     }))
 }
 
-fn fetch_failed() -> ApiError {
-    ApiError::coded(
-        StatusCode::UNPROCESSABLE_ENTITY,
-        "fetch_failed",
-        "the page could not be fetched",
-    )
-}
-
 #[utoipa::path(post, path = "/api/v1/ai/recipes/extract", tag = "ai", request_body = RecipeExtractReq,
     security(("cookie" = [])),
     responses((status = 200, body = RecipeDraft), (status = 403, body = Problem),
@@ -770,22 +762,30 @@ pub async fn extract_recipe(
     ApiJson(req): ApiJson<RecipeExtractReq>,
 ) -> ApiResult<Json<RecipeDraft>> {
     let hid = adult(&auth.actor)?;
+    // An alias of `POST /recipes/import` for `{url}`: the same code, including the
+    // `allow_private_hosts` policy.
     let (html, source) = match (req.url.as_deref(), req.html) {
         (Some(u), None) => {
-            let url = Url::parse(u.trim()).map_err(|_| bad_request("url is not a valid URL"))?;
-            tracing::info!(host = url.host_str().unwrap_or(""), "recipe fetch");
-            let http = fa_connectors::Http::with_policy(true, false)
-                .map_err(|e| ApiError::Internal(e.to_string()))?;
-            let html = fa_recipe::fetch_page(&http, &url).await.map_err(|e| {
-                tracing::info!(kind = ?std::mem::discriminant(&e), "recipe fetch failed");
-                fetch_failed()
-            })?;
-            (html, Some(url))
+            Url::parse(u.trim()).map_err(|_| bad_request("url is not a valid URL"))?;
+            let draft = s
+                .services
+                .meals
+                .import(
+                    hid,
+                    fa_domain::RecipeImportReq {
+                        url: Some(u.to_owned()),
+                        text: None,
+                    },
+                )
+                .await?;
+            return Ok(Json(draft));
         }
-        (None, Some(h)) if !h.trim().is_empty() => (h, None),
+        (None, Some(h)) if !h.trim().is_empty() => (h, None::<Url>),
         _ => return Err(bad_request("send exactly one of url and html")),
     };
-    if let Some(d) = fa_recipe::from_html(&html, source.as_ref()) {
+    if let Some(d) = fa_recipe::from_html(&html, source.as_ref())
+        .or_else(|| fa_recipe::from_microdata(&html, source.as_ref()))
+    {
         return Ok(Json(d));
     }
     let client = match &s.services.mail.llm {

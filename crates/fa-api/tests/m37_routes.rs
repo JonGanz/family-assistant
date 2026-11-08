@@ -160,6 +160,7 @@ async fn seed(pool: PgPool) -> Fx {
         )
         .unwrap(),
         tasks: std::sync::Arc::new(fa_tasks::TaskService::new(store.clone())),
+        meals: std::sync::Arc::new(fa_meals::MealsService::new(store.clone(), None, false)),
         notify: fa_notify::NotifyService::new(
             store.clone(),
             fa_notify::NotifyConfig {

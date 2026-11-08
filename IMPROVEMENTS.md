@@ -101,3 +101,4 @@ Source: the *Outcome* of [plan/M4.md](plan/M4.md) and the T-NN outcomes in [plan
 | ID | Area | Gap | Suggested fix | Size |
 |---|---|---|---|---|
 | G5-01 | Meals, grocery | `grocery_item_source` cascades when its plan entry is deleted, so `fa-meals` parks a deleted or replaced entry's contributions as a `meals_change` row (6 h expiry) for the D-116 "update the list?" answer. After 6 h a late reconcile no longer sees them | A small `grocery_pending_source` table (not tied to the entry's lifetime), written by the plan routes and read by `reconcile` | QUICK |
+| G5-02 | Meals API, grocery | `GroceryItemPatch` cannot express null, so an item's quantity cannot be cleared nor its store reset to "Any store" | Double-option fields (absent keeps, null clears), as `api_key` does in `PUT /ai/llm-endpoint` | QUICK |

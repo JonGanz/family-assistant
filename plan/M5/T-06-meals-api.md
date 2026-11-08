@@ -5,7 +5,7 @@ milestone: M5
 wave: 3
 depends_on: [T-05, T-03]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-api/**", "bins/fa-server/**"]
 decisions: [D-109, D-110, D-112, D-116, D-117, D-118, D-120, D-121, D-122, D-015, D-019]
 ---
@@ -93,3 +93,22 @@ You are a sub-agent implementing one task of milestone M5 of the Family Assistan
 - **Images:** use `fa_meals::image::sniff_image` in the upload route (you may drop a duplicate). `put_image` resizes.
 - **Events:** the services already publish `recipes.updated`, `mealplan.updated` and `grocery.updated`. Don't publish them again.
 - **Recipe import:** `import` already uses `allow_private_hosts`, `max_input_chars` and `record_call`. For the `/ai/recipes/extract` alias with `{html}`, use `fa_recipe::extract(…, RecipeInput::Html{…})` as before, with the same policy.
+
+## Outcome (T-06 report, 2026-11-08)
+- **Built:**
+  - `crates/fa-api/src/meals.rs`: every route in the API table, with `#[utoipa::path]` (tag `meals`), registered in `openapi.rs` and `lib.rs`;
+  - `From<MealsError> for ApiError`;
+  - `Services.meals`;
+  - the dashboard `meals` filled;
+  - the `routes::stream` doc lists the new events;
+  - `ensure_defaults` in `setup_household` and `seed_default_rules`;
+  - the wiring (`build_services`, `feature_handlers`, `ensure_feature_schedules`);
+  - `tests/m5.rs` (12 tests).
+- **Results** (reported): `cargo test -p fa-api -p fa-server` passes at 4 threads; one default-threads run hit a `PoolTimedOut` in an M1 test, under load. Clippy and fmt clean. gen-openapi ok.
+- **Additions and deviations:**
+  - an extra route, `GET /recipes/tags` → `string[]`;
+  - `/ai/recipes/extract` with `{url}` delegates to `MealsService::import`, which honours `allow_private_hosts`; with `{html}` it keeps its own path and gains a microdata step;
+  - `PUT /meals/settings` publishes `household.updated` when the horizon changes;
+  - image upload answers 415 on a bad type and 413 when too large;
+  - `ETag` on recipe, template, item and `PUT /meal-plan` responses;
+  - undo needs `ReadMeals`; the service checks who may undo.

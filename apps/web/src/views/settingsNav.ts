@@ -57,6 +57,13 @@ const RAW: { title: string; pages: PageDef[] }[] = [
         adult: true,
       },
       {
+        to: '/settings/meals',
+        icon: 'food',
+        label: 'Meals',
+        blurb: 'Meal slots, stores, aisles and ingredients',
+        adult: true,
+      },
+      {
         to: '/settings/tasks',
         icon: 'tasks',
         label: 'Tasks',

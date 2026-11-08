@@ -38,6 +38,17 @@ import I_error from '~icons/material-symbols/error-rounded'
 import I_info from '~icons/material-symbols/info-rounded'
 import I_success from '~icons/material-symbols/check-circle-rounded'
 import I_ai from '~icons/material-symbols/auto-awesome-rounded'
+import I_food from '~icons/material-symbols/restaurant-rounded'
+import I_cart from '~icons/material-symbols/shopping-cart-rounded'
+import I_recipe from '~icons/material-symbols/menu-book-rounded'
+import I_template from '~icons/material-symbols/calendar-view-week-rounded'
+import I_star from '~icons/material-symbols/star-outline-rounded'
+import I_star_filled from '~icons/material-symbols/star-rounded'
+import I_offline from '~icons/material-symbols/cloud-off-rounded'
+import I_store from '~icons/material-symbols/storefront-rounded'
+import I_copy from '~icons/material-symbols/content-copy-rounded'
+import I_drag from '~icons/material-symbols/drag-indicator-rounded'
+import I_swap from '~icons/material-symbols/swap-vert-rounded'
 import I_refresh from '~icons/material-symbols/refresh-rounded'
 import I_sync from '~icons/material-symbols/sync-rounded'
 import I_lock from '~icons/material-symbols/lock-rounded'
@@ -119,6 +130,18 @@ export const icons = {
   bills_outline: I_bills_outline,
   settings_outline: I_settings_outline,
   more_outline: I_more_outline,
+  // M5 food (D-117)
+  food: I_food,
+  cart: I_cart,
+  recipe: I_recipe,
+  template: I_template,
+  star: I_star,
+  star_filled: I_star_filled,
+  offline: I_offline,
+  store: I_store,
+  copy: I_copy,
+  drag: I_drag,
+  swap: I_swap,
 } as const
 
 export type IconName = keyof typeof icons

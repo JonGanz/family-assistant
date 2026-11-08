@@ -67,6 +67,22 @@ export default defineConfig({
               cacheableResponse: { statuses: [200] },
             },
           },
+          {
+            // The shopping list must open in a shop with poor signal (D-118): the network first, the
+            // last answer after a short wait. Nothing else under /api is cached.
+            urlPattern: ({ url }) =>
+              ['/api/v1/grocery', '/api/v1/meals/stores', '/api/v1/meals/aisles'].includes(
+                url.pathname,
+              ),
+            method: 'GET',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'fa-grocery',
+              networkTimeoutSeconds: 3,
+              expiration: { maxEntries: 8, maxAgeSeconds: 7 * 24 * 3600 },
+              cacheableResponse: { statuses: [200] },
+            },
+          },
         ],
       },
     }),

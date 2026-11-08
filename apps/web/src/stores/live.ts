@@ -5,18 +5,29 @@ import { connectSse, type SseHandle, type SseMessage, type SseStatus } from '../
 import { useAwayStore } from './away'
 import { useCalendarStore } from './calendar'
 import { useDefinitionsStore } from './definitions'
+import { useGroceryStore } from './grocery'
 import { useHouseholdStore } from './household'
 import { useInboxStore } from './inbox'
 import { useListsStore } from './lists'
+import { useMealPlanStore } from './mealPlan'
 import { useMembersStore } from './members'
+import { useMealsSettingsStore } from './mealsSettings'
 import { useNotifyPrefsStore } from './notifyPrefs'
+import { useRecipesStore } from './recipes'
 import { useRoutinesStore } from './routines'
 import { useSourcesStore } from './sources'
 import { useTasksStore } from './tasks'
 import { useWeatherStore } from './weather'
 
 /** The M2 and M3 kinds are added here (the shared `LiveEventKind` union predates them). */
-export type AppLiveKind = LiveEventKind | 'tasks.updated' | 'routines.updated' | 'inbox.updated'
+export type AppLiveKind =
+  | LiveEventKind
+  | 'tasks.updated'
+  | 'routines.updated'
+  | 'inbox.updated'
+  | 'mealplan.updated'
+  | 'grocery.updated'
+  | 'recipes.updated'
 
 const KINDS: AppLiveKind[] = [
   'calendar.updated',
@@ -29,6 +40,9 @@ const KINDS: AppLiveKind[] = [
   'tasks.updated',
   'routines.updated',
   'inbox.updated',
+  'mealplan.updated',
+  'grocery.updated',
+  'recipes.updated',
   'resync',
 ]
 
@@ -49,6 +63,10 @@ export function dispatchLive(kind: AppLiveKind, data?: LiveEventData): Promise<u
     useAwayStore().invalidate(kind),
     useNotifyPrefsStore().invalidate(kind),
     useInboxStore().invalidate(kind),
+    useMealPlanStore().invalidate(kind),
+    useGroceryStore().invalidate(kind),
+    useRecipesStore().invalidate(kind),
+    useMealsSettingsStore().invalidate(kind),
   ])
 }
 

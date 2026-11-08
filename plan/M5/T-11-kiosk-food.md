@@ -30,6 +30,15 @@ Anyone at the kiosk adds and checks grocery items without a PIN (D-015, D-019). 
   - `dashboard/strings.ts`, `dashboard/types.ts`, `stores/dashboard.ts` (`handleEvent`, elevation);
   - T-07's `components/food/plan/MealPlanGrid.vue` and T-08's `components/food/grocery/ShoppingList.vue` (props in their reports).
 
+## Note from the scaffold
+The kiosk calls the API with its device token. Use `foodKiosk` from `api/food.ts` (not `food`) in every kiosk component, and pass it to the reused `MealPlanGrid` and `ShoppingList` if they accept an API prop; otherwise report what they need.
+
+## Notes from wave 4
+- `MealPlanGrid` props on the kiosk: `api` (pass `foodKiosk`), `slots` (`{id, name}[]`), `today`, `fill: true`, `editable: false`, `from`, `weeks`. The grid loads its own entries (`useMealPlanStore().useApi(api)`).
+- `ShoppingList` props: `{canEdit, kiosk: true, api: foodKiosk}`, no events. It works through `useGroceryStore` (`store.use(api)`).
+- In `handleEvent`, call `useGroceryStore().invalidate('grocery.updated')` and `useMealPlanStore().invalidate('mealplan.updated')` as well as refreshing the dashboard.
+- The ids are `data-testid`.
+
 ## You own
 The paths in `owns`.
 

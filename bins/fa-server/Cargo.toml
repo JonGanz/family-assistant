@@ -20,6 +20,7 @@ fa-jobs.workspace = true
 fa-calendar.workspace = true
 fa-weather.workspace = true
 fa-tasks.workspace = true
+fa-meals.workspace = true
 fa-notify.workspace = true
 fa-mail.workspace = true
 fa-llm.workspace = true

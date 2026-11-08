@@ -1668,7 +1668,7 @@ pub async fn get_dashboard(
         routines,
         task_lists: s.services.tasks.list_task_lists(hid).await?,
         pending_approvals,
-        meals: Vec::new(),
+        meals: s.services.meals.dashboard_meals(hid).await?,
         weather,
         advisories,
         settings,
