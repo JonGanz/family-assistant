@@ -485,3 +485,146 @@ async fn migration_down_then_up(pool: PgPool) {
         .unwrap();
     assert_eq!(n, 0);
 }
+
+#[sqlx::test(migrations = "./migrations")]
+async fn mail_reset_forgets_mail_and_keeps_written_events(pool: PgPool) {
+    let store = Store::from_pool(pool);
+    let h = seed(&store).await;
+    let other = seed(&store).await;
+    let src = source(&store, h).await;
+    let other_src = source(&store, other).await;
+    let m1 = message(&store, h, src, "1", at(1, 9)).await;
+    let _m2 = message(&store, h, src, "2", at(2, 9)).await;
+    let keep_other = message(&store, other, other_src, "1", at(1, 9)).await;
+
+    let mut tx = store.tx_system().await.unwrap();
+    sqlx::query(
+        "INSERT INTO event (id, household_id, title, start_at, end_at, origin, status, dedupe_key, message_id)
+         SELECT gen_random_uuid(), $1, s, now(), now(), 'extracted', s, s, $2
+           FROM unnest(ARRAY['proposed', 'rejected', 'written', 'approved']) s",
+    )
+    .bind(h.as_uuid())
+    .bind(m1.as_uuid())
+    .execute(&mut *tx)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO event (id, household_id, title, start_at, end_at, origin, status, dedupe_key)
+         VALUES (gen_random_uuid(), $1, 'Manual', now(), now(), 'manual', 'written', 'm')",
+    )
+    .bind(h.as_uuid())
+    .execute(&mut *tx)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO bill (id, household_id, message_id, payee, amount_minor, currency, status, confidence, dedupe_key)
+         VALUES (gen_random_uuid(), $1, $2, 'Water', 100, 'USD', 'open', 1, 'b')",
+    )
+    .bind(h.as_uuid())
+    .bind(m1.as_uuid())
+    .execute(&mut *tx)
+    .await
+    .unwrap();
+    sqlx::query(
+        "INSERT INTO mail_folder_state (source_id, folder, household_id, uidvalidity, uidnext)
+         VALUES ($1, 'INBOX', $2, 1, 10)",
+    )
+    .bind(src.as_uuid())
+    .bind(h.as_uuid())
+    .execute(&mut *tx)
+    .await
+    .unwrap();
+    sqlx::query("UPDATE mail_source SET history_id = '42', last_synced_at = now(), state = 'error' WHERE id = $1")
+        .bind(src.as_uuid())
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    for (kind, status, hh) in [
+        ("mail.process", "queued", h),
+        ("mail.llm", "dead", h),
+        ("mail.sync", "queued", h),
+        ("mail.process", "queued", other),
+    ] {
+        sqlx::query(
+            "INSERT INTO job (id, household_id, kind, status) VALUES (gen_random_uuid(), $1, $2, $3)",
+        )
+        .bind(hh.as_uuid())
+        .bind(kind)
+        .bind(status)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    }
+    tx.commit().await.unwrap();
+
+    // A dry run (rolled back) reports the same counts and changes nothing.
+    let mut tx = store.tx_for(h).await.unwrap();
+    assert_eq!(MailResetRepo::running_jobs(&mut tx, h).await.unwrap(), 0);
+    let dry = MailResetRepo::reset(&mut tx, h).await.unwrap();
+    tx.rollback().await.unwrap();
+
+    let mut tx = store.tx_for(h).await.unwrap();
+    let c = MailResetRepo::reset(&mut tx, h).await.unwrap();
+    tx.commit().await.unwrap();
+    assert_eq!(dry, c);
+    assert_eq!(
+        (
+            c.messages,
+            c.events_removed,
+            c.events_kept,
+            c.bills,
+            c.jobs,
+            c.folder_cursors,
+            c.sources_rewound
+        ),
+        (2, 2, 2, 1, 2, 1, 1)
+    );
+
+    let mut tx = store.tx_system().await.unwrap();
+    let q = |sql: &'static str| sqlx::query_scalar::<_, i64>(sql);
+    let msgs: i64 = q("SELECT count(*) FROM message")
+        .fetch_one(&mut *tx)
+        .await
+        .unwrap();
+    assert_eq!(msgs, 1, "only the other household's message is left");
+    let left: i64 = sqlx::query_scalar("SELECT count(*) FROM message WHERE id = $1")
+        .bind(keep_other.as_uuid())
+        .fetch_one(&mut *tx)
+        .await
+        .unwrap();
+    assert_eq!(left, 1);
+    let events: Vec<(String, Option<String>, Option<uuid::Uuid>)> = sqlx::query_as(
+        "SELECT origin, status, message_id FROM event WHERE household_id = $1 ORDER BY title",
+    )
+    .bind(h.as_uuid())
+    .fetch_all(&mut *tx)
+    .await
+    .unwrap();
+    assert_eq!(
+        events,
+        vec![
+            ("extracted".into(), Some("approved".into()), None),
+            ("manual".into(), Some("written".into()), None),
+            ("extracted".into(), Some("written".into()), None),
+        ]
+    );
+    let (hist, synced, state): (Option<String>, Option<DateTime<Utc>>, String) =
+        sqlx::query_as("SELECT history_id, last_synced_at, state FROM mail_source WHERE id = $1")
+            .bind(src.as_uuid())
+            .fetch_one(&mut *tx)
+            .await
+            .unwrap();
+    assert_eq!((hist, synced, state.as_str()), (None, None, "ok"));
+    let jobs: Vec<(String, uuid::Uuid)> =
+        sqlx::query_as("SELECT kind, household_id FROM job ORDER BY kind")
+            .fetch_all(&mut *tx)
+            .await
+            .unwrap();
+    assert_eq!(
+        jobs,
+        vec![
+            ("mail.process".into(), other.as_uuid()),
+            ("mail.sync".into(), h.as_uuid()),
+        ]
+    );
+}

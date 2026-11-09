@@ -33,6 +33,7 @@ mod household;
 mod instance_setting;
 mod jobs;
 pub mod mail_defaults;
+mod mail_reset;
 mod mail_setup;
 mod mail_source;
 mod meals_grocery;
@@ -74,6 +75,7 @@ pub use event_m3::{EventFull, EventProposalRow, NewExtractedEvent};
 pub use household::HouseholdRepo;
 pub use instance_setting::{InstanceSettingRepo, InstanceSettingRow};
 pub use jobs::{Job, JobCounts, JobRepo, NewJob, Schedule, ScheduleRepo};
+pub use mail_reset::{MAIL_DERIVED_JOB_KINDS, MailResetCounts, MailResetRepo};
 pub use mail_setup::{CategoryRepo, MailRuleRepo};
 pub use mail_source::{MailFolderState, MailFolderStateRepo, MailSourceRepo};
 pub use meals_grocery::{

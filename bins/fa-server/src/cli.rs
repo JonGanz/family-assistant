@@ -174,6 +174,16 @@ pub enum MailAction {
     },
     /// Process the household's pending messages in this process.
     ProcessNow,
+    /// Forget every synced message and what was derived from it (suggestions, extracted events not
+    /// yet approved, mail tasks, bills, decisions, queued mail jobs) and rewind the sync cursors, so
+    /// the next sync starts as if the sources were just added. Keeps sources, orgs, contacts, rules,
+    /// categories, pipelines, AI settings and events already approved or written to a calendar.
+    /// Without --yes it only reports what it would remove.
+    Reset {
+        /// Delete for real (otherwise a dry run that rolls back).
+        #[arg(long)]
+        yes: bool,
+    },
 }
 
 #[derive(Debug, Subcommand)]

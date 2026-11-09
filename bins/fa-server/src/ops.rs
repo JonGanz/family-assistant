@@ -13,7 +13,7 @@ use fa_domain::{
 };
 use fa_store::{
     AdvisoryRepo, AuditRepo, CalendarSourceRepo, DeviceElevationRepo, DeviceRepo, HouseholdRepo,
-    MemberRepo, Store, Tx, UserAccountRepo,
+    MailResetRepo, MemberRepo, Store, Tx, UserAccountRepo,
 };
 
 use crate::cli::{
@@ -411,6 +411,9 @@ pub async fn mail(
     action: MailAction,
 ) -> Result<()> {
     let hid = require_household(store, household).await?;
+    if let MailAction::Reset { yes } = action {
+        return mail_reset(store, hid, yes).await;
+    }
     let llm = wiring::llm_provider(cfg, store)?;
     let services = wiring::build_services(cfg, store, &llm)?;
     crate::mail::run(
@@ -420,6 +423,38 @@ pub async fn mail(
         action,
     )
     .await
+}
+
+/// `mail reset`: one transaction, rolled back unless `yes`.
+pub(crate) async fn mail_reset(store: &Store, hid: HouseholdId, yes: bool) -> Result<()> {
+    let mut tx = store.tx_for(hid).await?;
+    let running = MailResetRepo::running_jobs(&mut tx, hid).await?;
+    if running > 0 {
+        bail!("{running} mail job(s) are running right now; wait a minute and try again");
+    }
+    let c = MailResetRepo::reset(&mut tx, hid).await?;
+    println!("messages:                {}", c.messages);
+    println!("pipeline decisions:      {}", c.decisions);
+    println!(
+        "extracted events:        {} (kept {} approved or written)",
+        c.events_removed, c.events_kept
+    );
+    println!("mail tasks:              {}", c.tasks);
+    println!("bills:                   {}", c.bills);
+    println!("contact suggestions:     {}", c.contact_suggestions);
+    println!("pending notifications:   {}", c.notifications);
+    println!("queued mail jobs:        {}", c.jobs);
+    println!("folder cursors:          {}", c.folder_cursors);
+    println!("sources rewound:         {}", c.sources_rewound);
+    if !yes {
+        tx.rollback().await?;
+        println!("dry run: nothing changed. Run again with --yes to delete.");
+        return Ok(());
+    }
+    audit(&mut tx, hid, "mail.reset", "household", hid.to_string()).await?;
+    tx.commit().await?;
+    println!("done: the next sync backfills every source as if it were just added.");
+    Ok(())
 }
 
 pub async fn pin(store: &Store, household: Option<HouseholdId>, action: PinAction) -> Result<()> {

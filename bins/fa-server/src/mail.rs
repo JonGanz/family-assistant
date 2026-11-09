@@ -98,6 +98,7 @@ pub async fn run(
                 .context("processing")?;
             println!("processed: {ok} message(s), {failed} failed");
         }
+        MailAction::Reset { yes } => crate::ops::mail_reset(store, household, yes).await?,
         MailAction::ProcessNow => {
             let (ok, failed) = process_pending(store, &deps, household)
                 .await

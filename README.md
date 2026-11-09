@@ -636,6 +636,7 @@ value. Saving a changed setting restarts the app by itself in about a second, on
 | `device pair --name <n>` / `device revoke <id>` | Dashboard devices. Pairing uses the saved settings and prints the home-network link too when that address is set |
 | `mail sync-now [--source <name>]` | One sync pass of every mail source (or the named one), then processes the new messages, in this process. Needs `FA_ALLOW_PLAIN_IMAP` for a plain-IMAP server |
 | `mail process-now` | Process the household's pending messages in this process |
+| `mail reset [--yes]` | Start mail processing over: deletes every synced message and what came from it (suggestions, unapproved extracted events, mail tasks, bills, pipeline decisions, queued mail jobs) and rewinds the sync cursors, so the next sync backfills `backfill_days` as if the sources were just added. Keeps sources, orgs, contacts, rules, categories, pipelines, AI settings and events already approved or written to a calendar. Without `--yes` it is a dry run that prints the counts. In production: `docker compose exec app fa-server mail reset` |
 | `calendar sync <source-id>` | Sync one calendar source now, in this process, and print what changed |
 | `weather fetch` | Fetch the forecast now, evaluate the rules and print the result |
 | `eval --decision-point <dp> [--with-llm] [--limit N] [--json]` | Read-only replay of the labelled mail sample, see [Local AI](#local-ai-optional). `--with-llm` without an enabled endpoint exits 2 |
