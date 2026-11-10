@@ -684,6 +684,24 @@ Run these before pushing:
 scripts/ci-local.sh
 scripts/e2e.sh
 ```
+
+**Optional installs that make these runs faster.** Nothing needs them; the scripts fall back without them.
+
+| Install | Effect |
+|---|---|
+| `cargo install cargo-nextest --locked` | Runs every test as its own process across all cores, as GitHub CI does. Without it, `ci-local.sh` runs one test binary at a time with 4 threads. The biggest win for the test phase |
+| `sudo apt install mold` and a per-machine linker setting (below) | Links the 90+ test binaries several times faster |
+| `cargo install cargo-deny --locked` | Not faster, but lets `ci-local.sh` run the licence and advisory check instead of skipping it |
+
+To use mold, add this to your own `~/.cargo/config.toml` (not the repo's, so machines without mold still build):
+```toml
+[target.x86_64-unknown-linux-gnu]
+linker = "clang"
+rustflags = ["-C", "link-arg=-fuse-ld=mold"]
+```
+(`clang` is `sudo apt install clang`.)
+
+**Disk:** `target/` is about 10 GB after a full `ci-local.sh` run. The workspace's dev profile keeps only line tables for debug info and none for dependencies. `cargo clean` frees it all; the next build starts from scratch.
 | Script | What it does |
 |---|---|
 | [`IMPROVEMENTS.md`](IMPROVEMENTS.md) | Outstanding review findings and suggestions, by area |
