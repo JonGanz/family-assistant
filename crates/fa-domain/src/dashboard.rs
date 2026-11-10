@@ -117,6 +117,8 @@ impl Default for DashboardSettings {
                 Panel::new("weather", json!({"hourly": true})),
                 Panel::new("advisories", json!({})),
                 Panel::new("agenda", json!({})),
+                // Today's meals (M5); hidden on days with nothing planned.
+                Panel::new("meals", json!({})),
             ],
             food_view: true,
         }

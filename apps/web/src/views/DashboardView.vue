@@ -191,7 +191,10 @@ const mmss = computed(
       </p>
     </div>
     <TaskFlow ref="flow" />
-    <Screensaver :minutes="store.snapshot?.settings.screensaver_minutes ?? 15" />
+    <Screensaver
+      :minutes="store.snapshot?.settings.screensaver_minutes ?? 15"
+      :tz="store.snapshot?.household.tz"
+    />
 
     <div v-if="showElevation" class="elevation" role="dialog" aria-label="Elevation">
       <div v-if="expiresAt && remaining > 0" data-testid="elevated">{{ S.elevated(mmss) }}</div>

@@ -140,6 +140,22 @@ const backlogText = computed(() => {
   const w = `${awaiting} ${awaiting === 1 ? 'message' : 'messages'} waiting for the AI`
   return queued > 0 ? `${w} · ${queued} queued` : w
 })
+const processing = ref(false)
+async function processNow() {
+  processing.value = true
+  try {
+    const n = ai.backlog.awaiting + ai.backlog.queued
+    await ai.processBacklog()
+    snackbar.show({
+      text: n > 0 ? `Processing ${n} ${n === 1 ? 'message' : 'messages'} now` : 'Processing now',
+    })
+    await ai.loadBacklog().catch(() => undefined)
+  } catch (e) {
+    snackbar.show({ text: e instanceof Error ? e.message : 'Could not start processing' })
+  } finally {
+    processing.value = false
+  }
+}
 let backlogTimer: ReturnType<typeof setInterval> | undefined
 
 // Model list: a select when the server answers, a text field with Refresh otherwise.
@@ -534,6 +550,14 @@ onUnmounted(() => clearInterval(backlogTimer))
           <p v-if="backlogText" class="note" role="status" data-testid="backlog">
             {{ backlogText }}
           </p>
+          <UiButton
+            v-if="backlogText && ai.endpoint?.enabled"
+            variant="text"
+            :disabled="processing"
+            data-testid="process-now"
+            @click="processNow"
+            >Process now</UiButton
+          >
         </template>
         <template v-if="showForm" #actions>
           <UiButton variant="tonal" :disabled="testing" data-testid="test" @click="testConnection"

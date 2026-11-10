@@ -74,7 +74,7 @@ impl Modify for Security {
         mail::reject_inbox, mail::list_bills, mail::patch_bill,
         ai::get_endpoint, ai::put_endpoint, ai::test_endpoint, ai::list_models,
         ai::get_settings, ai::put_settings, ai::get_pipeline, ai::put_pipeline,
-        ai::get_stats, ai::get_backlog, ai::extract_recipe,
+        ai::get_stats, ai::get_backlog, ai::process_backlog, ai::extract_recipe,
         meals::list_recipes, meals::list_recipe_tags, meals::create_recipe, meals::get_recipe, meals::put_recipe, meals::delete_recipe, meals::put_favourite, meals::put_rating, meals::get_recipe_image, meals::post_recipe_image, meals::delete_recipe_image, meals::import_recipe, meals::match_recipe_line, meals::list_ingredients, meals::create_ingredient, meals::put_ingredient, meals::delete_ingredient, meals::merge_ingredient, meals::get_meals_settings, meals::put_meals_settings, meals::get_meal_slots, meals::put_meal_slots, meals::get_meal_aisles, meals::put_meal_aisles, meals::get_meal_stores, meals::put_meal_stores, meals::get_store_aisles, meals::put_store_aisles, meals::get_meal_plan, meals::add_plan_entry, meals::put_plan_entry, meals::delete_plan_entry, meals::swap_plan_entries, meals::list_templates, meals::create_template, meals::get_template, meals::put_template, meals::delete_template, meals::preview_template, meals::template_from_plan, meals::duplicate_template, meals::apply_template, meals::get_grocery, meals::add_grocery_item, meals::check_grocery_item, meals::uncheck_grocery_item, meals::low_grocery_item, meals::put_grocery_item, meals::delete_grocery_item, meals::generate_grocery, meals::reconcile_grocery, meals::undo_meals_change,
     ),
     components(schemas(

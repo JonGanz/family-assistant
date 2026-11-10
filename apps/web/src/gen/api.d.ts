@@ -37,6 +37,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/backlog/process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Runs the LLM backlog now: queued jobs skip their retry wait and a catch-up queues the
+         *     `awaiting` messages again.
+         */
+        post: operations["process_backlog"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/llm-endpoint": {
         parameters: {
             query?: never;
@@ -3264,6 +3284,16 @@ export interface components {
              */
             queued: number;
         };
+        /** @description Result of `POST /ai/backlog/process`. */
+        LlmBacklogProcessed: {
+            /** @description A catch-up was queued: messages that were `awaiting` are queued again. */
+            catchup: boolean;
+            /**
+             * Format: int32
+             * @description Queued `mail.llm` jobs made runnable now (their retry wait was skipped).
+             */
+            released: number;
+        };
         LlmCallStat: {
             /** Format: int64 */
             ok: number;
@@ -4981,6 +5011,51 @@ export interface operations {
                 };
             };
             403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    process_backlog: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LlmBacklogProcessed"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description code `not_configured` */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description the endpoint is disabled */
+            422: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -1,14 +1,29 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useClock } from '../composables/useClock'
+import { formatTime } from '../lib/time'
 import { S } from './strings'
 
 const props = defineProps<{
   /** Minutes without interaction before it starts; 0 turns it off. */
   minutes: number
+  /** Household time zone for the clock; the browser's when unknown. */
+  tz?: string
 }>()
 
-const ICON = 96
 const SPEED = 110 // px per second, on both axes
+
+// The bouncing clock. Its box is measured each frame, so a wider time (10:00 vs 9:59) still bounces
+// off the edges exactly.
+const now = useClock(1000)
+const time = computed(() =>
+  formatTime(now.value, props.tz || Intl.DateTimeFormat().resolvedOptions().timeZone),
+)
+const clockEl = ref<HTMLElement | null>(null)
+const size = () => ({
+  w: clockEl.value?.offsetWidth || 240,
+  h: clockEl.value?.offsetHeight || 96,
+})
 
 const active = ref(false)
 const pos = ref({ x: 0, y: 0 })
@@ -34,7 +49,8 @@ function start() {
   active.value = true
   const w = window.innerWidth
   const h = window.innerHeight
-  pos.value = { x: Math.random() * Math.max(1, w - ICON), y: Math.random() * Math.max(1, h - ICON) }
+  const { w: cw, h: ch } = size()
+  pos.value = { x: Math.random() * Math.max(1, w - cw), y: Math.random() * Math.max(1, h - ch) }
   vx = Math.random() < 0.5 ? SPEED : -SPEED
   vy = Math.random() < 0.5 ? SPEED : -SPEED
   last = 0
@@ -44,8 +60,9 @@ function start() {
 function step(t: number) {
   const dt = last ? Math.min(0.1, (t - last) / 1000) : 0
   last = t
-  const maxX = Math.max(0, window.innerWidth - ICON)
-  const maxY = Math.max(0, window.innerHeight - ICON)
+  const { w: cw, h: ch } = size()
+  const maxX = Math.max(0, window.innerWidth - cw)
+  const maxY = Math.max(0, window.innerHeight - ch)
   let { x, y } = pos.value
   x += vx * dt
   y += vy * dt
@@ -101,14 +118,14 @@ watch(
     @click="wake"
     @keydown.enter="wake"
   >
-    <img
-      class="icon"
-      src="/icon-192.png"
-      alt=""
-      :width="ICON"
-      :height="ICON"
+    <div
+      ref="clockEl"
+      class="clock"
+      data-testid="screensaver-clock"
       :style="{ transform: `translate(${pos.x}px, ${pos.y}px)` }"
-    />
+    >
+      {{ time }}
+    </div>
   </div>
 </template>
 
@@ -121,10 +138,18 @@ watch(
   overflow: hidden;
   cursor: none;
 }
-.icon {
+.clock {
   position: absolute;
   top: 0;
   left: 0;
   will-change: transform;
+  white-space: nowrap;
+  /* Dim grey on black: readable across the room without lighting it up at night. */
+  color: #9a9a9a;
+  font-size: clamp(3rem, 10vmin, 7rem);
+  font-weight: 300;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.02em;
 }
 </style>

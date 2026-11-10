@@ -77,6 +77,62 @@
         ]
       }
     },
+    "/api/v1/ai/backlog/process": {
+      "post": {
+        "tags": [
+          "ai"
+        ],
+        "summary": "Runs the LLM backlog now: queued jobs skip their retry wait and a catch-up queues the\n`awaiting` messages again.",
+        "operationId": "process_backlog",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LlmBacklogProcessed"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "code `not_configured`",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "the endpoint is disabled",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          }
+        ]
+      }
+    },
     "/api/v1/ai/llm-endpoint": {
       "get": {
         "tags": [
@@ -15579,6 +15635,26 @@
             "type": "integer",
             "format": "int32",
             "description": "A `mail.llm` job is queued or running.",
+            "minimum": 0
+          }
+        }
+      },
+      "LlmBacklogProcessed": {
+        "type": "object",
+        "description": "Result of `POST /ai/backlog/process`.",
+        "required": [
+          "released",
+          "catchup"
+        ],
+        "properties": {
+          "catchup": {
+            "type": "boolean",
+            "description": "A catch-up was queued: messages that were `awaiting` are queued again."
+          },
+          "released": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Queued `mail.llm` jobs made runnable now (their retry wait was skipped).",
             "minimum": 0
           }
         }

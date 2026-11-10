@@ -10,8 +10,6 @@ const props = defineProps<{
   tz: string
   members?: MemberLike[]
   locale?: string
-  /** Inside a calendar grid: square corners (R1). */
-  square?: boolean
   /** Makes the card a button that emits `select`. */
   selectable?: boolean
 }>()
@@ -26,7 +24,7 @@ const chips = computed(() =>
 <template>
   <article
     class="event-card"
-    :class="{ busy, square, selectable }"
+    :class="{ busy, selectable }"
     :style="stripeStyle(event)"
     :role="selectable ? 'button' : undefined"
     :tabindex="selectable ? 0 : undefined"
@@ -65,19 +63,17 @@ const chips = computed(() =>
   display: flex;
   gap: var(--ui-space-3);
   padding: var(--ui-space-3);
+  --ev-stripe-w: 6px;
   border-left: 6px solid var(--ui-primary);
   border-radius: var(--ui-radius-md);
-  background: var(--ui-surface-container-low);
+  background-color: var(--ui-surface-container-low);
   color: var(--ui-on-surface);
-}
-.event-card.square {
-  border-radius: var(--ui-radius-none);
 }
 .event-card.selectable {
   cursor: pointer;
 }
 .event-card.selectable:hover {
-  background: var(--ui-surface-container-high);
+  background-color: var(--ui-surface-container-high);
   --ui-on-surface-variant: var(--ui-on-surface-variant-high);
 }
 .event-card.selectable:focus-visible {
@@ -85,13 +81,14 @@ const chips = computed(() =>
   outline-offset: 2px;
 }
 .event-card.busy {
-  background: repeating-linear-gradient(
+  --ev-bg: repeating-linear-gradient(
     45deg,
     var(--ui-surface-container-low),
     var(--ui-surface-container-low) 8px,
     var(--ui-outline-variant) 8px,
     var(--ui-outline-variant) 10px
   );
+  background-image: var(--ev-bg);
   color: var(--ui-on-surface-variant);
 }
 .time {

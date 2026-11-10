@@ -829,6 +829,95 @@ async fn backlog_counts_waiting_messages(pool: PgPool) {
     assert_eq!(r.status, StatusCode::FORBIDDEN);
 }
 
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn process_backlog_releases_only_own_queued_jobs(pool: PgPool) {
+    let fx = seed(pool).await;
+    let adult = login(&fx, "alex", ADULT_PW).await;
+    let c = [("cookie", adult.as_str())];
+    let uri = format!("{AI}/backlog/process");
+    // No endpoint yet: the usual not_configured problem.
+    let r = send(&fx.app, Method::POST, &uri, &c, None).await;
+    assert_eq!(r.status, StatusCode::NOT_FOUND);
+    let ep = format!("{AI}/llm-endpoint");
+    let mut body = json!({"base_url": "http://192.0.2.10:11434/v1", "model": "m",
+        "dialect": "openai_chat", "timeout_ms": 5000, "enabled": false});
+    send(&fx.app, Method::PUT, &ep, &c, Some(body.clone())).await;
+    let r = send(&fx.app, Method::POST, &uri, &c, None).await;
+    assert_eq!(r.status, StatusCode::UNPROCESSABLE_ENTITY);
+    body["enabled"] = json!(true);
+    send(&fx.app, Method::PUT, &ep, &c, Some(body)).await;
+
+    let mut tx = fx.state.store.tx_system().await.unwrap();
+    let hid: uuid::Uuid = sqlx::query_scalar("SELECT id FROM household")
+        .fetch_one(&mut *tx)
+        .await
+        .unwrap();
+    let other = uuid::Uuid::now_v7();
+    sqlx::query("INSERT INTO household (id, name, tz) VALUES ($1, 'Other', 'UTC')")
+        .bind(other)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    for (h, status) in [
+        (hid, "queued"),
+        (hid, "queued"),
+        (hid, "dead"),
+        (other, "queued"),
+    ] {
+        sqlx::query(
+            "INSERT INTO job (id, household_id, kind, payload, status, run_at)
+             VALUES ($1, $2, 'mail.llm', '{}', $3, now() + interval '5 hours')",
+        )
+        .bind(uuid::Uuid::now_v7())
+        .bind(h)
+        .bind(status)
+        .execute(&mut *tx)
+        .await
+        .unwrap();
+    }
+    tx.commit().await.unwrap();
+
+    let r = send(&fx.app, Method::POST, &uri, &c, None).await;
+    assert_eq!(
+        r.status,
+        StatusCode::OK,
+        "{}",
+        String::from_utf8_lossy(&r.body)
+    );
+    assert_eq!(r.json(), json!({"released": 2, "catchup": true}));
+    let mut tx = fx.state.store.tx_system().await.unwrap();
+    let rows: Vec<(uuid::Uuid, String, bool)> = sqlx::query_as(
+        "SELECT household_id, status, run_at <= now() FROM job WHERE kind = 'mail.llm'",
+    )
+    .fetch_all(&mut *tx)
+    .await
+    .unwrap();
+    assert_eq!(rows.len(), 4);
+    for (h, status, due) in rows {
+        assert_eq!(due, h == hid && status == "queued", "{h} {status}");
+    }
+    let catchups: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM job WHERE kind = 'mail.llm.catchup' AND household_id = $1",
+    )
+    .bind(hid)
+    .fetch_one(&mut *tx)
+    .await
+    .unwrap();
+    assert!(catchups >= 1);
+    tx.rollback().await.unwrap();
+
+    let child = login(&fx, "sam", CHILD_PW).await;
+    let r = send(
+        &fx.app,
+        Method::POST,
+        &uri,
+        &[("cookie", child.as_str())],
+        None,
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::FORBIDDEN);
+}
+
 const JSONLD: &str = r#"<html><head><script type="application/ld+json">
 {"@context":"https://schema.org","@type":"Recipe","name":"Plain Soup","recipeIngredient":["2 cups water","1 tsp salt"],
  "recipeInstructions":[{"@type":"HowToStep","text":"Boil the water."}],"prepTime":"PT5M"}

@@ -11,8 +11,9 @@ use axum::http::StatusCode;
 use chrono::{DateTime, Duration, Utc};
 use fa_domain::{
     Action, AiSettings, AiSettingsInput, DEFAULT_RULES_THRESHOLD, DecisionPointKey, HouseholdId,
-    LlmBacklog, LlmCallStat, LlmDialect, LlmEndpoint, LlmEndpointInput, LlmEndpointView,
-    MailExtractMode, MailMode, NewLlmCall, Resource, SecretKind, StageCount, StageKind,
+    LlmBacklog, LlmBacklogProcessed, LlmCallStat, LlmDialect, LlmEndpoint, LlmEndpointInput,
+    LlmEndpointView, MailExtractMode, MailMode, NewLlmCall, Resource, SecretKind, StageCount,
+    StageKind,
 };
 use fa_llm::{Dialect, EndpointConfig, LlmClient, LlmError};
 use fa_pipeline::{Pipeline, PipelineError};
@@ -627,6 +628,51 @@ pub async fn get_backlog(State(s): State<AppState>, auth: Auth) -> ApiResult<Jso
     let v = LlmStateRepo::backlog(&mut tx, hid).await?;
     tx.rollback().await?;
     Ok(Json(v))
+}
+
+/// Runs the LLM backlog now: queued jobs skip their retry wait and a catch-up queues the
+/// `awaiting` messages again.
+#[utoipa::path(post, path = "/api/v1/ai/backlog/process", tag = "ai", security(("cookie" = [])),
+    responses((status = 200, body = LlmBacklogProcessed), (status = 403, body = Problem),
+              (status = 404, body = Problem, description = "code `not_configured`"),
+              (status = 422, body = Problem, description = "the endpoint is disabled")))]
+pub async fn process_backlog(
+    State(s): State<AppState>,
+    auth: Auth,
+) -> ApiResult<Json<LlmBacklogProcessed>> {
+    let hid = adult(&auth.actor)?;
+    let mut tx = s.store.tx_for(hid).await?;
+    let ep = LlmEndpointRepo::get(&mut tx, hid)
+        .await?
+        .ok_or_else(not_configured)?;
+    if !ep.enabled {
+        return Err(ApiError::Unprocessable(
+            "the LLM endpoint is switched off".into(),
+        ));
+    }
+    let released = JobRepo::release_queued(&mut tx, hid, "mail.llm").await?;
+    let mut job = NewJob::new("mail.llm.catchup");
+    job.household_id = Some(hid);
+    job.payload = serde_json::json!({"household": hid});
+    job.idempotency_key = Some(format!(
+        "mail.llm.catchup:{hid}:{}",
+        Utc::now().timestamp_millis()
+    ));
+    let catchup = JobRepo::enqueue(&mut tx, &job).await?.is_some();
+    audit(
+        &mut tx,
+        &auth.actor,
+        "ai.backlog.process",
+        "llm_endpoint",
+        Some(ep.id.to_string()),
+        Some(serde_json::json!({"released": released, "catchup": catchup})),
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(Json(LlmBacklogProcessed {
+        released: u32::try_from(released).unwrap_or(u32::MAX),
+        catchup,
+    }))
 }
 
 fn pipeline_err(e: PipelineError) -> ApiError {

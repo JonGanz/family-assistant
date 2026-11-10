@@ -136,6 +136,16 @@ pub struct LlmBacklog {
     pub queued: u32,
 }
 
+/// Result of `POST /ai/backlog/process`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS, ToSchema)]
+#[ts(export, export_to = "../../../apps/web/src/gen/types/")]
+pub struct LlmBacklogProcessed {
+    /// Queued `mail.llm` jobs made runnable now (their retry wait was skipped).
+    pub released: u32,
+    /// A catch-up was queued: messages that were `awaiting` are queued again.
+    pub catchup: bool,
+}
+
 impl AiSettings {
     /// The settings of a household with no row yet.
     pub fn defaults(now: DateTime<Utc>) -> Self {

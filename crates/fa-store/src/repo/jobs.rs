@@ -118,6 +118,25 @@ impl JobRepo {
         Ok(id.map(Into::into))
     }
 
+    /// Makes a household's queued jobs of `kind` runnable now (skips a retry backoff). Running,
+    /// done and dead jobs and other households are untouched. Returns how many jobs were queued
+    /// (including those already runnable).
+    pub async fn release_queued(
+        conn: &mut PgConnection,
+        household: fa_domain::HouseholdId,
+        kind: &str,
+    ) -> Result<u64> {
+        Ok(sqlx::query(
+            "UPDATE job SET run_at = now()
+             WHERE household_id = $1 AND kind = $2 AND status = 'queued' AND run_at > now()",
+        )
+        .bind(household.as_uuid())
+        .bind(kind)
+        .execute(conn)
+        .await?
+        .rows_affected())
+    }
+
     pub async fn get(conn: &mut PgConnection, id: JobId) -> Result<Option<Job>> {
         let row = sqlx::query_as!(
             Row,

@@ -3,7 +3,9 @@ import { computed, onMounted, ref, watch } from 'vue'
 import type { EventView } from '../api/client'
 import DateRangeNav from '../components/DateRangeNav.vue'
 import EventCard from '../components/EventCard.vue'
+import WeekGrid from '../components/calendar/WeekGrid.vue'
 import { rangeFor, shiftAnchor } from '../composables/useRange'
+import { weekStartKey, type WeekStart } from '../dashboard/weekModel'
 import { stripeStyle } from '../lib/eventColors'
 import { addDays, dayKey, formatDayHeading, groupByDay, startOfDay } from '../lib/time'
 import type { EventLike, RangeMode } from '../lib/types'
@@ -74,13 +76,22 @@ const VIEWS = [
   { value: 'month', label: 'Month' },
 ]
 const navMode = computed<RangeMode>(() => (view.value === 'month' ? 'month' : 'week'))
-const span = computed(() => rangeFor(navMode.value, anchor.value))
+const weekStart = computed<WeekStart>(() => (household.view?.week_start as WeekStart) ?? 'monday')
+/** The household's week (from its first day of the week) or calendar month holding `a`; `to` is exclusive. */
+function rangeAt(mode: RangeMode, a: string): { from: string; to: string } {
+  if (mode === 'week') {
+    const from = weekStartKey(a, weekStart.value)
+    return { from, to: addDays(from, 7) }
+  }
+  return rangeFor(mode, a)
+}
+const span = computed(() => rangeAt(navMode.value, anchor.value))
 /** Month view also shows the leading and trailing days of the boundary weeks. */
 const grid = computed(() => {
   if (view.value !== 'month') return span.value
   return {
-    from: rangeFor('week', span.value.from).from,
-    to: rangeFor('week', addDays(span.value.to, -1)).to,
+    from: rangeAt('week', span.value.from).from,
+    to: rangeAt('week', addDays(span.value.to, -1)).to,
   }
 })
 const days = computed(() => {
@@ -103,14 +114,8 @@ const events = computed(() => {
 const memberOptions = computed(() =>
   members.items.map((m) => ({ value: m.id, label: m.display_name })),
 )
-const byDay = computed(() =>
-  groupByDay(
-    events.value.map((e) => toEventLike(e, likes.value)),
-    tz.value,
-    grid.value.from,
-    days.value,
-  ),
-)
+const eventLikes = computed(() => events.value.map((e) => toEventLike(e, likes.value)))
+const byDay = computed(() => groupByDay(eventLikes.value, tz.value, grid.value.from, days.value))
 const today = computed(() => dayKey(new Date(), tz.value))
 const label = computed(() => {
   if (view.value === 'month') {
@@ -125,7 +130,9 @@ const label = computed(() => {
 const weekdays = computed(() =>
   Array.from({ length: 7 }, (_, i) =>
     new Intl.DateTimeFormat(undefined, { timeZone: 'UTC', weekday: 'short' }).format(
-      new Date(`${addDays('2026-10-19', i)}T12:00:00Z`),
+      new Date(
+        `${addDays(weekStart.value === 'sunday' ? '2026-10-18' : '2026-10-19', i)}T12:00:00Z`,
+      ),
     ),
   ),
 )
@@ -217,8 +224,9 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
     <UiErrorState v-if="calendar.error" :message="calendar.error" @retry="load" />
     <UiSkeleton v-else-if="loadingFirst" :lines="5" />
 
-    <template v-else-if="view === 'agenda'">
+    <template v-else-if="view === 'agenda' || view === 'week'">
       <AgendaList
+        v-if="view === 'agenda'"
         :events="events"
         :tz="tz"
         :from="grid.from"
@@ -226,6 +234,15 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
         :members="likes"
         hide-empty
         selectable
+        @select="detail = $event"
+      />
+      <WeekGrid
+        v-else
+        :events="eventLikes"
+        :members="likes"
+        :chosen="chosen"
+        :start="grid.from"
+        :tz="tz"
         @select="detail = $event"
       />
       <section v-if="allChips.length" class="agenda-tasks" aria-label="Tasks">
@@ -244,39 +261,6 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
         </div>
       </section>
     </template>
-
-    <div v-else-if="view === 'week'" class="week">
-      <section
-        v-for="[k, list] in byDay"
-        :key="k"
-        class="day"
-        :class="{ today: k === today }"
-        :data-day="k"
-      >
-        <h2>{{ formatDayHeading(k, tz, today) }}</h2>
-        <div class="list">
-          <EventCard
-            v-for="e in list"
-            :key="e.id"
-            :event="e"
-            :tz="tz"
-            :members="likes"
-            square
-            selectable
-            @select="detail = $event"
-          />
-          <ul v-if="chipsOf(k).length" class="chips">
-            <li v-for="c in chipsOf(k)" :key="c.id" :style="{ borderLeftColor: c.color }">
-              <UiCheckbox
-                :model-value="c.done"
-                :label="c.title"
-                @update:model-value="toggleChip(c)"
-              />
-            </li>
-          </ul>
-        </div>
-      </section>
-    </div>
 
     <div v-else class="month-scroll">
       <div class="month">
@@ -351,19 +335,7 @@ h2 {
 .task-chip {
   border-left: 4px solid var(--ui-primary);
   padding-left: var(--ui-space-2);
-  border-radius: var(--ui-radius-none);
-}
-.week {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
-  gap: var(--ui-space-3);
-}
-.week .list {
-  display: grid;
-  gap: var(--ui-space-2);
-}
-.day.today > h2 {
-  color: var(--ui-primary);
+  border-radius: var(--ui-radius-sm);
 }
 .month-scroll {
   overflow-x: auto;
@@ -411,10 +383,11 @@ h2 {
   text-align: left;
   font: var(--ui-type-body-sm);
   color: inherit;
-  background: var(--ui-surface-container-low);
+  --ev-stripe-w: 4px;
+  background-color: var(--ui-surface-container-low);
   border: 0;
   border-left: 4px solid var(--ui-primary);
-  border-radius: var(--ui-radius-none);
+  border-radius: var(--ui-radius-sm);
   padding: 0 var(--ui-space-1);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -425,13 +398,14 @@ h2 {
   outline: var(--ui-focus-ring);
 }
 .ev.busy {
-  background: repeating-linear-gradient(
+  --ev-bg: repeating-linear-gradient(
     45deg,
     transparent,
     transparent 4px,
     var(--ui-outline-variant) 4px,
     var(--ui-outline-variant) 6px
   );
+  background-image: var(--ev-bg);
   color: var(--ui-on-surface-variant);
 }
 .more {

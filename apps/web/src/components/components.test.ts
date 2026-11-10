@@ -37,11 +37,11 @@ describe('components', () => {
       'avatar--app',
     )
   })
-  it('EventCard is square in a grid and emits select when selectable', async () => {
+  it('EventCard emits select when selectable', async () => {
     const w = mount(EventCard, {
-      props: { event, tz: 'UTC', members, square: true, selectable: true },
+      props: { event, tz: 'UTC', members, selectable: true },
     })
-    expect(w.classes()).toContain('square')
+    expect(w.classes()).not.toContain('square')
     await w.trigger('click')
     expect(w.emitted('select')).toHaveLength(1)
   })

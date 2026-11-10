@@ -138,6 +138,8 @@ li.event .title {
 li.event {
   cursor: pointer;
   border-left: 6px solid var(--color-accent);
+  --ev-stripe-w: 6px;
+  border-radius: var(--ui-radius-sm);
   background: var(--color-surface);
 }
 li.event.busy {

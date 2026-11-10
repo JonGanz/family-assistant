@@ -229,6 +229,25 @@ describe('Settings AI', () => {
     )
   })
 
+  it('Process now shows with a backlog and an enabled endpoint, posts and reloads', async () => {
+    serve(endpoint)
+    let w = await mountPage()
+    expect(w.find('[data-testid="process-now"]').exists()).toBe(false)
+    serve({ ...endpoint, enabled: false })
+    backlogBody = { awaiting: 12, queued: 3 }
+    w = await mountPage()
+    expect(w.find('[data-testid="process-now"]').exists()).toBe(false)
+    serve(endpoint)
+    w = await mountPage()
+    m.post.mockResolvedValue({ released: 3, catchup: true })
+    const gets = m.get.mock.calls.length
+    await w.find('[data-testid="process-now"]').trigger('click')
+    await flushPromises()
+    expect(m.post).toHaveBeenCalledWith('/api/v1/ai/backlog/process', null)
+    expect(m.get.mock.calls.length).toBeGreaterThan(gets)
+    expect(useSnackbar().state.current?.text).toBe('Processing 15 messages now')
+  })
+
   it('shows the empty activity text', async () => {
     serve(endpoint)
     const w = await mountPage()

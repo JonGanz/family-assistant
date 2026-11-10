@@ -28,9 +28,14 @@ describe('stripeStyle', () => {
     })
   })
 
-  it('is equal bands for several', () => {
+  it('is equal bands for several, painted under the border so corners stay round', () => {
     const s = stripeStyle({ color: '#111111', colors: ['#111111', '#222222'] })
-    expect(s.borderImage).toBe('linear-gradient(to bottom, #111111 0% 50%, #222222 50% 100%) 1')
+    expect(s.borderImage).toBeUndefined()
+    expect(s.borderLeftColor).toBe('transparent')
+    expect(s.backgroundImage).toBe(
+      'linear-gradient(to bottom, #111111 0% 50%, #222222 50% 100%), var(--ev-bg, none)',
+    )
+    expect(s.backgroundSize).toBe('var(--ev-stripe-w, 4px) 100%, auto')
   })
 })
 

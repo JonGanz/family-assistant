@@ -116,7 +116,9 @@ h2 {
   padding: var(--space-2) var(--space-3);
   border: 0;
   border-left: 6px solid var(--color-accent);
-  background: var(--color-surface);
+  --ev-stripe-w: 6px;
+  border-radius: var(--ui-radius-sm);
+  background: var(--color-layer-2, var(--color-surface));
   color: inherit;
   font: inherit;
   text-align: left;

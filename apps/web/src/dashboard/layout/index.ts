@@ -145,6 +145,19 @@ export function resolveLayout(
   return out
 }
 
+/**
+ * Layouts saved before the meals panel existed (and the server's default layout) have none, so
+ * Home never showed today's meals. A layout with an agenda but no `meals` panel gets one right
+ * after the agenda. An empty meals panel hides itself, so this costs nothing on days without a
+ * plan. Layouts without an agenda (Chores board, Calendar wall) are left alone.
+ */
+export function withMealsPanel(panels: PanelConfig[]): PanelConfig[] {
+  if (panels.some((p) => p.kind === 'meals')) return panels
+  const at = panels.findIndex((p) => p.kind === 'agenda')
+  if (at < 0) return panels
+  return [...panels.slice(0, at + 1), { kind: 'meals' }, ...panels.slice(at + 1)]
+}
+
 /** A few-pixel shift that changes every 10 minutes (burn-in protection). */
 export function burnInOffset(now: Date): { x: number; y: number } {
   const slot = Math.floor(now.getTime() / 600_000)

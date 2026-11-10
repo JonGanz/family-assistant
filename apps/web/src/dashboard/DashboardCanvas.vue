@@ -12,6 +12,7 @@ import {
   PORTRAIT_STRIP,
   PORTRAIT_TOP,
   resolveLayout,
+  withMealsPanel,
   type GridArea,
 } from './layout'
 import Whiteboard from './Whiteboard.vue'
@@ -75,7 +76,9 @@ onBeforeUnmount(() => sizeObserver?.disconnect())
 /** Panels with nothing to show (an idle routine) are dropped so the others use the space. */
 const areas = computed(() => {
   const o = portrait.value ? 'portrait' : 'landscape'
-  const panels = cfg.value.panels.filter((p) => panelVisible(p, props.data, props.now))
+  const panels = withMealsPanel(cfg.value.panels).filter((p) =>
+    panelVisible(p, props.data, props.now),
+  )
   return resolveLayout(
     {
       ...cfg.value,
@@ -507,5 +510,21 @@ const shift = computed(() =>
 }
 .cell {
   min-width: 0;
+}
+/* Each Home panel is a card (the app's UiCard look: layer 1, radius md, outline), so content is
+   visually separated. The Week view's table fills its own cell and keeps it flush. */
+.main.split .cell {
+  box-sizing: border-box;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--ui-radius-md);
+  background: var(--color-layer-1, var(--color-surface));
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-text) 14%, transparent);
+}
+.main.split .cell :deep(h2) {
+  font-weight: 700;
+}
+.weekview .cell {
+  border-radius: var(--ui-radius-md);
 }
 </style>

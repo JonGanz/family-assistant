@@ -6,6 +6,7 @@ import {
   parseSettings,
   PRESETS,
   resolveLayout,
+  withMealsPanel,
 } from './index'
 
 describe('layout engine', () => {
@@ -85,5 +86,18 @@ describe('saved theme', () => {
   it('presets keep an object theme', () => {
     for (const p of Object.values(PRESETS))
       expect(p.theme).toEqual({ family: 'catppuccin', mode: 'auto' })
+  })
+})
+
+describe('withMealsPanel', () => {
+  it('adds meals after the agenda of a layout saved before the panel existed', () => {
+    const old = [{ kind: 'clock' }, { kind: 'agenda' }, { kind: 'now' }]
+    expect(withMealsPanel(old).map((p) => p.kind)).toEqual(['clock', 'agenda', 'meals', 'now'])
+  })
+  it('keeps layouts that have meals or no agenda', () => {
+    const has = [{ kind: 'agenda' }, { kind: 'meals' }]
+    expect(withMealsPanel(has)).toBe(has)
+    const chores = [{ kind: 'clock' }, { kind: 'member_tasks' }]
+    expect(withMealsPanel(chores)).toBe(chores)
   })
 })

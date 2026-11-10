@@ -13,6 +13,7 @@ export type AiSettingsPut = S['AiSettingsPut']
 export type AiPipelinePoint = S['AiPipelinePoint']
 export type AiStats = S['AiStats']
 export type LlmBacklog = S['LlmBacklog']
+export type LlmBacklogProcessed = S['LlmBacklogProcessed']
 export type MailMode = S['MailMode']
 
 const BASE = '/api/v1/ai'
@@ -91,8 +92,14 @@ export const useAiStore = defineStore('ai', () => {
     backlog.value = await http.get<LlmBacklog>(`${BASE}/backlog`)
   }
 
+  /** Runs the queued LLM work now (retry waits skipped, awaiting messages queued again). */
+  function processBacklog(): Promise<LlmBacklogProcessed> {
+    return http.post<LlmBacklogProcessed>(`${BASE}/backlog/process`, null)
+  }
+
   return {
     backlog,
+    processBacklog,
     loadBacklog,
     endpoint,
     settings,

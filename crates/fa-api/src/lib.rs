@@ -225,6 +225,7 @@ pub fn router(state: AppState) -> Router {
         .route("/ai/pipeline/{decision_point}", put(ai::put_pipeline))
         .route("/ai/stats", get(ai::get_stats))
         .route("/ai/backlog", get(ai::get_backlog))
+        .route("/ai/backlog/process", post(ai::process_backlog))
         .route("/ai/recipes/extract", post(ai::extract_recipe))
         .route("/oauth/google/start", get(feeds::oauth_start))
         .route("/oauth/google/callback", get(feeds::oauth_callback))

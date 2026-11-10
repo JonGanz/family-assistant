@@ -156,6 +156,7 @@ Messages older than the window stay rules-only (`awaiting`, and they show in the
 | `GET /ai/llm-endpoint/models` | `{models: string[]}` from the server |
 | `GET/PUT /ai/settings` | `mail_extract_mode`, `max_input_chars`, `mail_mode`, `catchup_days`, `extract_fallback_cutoff`. On `PUT` the last three are optional: absent keeps the stored value |
 | `GET /ai/backlog` | `{awaiting, queued}`: messages waiting for the LLM, and queued for it |
+| `POST /ai/backlog/process` | "Process now": queued `mail.llm` jobs of the household run at once (retry wait skipped) and a fresh `mail.llm.catchup` is queued; `{released, catchup}`. 404 `not_configured` or 422 when the endpoint is missing or off; audited |
 | `GET /ai/pipeline`, `PUT /ai/pipeline/{decision_point}` | The per-point `llm` toggle and threshold, and `rules_threshold` (0.5 to 0.99, default 0.8; optional on `PUT`; a change is a new version) |
 | `GET /ai/stats?days=7` | Calls per purpose (total, ok, p50 and p95 in ms) and decisions per stage |
 | `POST /ai/recipes/extract` | `{url}` or `{html}` → `RecipeDraft` (nothing stored) |

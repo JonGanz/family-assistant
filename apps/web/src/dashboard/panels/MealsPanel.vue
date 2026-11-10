@@ -41,7 +41,8 @@ li {
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
   border-left: 6px solid var(--color-accent);
-  background: var(--color-surface);
+  border-radius: var(--ui-radius-sm);
+  background: var(--color-layer-2, var(--color-surface));
   font-size: var(--font-size-lg);
 }
 .slot {

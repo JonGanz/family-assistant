@@ -41,6 +41,17 @@ describe('Screensaver', () => {
     w.unmount()
   })
 
+  it('shows the time in the household time zone instead of the logo', async () => {
+    vi.setSystemTime(new Date('2026-11-09T15:07:00Z'))
+    const w = mount(Screensaver, { props: { minutes: 1, tz: 'UTC' } })
+    vi.advanceTimersByTime(60_000)
+    await w.vm.$nextTick()
+    expect(w.find('img').exists()).toBe(false)
+    const clock = w.find('[data-testid="screensaver-clock"]')
+    expect(clock.text()).toMatch(/3:08|15:08/)
+    w.unmount()
+  })
+
   it('0 minutes turns it off', async () => {
     const w = mount(Screensaver, { props: { minutes: 0 } })
     vi.advanceTimersByTime(10 * 60 * 60_000)
