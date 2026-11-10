@@ -22,7 +22,7 @@ import { weekLabel, weekStartKey, type WeekStart } from './weekModel'
 import EventDetail from './details/EventDetail.vue'
 import DayDetail from './details/DayDetail.vue'
 import WeatherDetail from './details/WeatherDetail.vue'
-import type { DashboardData, DashboardSettings, DetailRequest, WeekMeal } from './types'
+import type { DashboardData, DashboardSettings, DetailRequest } from './types'
 
 const props = withDefaults(
   defineProps<{
@@ -36,7 +36,6 @@ const props = withDefaults(
       from: string
       events: DashboardData['events']
       tasks: DashboardData['tasks']
-      meals?: WeekMeal[]
     }
     /** The visible meal slots for the Food view's plan. */
     foodSlots?: { id: string; name: string; time?: string }[]
@@ -163,9 +162,6 @@ const shownStart = computed(() => weekStartKey(today.value, weekStart.value, wee
 const weekText = computed(() =>
   weekOffset.value === 0 ? S.currentWeek : weekLabel(shownStart.value),
 )
-const weekMeals = computed(() =>
-  props.weekData && props.weekData.from === shownStart.value ? (props.weekData.meals ?? []) : [],
-)
 const weekPanel = computed(() => ({
   kind: 'week_table',
   start: shownStart.value,
@@ -243,7 +239,6 @@ const shift = computed(() =>
       <FoodView
         v-else-if="view === 'food'"
         :today="today"
-        :week-start="weekStart"
         :slots="foodSlots"
         :elevated="!!data.elevated"
       />
@@ -288,7 +283,6 @@ const shift = computed(() =>
               :settings="cfg"
               :panel="weekPanel"
               :now="now"
-              :meals="weekMeals"
               @detail="(d: DetailRequest) => (detail = d)"
             />
           </div>

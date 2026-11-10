@@ -4,7 +4,7 @@ import { api, type DashboardView } from '../api/client'
 import { foodKiosk } from '../api/food'
 import { useGroceryStore } from './grocery'
 import { useMealPlanStore } from './mealPlan'
-import type { DashboardData, TaskView, WeekMeal } from '../dashboard/types'
+import type { DashboardData, TaskView } from '../dashboard/types'
 import { ApiError } from '../api/http'
 import { taskApi } from '../kiosk/taskApi'
 import { getDeviceToken } from '../kiosk/deviceToken'
@@ -72,7 +72,6 @@ export const useDashboardStore = defineStore('dashboard', () => {
     from: string
     events: DashboardData['events']
     tasks: TaskView[]
-    meals: WeekMeal[]
   } | null>(null)
   /** The visible meal slots (id, name, time) in order, for the Food view's grid. */
   const mealSlots = ref<{ id: string; name: string; time: string }[]>([])
@@ -214,38 +213,14 @@ export const useDashboardStore = defineStore('dashboard', () => {
     }
   }
 
-  /** The week's meal lines (slot order, then entry order); none when meals are unavailable. */
-  async function loadWeekMeals(from: string): Promise<WeekMeal[]> {
-    try {
-      if (mealSlots.value.length === 0) await loadSlots()
-      const entries = await foodKiosk.plan(from, addDays(from, 6))
-      const order = new Map(mealSlots.value.map((x, i) => [x.id, i]))
-      return entries
-        .filter((e) => order.has(e.slot_id))
-        .sort(
-          (a, b) =>
-            a.date.localeCompare(b.date) ||
-            order.get(a.slot_id)! - order.get(b.slot_id)! ||
-            a.ord - b.ord,
-        )
-        .map((e) => ({
-          date: e.date,
-          slot: mealSlots.value[order.get(e.slot_id)!]!.name,
-          title: e.title,
-        }))
-    } catch {
-      return []
-    }
-  }
-
-  /** Fetches the events, tasks and meals of the week being viewed (the snapshot only starts today). */
+  /** Fetches the events and tasks of the week being viewed (the snapshot only starts today). */
   async function loadWeek(): Promise<void> {
     const from = weekFrom.value
     if (!from) return
     try {
-      const [d, meals] = await Promise.all([api.dashboard(7, undefined, from), loadWeekMeals(from)])
+      const d = await api.dashboard(7, undefined, from)
       if (weekFrom.value === from) {
-        weekData.value = { from, events: d.events, tasks: d.tasks ?? [], meals }
+        weekData.value = { from, events: d.events, tasks: d.tasks ?? [] }
       }
     } catch {
       /* keep the previous week; the next refresh retries */

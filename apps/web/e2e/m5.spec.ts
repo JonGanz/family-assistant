@@ -279,6 +279,12 @@ test("the kiosk Food view adds an item without a PIN, and the meals panel shows 
   ).toBeVisible()
 
   await screen.getByTestId('kiosk-view-food').click()
+  // The rolling plan: seven days, today the third row, with today's dinner in it.
+  await expect(screen.getByTestId('food-roll').locator('tbody tr')).toHaveCount(7)
+  await expect(screen.locator(`[data-testid="food-roll"] tr:nth-child(3)`)).toHaveClass(/today/)
+  await expect(screen.getByTestId(`roll-cell-${day(0)}-dinner`)).toContainText(
+    'Fictional kiosk dinner',
+  )
   await screen.getByTestId('food-tab-shopping').click()
   // An add typed before the list has loaded is dropped, so wait for the list first.
   await expect(

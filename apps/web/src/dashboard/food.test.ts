@@ -29,7 +29,6 @@ vi.mock('../api/food', async (orig) => {
 })
 
 import DashboardCanvas from './DashboardCanvas.vue'
-import DayCell from './DayCell.vue'
 import { addPanel } from './editor'
 import { defaultSettings, KNOWN_PANELS, PRESETS, resolveLayout } from './layout'
 import { mealsPanelVisible, sortedMeals } from './mealsModel'
@@ -142,35 +141,21 @@ describe('layout', () => {
   })
 })
 
-describe('week view meals', () => {
-  it('a day cell shows the meals line first', () => {
-    const w = mount(DayCell, {
-      props: {
-        events: [],
-        tasks: [],
-        meals: ['Dinner: Lentil soup'],
-        tz: 'UTC',
-        stripe: {},
-        label: 'x',
-        color: '#000',
-      },
-    })
-    expect(w.find('[data-testid="meal-line"]').text()).toContain('Dinner: Lentil soup')
-  })
-  it('the week table passes the day meals to the first column', () => {
+describe('week view has no meals', () => {
+  it('a day cell and the week table draw no meal lines', () => {
     const w = mount(PanelHost, {
       props: {
         data: data({
           members: [{ id: 'm1', display_name: 'Alex', role: 'adult', color: '#3366cc' }] as never,
+          meals: [{ slot_name: 'Dinner', time: '18:00', title: 'Lentil soup' }] as never,
         }),
         settings: settings(),
         panel: { kind: 'week_table', start: '2026-10-24' },
         now: NOW,
-        meals: [{ date: '2026-10-24', slot: 'Dinner', title: 'Lentil soup' }],
       },
     })
-    expect(w.find('tr[data-day="2026-10-24"]').text()).toContain('Dinner: Lentil soup')
-    expect(w.find('tr[data-day="2026-10-25"]').text()).not.toContain('Lentil')
+    expect(w.find('[data-testid="meal-line"]').exists()).toBe(false)
+    expect(w.text()).not.toContain('Lentil')
   })
 })
 

@@ -9,8 +9,6 @@ import type { DetailRequest, TaskView } from './types'
 const props = defineProps<{
   events: EventLike[]
   tasks: TaskView[]
-  /** The day's meals as compact lines ("Dinner: Lentil soup"); drawn first. */
-  meals?: string[]
   tz: string
   /** Stripe style of the owning member's column. */
   stripe: Record<string, string>
@@ -20,11 +18,9 @@ const props = defineProps<{
 }>()
 const emit = defineEmits<{ detail: [d: DetailRequest] }>()
 
-type Item =
-  { kind: 'meal'; text: string } | { kind: 'event'; e: EventLike } | { kind: 'task'; t: TaskView }
+type Item = { kind: 'event'; e: EventLike } | { kind: 'task'; t: TaskView }
 /** Events by start time (all-day first), then tasks, so "+N" hides the least time-bound items. */
 const items = computed<Item[]>(() => [
-  ...(props.meals ?? []).map((text): Item => ({ kind: 'meal', text })),
   ...[...props.events]
     .sort((a, b) => Number(b.all_day) - Number(a.all_day) || a.start_at.localeCompare(b.start_at))
     .map((e): Item => ({ kind: 'event', e })),
@@ -73,11 +69,8 @@ const all = () =>
   <div ref="box" class="fit">
     <ul :style="{ '--n': fit.cols, '--slot': `${slotRem}rem` }">
       <template v-for="(it, i) in shown" :key="i">
-        <li v-if="it.kind === 'meal'" class="meal" data-testid="meal-line">
-          <div class="title">🍽 {{ it.text }}</div>
-        </li>
         <li
-          v-else-if="it.kind === 'event'"
+          v-if="it.kind === 'event'"
           class="event"
           :class="{ busy: it.e.visibility === 'busy' }"
           :style="stripe"
@@ -149,16 +142,6 @@ li.event {
 }
 li.event.busy {
   color: var(--color-muted);
-}
-li.meal {
-  display: flex;
-  align-items: center;
-  border-left: 6px solid var(--color-muted);
-  color: var(--color-muted);
-}
-li.meal .title {
-  font-size: var(--font-size-base);
-  font-weight: 600;
 }
 li.chip {
   display: flex;

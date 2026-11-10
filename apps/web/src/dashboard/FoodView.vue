@@ -1,17 +1,15 @@
 <script setup lang="ts">
 // The kiosk's Food view (D-117): the meal plan and the shopping list, read with the device token.
 // Adding and checking items needs no PIN; edit and delete need the elevated adult (D-015, D-110).
-import { computed, ref } from 'vue'
+import { ref } from 'vue'
 import { foodKiosk } from '../api/food'
-import MealPlanGrid from '../components/food/plan/MealPlanGrid.vue'
+import FoodPlanRoll from './FoodPlanRoll.vue'
 import ShoppingList from '../components/food/grocery/ShoppingList.vue'
 import { S } from './strings'
-import { weekStartKey, type WeekStart } from './weekModel'
 
-const props = defineProps<{
+defineProps<{
   /** `YYYY-MM-DD` in the household's zone. */
   today: string
-  weekStart: WeekStart
   slots: { id: string; name: string; time?: string }[]
   /** The device is PIN-elevated. */
   elevated: boolean
@@ -23,8 +21,6 @@ const TABS: { id: Tab; label: string }[] = [
   { id: 'plan', label: S.foodPlan },
   { id: 'shopping', label: S.foodShopping },
 ]
-/** Three week rows: last week, this week and next. */
-const from = computed(() => weekStartKey(props.today, props.weekStart, -1))
 </script>
 
 <template>
@@ -44,16 +40,7 @@ const from = computed(() => weekStartKey(props.today, props.weekStart, -1))
       </button>
     </div>
     <div class="body" role="tabpanel">
-      <MealPlanGrid
-        v-if="tab === 'plan'"
-        :api="foodKiosk"
-        :slots="slots"
-        :today="today"
-        :from="from"
-        :weeks="3"
-        :editable="false"
-        fill
-      />
+      <FoodPlanRoll v-if="tab === 'plan'" :slots="slots" :today="today" />
       <ShoppingList v-else :can-edit="elevated" kiosk :api="foodKiosk" />
     </div>
   </div>

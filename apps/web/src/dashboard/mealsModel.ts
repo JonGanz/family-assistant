@@ -10,9 +10,6 @@ export function sortedMeals(data: Pick<DashboardData, 'meals'>) {
     .map((x) => x.m)
 }
 
-/** Compact line for the Week view ("Dinner: Lentil soup"). */
-export const mealLine = (m: { slot: string; title: string }) => `${m.slot}: ${m.title}`
-
 /**
  * An empty `meals` panel is dropped, unless nothing else would share its column (then it stays and
  * says so). Its column is the right one in landscape and "coming up" in portrait.
