@@ -26,6 +26,7 @@ const endpoint = {
   model: 'qwen3:8b',
   dialect: 'openai_chat',
   timeout_ms: 60000,
+  thinking: false,
   enabled: true,
   has_api_key: true,
   updated_at: '',
@@ -109,13 +110,29 @@ describe('Settings AI', () => {
     expect(m.put.mock.calls[2]![1]).toHaveProperty('api_key', 'sekret')
   })
 
+  it('saves the thinking switch with the form and keeps it on the enabled switch', async () => {
+    serve(endpoint)
+    m.put.mockResolvedValue({ ...endpoint, thinking: true } as never)
+    const w = await mountPage()
+    await w.find('[data-testid="thinking"]').trigger('click')
+    await w
+      .find('.ui-savebar button.ui-btn--filled, .ui-savebar button:last-child')
+      .trigger('click')
+    await flushPromises()
+    expect(m.put.mock.calls[0]![1]).toMatchObject({ thinking: true })
+    m.put.mockResolvedValue({ ...endpoint, thinking: true, enabled: false } as never)
+    await w.find('[data-testid="endpoint-card"] [role="switch"]').trigger('click')
+    await flushPromises()
+    expect(m.put.mock.calls[1]![1]).toMatchObject({ enabled: false, thinking: true })
+  })
+
   it('shows Undo for the enabled switch and Undo restores', async () => {
     serve(endpoint)
     m.put.mockResolvedValue({ ...endpoint, enabled: false } as never)
     const w = await mountPage()
     await w.find('[data-testid="endpoint-card"] [role="switch"]').trigger('click')
     await flushPromises()
-    expect(m.put.mock.calls[0]![1]).toMatchObject({ enabled: false })
+    expect(m.put.mock.calls[0]![1]).toMatchObject({ enabled: false, thinking: false })
     const bar = useSnackbar().state.current
     expect(bar?.action?.label).toBe('Undo')
     m.put.mockResolvedValue(endpoint as never)

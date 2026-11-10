@@ -31,6 +31,14 @@ license = "AGPL-3.0-or-later"
 repository = "https://github.com/JonGanz/family-assistant"
 publish = false
 
+# Debug info dominates the size of target/ (90+ test binaries) and link time. Line tables keep
+# file:line in backtraces; dependencies get none. Release builds are unaffected.
+[profile.dev]
+debug = "line-tables-only"
+
+[profile.dev.package."*"]
+debug = false
+
 # Password hashing is far too slow unoptimised; DB tests time out under load without this.
 [profile.dev.package.argon2]
 opt-level = 3

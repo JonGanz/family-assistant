@@ -10096,7 +10096,7 @@
         "operationId": "stream",
         "responses": {
           "200": {
-            "description": "`heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `mail.updated` `{source?}`, `inbox.updated` `{}`, `bills.updated` `{}`, `mealplan.updated` `{}`, `grocery.updated` `{}`, `recipes.updated` `{}`, `resync`), bridged from `fa_change`; honours Last-Event-ID",
+            "description": "`build` `{commit}` on connect (D-123), `heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `mail.updated` `{source?}`, `inbox.updated` `{}`, `bills.updated` `{}`, `mealplan.updated` `{}`, `grocery.updated` `{}`, `recipes.updated` `{}`, `resync`), bridged from `fa_change`; honours Last-Event-ID",
             "content": {
               "text/event-stream": {}
             }
@@ -15654,6 +15654,10 @@
           "model": {
             "type": "string"
           },
+          "thinking": {
+            "type": "boolean",
+            "description": "Let a thinking model reason before it answers. Absent: off."
+          },
           "timeout_ms": {
             "type": "integer",
             "format": "int32",
@@ -15744,6 +15748,7 @@
           "dialect",
           "has_api_key",
           "timeout_ms",
+          "thinking",
           "enabled",
           "updated_at"
         ],
@@ -15762,6 +15767,9 @@
           },
           "model": {
             "type": "string"
+          },
+          "thinking": {
+            "type": "boolean"
           },
           "timeout_ms": {
             "type": "integer",

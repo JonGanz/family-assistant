@@ -126,6 +126,7 @@ async fn stub_client(content: &str) -> LlmClient {
             model: "m".into(),
             api_key: None,
             timeout: Duration::from_secs(5),
+            thinking: false,
             dialect: Dialect::OpenaiChat,
         },
         default_http().unwrap(),

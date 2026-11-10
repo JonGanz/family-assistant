@@ -33,6 +33,7 @@ fn cfg(base: url::Url, dialect: Dialect, key: Option<&str>) -> EndpointConfig {
         model: "qwen3:8b".into(),
         api_key: key.map(Into::into),
         timeout: Duration::from_secs(5),
+        thinking: false,
         dialect,
     }
 }
@@ -256,4 +257,48 @@ async fn models_and_ping() {
     let mut missing = cfg(base.join("/v1").unwrap(), Dialect::OpenaiChat, None);
     missing.model = "nope".into();
     assert!(!client(missing).ping().await.unwrap().model_found);
+}
+
+/// Thinking off asks the model not to reason (both dialects); on keeps its default and adds the
+/// extra output budget so the reasoning cannot crowd out the answer.
+#[tokio::test]
+async fn thinking_switch_shapes_the_request() {
+    let seen: Seen = Default::default();
+    let app = Router::new()
+        .route(
+            "/v1/chat/completions",
+            post(recorder(
+                seen.clone(),
+                openai_reply(r#"{"title":"x","n":3}"#),
+            )),
+        )
+        .route(
+            "/api/chat",
+            post(recorder(
+                seen.clone(),
+                json!({"message":{"content":"{\"title\":\"y\",\"n\":1}"}}),
+            )),
+        )
+        .with_state(());
+    let base = serve(app).await;
+    for thinking in [false, true] {
+        let mut c = cfg(base.join("/v1").unwrap(), Dialect::OpenaiChat, None);
+        c.thinking = thinking;
+        client(c).extract::<Fixture>(&req()).await.unwrap();
+        let mut c = cfg(base.clone(), Dialect::OllamaNative, None);
+        c.thinking = thinking;
+        client(c).extract::<Fixture>(&req()).await.unwrap();
+    }
+    let s = seen.lock().unwrap();
+    let budget = 64 + fa_llm::THINKING_EXTRA_TOKENS;
+    // Off: OpenAI-style, then Ollama.
+    assert_eq!(s[0].1["reasoning_effort"], "none");
+    assert_eq!(s[0].1["max_tokens"], 64);
+    assert_eq!(s[1].1["think"], false);
+    assert_eq!(s[1].1["options"]["num_predict"], 64);
+    // On: no switch sent, a larger budget.
+    assert!(s[2].1.get("reasoning_effort").is_none());
+    assert_eq!(s[2].1["max_tokens"], budget);
+    assert!(s[3].1.get("think").is_none());
+    assert_eq!(s[3].1["options"]["num_predict"], budget);
 }

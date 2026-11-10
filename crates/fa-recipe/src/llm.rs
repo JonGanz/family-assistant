@@ -36,7 +36,7 @@ pub async fn from_llm(
         system: SYSTEM.into(),
         user,
         schema_name: "recipe",
-        max_tokens: 2048,
+        max_tokens: 4096,
     };
     let r = client.extract::<LlmRecipe>(&req).await?.value;
     let name = r.name.trim().to_string();

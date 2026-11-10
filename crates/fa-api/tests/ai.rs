@@ -406,6 +406,12 @@ async fn endpoint_key_is_never_returned(pool: PgPool) {
     let g = send(&fx.app, Method::GET, &uri, &c, None).await;
     assert_eq!(g.json()["has_api_key"], true);
     assert!(!String::from_utf8_lossy(&g.body).contains("sk-secret"));
+    // thinking: absent is off; it round-trips
+    assert_eq!(g.json()["thinking"], false);
+    body["thinking"] = json!(true);
+    let r = send(&fx.app, Method::PUT, &uri, &c, Some(body.clone())).await;
+    assert_eq!(r.json()["thinking"], true);
+    body.as_object_mut().unwrap().remove("thinking");
     // absent keeps the key
     body.as_object_mut().unwrap().remove("api_key");
     body["model"] = json!("m2");

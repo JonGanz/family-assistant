@@ -5,4 +5,8 @@ import type { LlmDialect } from "./LlmDialect";
  * Body of `PUT /ai/llm-endpoint`. `api_key`: absent keeps the stored key, `null` clears it, a
  * string sets it.
  */
-export type LlmEndpointPut = { base_url: string, model: string, dialect: LlmDialect, timeout_ms: number, enabled: boolean, api_key?: string | null, };
+export type LlmEndpointPut = { base_url: string, model: string, dialect: LlmDialect, timeout_ms: number, 
+/**
+ * Let a thinking model reason before it answers. Absent: off.
+ */
+thinking: boolean, enabled: boolean, api_key?: string | null, };

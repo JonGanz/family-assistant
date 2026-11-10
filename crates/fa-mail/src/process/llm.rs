@@ -31,7 +31,7 @@ use crate::{MailError, Result};
 
 const PURPOSE: &str = "mail.llm";
 const DEFAULT_THRESHOLD: f32 = 0.7;
-const MAX_TOKENS: u32 = 1024;
+const MAX_TOKENS: u32 = 2048;
 const PRUNE_DAYS: i64 = 90;
 const DPS: [DecisionPointKey; 4] = [
     DecisionPointKey::EmailCategory,

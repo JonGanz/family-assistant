@@ -73,6 +73,9 @@ pub struct LlmEndpointPut {
     pub model: String,
     pub dialect: LlmDialect,
     pub timeout_ms: u32,
+    /// Let a thinking model reason before it answers. Absent: off.
+    #[serde(default)]
+    pub thinking: bool,
     pub enabled: bool,
     #[serde(default)]
     #[ts(as = "Option<String>", optional = nullable)]
@@ -259,6 +262,7 @@ fn view(ep: &LlmEndpoint, has_api_key: bool) -> LlmEndpointView {
         dialect: ep.dialect,
         has_api_key,
         timeout_ms: ep.timeout_ms,
+        thinking: ep.thinking,
         enabled: ep.enabled,
         updated_at: ep.updated_at,
     }
@@ -320,6 +324,7 @@ pub async fn put_endpoint(
         model: check_model(&req.model)?,
         dialect: req.dialect,
         timeout_ms: check_timeout(req.timeout_ms)?,
+        thinking: req.thinking,
         enabled: req.enabled,
     };
     let key_change = match &req.api_key {
@@ -360,7 +365,7 @@ pub async fn put_endpoint(
         Some(ep.id.to_string()),
         Some(serde_json::json!({
             "base_url": ep.base_url, "model": ep.model, "dialect": ep.dialect,
-            "timeout_ms": ep.timeout_ms, "enabled": ep.enabled, "api_key": key_change,
+            "timeout_ms": ep.timeout_ms, "thinking": ep.thinking, "enabled": ep.enabled, "api_key": key_change,
         })),
     )
     .await?;
@@ -433,6 +438,8 @@ pub async fn test_endpoint(
             api_key,
             timeout: std::time::Duration::from_millis(u64::from(timeout_ms)),
             dialect: dialect(d),
+            // The test only lists models; thinking does not apply.
+            thinking: false,
         },
         http()?,
     );
@@ -518,6 +525,7 @@ pub async fn list_models(State(s): State<AppState>, auth: Auth) -> ApiResult<Jso
             api_key,
             timeout: std::time::Duration::from_millis(u64::from(ep.timeout_ms)),
             dialect: dialect(ep.dialect),
+            thinking: ep.thinking,
         },
         http()?,
     );

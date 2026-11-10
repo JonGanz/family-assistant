@@ -22,6 +22,7 @@ fn input(model: &str) -> LlmEndpointInput {
         model: model.into(),
         dialect: LlmDialect::OpenaiChat,
         timeout_ms: 60_000,
+        thinking: false,
         enabled: true,
     }
 }

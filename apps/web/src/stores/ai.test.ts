@@ -38,6 +38,7 @@ describe('ai store', () => {
       model: 'm',
       dialect: 'openai_chat',
       timeout_ms: 1,
+      thinking: false,
       enabled: true,
     })
     expect(m.put.mock.calls[0]![1]).not.toHaveProperty('api_key')

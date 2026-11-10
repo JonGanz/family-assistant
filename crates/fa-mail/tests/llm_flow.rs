@@ -199,6 +199,7 @@ async fn env(pool: PgPool, base_url: Option<String>) -> Env {
                 model: "test-model".into(),
                 dialect: LlmDialect::OpenaiChat,
                 timeout_ms: 5000,
+                thinking: false,
                 enabled: true,
             },
         )
@@ -632,6 +633,7 @@ impl Env {
                 model: "test-model".into(),
                 dialect: LlmDialect::OpenaiChat,
                 timeout_ms: 5000,
+                thinking: false,
                 enabled,
             },
         )

@@ -28,7 +28,14 @@ pub struct EndpointConfig {
     pub api_key: Option<String>,
     pub timeout: Duration,
     pub dialect: Dialect,
+    /// Let a thinking model reason first. Off asks it not to (`reasoning_effort: "none"`,
+    /// Ollama `think: false`); on keeps the model's default and adds [`THINKING_EXTRA_TOKENS`].
+    pub thinking: bool,
 }
+
+/// Output budget added to every request while thinking is on: the reasoning counts against
+/// `max_tokens`, and without room for it the answer is cut off (`bad_json`).
+pub const THINKING_EXTRA_TOKENS: u32 = 8192;
 
 impl std::fmt::Debug for EndpointConfig {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -36,6 +43,7 @@ impl std::fmt::Debug for EndpointConfig {
             .field("host", &self.base_url.host_str())
             .field("model", &self.model)
             .field("dialect", &self.dialect)
+            .field("thinking", &self.thinking)
             .finish_non_exhaustive()
     }
 }
@@ -151,6 +159,15 @@ impl LlmClient {
         serde_json::from_slice(&bytes).map_err(|e| LlmError::BadJson(e.to_string()))
     }
 
+    /// The request's output budget, plus [`THINKING_EXTRA_TOKENS`] while thinking is on.
+    pub fn max_tokens(&self, req: &ExtractRequest) -> u32 {
+        if self.cfg.thinking {
+            req.max_tokens.saturating_add(THINKING_EXTRA_TOKENS)
+        } else {
+            req.max_tokens
+        }
+    }
+
     pub async fn extract<T: DeserializeOwned + JsonSchema>(
         &self,
         req: &ExtractRequest,
@@ -173,21 +190,25 @@ impl LlmClient {
     ) -> Result<Extracted<T>, LlmError> {
         self.validate()?;
         let schema = json_schema_for::<T>();
+        let max_tokens = self.max_tokens(req);
         let messages = json!([
             {"role": "system", "content": req.system},
             {"role": "user", "content": req.user},
         ]);
         let (rb, content_ptr, pt_ptr, ct_ptr) = match self.cfg.dialect {
             Dialect::OpenaiChat => {
-                let body = json!({
+                let mut body = json!({
                     "model": self.cfg.model,
                     "messages": messages,
                     "response_format": {"type": "json_schema",
                         "json_schema": {"name": req.schema_name, "schema": schema, "strict": true}},
-                    "max_tokens": req.max_tokens,
+                    "max_tokens": max_tokens,
                     "temperature": 0,
                     "stream": false,
                 });
+                if !self.cfg.thinking {
+                    body["reasoning_effort"] = json!("none");
+                }
                 (
                     self.http.post(self.url("chat/completions")).json(&body),
                     "/choices/0/message/content",
@@ -196,13 +217,16 @@ impl LlmClient {
                 )
             }
             Dialect::OllamaNative => {
-                let body = json!({
+                let mut body = json!({
                     "model": self.cfg.model,
                     "messages": messages,
                     "format": schema,
                     "stream": false,
-                    "options": {"temperature": 0, "num_predict": req.max_tokens},
+                    "options": {"temperature": 0, "num_predict": max_tokens},
                 });
+                if !self.cfg.thinking {
+                    body["think"] = json!(false);
+                }
                 (
                     self.http.post(self.url("api/chat")).json(&body),
                     "/message/content",

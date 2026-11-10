@@ -3287,6 +3287,8 @@ export interface components {
             dialect: components["schemas"]["LlmDialect"];
             enabled: boolean;
             model: string;
+            /** @description Let a thinking model reason before it answers. Absent: off. */
+            thinking?: boolean;
             /** Format: int32 */
             timeout_ms: number;
         };
@@ -3314,6 +3316,7 @@ export interface components {
             enabled: boolean;
             has_api_key: boolean;
             model: string;
+            thinking: boolean;
             /** Format: int32 */
             timeout_ms: number;
             /**
@@ -11612,7 +11615,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description `heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `mail.updated` `{source?}`, `inbox.updated` `{}`, `bills.updated` `{}`, `mealplan.updated` `{}`, `grocery.updated` `{}`, `recipes.updated` `{}`, `resync`), bridged from `fa_change`; honours Last-Event-ID */
+            /** @description `build` `{commit}` on connect (D-123), `heartbeat` every 15 s plus the change kinds (`member.updated`, `calendar.updated`, `weather.updated`, `advisory.updated`, `household.updated`, `device.updated`, `source.updated`, `tasks.updated` `{}`, `routines.updated` `{date}`, `mail.updated` `{source?}`, `inbox.updated` `{}`, `bills.updated` `{}`, `mealplan.updated` `{}`, `grocery.updated` `{}`, `recipes.updated` `{}`, `resync`), bridged from `fa_change`; honours Last-Event-ID */
             200: {
                 headers: {
                     [name: string]: unknown;

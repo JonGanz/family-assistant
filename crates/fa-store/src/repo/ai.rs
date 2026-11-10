@@ -21,13 +21,13 @@ struct EndpointRow {
     model: String,
     dialect: String,
     timeout_ms: i32,
+    thinking: bool,
     enabled: bool,
     created_at: DateTime<Utc>,
     updated_at: DateTime<Utc>,
 }
 
-const ENDPOINT_COLS: &str =
-    "id, household_id, base_url, model, dialect, timeout_ms, enabled, created_at, updated_at";
+const ENDPOINT_COLS: &str = "id, household_id, base_url, model, dialect, timeout_ms, thinking, enabled, created_at, updated_at";
 
 impl TryFrom<EndpointRow> for LlmEndpoint {
     type Error = StoreError;
@@ -40,6 +40,7 @@ impl TryFrom<EndpointRow> for LlmEndpoint {
             dialect: parse_enum(&r.dialect)?,
             timeout_ms: u32::try_from(r.timeout_ms)
                 .map_err(|_| StoreError::Corrupt("timeout_ms".into()))?,
+            thinking: r.thinking,
             enabled: r.enabled,
             created_at: r.created_at,
             updated_at: r.updated_at,
@@ -68,11 +69,12 @@ impl LlmEndpointRepo {
         i: &LlmEndpointInput,
     ) -> Result<LlmEndpoint> {
         let row: EndpointRow = sqlx::query_as(&format!(
-            "INSERT INTO llm_endpoint (id, household_id, base_url, model, dialect, timeout_ms, enabled)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
+            "INSERT INTO llm_endpoint (id, household_id, base_url, model, dialect, timeout_ms, enabled, thinking)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              ON CONFLICT (household_id) DO UPDATE SET
                  base_url = EXCLUDED.base_url, model = EXCLUDED.model, dialect = EXCLUDED.dialect,
-                 timeout_ms = EXCLUDED.timeout_ms, enabled = EXCLUDED.enabled
+                 timeout_ms = EXCLUDED.timeout_ms, enabled = EXCLUDED.enabled,
+                 thinking = EXCLUDED.thinking
              RETURNING {ENDPOINT_COLS}"
         ))
         .bind(LlmEndpointId::new().as_uuid())
@@ -82,6 +84,7 @@ impl LlmEndpointRepo {
         .bind(enum_str(&i.dialect))
         .bind(i32::try_from(i.timeout_ms).unwrap_or(i32::MAX))
         .bind(i.enabled)
+        .bind(i.thinking)
         .fetch_one(conn)
         .await?;
         row.try_into()

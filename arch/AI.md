@@ -2,7 +2,7 @@
 title: AI — tiers, LLM endpoint, llm stage, recipe extraction, eval
 scope: The intelligence tiers (rules, System One, LLM), how the core reaches an LLM server (D-093), fa-llm and its Provider, the llm pipeline stage and the mail.llm job, the recipe-extraction contract for M5, basic eval, LLM call observability, security and failure modes, and the M4.1 roadmap
 status: draft
-updated: 2026-11-08
+updated: 2026-11-09
 drawio: AI.drawio
 drawio_src: src/AI.py
 depends_on: [Overall.md, Ingest.md, Platform.md]
@@ -40,6 +40,7 @@ The app works with no AI at all. Every pipeline ends in `rules` or `human`, and 
   - `model`: a free text field, also offered from the server's model list;
   - `dialect`: `openai_chat` (the default) or `ollama_native`;
   - `timeout_ms`: default 120000;
+  - `thinking`: default false. Off asks a reasoning model to answer straight away (`reasoning_effort: "none"` for `openai_chat`, `think: false` for `ollama_native`); on sends neither and adds 8192 tokens to every request's output budget, because the reasoning counts against it. Measured on Ollama 0.40.1 with `qwen3.5:9b` (thinking by default): with thinking on, a two-line mail spent the whole 1024-token budget reasoning and returned no answer (`bad_json`); off, it answered in 25 tokens;
   - `enabled`: default false in the table, but Settings → AI saves a newly created endpoint as enabled (D-104, Q-096);
   - an optional API key, stored as a `secret` row (`owner_type = 'llm_endpoint'`, `kind = 'api_key'`, AAD-bound per C-10) and never returned, only `has_api_key`.
 - **Default profile:** Ollama on the GPU PC at `http://<gpu-pc-lan-or-tailnet-ip>:11434/v1`, model `qwen3:8b` (R-004; about 5.2 GB to download, fits 8 GB of VRAM at Q4). Swapping the server or model is a settings change.
@@ -61,7 +62,7 @@ The coupling rule holds: `fa-recipe` stores nothing (M5 adds storage in `fa-meal
 ## 4. Data
 | Table | Columns | Written by |
 |---|---|---|
-| `llm_endpoint` | id, household_id (UNIQUE in M4), base_url, model, dialect, timeout_ms, enabled, created_at, updated_at | `PUT /ai/llm-endpoint` |
+| `llm_endpoint` | id, household_id (UNIQUE in M4), base_url, model, dialect, timeout_ms, thinking, enabled, created_at, updated_at | `PUT /ai/llm-endpoint` |
 | `ai_settings` | household_id (PK), `mail_extract_mode` `off\|fallback\|always` (default `fallback`), `max_input_chars` (default 12000), `mail_mode` `llm_first\|rules_first` (default `llm_first`), `catchup_days` (0 to 365, default 30; 0 switches the catch-up off), `extract_fallback_cutoff` (0.5 to 1, default 0.8), updated_at | `PUT /ai/settings`; read with defaults when absent |
 | `message.llm_state` | `none\|queued\|done\|awaiting`, default `none` (partial index on `(household_id, received_at DESC) WHERE llm_state = 'awaiting'`) | `mail.process`, the `mail.llm` job, `mail.llm.catchup` |
 | `llm_call` | id, household_id, purpose (`mail.llm`, `recipe.extract`, `endpoint.test`, `eval`), model, started_at, latency_ms, ok, error_kind?, prompt_tokens?, completion_tokens? | `Provider::call`; pruned after 90 days by `llm.prune` |

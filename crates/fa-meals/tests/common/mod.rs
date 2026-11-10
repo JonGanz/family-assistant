@@ -156,6 +156,7 @@ pub async fn env_with(pool: PgPool, o: Opts) -> Env {
                 model: "test-model".into(),
                 dialect: LlmDialect::OpenaiChat,
                 timeout_ms: 5000,
+                thinking: false,
                 enabled: true,
             },
         )

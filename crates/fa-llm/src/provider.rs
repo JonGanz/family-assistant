@@ -100,6 +100,7 @@ impl Provider {
             model: ep.model.clone(),
             api_key,
             timeout: Duration::from_millis(u64::from(ep.timeout_ms)),
+            thinking: ep.thinking,
             dialect: match ep.dialect {
                 LlmDialect::OpenaiChat => Dialect::OpenaiChat,
                 LlmDialect::OllamaNative => Dialect::OllamaNative,

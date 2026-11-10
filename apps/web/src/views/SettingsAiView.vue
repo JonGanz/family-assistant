@@ -41,6 +41,7 @@ interface EndpointDraft {
   model: string
   dialect: Dialect
   timeout_s: string
+  thinking: boolean
   key_mode: KeyMode
   api_key: string
 }
@@ -61,7 +62,8 @@ function fromEndpoint(): EndpointDraft {
     base_url: e?.base_url ?? '',
     model: e?.model ?? '',
     dialect: e?.dialect ?? 'openai_chat',
-    timeout_s: String(Math.round((e?.timeout_ms ?? 60_000) / 1000)),
+    timeout_s: String(Math.round((e?.timeout_ms ?? 120_000) / 1000)),
+    thinking: e?.thinking ?? false,
     key_mode: 'keep',
     api_key: '',
   }
@@ -86,6 +88,7 @@ const form = useFormDraft(fromEndpoint, async (d) => {
       model: d.model.trim(),
       dialect: d.dialect,
       timeout_ms: Math.round(secs * 1000),
+      thinking: d.thinking,
       enabled: ai.endpoint?.enabled ?? true,
       ...keyField(d),
     })
@@ -124,6 +127,7 @@ const enabledSave = useInstantSave(
       model: e.model,
       dialect: e.dialect,
       timeout_ms: e.timeout_ms,
+      thinking: e.thinking,
       enabled: v,
     })
     void ai.loadBacklog().catch(() => undefined)
@@ -481,6 +485,11 @@ onUnmounted(() => clearInterval(backlogTimer))
             suffix="s"
             :error="fieldErrors.timeout_s"
           />
+          <UiSwitch v-model="d.thinking" label="Let the model think first" data-testid="thinking" />
+          <p class="note">
+            Only for models that reason before answering. Sorting and reading mail rarely needs it,
+            and each message takes minutes instead of seconds.
+          </p>
           <div class="key" data-testid="api-key">
             <template v-if="d.key_mode === 'set'">
               <UiTextField

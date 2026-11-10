@@ -69,6 +69,8 @@ pub struct LlmEndpoint {
     pub model: String,
     pub dialect: LlmDialect,
     pub timeout_ms: u32,
+    /// Let a thinking model reason before it answers (slower; a larger output budget).
+    pub thinking: bool,
     pub enabled: bool,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -81,6 +83,7 @@ pub struct LlmEndpointInput {
     pub model: String,
     pub dialect: LlmDialect,
     pub timeout_ms: u32,
+    pub thinking: bool,
     pub enabled: bool,
 }
 
@@ -92,6 +95,7 @@ pub struct LlmEndpointView {
     pub dialect: LlmDialect,
     pub has_api_key: bool,
     pub timeout_ms: u32,
+    pub thinking: bool,
     pub enabled: bool,
     /// RFC 3339.
     pub updated_at: DateTime<Utc>,
