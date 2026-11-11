@@ -40,7 +40,7 @@ test('login, members, pair a device, dashboard shows it is connected', async ({
   const kiosk = await browser.newContext()
   const screen = await kiosk.newPage()
   await screen.goto(pairUrl!)
-  await expect(screen.getByTestId('household')).not.toBeEmpty()
+  await expect(screen.getByTestId('clock')).not.toBeEmpty()
   await expect(screen.getByTestId('connection')).toHaveAttribute('data-status', 'open')
   await kiosk.close()
 })
