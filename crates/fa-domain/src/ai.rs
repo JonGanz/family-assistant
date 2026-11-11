@@ -60,6 +60,8 @@ pub const DEFAULT_MAX_INPUT_CHARS: u32 = 12_000;
 pub const DEFAULT_CATCHUP_DAYS: u32 = 30;
 /// Rules-confidence default (per decision point and for the extraction fallback cutoff).
 pub const DEFAULT_RULES_THRESHOLD: f32 = 0.8;
+/// Least confidence at which the event duplicate check drops a proposal.
+pub const DEFAULT_EVENT_DEDUPE_THRESHOLD: f32 = 0.8;
 
 /// The endpoint row. The API key is a `secret` row (owner type `llm_endpoint`), never a column.
 #[derive(Debug, Clone, PartialEq)]
@@ -113,6 +115,10 @@ pub struct AiSettings {
     /// `rules_first` and `mail_extract_mode = fallback`: the LLM extracts when no rule extractor
     /// reached this confidence (0.5 to 0.99).
     pub extract_fallback_cutoff: f32,
+    /// Ask the LLM whether a proposed event is already on the calendar (default on).
+    pub event_dedupe_llm: bool,
+    /// A "duplicate" answer at or above this confidence drops the proposal (0 to 1, default 0.8).
+    pub event_dedupe_threshold: f32,
     /// RFC 3339.
     pub updated_at: DateTime<Utc>,
 }
@@ -156,6 +162,8 @@ impl AiSettings {
             mail_mode: MailMode::default(),
             catchup_days: DEFAULT_CATCHUP_DAYS,
             extract_fallback_cutoff: DEFAULT_RULES_THRESHOLD,
+            event_dedupe_llm: true,
+            event_dedupe_threshold: DEFAULT_EVENT_DEDUPE_THRESHOLD,
             updated_at: now,
         }
     }

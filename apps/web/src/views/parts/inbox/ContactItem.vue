@@ -4,7 +4,7 @@ import { UiButton, UiCard, UiSelect, UiTextField } from '../../../ui'
 import type { ContactApproval, ContactSuggestionView, Member } from '../../../api/client'
 
 const props = defineProps<{ contact: ContactSuggestionView; members: Member[]; busy?: boolean }>()
-const emit = defineEmits<{ approve: [ContactApproval]; reject: [] }>()
+const emit = defineEmits<{ approve: [ContactApproval]; reject: []; discard: [] }>()
 
 const children = computed(() => props.members.filter((m) => m.role === 'child'))
 const childOptions = computed(() => [
@@ -40,7 +40,20 @@ function approve() {
         </p>
       </div>
       <template #actions>
-        <UiButton variant="text" :disabled="busy" @click="emit('reject')">Reject</UiButton>
+        <UiButton
+          variant="text"
+          :disabled="busy"
+          title="Not needed; doesn't count against the AI"
+          @click="emit('discard')"
+          >Discard</UiButton
+        >
+        <UiButton
+          variant="text"
+          :disabled="busy"
+          title="The suggestion was wrong (used to measure accuracy)"
+          @click="emit('reject')"
+          >Reject</UiButton
+        >
         <UiButton :disabled="busy" @click="approve">Approve</UiButton>
       </template>
     </UiCard>

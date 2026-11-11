@@ -473,6 +473,11 @@ export const api = {
   rejectInbox: (kind: InboxKind, id: string) =>
     request<void>(`/api/v1/inbox/${kind}/${id}/reject`, { method: 'POST', ...U }),
 
+  discardInbox: (kind: InboxKind, id: string) =>
+    request<void>(`/api/v1/inbox/${kind}/${id}/discard`, { method: 'POST', ...U }),
+  discardPastEvents: () =>
+    request<{ count: number }>('/api/v1/inbox/events/discard-past', { method: 'POST', ...U }),
+
   bills: (status?: string, before?: string) => {
     const p = new URLSearchParams()
     if (status) p.set('status', status)

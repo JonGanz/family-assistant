@@ -76,7 +76,11 @@ export const useInboxStore = defineStore('inbox', () => {
   }
 
   /** Removes the item at once; on failure puts it back and returns false. */
-  async function decide(kind: InboxKind, id: string, approval: Approval | null): Promise<boolean> {
+  async function decide(
+    kind: InboxKind,
+    id: string,
+    approval: Approval | 'discard' | null,
+  ): Promise<boolean> {
     const prevItems = items.value
     const prevCounts = counts.value
     items.value = prevItems.filter((i) => !(i.kind === kind && itemId(i) === id))
@@ -86,7 +90,8 @@ export const useInboxStore = defineStore('inbox', () => {
       total: Math.max(0, prevCounts.total - 1),
     }
     try {
-      if (approval) await api.approveInbox(kind, id, approval)
+      if (approval === 'discard') await api.discardInbox(kind, id)
+      else if (approval) await api.approveInbox(kind, id, approval)
       else await api.rejectInbox(kind, id)
       error.value = null
       return true
@@ -100,6 +105,21 @@ export const useInboxStore = defineStore('inbox', () => {
 
   const approve = (kind: InboxKind, id: string, edits: Approval = {}) => decide(kind, id, edits)
   const reject = (kind: InboxKind, id: string) => decide(kind, id, null)
+  /** "Not needed": leaves the inbox without a verdict on the finding. */
+  const discard = (kind: InboxKind, id: string) => decide(kind, id, 'discard')
+
+  /** Discards every pending event proposal that starts before today; returns how many (null on failure). */
+  async function discardPast(): Promise<number | null> {
+    try {
+      const { count } = await api.discardPastEvents()
+      error.value = null
+      await load()
+      return count
+    } catch (e) {
+      error.value = e instanceof Error ? e.message : String(e)
+      return null
+    }
+  }
 
   return {
     items,
@@ -113,5 +133,7 @@ export const useInboxStore = defineStore('inbox', () => {
     invalidate,
     approve,
     reject,
+    discard,
+    discardPast,
   }
 })

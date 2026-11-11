@@ -954,7 +954,13 @@ async fn llm_first_without_a_client_waits_and_enabling_catches_up(pool: PgPool) 
     e.run_llm_jobs().await;
     assert_eq!(e.llm_state(ids[0]).await, "done");
     assert_eq!(e.llm_state(ids[1]).await, "done");
-    assert_eq!(state.lock().unwrap().requests.len(), 2);
+    // Two mail calls; the second message's event also gets the duplicate check against the first's.
+    assert_eq!(
+        e.count("SELECT count(*) FROM llm_call WHERE purpose = 'mail.llm'")
+            .await,
+        2
+    );
+    assert!(state.lock().unwrap().requests.len() >= 2);
     assert_eq!(
         e.backlog().await,
         LlmBacklog {
@@ -1155,4 +1161,214 @@ async fn llm_first_refines_a_pending_bill_but_not_an_edited_one(pool: PgPool) {
     );
     assert_eq!(row(b).await, rb);
     assert_eq!(e.count("SELECT count(*) FROM bill").await, 2);
+}
+
+// ---- Event duplicate check (second LLM pass, arch/AI.md) ----
+
+const DEDUPE_MARK: &str = "already on a family calendar";
+
+/// Answers the mail call with `main` and the duplicate check with `dedupe` (`None`: HTTP 500).
+async fn stub_dedupe(main: Value, dedupe: Option<Value>) -> (String, Stub) {
+    #[derive(Clone)]
+    struct S {
+        main: Value,
+        dedupe: Option<Value>,
+        seen: Stub,
+    }
+    async fn h(
+        State(s): State<S>,
+        Json(body): Json<Value>,
+    ) -> Result<Json<Value>, axum::http::StatusCode> {
+        s.seen.lock().unwrap().requests.push(body.clone());
+        let is_dedupe = body["messages"][0]["content"]
+            .as_str()
+            .is_some_and(|c| c.contains(DEDUPE_MARK));
+        let reply = if is_dedupe {
+            s.dedupe
+                .clone()
+                .ok_or(axum::http::StatusCode::INTERNAL_SERVER_ERROR)?
+        } else {
+            s.main.clone()
+        };
+        Ok(Json(json!({
+            "choices": [{"message": {"content": reply.to_string()}}],
+            "usage": {"prompt_tokens": 11, "completion_tokens": 7}
+        })))
+    }
+    let seen: Stub = Arc::new(Mutex::new(StubState::default()));
+    let app = Router::new()
+        .route("/v1/chat/completions", post(h))
+        .with_state(S {
+            main,
+            dedupe,
+            seen: seen.clone(),
+        });
+    let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+    let url = format!("http://{}/v1", l.local_addr().unwrap());
+    tokio::spawn(async move { axum::serve(l, app).await.unwrap() });
+    (url, seen)
+}
+
+impl Env {
+    /// An existing pending proposal near the candidate of `answer()` (not the same dedupe key).
+    async fn seed_existing(&self) -> EventId {
+        let start = Utc.with_ymd_and_hms(2026, 11, 5, 15, 30, 0).unwrap();
+        let mut tx = self.store.tx_for(self.h).await.unwrap();
+        let id = EventRepo::insert_extracted(
+            &mut tx,
+            &NewExtractedEvent {
+                household_id: self.h,
+                message_id: None,
+                org_id: None,
+                title: "Crossing guard meeting".into(),
+                description: None,
+                location: Some("Room 4".into()),
+                start_at: start,
+                end_at: start + Duration::hours(1),
+                all_day: false,
+                start_date: None,
+                end_date: None,
+                source_tz: None,
+                cancelled: false,
+                confidence: 0.9,
+                source_ref: None,
+                dedupe_key: "existing|k".into(),
+                remote_uid: None,
+                members: vec![],
+            },
+        )
+        .await
+        .unwrap();
+        tx.commit().await.unwrap();
+        id
+    }
+
+    async fn set_dedupe(&self, on: bool, threshold: f32) {
+        let mut tx = self.store.tx_for(self.h).await.unwrap();
+        AiSettingsRepo::set_event_dedupe(&mut tx, self.h, on, threshold)
+            .await
+            .unwrap();
+        tx.commit().await.unwrap();
+    }
+
+    async fn run_mail_llm(&self) -> MessageId {
+        let id = self.plain("m1").await;
+        self.svc.process(self.h, id, None).await.unwrap();
+        let payload = self.jobs("mail.llm").await.remove(0);
+        self.run("mail.llm", payload).await.unwrap();
+        id
+    }
+
+    async fn dedupe_calls(&self) -> i64 {
+        self.count("SELECT count(*) FROM llm_call WHERE purpose = 'event.dedupe'")
+            .await
+    }
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn dedupe_drops_a_confident_duplicate_and_links_the_message(pool: PgPool) {
+    let (url, state) = stub_dedupe(
+        answer(),
+        Some(json!({"duplicate_of": 1, "confidence": 0.9, "reason": "same meeting"})),
+    )
+    .await;
+    let e = env(pool, Some(url)).await;
+    let existing = e.seed_existing().await;
+    let id = e.run_mail_llm().await;
+    // No new proposal; the message points at the existing event.
+    assert_eq!(e.count("SELECT count(*) FROM event").await, 1);
+    assert_eq!(
+        e.count(&format!(
+            "SELECT count(*) FROM event_message WHERE event_id = '{existing}' AND message_id = '{id}'"
+        ))
+        .await,
+        1
+    );
+    assert_eq!(e.dedupe_calls().await, 1);
+    let g = state.lock().unwrap();
+    assert_eq!(g.requests.len(), 2);
+    let user = g.requests[1]["messages"][1]["content"].as_str().unwrap();
+    assert!(user.contains("Zebra crossing chat") && user.contains("1. Crossing guard meeting"));
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn dedupe_keeps_the_proposal_when_not_a_duplicate_or_below_threshold(pool: PgPool) {
+    for (reply, threshold) in [
+        (
+            json!({"duplicate_of": null, "confidence": 0.9, "reason": "different"}),
+            0.8,
+        ),
+        (
+            json!({"duplicate_of": 1, "confidence": 0.6, "reason": "maybe"}),
+            0.8,
+        ),
+        (
+            json!({"duplicate_of": 7, "confidence": 0.99, "reason": "bad index"}),
+            0.8,
+        ),
+    ] {
+        let (url, _) = stub_dedupe(answer(), Some(reply)).await;
+        let e = env(pool.clone(), Some(url)).await;
+        e.set_dedupe(true, threshold).await;
+        e.seed_existing().await;
+        e.run_mail_llm().await;
+        assert_eq!(
+            e.count("SELECT count(*) FROM event WHERE message_id IS NOT NULL")
+                .await,
+            1
+        );
+        assert_eq!(e.count("SELECT count(*) FROM event_message").await, 0);
+        assert_eq!(e.dedupe_calls().await, 1);
+    }
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn dedupe_asks_nothing_without_overlapping_events(pool: PgPool) {
+    let (url, state) = stub_dedupe(
+        answer(),
+        Some(json!({"duplicate_of": 1, "confidence": 1.0})),
+    )
+    .await;
+    let e = env(pool, Some(url)).await;
+    e.run_mail_llm().await;
+    assert_eq!(e.count("SELECT count(*) FROM event").await, 1);
+    assert_eq!(e.dedupe_calls().await, 0);
+    assert_eq!(state.lock().unwrap().requests.len(), 1);
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn dedupe_error_keeps_the_proposal(pool: PgPool) {
+    let (url, _) = stub_dedupe(answer(), None).await;
+    let e = env(pool, Some(url)).await;
+    e.seed_existing().await;
+    e.run_mail_llm().await;
+    assert_eq!(
+        e.count("SELECT count(*) FROM event WHERE message_id IS NOT NULL")
+            .await,
+        1
+    );
+    assert_eq!(
+        e.count("SELECT count(*) FROM llm_call WHERE purpose = 'event.dedupe' AND NOT ok")
+            .await,
+        1
+    );
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn dedupe_off_makes_no_call(pool: PgPool) {
+    let (url, state) = stub_dedupe(
+        answer(),
+        Some(json!({"duplicate_of": 1, "confidence": 1.0})),
+    )
+    .await;
+    let e = env(pool, Some(url)).await;
+    e.set_dedupe(false, 0.8).await;
+    e.seed_existing().await;
+    e.run_mail_llm().await;
+    assert_eq!(
+        e.count("SELECT count(*) FROM event WHERE message_id IS NOT NULL")
+            .await,
+        1
+    );
+    assert_eq!(state.lock().unwrap().requests.len(), 1);
 }

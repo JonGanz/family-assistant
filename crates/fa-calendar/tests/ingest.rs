@@ -810,6 +810,48 @@ async fn reject_and_state_checks(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../fa-store/migrations")]
+async fn discard_records_no_decision_and_leaves_the_inbox(pool: PgPool) {
+    let server = MockServer::start().await;
+    let e = env(pool, &server, &[SCOPE], false).await;
+    let human = |e: &Env| {
+        let pool = e.store.pool().clone();
+        async move {
+            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM decision WHERE stage_kind = 'human'")
+                .fetch_one(&pool)
+                .await
+                .unwrap()
+        }
+    };
+    let id = route(&e, &new_event(&e, "Concert", start(3))).await;
+    let rejected = route(&e, &new_event(&e, "Other", start(5))).await;
+    let before = human(&e).await;
+    e.svc.discard_event(e.h, id, Some(e.adult)).await.unwrap();
+    let r = get(&e, id).await.unwrap();
+    assert_eq!(r.event.status, Some(EventStatus::Dismissed));
+    assert_eq!(human(&e).await, before, "discard records no decision");
+    assert!(
+        e.svc
+            .proposals(e.h)
+            .await
+            .unwrap()
+            .iter()
+            .all(|p| p.id != id)
+    );
+    // it is no longer pending, and no longer a duplicate candidate (like rejected)
+    assert!(e.svc.discard_event(e.h, id, None).await.is_err());
+    assert!(e.svc.approve_event(e.h, id, ea(None), None).await.is_err());
+    let mut tx = e.store.tx_for(e.h).await.unwrap();
+    let near = EventRepo::dedupe_candidates(&mut tx, e.h, start(2), start(4))
+        .await
+        .unwrap();
+    assert!(near.iter().all(|c| c.event.id != id));
+    drop(tx);
+    // reject still records one
+    e.svc.reject_event(e.h, rejected, None).await.unwrap();
+    assert_eq!(human(&e).await, before + 1);
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
 async fn failed_writes_are_proposals_and_retry_by_approving(pool: PgPool) {
     let server = MockServer::start().await;
     let e = env(pool, &server, &[SCOPE], false).await;

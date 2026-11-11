@@ -27,6 +27,8 @@ vi.mock('../api/client', () => ({
     inbox: vi.fn(),
     approveInbox: vi.fn(),
     rejectInbox: vi.fn(),
+    discardInbox: vi.fn(),
+    discardPastEvents: vi.fn(),
     calendars: vi.fn(),
     sources: vi.fn(),
     labellingNext: vi.fn(),
@@ -98,6 +100,57 @@ describe('Inbox', () => {
     expect(m.rejectInbox).toHaveBeenCalledWith('bill', 'b1')
     expect(useInboxStore().items).toHaveLength(0)
     w.unmount()
+  })
+  it('Discard skips the confirm and calls discard, never reject', async () => {
+    m.inbox.mockResolvedValue({
+      items: [{ kind: 'bill', bill }],
+      counts: { event: 0, bill: 1, task: 0, contact: 0, total: 1 },
+      next_before: null,
+    } as never)
+    m.discardInbox.mockResolvedValue(undefined as never)
+    const w = mount(InboxView, { global: { stubs }, attachTo: document.body })
+    await flushPromises()
+    await w.get('[role="radio"]:nth-child(2), [role="tab"]:nth-child(2)').trigger('click')
+    await w
+      .findAll('button')
+      .find((b) => b.text() === 'Discard')!
+      .trigger('click')
+    await flushPromises()
+    expect(m.discardInbox).toHaveBeenCalledWith('bill', 'b1')
+    expect(m.rejectInbox).not.toHaveBeenCalled()
+    expect(useInboxStore().items).toHaveLength(0)
+    w.unmount()
+  })
+  it('offers Discard past events only when a pending event is before today', async () => {
+    const ev = (id: string, start_at: string) => ({
+      kind: 'event',
+      event: { id, title: 'T', start_at, end_at: start_at, all_day: false, pending_cancel: false },
+    })
+    m.inbox.mockResolvedValue({
+      items: [ev('e1', '2020-01-01T10:00:00Z')],
+      counts: { event: 1, bill: 0, task: 0, contact: 0, total: 1 },
+      next_before: null,
+    } as never)
+    m.discardPastEvents.mockResolvedValue({ count: 1 })
+    const w = mount(InboxView, { global: { stubs }, attachTo: document.body })
+    await flushPromises()
+    const btn = w.findAll('button').find((b) => b.text().startsWith('Discard past events'))!
+    expect(btn.text()).toContain('(1)')
+    await btn.trigger('click')
+    await flushPromises()
+    expect(m.discardPastEvents).toHaveBeenCalled()
+    w.unmount()
+
+    m.inbox.mockResolvedValue({
+      items: [ev('e2', '2999-01-01T10:00:00Z')],
+      counts: { event: 1, bill: 0, task: 0, contact: 0, total: 1 },
+      next_before: null,
+    } as never)
+    setActivePinia(createPinia())
+    const w2 = mount(InboxView, { global: { stubs }, attachTo: document.body })
+    await flushPromises()
+    expect(w2.findAll('button').some((b) => b.text().startsWith('Discard past'))).toBe(false)
+    w2.unmount()
   })
   it('approves with only the edited fields', async () => {
     const w = mount(BillItem, { props: { bill: bill as never }, global: { stubs } })

@@ -229,7 +229,7 @@ impl EventRepo {
     }
 
     /// Events of any origin starting in `[start_from, start_to)` that could be the same event as a
-    /// new one: everything except `rejected` and `expired` rows.
+    /// new one: everything except `rejected`, `expired` and `dismissed` rows.
     pub async fn dedupe_candidates(
         conn: &mut PgConnection,
         household: HouseholdId,
@@ -239,7 +239,7 @@ impl EventRepo {
         let rows: Vec<EvRow> = sqlx::query_as(&format!(
             "SELECT {EV} FROM event e
              WHERE e.household_id = $1 AND e.start_at >= $2 AND e.start_at < $3
-               AND (e.status IS NULL OR e.status NOT IN ('rejected', 'expired'))
+               AND (e.status IS NULL OR e.status NOT IN ('rejected', 'expired', 'dismissed'))
              ORDER BY e.start_at, e.id"
         ))
         .bind(household.as_uuid())
@@ -409,6 +409,25 @@ impl EventRepo {
             .await?
             .rows_affected()
             > 0)
+    }
+
+    /// Proposed (not pending-cancel) extracted events that start before `before`: id and message.
+    pub async fn past_proposals(
+        conn: &mut PgConnection,
+        before: DateTime<Utc>,
+    ) -> Result<Vec<(EventId, Option<MessageId>)>> {
+        let rows: Vec<(uuid::Uuid, Option<uuid::Uuid>)> = sqlx::query_as(
+            "SELECT id, message_id FROM event
+             WHERE origin = 'extracted' AND status = 'proposed' AND start_at < $1
+             ORDER BY start_at, id",
+        )
+        .bind(before)
+        .fetch_all(conn)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|(i, m)| (EventId::from(i), m.map(MessageId::from)))
+            .collect())
     }
 
     /// Proposed events that start before `now` become `expired`.

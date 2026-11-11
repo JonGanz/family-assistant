@@ -3215,6 +3215,45 @@
         ]
       }
     },
+    "/api/v1/inbox/events/discard-past": {
+      "post": {
+        "tags": [
+          "inbox"
+        ],
+        "summary": "Discards every proposed event, visible to the caller, that started before today (household\ntime zone). Records no decisions.",
+        "operationId": "discard_past_events",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DiscardedCount"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/inbox/{kind}/{id}/approve": {
       "post": {
         "tags": [
@@ -3286,6 +3325,78 @@
           },
           "422": {
             "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/inbox/{kind}/{id}/discard": {
+      "post": {
+        "tags": [
+          "inbox"
+        ],
+        "summary": "\"I don't want this\": the item leaves the inbox and is not proposed again, but no human\ndecision is recorded, so it never counts for or against the AI.",
+        "operationId": "discard_inbox",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "path",
+            "description": "event, bill, task or contact",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "description": "item id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": ""
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "the item is not awaiting a decision",
             "content": {
               "application/json": {
                 "schema": {
@@ -12577,6 +12688,8 @@
           "mail_mode",
           "catchup_days",
           "extract_fallback_cutoff",
+          "event_dedupe_llm",
+          "event_dedupe_threshold",
           "updated_at"
         ],
         "properties": {
@@ -12585,6 +12698,15 @@
             "format": "int32",
             "description": "Only messages received within this many days are caught up (0 to 365).",
             "minimum": 0
+          },
+          "event_dedupe_llm": {
+            "type": "boolean",
+            "description": "Ask the LLM whether a proposed event is already on the calendar (default on)."
+          },
+          "event_dedupe_threshold": {
+            "type": "number",
+            "format": "float",
+            "description": "A \"duplicate\" answer at or above this confidence drops the proposal (0 to 1, default 0.8)."
           },
           "extract_fallback_cutoff": {
             "type": "number",
@@ -12624,6 +12746,21 @@
             "format": "int32",
             "description": "0 to 365; 0 switches the catch-up off. Absent keeps the stored value (default 30).",
             "minimum": 0
+          },
+          "event_dedupe_llm": {
+            "type": [
+              "boolean",
+              "null"
+            ],
+            "description": "Check proposed events against the calendar with the LLM. Absent keeps the stored value."
+          },
+          "event_dedupe_threshold": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "format": "float",
+            "description": "0 to 1. Absent keeps the stored value (default 0.8)."
           },
           "extract_fallback_cutoff": {
             "type": [
@@ -13982,6 +14119,20 @@
           }
         }
       },
+      "DiscardedCount": {
+        "type": "object",
+        "description": "How many items a bulk inbox action changed.",
+        "required": [
+          "count"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        }
+      },
       "ElevateReq": {
         "type": "object",
         "required": [
@@ -14382,7 +14533,8 @@
           "written",
           "rejected",
           "extracted",
-          "expired"
+          "expired",
+          "dismissed"
         ]
       },
       "EventView": {

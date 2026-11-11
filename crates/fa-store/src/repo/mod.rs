@@ -70,7 +70,7 @@ pub use bill::{BillRepo, InboxRepo, MailActionRepo, NewMailAction};
 pub use calendar::CalendarRepo;
 pub use calendar_source::CalendarSourceRepo;
 pub use device::{DeviceElevationRepo, DeviceRepo};
-pub use event::{EventRepo, EventRow, NewOccurrence};
+pub use event::{DedupeEvent, EventRepo, EventRow, NewOccurrence};
 pub use event_m3::{EventFull, EventProposalRow, NewExtractedEvent};
 pub use household::HouseholdRepo;
 pub use instance_setting::{InstanceSettingRepo, InstanceSettingRow};

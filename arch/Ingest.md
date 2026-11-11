@@ -79,7 +79,7 @@ This refines the Organizations & Mail and AI & Pipelines packages of [Domain.md]
 | `enrollment` | member, org, grade?, class?, from?, until? | A child at a school, daycare or club |
 | `enrollment_contact` | enrollment ↔ org_contact | This child's teacher or coach |
 | `org` (+col) | contact_mode: `suggest\|auto\|manual` (default `suggest`) | D-056 |
-| `contact_suggestion` | org, email, name?, member?, message, status: `proposed\|accepted\|rejected\|expired` | Unique `(org, lower(email))`, so a rejected address isn't proposed again |
+| `contact_suggestion` | org, email, name?, member?, message, status: `proposed\|accepted\|rejected\|expired\|dismissed` | Unique `(org, lower(email))`, so a rejected or discarded address isn't proposed again |
 | `member` (+cols) | `aliases[]` (nicknames to match in mail), `gender?`: `female\|male\|other`, `relevance_tags[]` | D-055. Used by member linking (§6.3) |
 | `household` (+settings) | `mail.max_message_bytes` (default 40 MB, D-101, planned; Settings → Mail), `gender_terms{female[], male[]}`, `events.auto_write` (false), `events.thresholds{extract: 0.9, route: 0.9}`, `inbox.expiry{task_days: 14, contact_days: 14}`, `dashboard_pending_approvals` (true) | D-055, D-057, D-061, D-078 |
 | `mail_source` | provider: `gmail\|imap` (default `gmail`), address, read_only (true), visibility: `owners\|household` (default `owners`), backfill_days (30), query? (Gmail search string), poll_minutes (5), state: `ok\|needs_reauth\|error\|paused`, last_synced_at?, last_error?, archived_at?, version. **Gmail:** oauth_account, history_id?. **IMAP:** host, port (993), username, secret (app password), folders[] (default `INBOX`; `[Gmail]/All Mail` on Gmail), archive_folder?, gmail_ext (detected), `imap_pem?` (Secret, D-100: a server certificate or CA bundle, planned). **All sources:** `task_visibility: follow_until_accepted\|follow_until_done\|household` (default `follow_until_accepted`, D-098, planned; written by `POST/PATCH /mail-sources` and Settings → Mail) | D-007, D-052, D-053, D-063, D-098, D-100. Gmail reuses `oauth_account` (Feeds.md §2) with incremental consent for `gmail.readonly`, or `gmail.modify` when read-only is off |
@@ -91,7 +91,7 @@ This refines the Organizations & Mail and AI & Pipelines packages of [Domain.md]
 | `mail_rule` | decision_point, name, priority, conditions jsonb (§6.1), value, confidence, enabled, origin: `builtin\|user`, version | User rules for the `rules` stage. Built-in rules are code with listed defaults, and can be disabled |
 | `category` | key, label, behaviour: `ignore\|keep\|extract`, notify_time_sensitive, auto_actions[] (`label` default; `archive`, `mark_read` optional), email_tasks: `suggest\|create\|off` (default `suggest`), color, ord, archived_at? | Seeded with the D-054 set; D-058, D-060 |
 | `bill` | message?, org?, payee, amount_minor, currency, due_on?, account_hint?, statement_period?, status: `proposed\|open\|paid\|dismissed`, confidence, task?, source_ref, version | D-009, D-059 (no autopay). `proposed` waits in the inbox |
-| `event` (+use) | origin `extracted`, status `extracted\|proposed\|approved\|written\|rejected\|expired`, confidence, source_ref, dedupe_key, target_calendar? | Columns from M1 (Feeds.md §2), now used |
+| `event` (+use) | origin `extracted`, status `extracted\|proposed\|approved\|written\|rejected\|expired\|dismissed`, confidence, source_ref, dedupe_key, target_calendar? | Columns from M1 (Feeds.md §2), now used |
 | `task` (+use) | origin `email`, status `suggested` (D-060), source_ref, list kind `email` | Domain.md Tasks package |
 | `gmail_action` | message, action: `archive\|mark_read\|label`, label?, automatic, done_by?, done_at, undone_at? | D-007, D-058. Undoable for 30 days. Named for D-007; also used for IMAP sources |
 
@@ -247,6 +247,7 @@ Summarising a long newsletter per child is System 2 work (after M4).
 - **Private to the source's adults (D-078):** an item is visible to, and can be approved, edited or rejected by, the adults who may see its source message (the source's owners, or every adult for a `household` source, D-063). Each adult's `/inbox` lists only those items. Items whose source is gone or archived fall back to every adult.
 - Approving needs that adult signed in to the app. Dashboard devices, elevated or not, are refused `ReadInbox` and approvals (D-068; amends D-008). The dashboard shows at most a pending count per adult (D-078, household setting `dashboard_pending_approvals`, default on).
 - Every approval, edit or rejection is stored as a `Decision` from the `human` stage, which is training data for M4 kNN and M6 routing.
+- **Reject vs Discard.** *Reject* says "the suggestion was wrong": it records the human decision, so it is a ground-truth negative for the evaluation and the AI stats. *Discard* says "I don't want this" (not needed, or already in the past) and is no verdict on the finding: the item gets status `dismissed` (events and contact suggestions; bills reuse their `dismissed`; a suggested task becomes `skipped` with no actor, as at expiry) and **no decision is recorded**, so eval and stats are unaffected. A discarded item leaves the inbox and counts like a rejected one for dedupe, so it is not proposed again. Events add a bulk **Discard past events** (every pending proposal the adult may see that started before today in the household time zone; the inbox's Events tab offers it when any exist).
 - **Expiry (D-061):** `inbox.expire` marks proposals `expired` (not rejected, so they aren't negatives): events when their start passes, suggested tasks and contacts after 14 days (household settings); bills never.
 - **Notifications (D-061):** `approval_needed` is a per-adult trigger, sent only to the adults who may approve the item (D-078), default **batched** (D-044) plus the daily digest; each adult can switch it to immediate, digest only, or off.
 - **Mail actions (D-058):** after processing, a writable source applies its category's `auto_actions` (default: labels `FA/<category>` and `FA/<child>`; archive and mark read are opt-in per category). Each is a `gmail_action` row, undoable from the message view for 30 days.
@@ -267,7 +268,7 @@ Summarising a long newsletter per child is System 2 work (after M4).
 | `GET/POST/PATCH /orgs`, `/orgs/{id}/contacts`, `/members/{id}/enrollments` | adult | Linking setup |
 | `GET/POST/PATCH /mail-rules`, `POST /mail-rules/test` `{rule, message?}` | adult | Rules, and dry-running a rule on recent mail |
 | `GET/POST/PATCH /categories` | adult | Category set, behaviour, auto actions, email tasks |
-| `GET /inbox`, `POST /inbox/{kind}/{id}/approve\|reject` (kind: `event\|bill\|task\|contact`) | adults who may see the source (D-078) | Approvals (devices refused, D-068) |
+| `GET /inbox`, `POST /inbox/{kind}/{id}/approve\|reject\|discard` (kind: `event\|bill\|task\|contact`), `POST /inbox/events/discard-past` (returns `{count}`) | adults who may see the source (D-078) | Approvals (devices refused, D-068) |
 | `GET /bills`, `PATCH /bills/{id}` | adult | Bills list (no ledger, D-009) |
 
 ## 12. Authorization (adds to the RBAC matrix in Domain.md)
@@ -279,7 +280,7 @@ Summarising a long newsletter per child is System 2 work (after M4).
 | Manage sources | ✗ | own and household | ✗ | ✗ |
 | Manage orgs, contacts, enrollments, rules, categories | ✗ | ✓ | ✗ | ✗ |
 | See the inbox | ✗ | items from sources they may see (D-078) | pending count per adult only | count only (D-068, D-078) |
-| Approve or reject | ✗ | items from sources they may see (D-078) | ✗ | ✗ (D-068) |
+| Approve, reject or discard | ✗ | items from sources they may see (D-078) | ✗ | ✗ (D-068) |
 
 ## 13. Jobs
 | Job | Schedule | What it does |

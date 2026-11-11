@@ -683,6 +683,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/inbox/events/discard-past": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Discards every proposed event, visible to the caller, that started before today (household
+         *     time zone). Records no decisions.
+         */
+        post: operations["discard_past_events"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/inbox/{kind}/{id}/approve": {
         parameters: {
             query?: never;
@@ -693,6 +713,26 @@ export interface paths {
         get?: never;
         put?: never;
         post: operations["approve_inbox"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/inbox/{kind}/{id}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * "I don't want this": the item leaves the inbox and is not proposed again, but no human
+         *     decision is recorded, so it never counts for or against the AI.
+         */
+        post: operations["discard_inbox"];
         delete?: never;
         options?: never;
         head?: never;
@@ -2453,6 +2493,13 @@ export interface components {
              * @description Only messages received within this many days are caught up (0 to 365).
              */
             catchup_days: number;
+            /** @description Ask the LLM whether a proposed event is already on the calendar (default on). */
+            event_dedupe_llm: boolean;
+            /**
+             * Format: float
+             * @description A "duplicate" answer at or above this confidence drops the proposal (0 to 1, default 0.8).
+             */
+            event_dedupe_threshold: number;
             /**
              * Format: float
              * @description `rules_first` and `mail_extract_mode = fallback`: the LLM extracts when no rule extractor
@@ -2475,6 +2522,13 @@ export interface components {
              * @description 0 to 365; 0 switches the catch-up off. Absent keeps the stored value (default 30).
              */
             catchup_days?: number | null;
+            /** @description Check proposed events against the calendar with the LLM. Absent keeps the stored value. */
+            event_dedupe_llm?: boolean | null;
+            /**
+             * Format: float
+             * @description 0 to 1. Absent keeps the stored value (default 0.8).
+             */
+            event_dedupe_threshold?: number | null;
             /**
              * Format: float
              * @description 0.5 to 0.99. Absent keeps the stored value (default 0.8).
@@ -2840,6 +2894,11 @@ export interface components {
             /** Format: int32 */
             version: number;
         };
+        /** @description How many items a bulk inbox action changed. */
+        DiscardedCount: {
+            /** Format: int64 */
+            count: number;
+        };
         ElevateReq: {
             /** Format: uuid */
             member_id: string;
@@ -2961,7 +3020,7 @@ export interface components {
             write_error?: string | null;
         };
         /** @enum {string} */
-        EventStatus: "proposed" | "approved" | "written" | "rejected" | "extracted" | "expired";
+        EventStatus: "proposed" | "approved" | "written" | "rejected" | "extracted" | "expired" | "dismissed";
         EventView: {
             all_day: boolean;
             calendar?: null | components["schemas"]["CalendarId"];
@@ -7242,6 +7301,33 @@ export interface operations {
             };
         };
     };
+    discard_past_events: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscardedCount"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     approve_inbox: {
         parameters: {
             query?: never;
@@ -7293,6 +7379,53 @@ export interface operations {
                 };
             };
             422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    discard_inbox: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description event, bill, task or contact */
+                kind: string;
+                /** @description item id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description the item is not awaiting a decision */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };

@@ -80,11 +80,11 @@ describe('food view button', () => {
   it('is hidden when food_view is false', () => {
     expect(mk(false).find('[data-testid="kiosk-view-food"]').exists()).toBe(false)
   })
-  it('sits between Week and Whiteboard', () => {
+  it('sits between Week and Timers', () => {
     const ids = mk()
       .findAll('nav button')
       .map((b) => b.attributes('data-view'))
-    expect(ids).toEqual(['home', 'week', 'food', 'whiteboard'])
+    expect(ids).toEqual(['home', 'week', 'food', 'timers', 'whiteboard'])
   })
 })
 

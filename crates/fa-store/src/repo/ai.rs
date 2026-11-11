@@ -100,10 +100,12 @@ struct SettingsRow {
     mail_mode: String,
     catchup_days: i32,
     extract_fallback_cutoff: f32,
+    event_dedupe_llm: bool,
+    event_dedupe_threshold: f32,
     updated_at: DateTime<Utc>,
 }
 
-const SETTINGS_COLS: &str = "mail_extract_mode, max_input_chars, mail_mode, catchup_days, extract_fallback_cutoff, updated_at";
+const SETTINGS_COLS: &str = "mail_extract_mode, max_input_chars, mail_mode, catchup_days, extract_fallback_cutoff, event_dedupe_llm, event_dedupe_threshold, updated_at";
 
 impl TryFrom<SettingsRow> for AiSettings {
     type Error = StoreError;
@@ -116,6 +118,8 @@ impl TryFrom<SettingsRow> for AiSettings {
             catchup_days: u32::try_from(r.catchup_days)
                 .map_err(|_| StoreError::Corrupt("catchup_days".into()))?,
             extract_fallback_cutoff: r.extract_fallback_cutoff,
+            event_dedupe_llm: r.event_dedupe_llm,
+            event_dedupe_threshold: r.event_dedupe_threshold,
             updated_at: r.updated_at,
         })
     }
@@ -152,7 +156,7 @@ impl AiSettingsRepo {
                  mail_extract_mode = EXCLUDED.mail_extract_mode,
                  max_input_chars = EXCLUDED.max_input_chars
              RETURNING mail_extract_mode, max_input_chars, mail_mode, catchup_days,
-                       extract_fallback_cutoff, updated_at",
+                       extract_fallback_cutoff, event_dedupe_llm, event_dedupe_threshold, updated_at",
         )
         .bind(household.as_uuid())
         .bind(enum_str(&mode))
@@ -186,6 +190,29 @@ impl AiSettingsRepo {
         .bind(enum_str(&i.mail_mode))
         .bind(i32::try_from(i.catchup_days).unwrap_or(i32::MAX))
         .bind(i.extract_fallback_cutoff)
+        .fetch_one(conn)
+        .await?;
+        row.try_into()
+    }
+
+    /// Writes the event duplicate check settings only (`PUT /ai/settings`).
+    pub async fn set_event_dedupe(
+        conn: &mut PgConnection,
+        household: HouseholdId,
+        enabled: bool,
+        threshold: f32,
+    ) -> Result<AiSettings> {
+        let row: SettingsRow = sqlx::query_as(&format!(
+            "INSERT INTO ai_settings (household_id, event_dedupe_llm, event_dedupe_threshold)
+             VALUES ($1, $2, $3)
+             ON CONFLICT (household_id) DO UPDATE SET
+                 event_dedupe_llm = EXCLUDED.event_dedupe_llm,
+                 event_dedupe_threshold = EXCLUDED.event_dedupe_threshold
+             RETURNING {SETTINGS_COLS}"
+        ))
+        .bind(household.as_uuid())
+        .bind(enabled)
+        .bind(threshold)
         .fetch_one(conn)
         .await?;
         row.try_into()

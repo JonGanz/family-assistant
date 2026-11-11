@@ -42,6 +42,7 @@ import I_error from '~icons/material-symbols/error-rounded'
 import I_info from '~icons/material-symbols/info-rounded'
 import I_success from '~icons/material-symbols/check-circle-rounded'
 import I_ai from '~icons/material-symbols/auto-awesome-rounded'
+import I_timer from '~icons/material-symbols/timer-rounded'
 import I_food from '~icons/material-symbols/restaurant-rounded'
 import I_dinner from '~icons/material-symbols/restaurant-rounded'
 import I_cart from '~icons/material-symbols/shopping-cart-rounded'
@@ -140,6 +141,7 @@ export const icons = {
   settings_outline: I_settings_outline,
   more_outline: I_more_outline,
   // M5 food (D-117)
+  timer: I_timer,
   food: I_food,
   dinner: I_dinner,
   cart: I_cart,

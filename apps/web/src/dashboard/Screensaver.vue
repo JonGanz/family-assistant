@@ -9,6 +9,8 @@ const props = defineProps<{
   minutes: number
   /** Household time zone for the clock; the browser's when unknown. */
   tz?: string
+  /** Keeps the screen awake (a ringing timer): wakes it at once and holds it off while true. */
+  hold?: boolean
 }>()
 
 const SPEED = 110 // px per second, on both axes
@@ -46,6 +48,7 @@ function onInteract() {
 }
 
 function start() {
+  if (props.hold) return arm()
   active.value = true
   const w = window.innerWidth
   const h = window.innerHeight
@@ -104,6 +107,12 @@ onBeforeUnmount(() => {
 watch(
   () => props.minutes,
   () => arm(),
+)
+watch(
+  () => props.hold,
+  (h) => {
+    if (h && active.value) wake()
+  },
 )
 </script>
 

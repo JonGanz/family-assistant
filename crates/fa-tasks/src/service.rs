@@ -759,6 +759,26 @@ impl TaskService {
         self.finish(tx, household, task).await
     }
 
+    /// Discards a suggested task ("not needed"): `skipped` with no actor, like expiry, so it is
+    /// not counted as a rejection.
+    pub async fn discard_suggested(
+        &self,
+        household: HouseholdId,
+        task: TaskId,
+    ) -> Result<TaskView> {
+        let mut tx = self.store.tx_for(household).await?;
+        TaskRepo::lock(&mut tx, task).await?;
+        let row = row_of(&mut tx, task).await?;
+        if row.task.value.status != TaskStatus::Suggested {
+            return Err(TaskError::WrongStatus {
+                expected: "suggested",
+                actual: row.task.value.status.as_str().to_owned(),
+            });
+        }
+        TaskRepo::set_status(&mut tx, task, TaskStatus::Skipped, None, None, None).await?;
+        self.finish(tx, household, task).await
+    }
+
     /// `suggested` to `open`.
     pub async fn accept(&self, household: HouseholdId, task: TaskId) -> Result<TaskView> {
         let mut tx = self.store.tx_for(household).await?;

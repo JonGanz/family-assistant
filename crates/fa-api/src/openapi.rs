@@ -71,7 +71,7 @@ impl Modify for Security {
         mail::patch_mail_rule, mail::delete_mail_rule, mail::test_mail_rule,
         mail::list_mail_signals, mail::patch_mail_signal, mail::list_categories,
         mail::create_category, mail::patch_category, mail::get_inbox, mail::approve_inbox,
-        mail::reject_inbox, mail::list_bills, mail::patch_bill,
+        mail::reject_inbox, mail::discard_inbox, mail::discard_past_events, mail::list_bills, mail::patch_bill,
         ai::get_endpoint, ai::put_endpoint, ai::test_endpoint, ai::list_models,
         ai::get_settings, ai::put_settings, ai::get_pipeline, ai::put_pipeline,
         ai::get_stats, ai::get_backlog, ai::process_backlog, ai::extract_recipe,
@@ -79,7 +79,7 @@ impl Modify for Security {
     ),
     components(schemas(
         crate::tasks::ViewParam, crate::tasks::StatusParam,
-        EventApproval, TaskApproval, ContactApproval, BillPatch, BillPatchStatus, InboxItem,
+        crate::mail::DiscardedCount, EventApproval, TaskApproval, ContactApproval, BillPatch, BillPatchStatus, InboxItem,
         crate::feeds::PurposeParam, crate::feeds::SourceViewExt, crate::feeds::SourcePatchExt,
         crate::feeds::CalendarViewExt, crate::feeds::CalendarPatchExt,
         RecipeSummary, RecipePage, RecipeView, RecipeLineView, IngredientProposal, RecipeInput, MemberRating, RatingsView, RecipeImportReq, LineMatchReq, IngredientView, IngredientInput, IngredientMergeReq, MealsSettingsView, MealsSettingsPatch, MealSlotView, AisleView, StoreView, StoreAisleView, MealPlanEntryView, MealPlanEntryInput, MealPlanEntryPatch, SwapReq, GroceryImpact, PlanChangeResult, MealTemplateSummary, TemplateCellView, MealTemplateView, TemplateCellInput, MealTemplateInput, TemplateFromPlanReq, TemplateDuplicateReq, TemplatePreviewReq, SlotRef, TemplateApplyReq, TemplateTarget, TemplatePreview, SourceHint, GroceryItemView, StapleView, GroceryView, GroceryAddReq, GroceryItemPatch, GenerateReq, GenerateResult, ReconcileReq, ReconcileResult, DashboardMeal,

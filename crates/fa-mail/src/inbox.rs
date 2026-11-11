@@ -438,6 +438,29 @@ impl InboxService {
         Ok(v)
     }
 
+    /// Discards a proposed bill ("not needed"): `dismissed`, but no decision is recorded.
+    pub async fn discard_bill(
+        &self,
+        household: HouseholdId,
+        id: BillId,
+        viewer: Viewer,
+    ) -> Result<()> {
+        let mut tx = self.store.tx_for(household).await?;
+        let b = BillRepo::get(&mut tx, id)
+            .await?
+            .ok_or(MailError::NotFound)?;
+        Self::check(&mut tx, viewer, b.value.message_id).await?;
+        match b.value.status {
+            BillStatus::Dismissed => return Ok(()),
+            BillStatus::Proposed => {}
+            _ => return Err(MailError::Conflict),
+        }
+        BillRepo::set_status(&mut tx, id, BillStatus::Dismissed).await?;
+        publish_bills(&mut tx, household).await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
     /// Dismisses a proposed bill and records that the message is not a bill.
     pub async fn reject_bill(
         &self,
@@ -534,6 +557,62 @@ impl InboxService {
             role: c.value.role,
             version: c.version,
         })
+    }
+
+    /// Discards the suggestion ("not needed"): no decision is recorded; the address is still not
+    /// suggested again (unique per org).
+    pub async fn discard_contact(
+        &self,
+        household: HouseholdId,
+        id: ContactSuggestionId,
+        viewer: Viewer,
+    ) -> Result<()> {
+        let mut tx = self.store.tx_for(household).await?;
+        let s = ContactSuggestionRepo::get(&mut tx, id)
+            .await?
+            .ok_or(MailError::NotFound)?;
+        Self::check(&mut tx, viewer, s.message_id).await?;
+        match s.status {
+            SuggestionStatus::Dismissed => return Ok(()),
+            SuggestionStatus::Proposed => {}
+            _ => return Err(MailError::Conflict),
+        }
+        ContactSuggestionRepo::set_status(&mut tx, id, SuggestionStatus::Dismissed, viewer.member)
+            .await?;
+        publish_inbox(&mut tx, household).await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
+    /// Discards every proposed event the viewer may see that started before `before` (the start
+    /// of the household's today). No decision is recorded. Returns how many.
+    pub async fn discard_past_events(
+        &self,
+        household: HouseholdId,
+        viewer: Viewer,
+        before: DateTime<Utc>,
+    ) -> Result<u64> {
+        let mut tx = self.store.tx_for(household).await?;
+        let mut scope = Scope::load(&mut tx, viewer).await?;
+        let mut n = 0;
+        for (id, message) in EventRepo::past_proposals(&mut tx, before).await? {
+            if !scope.get(&mut tx, message).await?.0 {
+                continue;
+            }
+            EventRepo::set_status(
+                &mut tx,
+                id,
+                fa_domain::EventStatus::Dismissed,
+                viewer.member,
+            )
+            .await?;
+            n += 1;
+        }
+        if n > 0 {
+            publish_inbox(&mut tx, household).await?;
+        }
+        tx.commit().await?;
+        Ok(n)
     }
 
     /// Rejects the suggestion; the address is remembered, so it is not suggested again.

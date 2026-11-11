@@ -18,7 +18,7 @@ const props = defineProps<{
   members: Member[]
   busy?: boolean
 }>()
-const emit = defineEmits<{ approve: [EventApproval]; reject: [] }>()
+const emit = defineEmits<{ approve: [EventApproval]; reject: []; discard: [] }>()
 
 const writable = computed(() => {
   const ok = new Set(props.sources.filter((s) => s.writable).map((s) => s.id))
@@ -89,7 +89,20 @@ function approve() {
         </p>
       </div>
       <template #actions>
-        <UiButton variant="text" :disabled="busy" @click="emit('reject')">Reject</UiButton>
+        <UiButton
+          variant="text"
+          :disabled="busy"
+          title="Not needed; doesn't count against the AI"
+          @click="emit('discard')"
+          >Discard</UiButton
+        >
+        <UiButton
+          variant="text"
+          :disabled="busy"
+          title="The suggestion was wrong (used to measure accuracy)"
+          @click="emit('reject')"
+          >Reject</UiButton
+        >
         <UiButton :disabled="busy" @click="approve">{{
           ev.write_error ? 'Retry' : ev.pending_cancel ? 'Approve removal' : 'Approve'
         }}</UiButton>

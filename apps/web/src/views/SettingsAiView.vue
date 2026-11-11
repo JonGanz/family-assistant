@@ -375,6 +375,50 @@ async function releaseCutoff(ev: Event) {
   })
 }
 
+// Event duplicate check: a second AI pass before a proposed event reaches the inbox.
+const dedupeOn = ref(ai.settings?.event_dedupe_llm ?? true)
+watch(
+  () => ai.settings?.event_dedupe_llm,
+  (v) => v != null && (dedupeOn.value = v),
+)
+const dedupeSave = useInstantSave(
+  dedupeOn,
+  async (v) => {
+    await putSettings({ event_dedupe_llm: v })
+  },
+  { label: 'Calendar check saved' },
+)
+const dedupeThreshold = ref(ai.settings?.event_dedupe_threshold ?? 0.8)
+watch(
+  () => ai.settings?.event_dedupe_threshold,
+  (v) => v != null && (dedupeThreshold.value = v),
+)
+async function releaseDedupeThreshold(ev: Event) {
+  const v = Number((ev.target as HTMLInputElement).value)
+  const old = ai.settings?.event_dedupe_threshold ?? 0.8
+  if (v === old) return
+  try {
+    await putSettings({ event_dedupe_threshold: v })
+  } catch (e) {
+    dedupeThreshold.value = old
+    snackbar.show({ text: e instanceof Error ? e.message : 'Could not save' })
+    return
+  }
+  snackbar.show({
+    text: 'Calendar check threshold saved',
+    action: {
+      label: 'Undo',
+      run: async () => {
+        try {
+          await putSettings({ event_dedupe_threshold: old })
+        } catch (e) {
+          snackbar.show({ text: e instanceof Error ? e.message : 'Could not undo' })
+        }
+      },
+    },
+  })
+}
+
 const mode = ref(ai.settings?.mail_extract_mode ?? 'fallback')
 watch(
   () => ai.settings?.mail_extract_mode,
@@ -705,6 +749,31 @@ onUnmounted(() => clearInterval(backlogTimer))
           The AI reads every message and pulls out events, bills and tasks.
           <template v-if="llmOnly">The rules are not used.</template>
         </p>
+        <UiSwitch
+          :model-value="dedupeOn"
+          label="Check proposed events against the calendar"
+          data-testid="dedupe-switch"
+          @update:model-value="dedupeSave.set($event)"
+        />
+        <p class="note">
+          Before an event from mail is proposed, the AI is asked whether it is already on a
+          calendar. A confident match is not proposed again.
+        </p>
+        <label v-if="dedupeOn" class="cutoff">
+          <span class="note"
+            >Skip the proposal when the AI is at least {{ pct(dedupeThreshold) }} sure</span
+          >
+          <input
+            v-model.number="dedupeThreshold"
+            type="range"
+            min="0"
+            max="1"
+            step="0.05"
+            data-testid="dedupe-threshold"
+            aria-label="Calendar check threshold"
+            @change="releaseDedupeThreshold"
+          />
+        </label>
         <UiTextField
           v-model="maxForm.draft.value.max_input_chars"
           label="Longest text sent to the model (characters)"

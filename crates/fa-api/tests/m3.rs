@@ -1217,6 +1217,183 @@ async fn inbox_lists_items_and_devices_get_counts_only(pool: PgPool) {
 }
 
 #[sqlx::test(migrations = "../fa-store/migrations")]
+async fn inbox_discard_each_kind_and_past(pool: PgPool) {
+    use Who::*;
+    let fx = seed(pool).await;
+    let mx = seed_mail(&fx).await;
+    let inbox =
+        |kind: &str, id: &dyn std::fmt::Display| format!("/api/v1/inbox/{kind}/{id}/discard");
+    async fn decisions(fx: &Fx) -> i64 {
+        scalar::<i64>(
+            fx,
+            "SELECT count(*) FROM decision WHERE stage_kind = 'human'",
+        )
+        .await
+    }
+    let before = decisions(&fx).await;
+
+    // Event: discard sets `dismissed`, records no decision and is not stamped as decided.
+    let e1 = new_event(&fx, "Old concert", None, "proposed").await;
+    let r = post(&fx, Adult, &inbox("event", &e1), None).await;
+    assert_eq!(r.status, StatusCode::NO_CONTENT, "{}", r.text());
+    assert_eq!(
+        scalar::<String>(&fx, &format!("SELECT status FROM event WHERE id = '{e1}'")).await,
+        "dismissed"
+    );
+    assert!(
+        scalar::<bool>(
+            &fx,
+            &format!("SELECT decided_at IS NULL FROM event WHERE id = '{e1}'")
+        )
+        .await
+    );
+    // No longer pending: a second discard or a reject conflicts.
+    assert_eq!(
+        post(&fx, Adult, &inbox("event", &e1), None).await.status,
+        StatusCode::CONFLICT
+    );
+    // Not for children or devices.
+    for who in [Child, Device] {
+        assert_eq!(
+            post(&fx, who, &inbox("event", &e1), None).await.status,
+            StatusCode::FORBIDDEN,
+            "{who:?}"
+        );
+    }
+
+    // Bill.
+    let b = new_bill(&fx, "Water Co", BillStatus::Proposed, None).await;
+    let r = post(&fx, Adult, &inbox("bill", &b), None).await;
+    assert_eq!(r.status, StatusCode::NO_CONTENT, "{}", r.text());
+    assert_eq!(
+        scalar::<String>(&fx, &format!("SELECT status FROM bill WHERE id = '{b}'")).await,
+        "dismissed"
+    );
+
+    // Suggested task.
+    let t = fa_tasks::TaskService::new(fx.store.clone())
+        .from_mail(fa_tasks::MailTaskRequest {
+            extracted_by: None,
+            household: Some(fx.hid),
+            message: mx.m_owned,
+            kind: None,
+            title: "Bring snacks".into(),
+            due_at: None,
+            assignees: vec![fx.adult],
+            mode: fa_tasks::MailTaskMode::Suggest,
+            external_url: None,
+        })
+        .await
+        .unwrap()
+        .unwrap();
+    let r = post(&fx, Adult, &inbox("task", &t), None).await;
+    assert_eq!(r.status, StatusCode::NO_CONTENT, "{}", r.text());
+    assert_eq!(
+        scalar::<String>(&fx, &format!("SELECT status FROM task WHERE id = '{t}'")).await,
+        "skipped"
+    );
+    assert!(
+        scalar::<bool>(
+            &fx,
+            &format!("SELECT skipped_by IS NULL FROM task WHERE id = '{t}'")
+        )
+        .await
+    );
+
+    // Contact suggestion.
+    let org = post(
+        &fx,
+        Adult,
+        "/api/v1/orgs",
+        Some(json!({"kind": "school", "name": "Example Elementary", "domains": ["school.example.edu"]})),
+    )
+    .await;
+    assert_eq!(org.status, StatusCode::CREATED, "{}", org.text());
+    let org: OrgId = serde_json::from_value(org.json()["id"].clone()).unwrap();
+    let c = ContactSuggestionId::new();
+    let mut tx = fx.store.tx_for(fx.hid).await.unwrap();
+    ContactSuggestionRepo::insert_if_new(
+        &mut tx,
+        &ContactSuggestion {
+            id: c,
+            household_id: fx.hid,
+            org_id: org,
+            email: "aide@school.example.edu".into(),
+            name: None,
+            member_id: None,
+            message_id: None,
+            status: SuggestionStatus::Proposed,
+            decided_by: None,
+            decided_at: None,
+            created_at: Utc::now(),
+            updated_at: Utc::now(),
+        },
+    )
+    .await
+    .unwrap();
+    tx.commit().await.unwrap();
+    let r = post(&fx, Adult, &inbox("contact", &c), None).await;
+    assert_eq!(r.status, StatusCode::NO_CONTENT, "{}", r.text());
+    assert_eq!(
+        scalar::<String>(
+            &fx,
+            &format!("SELECT status FROM contact_suggestion WHERE id = '{c}'")
+        )
+        .await,
+        "dismissed"
+    );
+
+    // Bulk: only proposals that started before today go; future ones stay.
+    let past = new_event(&fx, "Last week", None, "proposed").await;
+    sql(
+        &fx,
+        &format!(
+            "UPDATE event SET start_at = now() - interval '3 days', end_at = now() - interval '3 days' + interval '1 hour' WHERE id = '{past}'"
+        ),
+    )
+    .await;
+    let future = new_event(&fx, "Next week", None, "proposed").await;
+    for who in [Child, Device] {
+        assert_eq!(
+            post(&fx, who, "/api/v1/inbox/events/discard-past", None)
+                .await
+                .status,
+            StatusCode::FORBIDDEN,
+            "{who:?}"
+        );
+    }
+    let r = post(&fx, Adult, "/api/v1/inbox/events/discard-past", None).await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text());
+    assert_eq!(r.json()["count"], json!(1));
+    let st = |id: EventId| {
+        scalar::<String>(
+            &fx,
+            format!("SELECT status FROM event WHERE id = '{id}'").leak(),
+        )
+    };
+    assert_eq!(st(past).await, "dismissed");
+    assert_eq!(st(future).await, "proposed");
+    let r = post(&fx, Adult, "/api/v1/inbox/events/discard-past", None).await;
+    assert_eq!(r.json()["count"], json!(0));
+
+    // Discarding never records a human decision, and audits as `inbox.discard`.
+    assert_eq!(decisions(&fx).await, before);
+    assert!(
+        scalar::<i64>(
+            &fx,
+            "SELECT count(*) FROM audit_entry WHERE action = 'inbox.discard'"
+        )
+        .await
+            >= 4
+    );
+    // The discarded items left the inbox; only the future event remains.
+    let r = get(&fx, Adult, "/api/v1/inbox").await;
+    assert_eq!(r.json()["counts"]["event"], json!(1));
+    assert_eq!(r.json()["counts"]["bill"], json!(0));
+    assert_eq!(r.json()["counts"]["contact"], json!(0));
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
 async fn inbox_approve_and_reject_each_kind(pool: PgPool) {
     use Who::*;
     let fx = seed(pool).await;

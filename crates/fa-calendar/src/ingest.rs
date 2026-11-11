@@ -483,6 +483,22 @@ impl CalendarService {
         Ok(())
     }
 
+    /// Discards a proposal ("not needed"): status `dismissed`, no human decision is recorded, so
+    /// the accuracy numbers are unaffected. It is not proposed again.
+    pub async fn discard_event(
+        &self,
+        household: HouseholdId,
+        id: EventId,
+        by: Option<MemberId>,
+    ) -> Result<()> {
+        let mut tx = self.store.tx_for(household).await?;
+        Self::pending(&mut tx, id, false).await?;
+        EventRepo::set_status(&mut tx, id, EventStatus::Dismissed, by).await?;
+        publish(&mut tx, household, "inbox.updated").await?;
+        tx.commit().await?;
+        Ok(())
+    }
+
     /// Approves deleting an event we wrote.
     pub async fn approve_cancel(
         &self,

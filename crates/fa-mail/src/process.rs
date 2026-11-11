@@ -3,6 +3,7 @@
 //! owners. Also job `inbox.expire`. See plan/M3.md "Mail service" (T-10 paragraph).
 
 mod catchup;
+mod dedupe;
 mod expire;
 mod extract;
 mod facts;

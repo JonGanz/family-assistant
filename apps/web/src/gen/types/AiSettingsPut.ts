@@ -14,4 +14,12 @@ catchup_days?: number | null,
 /**
  * 0.5 to 0.99. Absent keeps the stored value (default 0.8).
  */
-extract_fallback_cutoff?: number | null, };
+extract_fallback_cutoff?: number | null, 
+/**
+ * Check proposed events against the calendar with the LLM. Absent keeps the stored value.
+ */
+event_dedupe_llm?: boolean | null, 
+/**
+ * 0 to 1. Absent keeps the stored value (default 0.8).
+ */
+event_dedupe_threshold?: number | null, };

@@ -81,7 +81,7 @@ pub struct MemberPick {
     pub confidence: f32,
 }
 
-#[derive(Debug, Deserialize, JsonSchema)]
+#[derive(Debug, Clone, Deserialize, JsonSchema)]
 pub struct LlmEvent {
     pub title: String,
     /// RFC 3339 date-time, or `YYYY-MM-DD` for an all-day event.
@@ -132,7 +132,7 @@ struct Ask {
     version: PipelineVersionId,
 }
 
-fn clamp(c: f32) -> f32 {
+pub(super) fn clamp(c: f32) -> f32 {
     if c.is_finite() {
         c.clamp(0.0, 1.0)
     } else {
@@ -208,7 +208,7 @@ pub fn rules_candidates(
 }
 
 /// An RFC 3339 instant, `YYYY-MM-DD` (all-day, local midnight) or a zone-less local date-time.
-fn parse_when(s: &str, tz: Tz) -> Option<(DateTime<Utc>, bool)> {
+pub(super) fn parse_when(s: &str, tz: Tz) -> Option<(DateTime<Utc>, bool)> {
     let s = s.trim();
     if let Ok(d) = DateTime::parse_from_rfc3339(s) {
         return Some((d.with_timezone(&Utc), false));
@@ -535,6 +535,7 @@ impl ProcessService {
 
         // Extracted items, after the rule extractors so that duplicates of rule items drop.
         let mut out = Emitted::default();
+        let mut res = res;
         let cat_key = category.clone().or(msg.category.clone());
         let extractable = cat_key
             .as_deref()
@@ -544,6 +545,14 @@ impl ProcessService {
             && let Some(cat) = extractable
             && (res.events.is_some() || res.bills.is_some() || res.tasks.is_some())
         {
+            // Second pass (arch/AI.md "Event duplicate check"): events already on the calendar
+            // are not proposed again. Before the transaction: it is a model call.
+            if let Some(evs) = res.events.take() {
+                res.events = Some(
+                    self.dedupe_events(household, message, &pc, &of, evs, threshold)
+                        .await,
+                );
+            }
             let mut tx = self.store.tx_for(household).await?;
             let source = MailSourceRepo::get(&mut tx, msg.source_id)
                 .await?

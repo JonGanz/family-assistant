@@ -6,7 +6,7 @@ import { formatMoney } from '../../../stores/bills'
 import { UiButton, UiCard, UiTextField } from '../../../ui'
 
 const props = defineProps<{ bill: BillView; busy?: boolean }>()
-const emit = defineEmits<{ approve: [BillPatch]; reject: [] }>()
+const emit = defineEmits<{ approve: [BillPatch]; reject: []; discard: [] }>()
 
 const form = reactive({ payee: props.bill.payee, due: props.bill.due_on ?? '' })
 
@@ -43,7 +43,20 @@ function approve() {
         </p>
       </div>
       <template #actions>
-        <UiButton variant="text" :disabled="busy" @click="emit('reject')">Reject</UiButton>
+        <UiButton
+          variant="text"
+          :disabled="busy"
+          title="Not needed; doesn't count against the AI"
+          @click="emit('discard')"
+          >Discard</UiButton
+        >
+        <UiButton
+          variant="text"
+          :disabled="busy"
+          title="The suggestion was wrong (used to measure accuracy)"
+          @click="emit('reject')"
+          >Reject</UiButton
+        >
         <UiButton :disabled="busy" @click="approve">Approve</UiButton>
       </template>
     </UiCard>

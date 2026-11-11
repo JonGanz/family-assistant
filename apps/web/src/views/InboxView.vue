@@ -46,6 +46,21 @@ const isAi = (i: InboxItem) =>
       : i.kind === 'task'
         ? i.task.extracted_by === 'llm'
         : false
+/** Pending event proposals that start before today (household time zone); matches the server. */
+const pastEvents = computed(() => {
+  const day = (d: Date) =>
+    new Intl.DateTimeFormat('en-CA', { timeZone: household.tz || undefined }).format(d)
+  const today = day(new Date())
+  return inbox.items.filter(
+    (i) => i.kind === 'event' && !i.event.pending_cancel && day(new Date(i.event.start_at)) < today,
+  ).length
+})
+const discardingPast = ref(false)
+async function discardPast() {
+  discardingPast.value = true
+  await inbox.discardPast()
+  discardingPast.value = false
+}
 const shown = computed(() =>
   inbox.items.filter((i) => i.kind === tab.value && (!aiOnly.value || isAi(i))),
 )
@@ -59,6 +74,7 @@ onMounted(() => {
 const key = (i: InboxItem) => `${i.kind}:${itemId(i)}`
 // Approving is instant (the server writes the result; there is no undo for it). Rejecting
 // drops the proposal for good, so it confirms first.
+const discard = (kind: InboxKind, id: string) => void inbox.discard(kind, id)
 const approve = (kind: InboxKind, id: string, edits: Approval) => inbox.approve(kind, id, edits)
 const rejecting = ref<{ kind: InboxKind; id: string } | null>(null)
 const confirmOpen = computed({
@@ -89,6 +105,14 @@ function confirmReject() {
 
     <div class="filters" role="group" aria-label="Filter">
       <UiChip variant="filter" :selected="aiOnly" @click="aiOnly = !aiOnly">AI only</UiChip>
+      <UiButton
+        v-if="tab === 'event' && pastEvents > 0"
+        variant="text"
+        :loading="discardingPast"
+        title="Not needed; doesn't count against the AI"
+        @click="discardPast"
+        >Discard past events ({{ pastEvents }})</UiButton
+      >
     </div>
 
     <UiSkeleton v-if="!inbox.loaded && !inbox.error" :lines="5" />
@@ -110,6 +134,7 @@ function confirmReject() {
           :members="members.items"
           @approve="(e) => approve('event', i.event.id, e)"
           @reject="rejecting = { kind: 'event', id: i.event.id }"
+          @discard="discard('event', i.event.id)"
         >
           <template #header-trailing>
             <AiChip v-if="i.event.extracted_by === 'llm'" :confidence="i.event.confidence" />
@@ -120,6 +145,7 @@ function confirmReject() {
           :bill="i.bill"
           @approve="(e) => approve('bill', i.bill.id, e)"
           @reject="rejecting = { kind: 'bill', id: i.bill.id }"
+          @discard="discard('bill', i.bill.id)"
         >
           <template #header-trailing>
             <AiChip v-if="i.bill.extracted_by === 'llm'" :confidence="i.bill.confidence" />
@@ -133,6 +159,7 @@ function confirmReject() {
           :members="members.items"
           @approve="(e) => approve('task', i.task.id, e)"
           @reject="rejecting = { kind: 'task', id: i.task.id }"
+          @discard="discard('task', i.task.id)"
         >
           <template #header-trailing>
             <AiChip v-if="i.task.extracted_by === 'llm'" />
@@ -144,13 +171,17 @@ function confirmReject() {
           :members="members.items"
           @approve="(e) => approve('contact', i.contact.id, e)"
           @reject="rejecting = { kind: 'contact', id: i.contact.id }"
+          @discard="discard('contact', i.contact.id)"
         />
       </template>
     </ul>
     <UiButton v-if="inbox.nextBefore" variant="text" @click="inbox.loadMore()">Load more</UiButton>
 
     <UiDialog v-model="confirmOpen" title="Reject this proposal?">
-      <p>It is dropped and will not be suggested again.</p>
+      <p>
+        The suggestion was wrong. It is dropped, will not be suggested again, and is used to measure
+        accuracy. Use Discard instead if you just don't need it.
+      </p>
       <template #actions>
         <UiButton variant="text" @click="rejecting = null">Cancel</UiButton>
         <UiButton @click="confirmReject">Reject</UiButton>

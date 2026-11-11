@@ -294,3 +294,51 @@ impl EventRepo {
         .await?)
     }
 }
+
+/// An existing event as the duplicate check sees it.
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct DedupeEvent {
+    pub id: Uuid,
+    pub title: String,
+    pub start_at: DateTime<Utc>,
+    pub end_at: DateTime<Utc>,
+    pub all_day: bool,
+    pub location: Option<String>,
+    pub calendar_name: Option<String>,
+    pub proposed: bool,
+}
+
+impl EventRepo {
+    /// Events overlapping `[from, to)` on any calendar, for the LLM duplicate check: synced,
+    /// approved and written events and pending proposals (status extracted or proposed). Cancelled, rejected and expired
+    /// events, and the events `message` extracted or already mentioned, are left out.
+    pub async fn llm_dedupe_candidates(
+        conn: &mut PgConnection,
+        from: DateTime<Utc>,
+        to: DateTime<Utc>,
+        message: fa_domain::MessageId,
+        limit: i64,
+    ) -> Result<Vec<DedupeEvent>> {
+        Ok(sqlx::query_as(
+            "SELECT e.id, e.title, e.start_at, e.end_at, e.all_day, e.location,
+                    c.name AS calendar_name, COALESCE(e.status IN ('extracted', 'proposed'), false) AS proposed
+             FROM event e
+             LEFT JOIN calendar c ON c.id = e.calendar_id
+             WHERE e.start_at < $2 AND e.end_at > $1
+               AND NOT e.cancelled
+               AND (e.status IS NULL OR e.status NOT IN ('rejected', 'expired', 'dismissed'))
+               AND (e.calendar_id IS NULL OR c.archived_at IS NULL)
+               AND e.message_id IS DISTINCT FROM $3
+               AND NOT EXISTS (SELECT 1 FROM event_message em
+                               WHERE em.event_id = e.id AND em.message_id = $3)
+             ORDER BY e.start_at, e.id
+             LIMIT $4",
+        )
+        .bind(from)
+        .bind(to)
+        .bind(message.as_uuid())
+        .bind(limit)
+        .fetch_all(conn)
+        .await?)
+    }
+}

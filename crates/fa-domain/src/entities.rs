@@ -99,7 +99,8 @@ text_enum!(EventStatus {
     Written,
     Rejected,
     Extracted,
-    Expired
+    Expired,
+    Dismissed
 });
 text_enum!(RuleAction { Alert, Task });
 text_enum!(Severity {

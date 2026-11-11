@@ -5,6 +5,8 @@ import { applyTheme, loadDeviceChoice, resolveVariant } from '../themes'
 import { panelVisible } from './tasksModel'
 import { mealsPanelVisible } from './mealsModel'
 import FoodView from './FoodView.vue'
+import TimersView from './timers/TimersView.vue'
+import { useTimers } from './timers/useTimers'
 import {
   burnInOffset,
   normalizeTheme,
@@ -153,17 +155,20 @@ const homeRows = computed(() => {
   }
   return rows.join(' ')
 })
-type View = 'home' | 'week' | 'food' | 'whiteboard'
+type View = 'home' | 'week' | 'food' | 'timers' | 'whiteboard'
 const ALL_VIEWS: { id: View; label: string; icon?: boolean; glyph?: IconName }[] = [
   { id: 'home', label: S.navHome, glyph: 'home' },
   { id: 'week', label: S.navWeek, glyph: 'calendar' },
   { id: 'food', label: S.navFood, glyph: 'dinner' },
+  { id: 'timers', label: S.navTimers, glyph: 'timer' },
   { id: 'whiteboard', label: S.navWhiteboard, icon: true },
 ]
 /** The Food view is a per-device switch (`food_view`, on unless turned off). */
 const foodOn = computed(() => cfg.value.food_view !== false)
 const VIEWS = computed(() => ALL_VIEWS.filter((v) => v.id !== 'food' || foodOn.value))
 const view = ref<View>('home')
+// Timers keep running and ringing while another view is open; the bar button shows it.
+const { ringing: timersRinging } = useTimers()
 // The switch turned off while the Food view is open: back to Home.
 watch(foodOn, (on) => {
   if (!on && view.value === 'food') view.value = 'home'
@@ -253,11 +258,19 @@ const shift = computed(() =>
           <path d="M3 21l3.5-1 12-12-2.5-2.5-12 12L3 21zM15 5l2.5 2.5" />
         </svg>
         <UiIcon v-else-if="v.glyph" :name="v.glyph" :size="24" class="navglyph" />
+        <span
+          v-if="v.id === 'timers' && timersRinging"
+          class="ringdot"
+          role="status"
+          :aria-label="S.timerRinging"
+          data-testid="timers-ringing"
+        />
       </button>
       <div class="navend"><slot name="nav-end" /></div>
     </nav>
     <main class="main" :class="{ full: view !== 'home', split: view === 'home' }">
       <Whiteboard v-if="view === 'whiteboard'" :portrait="portrait" />
+      <TimersView v-else-if="view === 'timers'" />
       <FoodView
         v-else-if="view === 'food'"
         :today="today"
@@ -404,6 +417,24 @@ const shift = computed(() =>
   background: var(--color-layer-2);
   color: inherit;
   cursor: pointer;
+}
+.nav button {
+  position: relative;
+}
+.ringdot {
+  position: absolute;
+  top: var(--space-2);
+  right: var(--space-2);
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  background: var(--color-danger, #d33);
+  animation: dotpulse 1s ease-in-out infinite;
+}
+@keyframes dotpulse {
+  50% {
+    opacity: 0.3;
+  }
 }
 .navglyph {
   width: 2.4rem;

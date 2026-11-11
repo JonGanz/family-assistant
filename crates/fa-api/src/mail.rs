@@ -1244,6 +1244,115 @@ pub async fn reject_inbox(
     Ok(StatusCode::NO_CONTENT)
 }
 
+#[utoipa::path(post, path = "/api/v1/inbox/{kind}/{id}/discard", tag = "inbox",
+    params(("kind" = String, Path, description = "event, bill, task or contact"),
+           ("id" = String, Path, description = "item id")),
+    security(("cookie" = []), ("bearer" = [])),
+    responses((status = 204), (status = 403, body = Problem), (status = 404, body = Problem),
+              (status = 409, body = Problem, description = "the item is not awaiting a decision")))]
+/// "I don't want this": the item leaves the inbox and is not proposed again, but no human
+/// decision is recorded, so it never counts for or against the AI.
+pub async fn discard_inbox(
+    State(s): State<AppState>,
+    auth: Auth,
+    ApiPath((kind, id)): ApiPath<(InboxKind, Uuid)>,
+) -> ApiResult<StatusCode> {
+    approver(&auth.actor)?;
+    let viewer = viewer_of(&auth.actor)?;
+    let by = viewer.member;
+    let hid = household(&auth.actor)?;
+    match kind {
+        InboxKind::Event => {
+            let id = EventId::from(id);
+            s.services.mail.inbox.ensure_event(hid, viewer, id).await?;
+            if pending_cancel(&s, hid, id).await? {
+                return Err(ApiError::Conflict(
+                    "a proposed deletion can only be approved or rejected".into(),
+                ));
+            }
+            s.services.calendar.discard_event(hid, id, by).await?;
+        }
+        InboxKind::Bill => {
+            s.services
+                .mail
+                .inbox
+                .discard_bill(hid, BillId::from(id), viewer)
+                .await?;
+        }
+        InboxKind::Task => {
+            let id = TaskId::from(id);
+            s.services.mail.inbox.ensure_task(hid, viewer, id).await?;
+            suggested_mail_task(&s, hid, id).await?;
+            s.services.tasks.discard_suggested(hid, id).await?;
+            publish_inbox(&s, hid).await;
+        }
+        InboxKind::Contact => {
+            s.services
+                .mail
+                .inbox
+                .discard_contact(hid, ContactSuggestionId::from(id), viewer)
+                .await?;
+        }
+    }
+    audit_after(
+        &s,
+        &auth.actor,
+        "inbox.discard",
+        kind.as_str(),
+        id.to_string(),
+    )
+    .await;
+    Ok(StatusCode::NO_CONTENT)
+}
+
+/// How many items a bulk inbox action changed.
+#[derive(serde::Serialize, utoipa::ToSchema)]
+pub struct DiscardedCount {
+    pub count: u64,
+}
+
+#[utoipa::path(post, path = "/api/v1/inbox/events/discard-past", tag = "inbox",
+    security(("cookie" = []), ("bearer" = [])),
+    responses((status = 200, body = DiscardedCount), (status = 403, body = Problem)))]
+/// Discards every proposed event, visible to the caller, that started before today (household
+/// time zone). Records no decisions.
+pub async fn discard_past_events(
+    State(s): State<AppState>,
+    auth: Auth,
+) -> ApiResult<Json<DiscardedCount>> {
+    approver(&auth.actor)?;
+    let viewer = viewer_of(&auth.actor)?;
+    let hid = household(&auth.actor)?;
+    let mut tx = s.store.tx_for(hid).await?;
+    let h = fa_store::HouseholdRepo::get(&mut tx, hid)
+        .await?
+        .ok_or(ApiError::NotFound)?
+        .value;
+    tx.rollback().await?;
+    let tz: chrono_tz::Tz = h.tz.parse().unwrap_or(chrono_tz::Tz::UTC);
+    let today = Utc::now().with_timezone(&tz).date_naive();
+    let before = today
+        .and_hms_opt(0, 0, 0)
+        .and_then(|m| m.and_local_timezone(tz).earliest())
+        .map(|d| d.with_timezone(&Utc))
+        .ok_or(ApiError::NotFound)?;
+    let count = s
+        .services
+        .mail
+        .inbox
+        .discard_past_events(hid, viewer, before)
+        .await?;
+    audit_after(
+        &s,
+        &auth.actor,
+        "inbox.discard_past",
+        "event",
+        count.to_string(),
+    )
+    .await;
+    Ok(Json(DiscardedCount { count }))
+}
+
 /// Whether the extracted event is a proposal to delete an event we wrote.
 async fn pending_cancel(s: &AppState, hid: HouseholdId, id: EventId) -> ApiResult<bool> {
     let mut tx = s.store.tx_for(hid).await?;

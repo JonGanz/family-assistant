@@ -13,6 +13,14 @@ catchup_days: number,
  */
 extract_fallback_cutoff: number, 
 /**
+ * Ask the LLM whether a proposed event is already on the calendar (default on).
+ */
+event_dedupe_llm: boolean, 
+/**
+ * A "duplicate" answer at or above this confidence drops the proposal (0 to 1, default 0.8).
+ */
+event_dedupe_threshold: number, 
+/**
  * RFC 3339.
  */
 updated_at: string, };

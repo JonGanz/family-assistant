@@ -14,7 +14,7 @@ use crate::ids::*;
 db_enum!(OrgKind { School => "school", Daycare => "daycare", Club => "club", Biller => "biller", Other => "other" });
 db_enum!(ContactRole { Teacher => "teacher", Coach => "coach", Admin => "admin", Office => "office", Other => "other" });
 db_enum!(ContactMode { Suggest => "suggest", Auto => "auto", Manual => "manual" });
-db_enum!(SuggestionStatus { Proposed => "proposed", Accepted => "accepted", Rejected => "rejected", Expired => "expired" });
+db_enum!(SuggestionStatus { Proposed => "proposed", Accepted => "accepted", Rejected => "rejected", Expired => "expired", Dismissed => "dismissed" });
 db_enum!(MailProvider { Gmail => "gmail", Imap => "imap" });
 db_enum!(MailVisibility { Owners => "owners", Household => "household" });
 db_enum!(MailSourceState { Ok => "ok", NeedsReauth => "needs_reauth", Error => "error", Paused => "paused" });

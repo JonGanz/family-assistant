@@ -139,6 +139,14 @@ pub struct AiSettingsPut {
     #[serde(default)]
     #[ts(as = "Option<f32>", optional = nullable)]
     pub extract_fallback_cutoff: Option<f32>,
+    /// Check proposed events against the calendar with the LLM. Absent keeps the stored value.
+    #[serde(default)]
+    #[ts(as = "Option<bool>", optional = nullable)]
+    pub event_dedupe_llm: Option<bool>,
+    /// 0 to 1. Absent keeps the stored value (default 0.8).
+    #[serde(default)]
+    #[ts(as = "Option<f32>", optional = nullable)]
+    pub event_dedupe_threshold: Option<f32>,
 }
 
 /// The `llm` stage of one email decision point.
@@ -586,8 +594,22 @@ pub async fn put_settings(
             "must be between 0.5 and 0.99",
         ));
     }
+    if req
+        .event_dedupe_threshold
+        .is_some_and(|c| !c.is_finite() || !(0.0..=1.0).contains(&c))
+    {
+        return Err(field("event_dedupe_threshold", "must be between 0 and 1"));
+    }
     let mut tx = s.store.tx_for(hid).await?;
     let cur = AiSettingsRepo::get_or_default(&mut tx, hid).await?;
+    AiSettingsRepo::set_event_dedupe(
+        &mut tx,
+        hid,
+        req.event_dedupe_llm.unwrap_or(cur.event_dedupe_llm),
+        req.event_dedupe_threshold
+            .unwrap_or(cur.event_dedupe_threshold),
+    )
+    .await?;
     let v = AiSettingsRepo::update_all(
         &mut tx,
         hid,
@@ -612,6 +634,8 @@ pub async fn put_settings(
             "mail_extract_mode": v.mail_extract_mode, "max_input_chars": v.max_input_chars,
             "mail_mode": v.mail_mode, "catchup_days": v.catchup_days,
             "extract_fallback_cutoff": v.extract_fallback_cutoff,
+            "event_dedupe_llm": v.event_dedupe_llm,
+            "event_dedupe_threshold": v.event_dedupe_threshold,
         })),
     )
     .await?;

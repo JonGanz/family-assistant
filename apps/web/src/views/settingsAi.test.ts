@@ -45,6 +45,8 @@ let settingsBody: Record<string, unknown> = {
   mail_mode: 'rules_first',
   catchup_days: 30,
   extract_fallback_cutoff: 0.8,
+  event_dedupe_llm: true,
+  event_dedupe_threshold: 0.8,
 }
 let backlogBody = { awaiting: 0, queued: 0 }
 
@@ -216,6 +218,27 @@ describe('Settings AI', () => {
     expect(w.find('input[name="catchup_days"]').exists()).toBe(false)
     expect(w.findAll('[data-testid="rules-threshold"]')).toHaveLength(2)
     expect(w.find('[data-testid="cutoff"]').exists()).toBe(true)
+  })
+
+  it('saves the calendar check switch and threshold', async () => {
+    serve(endpoint)
+    m.put.mockResolvedValue({ ...settingsBody, event_dedupe_threshold: 0.9 } as never)
+    const w = await mountPage()
+    expect(w.find('[data-testid="dedupe-threshold"]').exists()).toBe(true)
+    const r = w.find('[data-testid="dedupe-threshold"]')
+    await r.setValue('0.9')
+    await r.trigger('change')
+    await flushPromises()
+    expect(m.put).toHaveBeenCalledWith(
+      '/api/v1/ai/settings',
+      expect.objectContaining({ event_dedupe_threshold: 0.9 }),
+    )
+    await w.find('[data-testid="extract-card"] [role="switch"]').trigger('click')
+    await flushPromises()
+    expect(m.put).toHaveBeenCalledWith(
+      '/api/v1/ai/settings',
+      expect.objectContaining({ event_dedupe_llm: false }),
+    )
   })
 
   it('switching the mail mode saves instantly with Undo and keeps the other settings', async () => {

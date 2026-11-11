@@ -284,6 +284,11 @@ pub fn router(state: AppState) -> Router {
         .route("/inbox", get(mail::get_inbox))
         .route("/inbox/{kind}/{id}/approve", post(mail::approve_inbox))
         .route("/inbox/{kind}/{id}/reject", post(mail::reject_inbox))
+        .route("/inbox/{kind}/{id}/discard", post(mail::discard_inbox))
+        .route(
+            "/inbox/events/discard-past",
+            post(mail::discard_past_events),
+        )
         .route("/bills", get(mail::list_bills))
         .route("/bills/{id}", patch(mail::patch_bill))
         .route("/oauth/accounts", get(feeds::list_oauth_accounts))

@@ -6,6 +6,7 @@ import PinPad from '../components/PinPad.vue'
 import { useClock } from '../composables/useClock'
 import DashboardCanvas from '../dashboard/DashboardCanvas.vue'
 import Screensaver from '../dashboard/Screensaver.vue'
+import { useTimers } from '../dashboard/timers/useTimers'
 import TaskFlow from '../dashboard/TaskFlow.vue'
 import { S } from '../dashboard/strings'
 import { getDeviceToken } from '../kiosk/deviceToken'
@@ -53,6 +54,8 @@ let stopKeepAlive: (() => void) | undefined
 let watchdog: Watchdog | undefined
 
 // Fullscreen (for the Echo Show's browser bar): a button, since browsers only allow it on a tap.
+// A ringing kitchen timer keeps the screensaver away so the card is visible.
+const timers = useTimers()
 const fullscreen = ref(false)
 const fullscreenSupported =
   typeof document !== 'undefined' && !!document.documentElement.requestFullscreen
@@ -270,6 +273,7 @@ const mmss = computed(
     <Screensaver
       :minutes="store.snapshot?.settings.screensaver_minutes ?? 15"
       :tz="store.snapshot?.household.tz"
+      :hold="timers.ringing.value"
     />
 
     <div

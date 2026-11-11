@@ -3,7 +3,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { itemId, useInboxStore } from './inbox'
 
 vi.mock('../api/client', () => ({
-  api: { inbox: vi.fn(), approveInbox: vi.fn(), rejectInbox: vi.fn() },
+  api: {
+    inbox: vi.fn(),
+    approveInbox: vi.fn(),
+    rejectInbox: vi.fn(),
+    discardInbox: vi.fn(),
+    discardPastEvents: vi.fn(),
+  },
 }))
 import { api } from '../api/client'
 const m = vi.mocked(api)
@@ -64,6 +70,27 @@ describe('inbox store', () => {
     expect(s.items).toHaveLength(2)
     expect(s.total).toBe(2)
     expect(s.error).toBe('stale')
+  })
+
+  it('discard removes optimistically and calls the discard endpoint, not reject', async () => {
+    m.discardInbox.mockResolvedValue(undefined as never)
+    const s = useInboxStore()
+    await s.load()
+    expect(await s.discard('bill', 'b1')).toBe(true)
+    expect(m.discardInbox).toHaveBeenCalledWith('bill', 'b1')
+    expect(m.rejectInbox).not.toHaveBeenCalled()
+    expect(s.items).toHaveLength(1)
+    expect(s.counts.bill).toBe(0)
+  })
+
+  it('discardPast reloads and returns the count', async () => {
+    m.discardPastEvents.mockResolvedValue({ count: 3 })
+    const s = useInboxStore()
+    expect(await s.discardPast()).toBe(3)
+    expect(m.inbox).toHaveBeenCalled()
+    m.discardPastEvents.mockRejectedValue(new Error('nope'))
+    expect(await s.discardPast()).toBeNull()
+    expect(s.error).toBe('nope')
   })
 
   it('inbox.updated refetches once loaded, other kinds do not', async () => {

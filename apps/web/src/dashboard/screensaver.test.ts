@@ -28,6 +28,19 @@ describe('Screensaver', () => {
     w.unmount()
   })
 
+  it('a ringing timer wakes it and holds it off', async () => {
+    const w = mount(Screensaver, { props: { minutes: 15 } })
+    vi.advanceTimersByTime(15 * 60_000)
+    await w.vm.$nextTick()
+    expect(shown(w)).toBe(true)
+    await w.setProps({ hold: true })
+    expect(shown(w)).toBe(false)
+    vi.advanceTimersByTime(30 * 60_000)
+    await w.vm.$nextTick()
+    expect(shown(w)).toBe(false)
+    w.unmount()
+  })
+
   it('interaction restarts the countdown', async () => {
     const w = mount(Screensaver, { props: { minutes: 15 } })
     vi.advanceTimersByTime(14 * 60_000)

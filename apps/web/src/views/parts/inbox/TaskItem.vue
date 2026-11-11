@@ -11,7 +11,7 @@ const props = defineProps<{
   members: Member[]
   busy?: boolean
 }>()
-const emit = defineEmits<{ approve: [TaskApproval]; reject: [] }>()
+const emit = defineEmits<{ approve: [TaskApproval]; reject: []; discard: [] }>()
 
 const form = reactive({
   title: props.task.title,
@@ -72,7 +72,20 @@ function approve() {
         </p>
       </div>
       <template #actions>
-        <UiButton variant="text" :disabled="busy" @click="emit('reject')">Reject</UiButton>
+        <UiButton
+          variant="text"
+          :disabled="busy"
+          title="Not needed; doesn't count against the AI"
+          @click="emit('discard')"
+          >Discard</UiButton
+        >
+        <UiButton
+          variant="text"
+          :disabled="busy"
+          title="The suggestion was wrong (used to measure accuracy)"
+          @click="emit('reject')"
+          >Reject</UiButton
+        >
         <UiButton :disabled="busy" @click="approve">Approve</UiButton>
       </template>
     </UiCard>
