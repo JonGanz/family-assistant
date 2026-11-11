@@ -497,6 +497,15 @@ const shift = computed(() =>
   overflow-y: auto;
   padding-bottom: 2.5rem;
 }
+/* Portrait: the routines band is pinned to the bottom; past 40% of the screen it scrolls inside its
+   card instead of pushing off the screen (the page itself never scrolls). */
+.main.split .stack.s-routines {
+  align-self: end;
+}
+.main.split .s-routines .cell {
+  max-height: 40dvh;
+  overflow-y: auto;
+}
 .weekview {
   grid-template-rows: minmax(0, 1fr) auto;
   min-height: 0;

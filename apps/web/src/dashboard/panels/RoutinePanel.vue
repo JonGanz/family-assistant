@@ -149,9 +149,10 @@ ul {
 </style>
 
 <style>
-/* Portrait: half the width is too narrow for side-by-side routines, so they stack. */
+/* Portrait: the routines band runs the full width at the bottom, so routines sit two side by side. */
 [data-orientation='portrait'] .routine.routine {
   grid-auto-flow: row;
   grid-auto-columns: auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 </style>
