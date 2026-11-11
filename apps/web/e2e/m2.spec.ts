@@ -227,7 +227,27 @@ async function checkKiosk(
     )
     await screen.screenshot({ path: `test-results/kiosk-${preset}-${name}.png` })
     expect(overflow, `${name} horizontal overflow`).toBeLessThanOrEqual(1)
-    const boxes = await Promise.all(Object.values(regions).map((r) => r.boundingBox()))
+    // The visible part of each panel: a scrolling column clips what is scrolled out of view.
+    const boxes = await Promise.all(
+      Object.values(regions).map((r) =>
+        r.evaluate((el) => {
+          let { left, top, right, bottom } = el.getBoundingClientRect()
+          for (let p = el.parentElement; p; p = p.parentElement) {
+            const o = getComputedStyle(p).overflowY
+            if (o === 'auto' || o === 'scroll' || o === 'hidden') {
+              const c = p.getBoundingClientRect()
+              left = Math.max(left, c.left)
+              top = Math.max(top, c.top)
+              right = Math.min(right, c.right)
+              bottom = Math.min(bottom, c.bottom)
+            }
+          }
+          return right > left && bottom > top
+            ? { x: left, y: top, width: right - left, height: bottom - top }
+            : null
+        }),
+      ),
+    )
     const rects = boxes.filter((b): b is Rect => !!b)
     const clash = rects.flatMap((a, i) => rects.slice(i + 1).filter((b) => hit(a, b)))
     expect(clash, `${name}: overlapping panels`).toHaveLength(0)
