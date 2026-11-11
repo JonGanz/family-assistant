@@ -1,4 +1,4 @@
-import type { ThemeChoice } from '../../themes'
+import { normalizeDark, type ThemeChoice } from '../../themes'
 
 export type PanelKind =
   'clock' | 'weather' | 'agenda' | 'meals' | 'week' | 'members' | 'now' | 'member_tasks' | 'routine'
@@ -86,6 +86,7 @@ export function normalizeTheme(raw: unknown): ThemeChoice {
         family: r.family,
         mode,
         ...(typeof r.variant === 'string' ? { variant: r.variant } : {}),
+        ...normalizeDark(r.dark),
       }
     }
   }

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::ids::MemberId;
-use crate::theme::{ThemeChoice, is_theme_id};
+use crate::theme::ThemeChoice;
 
 pub const MAX_PANELS: usize = 12;
 pub const MAX_AGENDA_DAYS: u8 = 14;
@@ -90,13 +90,7 @@ impl DashboardSettings {
         if self.panels.len() > MAX_PANELS {
             return Err(SettingsError::TooManyPanels);
         }
-        if !is_theme_id(&self.theme.family)
-            || self
-                .theme
-                .variant
-                .as_deref()
-                .is_some_and(|v| !is_theme_id(v))
-        {
+        if !self.theme.ids_valid() {
             return Err(SettingsError::ThemeId);
         }
         Ok(())

@@ -196,6 +196,20 @@ describe('Settings AI', () => {
     expect(sw[1]!.attributes('aria-checked')).toBe('false')
   })
 
+  it('offers AI only and saves it', async () => {
+    serve(endpoint)
+    m.put.mockResolvedValue({ ...settingsBody, mail_mode: 'llm_only' } as never)
+    const w = await mountPage()
+    const radio = w.find('[data-testid="mail-mode-card"] input[value="llm_only"]')
+    expect(radio.exists()).toBe(true)
+    await radio.setValue(true)
+    await flushPromises()
+    expect(m.put).toHaveBeenCalledWith(
+      '/api/v1/ai/settings',
+      expect.objectContaining({ mail_mode: 'llm_only' }),
+    )
+  })
+
   it('in rules_first shows rules thresholds and no catch-up window', async () => {
     serve(endpoint)
     const w = await mountPage()

@@ -15,7 +15,7 @@ research: [R-001, R-004]
 
 This document is derived from PROJECT.md and every accepted AI decision: D-024 to D-029, D-071, D-093, D-094 and D-104 (confirmed M4 choices). D-067 is superseded by D-094. The plan with the exact contracts is [plan/M4.md](../plan/M4.md); when the two disagree, the plan's contract wins until this doc is updated.
 
-**LLM first (D-107, built in M4 wave 6):** with the endpoint reachable, every message goes to the LLM and the rules are the provisional value and the fallback (§5a). `mail_mode = rules_first` keeps the original M4 behaviour (the LLM only when the rules are unsure).
+**LLM first (D-107, built in M4 wave 6):** with the endpoint reachable, every message goes to the LLM and the rules are the provisional value and the fallback (§5a). `mail_mode = rules_first` keeps the original M4 behaviour (the LLM only when the rules are unsure). `mail_mode = llm_only` (AI only) goes further: no rule classifies or extracts (no provisional value, no rule fallback); every message is queued for the LLM, and without a usable endpoint it stays `awaiting` until one is available. Deterministic parsing and dedupe still run.
 
 **M4 builds only the LLM extraction slice (D-094).** System One, kNN, the backend registry, `fa-gpu-agent` and Wake-on-LAN come in M4.1 (§10).
 
@@ -63,7 +63,7 @@ The coupling rule holds: `fa-recipe` stores nothing (M5 adds storage in `fa-meal
 | Table | Columns | Written by |
 |---|---|---|
 | `llm_endpoint` | id, household_id (UNIQUE in M4), base_url, model, dialect, timeout_ms, thinking, enabled, created_at, updated_at | `PUT /ai/llm-endpoint` |
-| `ai_settings` | household_id (PK), `mail_extract_mode` `off\|fallback\|always` (default `fallback`), `max_input_chars` (default 12000), `mail_mode` `llm_first\|rules_first` (default `llm_first`), `catchup_days` (0 to 365, default 30; 0 switches the catch-up off), `extract_fallback_cutoff` (0.5 to 1, default 0.8), updated_at | `PUT /ai/settings`; read with defaults when absent |
+| `ai_settings` | household_id (PK), `mail_extract_mode` `off\|fallback\|always` (default `fallback`), `max_input_chars` (default 12000), `mail_mode` `llm_first\|rules_first\|llm_only` (default `llm_first`), `catchup_days` (0 to 365, default 30; 0 switches the catch-up off), `extract_fallback_cutoff` (0.5 to 1, default 0.8), updated_at | `PUT /ai/settings`; read with defaults when absent |
 | `message.llm_state` | `none\|queued\|done\|awaiting`, default `none` (partial index on `(household_id, received_at DESC) WHERE llm_state = 'awaiting'`) | `mail.process`, the `mail.llm` job, `mail.llm.catchup` |
 | `llm_call` | id, household_id, purpose (`mail.llm`, `recipe.extract`, `endpoint.test`, `eval`), model, started_at, latency_ms, ok, error_kind?, prompt_tokens?, completion_tokens? | `Provider::call`; pruned after 90 days by `llm.prune` |
 | `extracted_by` on `event`, `bill`, `task` | `rules\|llm`, default `rules` | the `mail.llm` job writes `llm` |
@@ -177,7 +177,7 @@ Settings → AI (the web app, Frontend.md, under "Sources and rules" after Mail,
 - The **truth** is the human decision for that point; messages without one are skipped.
 - It reports, per stage (`rules`, then `llm`, then the remainder to `human`): items decided, correct, p50 and p95 latency. Overall it reports accuracy and coverage (the share decided before `human`).
 - With `--with-llm` the `llm` stage uses its stored threshold even when the stage is off, else 0.7; a failed LLM call counts as undecided (D-104, Q-095).
-- `--with-llm` honours `mail_mode`: in `rules_first` the model sees only what the rules leave open; in `llm_first` it answers every item, and the rules decide only what it leaves open (a low-confidence or failed answer falls back to the rules).
+- `--with-llm` honours `mail_mode` (`llm_only` is `llm_first` without the rules fallback): in `rules_first` the model sees only what the rules leave open; in `llm_first` it answers every item, and the rules decide only what it leaves open (a low-confidence or failed answer falls back to the rules).
 - It writes no decisions. LLM calls are logged with `purpose = "eval"`.
 - It is run by a person on the real install (a human step); tests use fixtures.
 - M4.1 adds calibration (ECE), dry-run in a Pipeline screen and backend comparison.

@@ -22,6 +22,7 @@ import I_filter from '~icons/material-symbols/filter-list-rounded'
 import I_sort from '~icons/material-symbols/sort-rounded'
 import I_expand from '~icons/material-symbols/expand-more-rounded'
 import I_collapse from '~icons/material-symbols/expand-less-rounded'
+import I_chevron_left from '~icons/material-symbols/chevron-left-rounded'
 import I_chevron_right from '~icons/material-symbols/chevron-right-rounded'
 import I_menu from '~icons/material-symbols/menu-rounded'
 import I_person from '~icons/material-symbols/person-rounded'
@@ -95,6 +96,7 @@ export const icons = {
   sort: I_sort,
   expand: I_expand,
   collapse: I_collapse,
+  chevron_left: I_chevron_left,
   chevron_right: I_chevron_right,
   menu: I_menu,
   person: I_person,

@@ -90,6 +90,31 @@ pub struct ThemeChoice {
     #[ts(optional)]
     pub variant: Option<String>,
     pub mode: ThemeMode,
+    /// Theme used when the effective mode is dark; `None` keeps the daytime family.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub dark: Option<DarkTheme>,
+}
+
+/// The night-time family and variant of a [`ThemeChoice`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, TS, ToSchema)]
+#[ts(export, export_to = "../../../apps/web/src/gen/types/")]
+pub struct DarkTheme {
+    /// Slug, `^[a-z0-9][a-z0-9-]{0,31}$`.
+    pub family: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub variant: Option<String>,
+}
+
+impl ThemeChoice {
+    /// True when every slug in the choice (including the night-time one) is well formed.
+    pub fn ids_valid(&self) -> bool {
+        let ok =
+            |f: &str, v: &Option<String>| is_theme_id(f) && v.as_deref().is_none_or(is_theme_id);
+        ok(&self.family, &self.variant)
+            && self.dark.as_ref().is_none_or(|d| ok(&d.family, &d.variant))
+    }
 }
 
 #[derive(Deserialize)]
@@ -101,6 +126,8 @@ enum ThemeRepr {
         #[serde(default)]
         variant: Option<String>,
         mode: ThemeMode,
+        #[serde(default)]
+        dark: Option<DarkTheme>,
     },
 }
 
@@ -111,15 +138,18 @@ impl<'de> Deserialize<'de> for ThemeChoice {
                 family: DEFAULT_THEME_FAMILY.into(),
                 variant: None,
                 mode,
+                dark: None,
             },
             ThemeRepr::Object {
                 family,
                 variant,
                 mode,
+                dark,
             } => ThemeChoice {
                 family,
                 variant,
                 mode,
+                dark,
             },
         })
     }
@@ -131,6 +161,7 @@ impl Default for ThemeChoice {
             family: DEFAULT_THEME_FAMILY.into(),
             variant: None,
             mode: ThemeMode::Auto,
+            dark: None,
         }
     }
 }
@@ -179,6 +210,29 @@ mod tests {
             o
         );
         assert!(serde_json::from_str::<ThemeChoice>("\"neon\"").is_err());
+    }
+
+    #[test]
+    fn theme_dark_optional() {
+        let o: ThemeChoice = serde_json::from_str(r#"{"family":"nord","mode":"auto"}"#).unwrap();
+        assert!(o.dark.is_none());
+        assert_eq!(
+            serde_json::to_value(&o).unwrap(),
+            serde_json::json!({"family":"nord","mode":"auto"})
+        );
+        let d: ThemeChoice = serde_json::from_str(
+            r#"{"family":"nord","mode":"auto","dark":{"family":"dracula","variant":"x"}}"#,
+        )
+        .unwrap();
+        assert_eq!(d.dark.as_ref().unwrap().family, "dracula");
+        assert!(d.ids_valid());
+        assert_eq!(
+            serde_json::from_value::<ThemeChoice>(serde_json::to_value(&d).unwrap()).unwrap(),
+            d
+        );
+        let mut bad = d.clone();
+        bad.dark.as_mut().unwrap().family = "Bad Name".into();
+        assert!(!bad.ids_valid());
     }
 
     #[test]

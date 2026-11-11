@@ -132,7 +132,10 @@ export function themeControls(
 ): ThemeControls {
   const family = familyOf(choice.family)
   const modes = new Set(family.variants.map((v) => v.mode))
-  const current = resolveVariant(choice, ctx)
+  // with a night-time theme the daytime pickers describe the light side only
+  const current = choice.dark
+    ? resolveVariant({ ...choice, dark: undefined, mode: 'light' }, ctx)
+    : resolveVariant(choice, ctx)
   const variants = family.variants.filter((v) => v.mode === current.mode)
   return {
     showMode: modes.size > 1,
@@ -145,7 +148,25 @@ export function themeControls(
 
 /** A new family starts at its default variant, keeping the chosen mode. */
 export function withFamily(choice: ThemeChoice, family: string): ThemeChoice {
-  return { family, mode: choice.mode }
+  return { family, mode: choice.mode, ...(choice.dark ? { dark: choice.dark } : {}) }
+}
+
+/** Sets the night-time family (default variant); `null` goes back to "same as daytime". */
+export function withDarkFamily(choice: ThemeChoice, family: string | null): ThemeChoice {
+  const rest = { ...choice }
+  delete rest.dark
+  return family ? { ...rest, dark: { family } } : rest
+}
+
+export function withDarkVariant(choice: ThemeChoice, variant: string): ThemeChoice {
+  return choice.dark ? { ...choice, dark: { ...choice.dark, variant } } : choice
+}
+
+/** The variants of a night-time family that are dark (the picker's variant list). */
+export function darkVariants(family: string): ThemeVariant[] {
+  const fam = familyOf(family)
+  const dark = fam.variants.filter((v) => v.mode === 'dark')
+  return dark.length ? dark : fam.variants
 }
 
 /** A new mode drops a variant that does not belong to it. */
@@ -153,7 +174,12 @@ export function withMode(choice: ThemeChoice, mode: ThemeChoice['mode']): ThemeC
   const fam = familyOf(choice.family)
   const keep =
     choice.variant && fam.variants.some((v) => v.id === choice.variant && v.mode === mode)
-  return { family: choice.family, mode, ...(keep ? { variant: choice.variant } : {}) }
+  return {
+    family: choice.family,
+    mode,
+    ...(keep ? { variant: choice.variant } : {}),
+    ...(choice.dark ? { dark: choice.dark } : {}),
+  }
 }
 
 export function withVariant(choice: ThemeChoice, variant: string): ThemeChoice {

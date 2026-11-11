@@ -1,30 +1,21 @@
 <script setup lang="ts">
-import { computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import type { TaskView } from '../api/client'
-import { addDays, dayKey } from '../lib/time'
-import TodayMeals from '../components/food/TodayMeals.vue'
+import { addDays, dayKey, groupByDay } from '../lib/time'
+import { food, type MealPlanEntryView } from '../api/food'
 import { useCalendarStore } from '../stores/calendar'
 import { useHouseholdStore } from '../stores/household'
+import { useMealsSettingsStore } from '../stores/mealsSettings'
 import { useMembersStore } from '../stores/members'
 import { useSessionStore } from '../stores/session'
 import { useTasksStore } from '../stores/tasks'
 import { useWeatherStore } from '../stores/weather'
-import {
-  UiCard,
-  UiCheckbox,
-  UiEmptyState,
-  UiErrorState,
-  UiList,
-  UiPage,
-  UiSection,
-  UiSkeleton,
-  UiTopAppBar,
-  useSnackbar,
-} from '../ui'
+import { UiEmptyState, UiErrorState, UiPage, UiSkeleton, UiTopAppBar, useSnackbar } from '../ui'
 import AdvisoryList from './parts/AdvisoryList.vue'
-import AgendaList from './parts/AgendaList.vue'
-import WeatherCard from './parts/WeatherCard.vue'
-import { describeError, memberLikes } from './shared'
+import TodayDay from './today/TodayDay.vue'
+import TodayWeather from './today/TodayWeather.vue'
+import { mealCards, tasksDueOn } from './today/todayModel'
+import { describeError, memberLikes, toEventLike } from './shared'
 
 const session = useSessionStore()
 const household = useHouseholdStore()
@@ -39,15 +30,47 @@ const today = computed(() => dayKey(new Date(), tz.value))
 const todayLabel = computed(() =>
   new Intl.DateTimeFormat(undefined, { timeZone: tz.value, dateStyle: 'full' }).format(new Date()),
 )
+const tomorrow = computed(() => addDays(today.value, 1))
 const end = computed(() => addDays(today.value, 2))
 const events = computed(() => calendar.eventsIn(today.value, end.value, tz.value))
 const likes = computed(() => memberLikes(members.items))
 const loadingEvents = computed(() => calendar.loading && events.value.length === 0)
+const byDay = computed(() =>
+  groupByDay(
+    events.value.map((e) => toEventLike(e, likes.value)),
+    tz.value,
+    today.value,
+    2,
+  ),
+)
+const eventsToday = computed(() => byDay.value.get(today.value) ?? [])
+const eventsTomorrow = computed(() => byDay.value.get(tomorrow.value) ?? [])
 
-const mineNow = computed<TaskView[]>(() => {
-  const me = session.member?.id
-  return (tasks.tabs.now ?? []).filter((t) => !!me && t.assignees.includes(me))
-})
+const mealSettings = useMealsSettingsStore()
+const plan = ref<MealPlanEntryView[]>([])
+const slots = computed(() =>
+  mealSettings.visibleSlots.flatMap((s) => (s.id ? [{ id: s.id, name: s.name }] : [])),
+)
+const mealsToday = computed(() => mealCards(plan.value, today.value, slots.value))
+const mealsTomorrow = computed(() => mealCards(plan.value, tomorrow.value, slots.value))
+
+// Today's tasks are the server's "now" view; tomorrow's are the open ones due tomorrow.
+const tasksToday = computed<TaskView[]>(() => tasks.tabs.now ?? [])
+const tasksTomorrow = computed<TaskView[]>(() =>
+  tasksDueOn(tasks.tabs.all ?? [], tomorrow.value, tz.value),
+)
+
+async function loadPlan() {
+  try {
+    const [list] = await Promise.all([
+      food.plan(today.value, tomorrow.value),
+      mealSettings.loaded ? Promise.resolve() : mealSettings.load(),
+    ])
+    plan.value = list
+  } catch {
+    plan.value = []
+  }
+}
 
 function loadRange() {
   void calendar.ensureRange(today.value, end.value, tz.value)
@@ -57,6 +80,8 @@ onMounted(() => {
   void weather.load()
   void members.load()
   void tasks.load('now')
+  void tasks.load('all')
+  void loadPlan()
   loadRange()
 })
 watch(tz, loadRange)
@@ -98,13 +123,13 @@ watch(
 <template>
   <UiPage>
     <template #top>
-      <UiTopAppBar :title="session.household?.name ?? 'Today'" />
+      <UiTopAppBar :title="todayLabel" />
     </template>
 
-    <p class="date">{{ todayLabel }}</p>
     <AdvisoryList :advisories="weather.advisories" />
-    <WeatherCard
+    <TodayWeather
       v-if="weather.latest"
+      mode="today"
       :weather="weather.latest"
       :tz="tz"
       :units="household.units"
@@ -122,34 +147,33 @@ watch(
       <RouterLink v-if="session.isAdult" to="/settings/household">Household settings</RouterLink>
     </UiEmptyState>
 
-    <UiSection v-if="mineNow.length" heading="Now">
-      <UiCard variant="filled">
-        <UiList aria-label="Now">
-          <li v-for="t in mineNow" :key="t.id" class="now-row">
-            <UiCheckbox :model-value="false" :label="t.title" @update:model-value="complete(t)" />
-          </li>
-        </UiList>
-      </UiCard>
-    </UiSection>
-
-    <TodayMeals />
-
     <UiErrorState v-if="calendar.error" :message="calendar.error" @retry="loadRange" />
     <UiSkeleton v-else-if="loadingEvents" :lines="4" />
-    <AgendaList v-else :events="events" :tz="tz" :from="today" :days="2" :members="likes" />
+    <TodayDay
+      v-else
+      :meals="mealsToday"
+      :tasks="tasksToday"
+      :events="eventsToday"
+      :tz="tz"
+      completable
+      @complete="complete"
+    />
+
+    <h1 class="page-head" data-testid="tomorrow-head">Tomorrow</h1>
+    <TodayWeather
+      v-if="weather.latest"
+      mode="tomorrow"
+      :weather="weather.latest"
+      :tz="tz"
+      :units="household.units"
+    />
+    <TodayDay :meals="mealsTomorrow" :tasks="tasksTomorrow" :events="eventsTomorrow" :tz="tz" />
   </UiPage>
 </template>
 
 <style scoped>
-.date {
-  margin: 0;
-  font: var(--ui-type-title-md);
-  color: var(--ui-on-surface-variant);
-}
-.now-row {
-  padding: var(--ui-space-1) var(--ui-space-3);
-  min-height: var(--ui-touch);
-  display: flex;
-  align-items: center;
+.page-head {
+  margin: var(--ui-space-2) 0 0;
+  font: var(--ui-type-headline-sm);
 }
 </style>

@@ -13422,6 +13422,25 @@
           }
         }
       },
+      "DarkTheme": {
+        "type": "object",
+        "description": "The night-time family and variant of a [`ThemeChoice`].",
+        "required": [
+          "family"
+        ],
+        "properties": {
+          "family": {
+            "type": "string",
+            "description": "Slug, `^[a-z0-9][a-z0-9-]{0,31}$`."
+          },
+          "variant": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
       "DashboardHousehold": {
         "type": "object",
         "required": [
@@ -16035,10 +16054,11 @@
       },
       "MailMode": {
         "type": "string",
-        "description": "Who goes first: the LLM (the rules apply at once as a provisional value and as the\nfallback) or the rules (the LLM is asked only when they are unsure). D-107.",
+        "description": "Who goes first: the LLM (the rules apply at once as a provisional value and as the\nfallback), the rules (the LLM is asked only when they are unsure), or the LLM alone (no\nrule decides or extracts; without an endpoint the message waits). D-107.",
         "enum": [
           "llm_first",
-          "rules_first"
+          "rules_first",
+          "llm_only"
         ]
       },
       "MailProvider": {
@@ -21882,6 +21902,17 @@
           "mode"
         ],
         "properties": {
+          "dark": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DarkTheme",
+                "description": "Theme used when the effective mode is dark; `None` keeps the daytime family."
+              }
+            ]
+          },
           "family": {
             "type": "string",
             "description": "Slug, `^[a-z0-9][a-z0-9-]{0,31}$`."

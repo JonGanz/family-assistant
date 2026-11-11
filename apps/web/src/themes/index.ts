@@ -20,18 +20,41 @@ export function familyOf(id: string): ThemeFamily {
   )
 }
 
+function pickVariant(
+  familyId: string,
+  variantId: string | undefined,
+  want: 'auto' | 'light' | 'dark',
+  autoDark: boolean,
+): ThemeVariant {
+  const family = familyOf(familyId)
+  const modes = new Set(family.variants.map((v) => v.mode))
+  let mode: 'light' | 'dark'
+  if (modes.size === 1) mode = family.variants[0]!.mode
+  else if (want === 'auto') mode = autoDark ? 'dark' : 'light'
+  else mode = want
+  const ofMode = family.variants.filter((v) => v.mode === mode)
+  return ofMode.find((v) => v.id === variantId) ?? ofMode[0] ?? family.variants[0]!
+}
+
+/** True when the choice asks for dark right now (night or system dark under `auto`). */
+export function wantsDark(
+  choice: ThemeChoice,
+  ctx: { prefersDark: boolean; night?: boolean },
+): boolean {
+  return choice.mode === 'dark' || (choice.mode === 'auto' && (ctx.night ?? ctx.prefersDark))
+}
+
 export function resolveVariant(
   choice: ThemeChoice,
   ctx: { prefersDark: boolean; night?: boolean },
 ): ThemeVariant {
-  const family = familyOf(choice.family)
-  const modes = new Set(family.variants.map((v) => v.mode))
-  let mode: 'light' | 'dark'
-  if (modes.size === 1) mode = family.variants[0]!.mode
-  else if (choice.mode === 'auto') mode = (ctx.night ?? ctx.prefersDark) ? 'dark' : 'light'
-  else mode = choice.mode
-  const ofMode = family.variants.filter((v) => v.mode === mode)
-  return ofMode.find((v) => v.id === choice.variant) ?? ofMode[0] ?? family.variants[0]!
+  const dark = wantsDark(choice, ctx)
+  if (choice.dark) {
+    return dark
+      ? pickVariant(choice.dark.family, choice.dark.variant, 'dark', true)
+      : pickVariant(choice.family, choice.variant, 'light', false)
+  }
+  return pickVariant(choice.family, choice.variant, choice.mode, ctx.night ?? ctx.prefersDark)
 }
 
 function mixHex(a: string, b: string, pctB: number): string {
@@ -107,6 +130,17 @@ export function applyTheme(
   el.setAttribute('data-theme-mode', variant.mode)
 }
 
+export function normalizeDark(raw: unknown): { dark?: NonNullable<ThemeChoice['dark']> } {
+  const d = raw as { family?: unknown; variant?: unknown } | null | undefined
+  if (!d || typeof d !== 'object' || typeof d.family !== 'string') return {}
+  return {
+    dark: {
+      family: d.family,
+      ...(typeof d.variant === 'string' ? { variant: d.variant } : {}),
+    },
+  }
+}
+
 export function loadDeviceChoice(): ThemeChoice {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
@@ -118,6 +152,7 @@ export function loadDeviceChoice(): ThemeChoice {
       family: v.family,
       mode,
       ...(typeof v.variant === 'string' ? { variant: v.variant } : {}),
+      ...normalizeDark(v.dark),
     }
   } catch {
     return { ...DEFAULT_CHOICE }

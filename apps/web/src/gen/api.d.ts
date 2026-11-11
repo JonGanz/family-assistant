@@ -2674,6 +2674,12 @@ export interface components {
             responsibilities?: string[];
             role: string;
         };
+        /** @description The night-time family and variant of a [`ThemeChoice`]. */
+        DarkTheme: {
+            /** @description Slug, `^[a-z0-9][a-z0-9-]{0,31}$`. */
+            family: string;
+            variant?: string | null;
+        };
         DashboardHousehold: {
             /** @description Anyone may complete tasks from the dashboard (D-013). */
             completion_override: boolean;
@@ -3414,10 +3420,11 @@ export interface components {
         MailExtractMode: "off" | "fallback" | "always";
         /**
          * @description Who goes first: the LLM (the rules apply at once as a provisional value and as the
-         *     fallback) or the rules (the LLM is asked only when they are unsure). D-107.
+         *     fallback), the rules (the LLM is asked only when they are unsure), or the LLM alone (no
+         *     rule decides or extracts; without an endpoint the message waits). D-107.
          * @enum {string}
          */
-        MailMode: "llm_first" | "rules_first";
+        MailMode: "llm_first" | "rules_first" | "llm_only";
         /** @enum {string} */
         MailProvider: "gmail" | "imap";
         MailRetention: {
@@ -4869,6 +4876,7 @@ export interface components {
         };
         /** @description A device's theme. Reads the legacy string form; always writes the object. */
         ThemeChoice: {
+            dark?: null | components["schemas"]["DarkTheme"];
             /** @description Slug, `^[a-z0-9][a-z0-9-]{0,31}$`. */
             family: string;
             mode: components["schemas"]["ThemeMode"];

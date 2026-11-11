@@ -668,6 +668,28 @@ fn conference_answer(category: &str) -> Value {
 }
 
 #[sqlx::test(migrations = "../fa-store/migrations")]
+async fn llm_only_applies_no_rules_and_queues_or_waits(pool: PgPool) {
+    let (url, _) = stub(json!({})).await;
+    let e = env(pool, Some(url)).await;
+    e.settings(MailMode::LlmOnly, 30, 0.8).await;
+    let ics = e.insert(&fixture("teacher_ics.eml"), "ics").await;
+    e.svc.process(e.h, ics, None).await.unwrap();
+    // The rules decided nothing and proposed nothing; the message waits for the model.
+    assert_eq!(e.category(ics).await, None);
+    assert!(events(&e).await.is_empty());
+    assert!(e.decisions(ics, "email.category").await.is_empty());
+    assert_eq!(e.llm_state(ics).await, "queued");
+    assert_eq!(e.jobs("mail.llm").await.len(), 1);
+
+    // Without a usable endpoint the message is awaiting, never handled by rules.
+    e.set_endpoint("http://127.0.0.1:1", false).await;
+    let promo = e.insert(&fixture("promo.eml"), "promo").await;
+    e.svc.process(e.h, promo, None).await.unwrap();
+    assert_eq!(e.llm_state(promo).await, "awaiting");
+    assert_eq!(e.category(promo).await, None);
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
 async fn llm_first_queues_every_message_even_when_rules_are_sure(pool: PgPool) {
     let (url, _) = stub(json!({})).await;
     let e = env(pool, Some(url)).await;

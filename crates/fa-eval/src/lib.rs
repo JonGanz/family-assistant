@@ -192,7 +192,9 @@ pub async fn run(
     let max_chars = ai.max_input_chars as usize;
     // llm_first (D-107): the model answers every item and the rules only decide what it leaves
     // open; rules_first: the model sees what the rules leave open.
-    let llm_first = provider.is_some() && ai.mail_mode == MailMode::LlmFirst;
+    let llm_first = provider.is_some() && ai.mail_mode != MailMode::RulesFirst;
+    // llm_only: the rules are never a fallback either.
+    let llm_only = ai.mail_mode == MailMode::LlmOnly;
 
     // Sample messages with a human truth: the latest human decision per message.
     let rows: Vec<(uuid::Uuid, serde_json::Value)> = sqlx::query_as(
@@ -254,7 +256,7 @@ pub async fn run(
             }
         }
         // llm_first: the rules are the fallback when the model decided nothing.
-        if llm_first && !accepted.is_empty() {
+        if llm_first && !llm_only && !accepted.is_empty() {
             rules.decided += 1;
             rules.ms.push(took);
             rules.correct += u32::from(is_correct(dp, &accepted, &truth));

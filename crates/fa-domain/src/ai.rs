@@ -14,8 +14,9 @@ db_enum!(LlmDialect { OpenaiChat => "openai_chat", OllamaNative => "ollama_nativ
 db_enum!(MailExtractMode { Off => "off", Fallback => "fallback", Always => "always" });
 db_enum!(
     /// Who goes first: the LLM (the rules apply at once as a provisional value and as the
-    /// fallback) or the rules (the LLM is asked only when they are unsure). D-107.
-    MailMode { LlmFirst => "llm_first", RulesFirst => "rules_first" }
+    /// fallback), the rules (the LLM is asked only when they are unsure), or the LLM alone (no
+    /// rule decides or extracts; without an endpoint the message waits). D-107.
+    MailMode { LlmFirst => "llm_first", RulesFirst => "rules_first", LlmOnly => "llm_only" }
 );
 db_enum!(
     /// Where a message stands with the LLM (`message.llm_state`). Nothing is waiting or done yet.

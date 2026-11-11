@@ -94,7 +94,9 @@ export const S = {
   themeAuto: 'Auto (dark after sunset)',
   themeLight: 'Light',
   themeDark: 'Dark',
-  themeFamily: 'Theme',
+  themeFamily: 'Daytime theme',
+  themeNightFamily: 'Night-time theme',
+  themeNightSame: 'Same as daytime',
   themeVariant: 'Variant',
   themeMode: 'Mode',
   // appearance page

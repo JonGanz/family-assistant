@@ -231,6 +231,7 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 
 **Mode.** A device's choice is `{family, variant?, mode}` with `mode` one of `auto | light | dark`.
 - A family with **both** light and dark variants follows the mode. In the app, `auto` follows the device's `prefers-color-scheme`. On the kiosk, `auto` is dark between sunset and sunrise (from the weather data).
+- An optional `dark: {family, variant?}` gives a separate **night-time theme** (stored in the same `device.settings` jsonb, so no migration; absent means the daytime family, and the legacy string and objects without it still read). When the effective mode is dark (`mode` dark, or `auto` at night or with a dark system scheme) the `dark` family and variant are used, otherwise the daytime ones. Settings → Devices shows "Daytime theme" and "Night-time theme" (default "Same as daytime"). Both slugs are validated like `family`.
 - A family with **one** variant always uses it, at any time of day. The mode picker is hidden for it.
 - A family with several variants in one mode (Catppuccin dark) lets the user pick the variant.
 

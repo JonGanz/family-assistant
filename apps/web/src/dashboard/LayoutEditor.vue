@@ -17,6 +17,9 @@ import {
   themeOf,
   toggleMember,
   togglePanelId,
+  darkVariants,
+  withDarkFamily,
+  withDarkVariant,
   withFamily,
   withMode,
   withVariant,
@@ -95,7 +98,32 @@ function preset(e: Event) {
           <option v-for="v in controls.variants" :key="v.id" :value="v.id">{{ v.label }}</option>
         </select>
       </label>
-      <label v-if="controls.showMode"
+      <label
+        >{{ S.themeNightFamily }}
+        <select
+          data-testid="theme-night-family"
+          :value="theme.dark?.family ?? ''"
+          @change="
+            setTheme(withDarkFamily(theme, ($event.target as HTMLSelectElement).value || null))
+          "
+        >
+          <option value="">{{ S.themeNightSame }}</option>
+          <option v-for="f in FAMILY_OPTIONS" :key="f.id" :value="f.id">{{ f.label }}</option>
+        </select>
+      </label>
+      <label v-if="theme.dark && darkVariants(theme.dark.family).length > 1"
+        >{{ S.themeVariant }}
+        <select
+          data-testid="theme-night-variant"
+          :value="theme.dark.variant ?? darkVariants(theme.dark.family)[0]!.id"
+          @change="setTheme(withDarkVariant(theme, ($event.target as HTMLSelectElement).value))"
+        >
+          <option v-for="v in darkVariants(theme.dark.family)" :key="v.id" :value="v.id">
+            {{ v.label }}
+          </option>
+        </select>
+      </label>
+      <label v-if="controls.showMode || theme.dark"
         >{{ S.themeMode }}
         <select
           data-testid="theme"

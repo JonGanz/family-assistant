@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { stripeStyle } from '../lib/eventColors'
+import { mapLink } from '../lib/mapLink'
 import { formatRange } from '../lib/time'
 import type { EventLike, MemberLike } from '../lib/types'
 import MemberChip from './MemberChip.vue'
@@ -16,6 +17,7 @@ const props = defineProps<{
 const emit = defineEmits<{ select: [event: EventLike] }>()
 
 const busy = computed(() => props.event.visibility === 'busy')
+const map = computed(() => (props.event.location ? mapLink(props.event.location) : null))
 const chips = computed(() =>
   (props.members ?? []).filter((m) => props.event.members.includes(m.id)),
 )
@@ -35,7 +37,18 @@ const chips = computed(() =>
     <div class="time">{{ formatRange(event, tz, locale) }}</div>
     <div class="body">
       <div class="title">{{ busy ? 'Busy' : (event.title ?? '') }}</div>
-      <div v-if="!busy && event.location" class="location">{{ event.location }}</div>
+      <div v-if="!busy && event.location" class="location">
+        {{ event.location }}
+        <a
+          v-if="map"
+          class="map-link"
+          :href="map.href"
+          :target="map.external ? '_blank' : undefined"
+          :rel="map.external ? 'noopener' : undefined"
+          @click.stop
+          >Open in maps</a
+        >
+      </div>
       <div v-if="chips.length" class="chips">
         <MemberChip
           v-for="m in chips"
@@ -103,6 +116,10 @@ const chips = computed(() =>
 .from {
   font: var(--ui-type-body-md);
   color: var(--ui-on-surface-variant);
+}
+.map-link {
+  margin-left: var(--ui-space-2);
+  color: var(--ui-primary);
 }
 .chips {
   display: flex;

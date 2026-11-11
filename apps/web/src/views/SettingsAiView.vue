@@ -225,7 +225,9 @@ const STAGE_NAMES: Record<string, string> = {
 }
 const stageName = (dp: string) => STAGE_NAMES[dp] ?? dp
 const pct = (v: number) => `${Math.round(v * 100)}%`
-const llmFirst = computed(() => (ai.settings?.mail_mode ?? 'llm_first') === 'llm_first')
+// The AI is asked about every message (AI first, or AI only).
+const llmFirst = computed(() => (ai.settings?.mail_mode ?? 'llm_first') !== 'rules_first')
+const llmOnly = computed(() => mailMode.value === 'llm_only')
 const thresholds = ref<Record<string, number>>({})
 const rulesThresholds = ref<Record<string, number>>({})
 watch(
@@ -308,8 +310,23 @@ const mailModeSave = useInstantSave(
   { label: 'Mail processing saved' },
 )
 const mailModeOptions = [
-  { value: 'llm_first', label: 'Use the AI for every message (rules as fallback)' },
-  { value: 'rules_first', label: 'Use rules first, AI only when unsure' },
+  {
+    value: 'llm_first',
+    label: 'AI first, rules as fallback',
+    supporting:
+      'The AI reads every message. The rules run at once as a provisional result and take over when the AI is unavailable or unsure.',
+  },
+  {
+    value: 'rules_first',
+    label: 'Rules first, AI only when unsure',
+    supporting: 'The rules decide. The AI is asked only about what they leave open.',
+  },
+  {
+    value: 'llm_only',
+    label: 'AI only',
+    supporting:
+      'Only the AI processes messages: no rule classifies or extracts anything. Without a working AI endpoint, messages wait until one is available.',
+  },
 ]
 const catchupErr = ref('')
 const catchupForm = useFormDraft(
@@ -686,6 +703,7 @@ onUnmounted(() => clearInterval(backlogTimer))
         </label>
         <p v-if="llmFirst" class="note">
           The AI reads every message and pulls out events, bills and tasks.
+          <template v-if="llmOnly">The rules are not used.</template>
         </p>
         <UiTextField
           v-model="maxForm.draft.value.max_input_chars"

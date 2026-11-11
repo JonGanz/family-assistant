@@ -13,7 +13,7 @@ const MODES = [
 
 <template>
   <nav class="range-nav" aria-label="Date range">
-    <UiIconButton icon="back" label="Previous" @click="$emit('prev')" />
+    <UiIconButton icon="chevron_left" label="Previous" @click="$emit('prev')" />
     <UiIconButton icon="chevron_right" label="Next" @click="$emit('next')" />
     <UiButton variant="tonal" @click="$emit('today')">Today</UiButton>
     <strong class="label" aria-live="polite">{{ label }}</strong>

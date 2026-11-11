@@ -89,7 +89,7 @@ impl Modify for Security {
         CreateAccountReq, PasswordReq, PinReq, PairDeviceReq, PairDeviceResp, ElevateReq,
         ElevateResp, SessionView, PasswordBody, OwnPasswordChange, crate::feeds::HouseholdViewExt,
         crate::setup::SetupHouseholdCreated, SetupStatus, NewSetupHousehold, SetupLocation,
-        NewSetupOwner, fa_domain::theme::Hue, fa_domain::theme::ThemeChoice, fa_domain::theme::ThemeMode, MasterKeyRequest, MasterKeyView, SettingSource, SettingKind, SettingView,
+        NewSetupOwner, fa_domain::theme::Hue, fa_domain::theme::ThemeChoice, fa_domain::theme::DarkTheme, fa_domain::theme::ThemeMode, MasterKeyRequest, MasterKeyView, SettingSource, SettingKind, SettingView,
         ConnectionInfo, AboutView, SystemSettingsView, SystemSettingsPatch,
     )),
     modifiers(&Security)

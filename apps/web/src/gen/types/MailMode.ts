@@ -2,6 +2,7 @@
 
 /**
  * Who goes first: the LLM (the rules apply at once as a provisional value and as the
- * fallback) or the rules (the LLM is asked only when they are unsure). D-107.
+ * fallback), the rules (the LLM is asked only when they are unsure), or the LLM alone (no
+ * rule decides or extracts; without an endpoint the message waits). D-107.
  */
-export type MailMode = "llm_first" | "rules_first";
+export type MailMode = "llm_first" | "rules_first" | "llm_only";

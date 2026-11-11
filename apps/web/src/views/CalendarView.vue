@@ -15,6 +15,7 @@ import { useMembersStore } from '../stores/members'
 import { chipsByDay, memberRefs, type TaskChip } from '../stores/taskMap'
 import { useTasksStore } from '../stores/tasks'
 import {
+  UiButton,
   UiCheckbox,
   UiFilterChips,
   UiErrorState,
@@ -63,11 +64,21 @@ const anchor = ref(dayKey(new Date(), household.tz))
 /** The chosen members (D-105); empty means everyone. */
 const chosen = ref<string[]>([])
 const detail = ref<EventLike | null>(null)
+/** The day whose full list is open ("+N more"); an event opened from it can go back to it. */
+const dayOpen = ref<string | null>(null)
 const detailOpen = computed({
-  get: () => detail.value !== null,
+  get: () => detail.value !== null || dayOpen.value !== null,
   set: (v) => {
-    if (!v) detail.value = null
+    if (!v) {
+      detail.value = null
+      dayOpen.value = null
+    }
   },
+})
+const dayEvents = computed(() => (dayOpen.value ? (byDay.value.get(dayOpen.value) ?? []) : []))
+const sheetTitle = computed(() => {
+  if (detail.value) return detail.value.visibility === 'busy' ? 'Busy' : (detail.value.title ?? '')
+  return dayOpen.value ? formatDayHeading(dayOpen.value, tz.value, today.value) : ''
 })
 
 const VIEWS = [
@@ -149,7 +160,6 @@ const chips = computed(() =>
   ),
 )
 const chipsOf = (k: string): TaskChip[] => chips.value.get(k) ?? []
-const allChips = computed(() => [...chips.value.entries()].sort(([a], [b]) => a.localeCompare(b)))
 // Completing a task chip is instant (D-096); the store arms a 10 s undo that the snackbar offers.
 async function toggleChip(c: TaskChip) {
   try {
@@ -245,21 +255,6 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
         :tz="tz"
         @select="detail = $event"
       />
-      <section v-if="allChips.length" class="agenda-tasks" aria-label="Tasks">
-        <h2>Tasks</h2>
-        <div v-for="[k, list] in allChips" :key="k">
-          <strong>{{ formatDayHeading(k, tz, today) }}</strong>
-          <ul class="chips">
-            <li v-for="c in list" :key="c.id" :style="{ borderLeftColor: c.color }">
-              <UiCheckbox
-                :model-value="c.done"
-                :label="c.title"
-                @update:model-value="toggleChip(c)"
-              />
-            </li>
-          </ul>
-        </div>
-      </section>
     </template>
 
     <div v-else class="month-scroll">
@@ -284,7 +279,11 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
                 {{ e.visibility === 'busy' ? 'Busy' : e.title }}
               </button>
             </li>
-            <li v-if="list.length > 3" class="more">+{{ list.length - 3 }} more</li>
+            <li v-if="list.length > 3">
+              <button type="button" class="more" @click="dayOpen = k">
+                +{{ list.length - 3 }} more
+              </button>
+            </li>
             <li
               v-for="c in chipsOf(k)"
               :key="c.id"
@@ -302,11 +301,24 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
       </div>
     </div>
 
-    <UiSheet
-      v-model="detailOpen"
-      :title="detail?.visibility === 'busy' ? 'Busy' : (detail?.title ?? '')"
-    >
-      <EventCard v-if="detail" :event="detail" :tz="tz" :members="likes" />
+    <UiSheet v-model="detailOpen" :title="sheetTitle">
+      <template v-if="detail">
+        <UiButton v-if="dayOpen" class="back" variant="text" icon="back" @click="detail = null">
+          Back to day
+        </UiButton>
+        <EventCard :event="detail" :tz="tz" :members="likes" />
+      </template>
+      <div v-else class="day-list">
+        <EventCard
+          v-for="e in dayEvents"
+          :key="e.id"
+          :event="e"
+          :tz="tz"
+          :members="likes"
+          selectable
+          @select="detail = $event"
+        />
+      </div>
     </UiSheet>
   </UiPage>
 </template>
@@ -408,7 +420,18 @@ h2 {
   background-image: var(--ev-bg);
   color: var(--ui-on-surface-variant);
 }
+.day-list {
+  display: grid;
+  gap: var(--ui-space-2);
+}
+.back {
+  margin-bottom: var(--ui-space-2);
+}
 .more {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
   color: var(--ui-on-surface-variant);
   font: var(--ui-type-body-sm);
 }

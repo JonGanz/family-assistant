@@ -256,7 +256,7 @@ impl ProcessService {
                     stage.is_some_and(|s| s.enabled),
                     latest.is_none_or(|d| !d.is_final),
                 ),
-                MailMode::LlmFirst => (
+                MailMode::LlmFirst | MailMode::LlmOnly => (
                     stage.is_none_or(|s| s.enabled),
                     !latest.is_some_and(|d| d.stage_kind == StageKind::Human && d.is_final),
                 ),
@@ -418,7 +418,7 @@ impl ProcessService {
                 .is_some_and(|c| c.behaviour == CategoryBehaviour::Extract && c.key != "junk");
             let extract = ai.mail_extract_mode != MailExtractMode::Off
                 && (cat_asked || extractable)
-                && (ai.mail_mode == MailMode::LlmFirst
+                && (ai.mail_mode != MailMode::RulesFirst
                     || ai.mail_extract_mode == MailExtractMode::Always
                     || !rules_strong);
             let of = OwnedFacts::new(&msg);
@@ -566,7 +566,7 @@ impl ProcessService {
                 is_bill: bill_flag,
                 members: &members,
                 attachments: None,
-                refine: mode == MailMode::LlmFirst,
+                refine: mode != MailMode::RulesFirst,
                 strong_cutoff: 1.0,
                 strong: false,
             };

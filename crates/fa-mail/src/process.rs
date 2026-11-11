@@ -259,6 +259,10 @@ impl ProcessService {
             id: msg.id.as_uuid(),
         };
 
+        // llm_only: no rule decides or extracts anything; the model answers everything.
+        let ai = AiSettingsRepo::get_or_default(&mut tx, household).await?;
+        let rules_on = ai.mail_mode != MailMode::LlmOnly;
+
         let mut category = msg.category.clone();
         let mut time_sensitive = msg.time_sensitive;
         let mut is_bill = msg.is_bill;
@@ -269,7 +273,7 @@ impl ProcessService {
             .map(|m| m.0)
             .collect();
 
-        if steps.category {
+        if steps.category && rules_on {
             let d = decide(
                 &mut tx,
                 household,
@@ -292,7 +296,7 @@ impl ProcessService {
                 });
             category = key.or(category);
         }
-        if steps.time_sensitive {
+        if steps.time_sensitive && rules_on {
             let d = decide(
                 &mut tx,
                 household,
@@ -308,7 +312,7 @@ impl ProcessService {
                 .and_then(|c| c.value.as_bool())
                 .or(time_sensitive);
         }
-        if steps.is_bill {
+        if steps.is_bill && rules_on {
             let d = decide(
                 &mut tx,
                 household,
@@ -320,7 +324,7 @@ impl ProcessService {
             pending_llm |= d.pending_llm;
             is_bill = d.values.first().and_then(|c| c.value.as_bool()).or(is_bill);
         }
-        if steps.member_link {
+        if steps.member_link && rules_on {
             let d = decide(
                 &mut tx,
                 household,
@@ -334,7 +338,7 @@ impl ProcessService {
             members = links.iter().map(|l| l.0).collect();
             MessageRepo::set_members(&mut tx, msg.id, &links).await?;
         }
-        if steps.category || steps.time_sensitive || steps.is_bill {
+        if rules_on && (steps.category || steps.time_sensitive || steps.is_bill) {
             MessageRepo::set_classification(
                 &mut tx,
                 msg.id,
@@ -376,11 +380,11 @@ impl ProcessService {
             }
         }
 
-        let ai = AiSettingsRepo::get_or_default(&mut tx, household).await?;
         let extractable =
             cat.filter(|c| c.behaviour == CategoryBehaviour::Extract && c.key != "junk");
         let mut rules_strong = false;
         if let Some(cat) = extractable
+            && rules_on
             && (steps.events || steps.bills || steps.tasks || steps.contacts)
         {
             let mut ex = extract::Extractor {
@@ -414,7 +418,7 @@ impl ProcessService {
         }
 
         match ai.mail_mode {
-            MailMode::LlmFirst if full => {
+            MailMode::LlmFirst | MailMode::LlmOnly if full => {
                 // Every message goes to the model; without a usable endpoint it waits for one.
                 let has_client = self.has_client(household).await;
                 if has_client {
@@ -437,7 +441,7 @@ impl ProcessService {
                     .await?;
                 }
             }
-            MailMode::LlmFirst => {}
+            MailMode::LlmFirst | MailMode::LlmOnly => {}
             MailMode::RulesFirst => {
                 let wants_extract = extractable.is_some()
                     && (steps.events || steps.bills || steps.tasks)

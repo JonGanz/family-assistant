@@ -43,4 +43,6 @@ export interface ThemeChoice {
   family: string
   variant?: string
   mode: 'auto' | 'light' | 'dark'
+  /** Night-time family and variant; absent means the same as the daytime choice. */
+  dark?: { family: string; variant?: string }
 }

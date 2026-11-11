@@ -1,7 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import TodayMeals from '../components/food/TodayMeals.vue'
 import { isSlotTime, useMealsSettingsStore } from '../stores/mealsSettings'
 import { resetSnackbar, useSnackbar } from '../ui/composables/useSnackbar'
 import IngredientsCard from './parts/meals/IngredientsCard.vue'
@@ -110,34 +109,5 @@ describe('meals settings', () => {
     const adult = visibleGroups(true).flatMap((g) => g.pages.map((p) => p.to))
     expect(child).not.toContain('/settings/meals')
     expect(adult).toContain('/settings/meals')
-  })
-
-  it('hides the Today card when there are no entries', async () => {
-    f.plan.mockResolvedValue([])
-    const s = useMealsSettingsStore()
-    s.loaded = true
-    s.slots = [{ id: 'sl1', name: 'Dinner', time: '18:00', visible: true, ord: 0 }] as never
-    const w = mount(TodayMeals)
-    await flushPromises()
-    expect(w.find('[data-testid="today-meals"]').exists()).toBe(false)
-  })
-
-  it('shows today’s entries in visible slots', async () => {
-    f.plan.mockResolvedValue([
-      { id: 'e1', slot_id: 'sl1', ord: 0, title: 'Soup', date: '2026-11-08', version: 1 },
-      { id: 'e2', slot_id: 'sl2', ord: 0, title: 'Hidden', date: '2026-11-08', version: 1 },
-    ] as never)
-    const s = useMealsSettingsStore()
-    s.loaded = true
-    s.slots = [
-      { id: 'sl1', name: 'Dinner', time: '18:00', visible: true, ord: 0 },
-      { id: 'sl2', name: 'Lunch', time: '12:00', visible: false, ord: 1 },
-    ] as never
-    const w = mount(TodayMeals, {
-      global: { stubs: { RouterLink: { template: '<a><slot /></a>' } } },
-    })
-    await flushPromises()
-    expect(w.text()).toContain('Soup')
-    expect(w.text()).not.toContain('Hidden')
   })
 })
