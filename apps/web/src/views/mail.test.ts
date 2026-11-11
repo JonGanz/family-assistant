@@ -86,7 +86,7 @@ describe('Inbox', () => {
     const w = mount(InboxView, { global: { stubs }, attachTo: document.body })
     await flushPromises()
     expect(w.text()).toContain('Bills (1)')
-    await w.get('[role="radio"]:nth-child(2)').trigger('click')
+    await w.get('[role="radio"]:nth-child(2), [role="tab"]:nth-child(2)').trigger('click')
     const reject = w.findAll('button').find((b) => b.text() === 'Reject')!
     await reject.trigger('click')
     expect(m.rejectInbox).not.toHaveBeenCalled()
@@ -165,7 +165,7 @@ describe('AI provenance', () => {
     } as never)
     const w = mount(InboxView, { global: { stubs }, attachTo: document.body })
     await flushPromises()
-    await w.get('[role="radio"]:nth-child(2)').trigger('click')
+    await w.get('[role="radio"]:nth-child(2), [role="tab"]:nth-child(2)').trigger('click')
     return w
   }
   it('shows the chip with a rounded percentage only on llm items, and filters', async () => {

@@ -36,6 +36,7 @@ import {
   UiSkeleton,
   UiSnackbarHost,
   UiSwitch,
+  UiTabs,
   UiTextField,
   UiTopAppBar,
   icons,
@@ -372,6 +373,15 @@ const dayOptions = [
           <UiSegmented
             v-model="seg"
             label="View"
+            :options="[
+              { value: 'day', label: 'Day' },
+              { value: 'week', label: 'Week' },
+              { value: 'month', label: 'Month' },
+            ]"
+          />
+          <UiTabs
+            v-model="seg"
+            label="Page tabs"
             :options="[
               { value: 'day', label: 'Day' },
               { value: 'week', label: 'Week' },

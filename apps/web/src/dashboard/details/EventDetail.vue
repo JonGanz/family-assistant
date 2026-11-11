@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import MemberChip from '../../components/MemberChip.vue'
 import { formatRange } from '../../lib/time'
 import { toEventLike, toMemberLike } from '../filter'
+import MemberPills from '../MemberPills.vue'
 import Modal from '../Modal.vue'
 import { S } from '../strings'
 import type { DashboardData } from '../types'
@@ -47,8 +47,10 @@ const time = computed(() =>
       </template>
       <template v-if="who.length">
         <dt>{{ S.who }}</dt>
-        <dd class="chips">
-          <MemberChip v-for="m in who" :key="m.id" :name="m.display_name" :color="m.color" />
+        <dd>
+          <MemberPills
+            :members="who.map((m) => ({ id: m.id, name: m.display_name, color: m.color }))"
+          />
         </dd>
       </template>
       <template v-if="!busy && ev.description">
@@ -80,11 +82,6 @@ dt {
 }
 dd {
   margin: 0;
-}
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
 }
 .notes {
   white-space: pre-wrap;

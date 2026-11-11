@@ -77,7 +77,7 @@ A home-grown Vue component library in `apps/web/src/ui/`, modelled on Material 3
   - **Surfaces:** `UiCard` (elevated, filled or outlined; media, header, body and actions slots; the whole card can be a link), `UiDivider`.
   - **Lists:** `UiList` and `UiListItem` (one to three lines, leading and trailing slots), the main way to show collections on phones.
   - **Actions:** `UiButton` (filled, tonal, outlined, text), `UiIconButton`, `UiFab`.
-  - **Inputs:** `UiTextField`, `UiSelect`, `UiSwitch`, `UiCheckbox`, `UiRadioGroup`, `UiSegmented`, `UiChip` (assist, filter, input), `UiFilterChips` (the shared filter row, §1.5).
+  - **Inputs:** `UiTabs` (every page-level view switcher: Food, Calendar, Inbox, Tasks; segmented on compact, tab row otherwise, links when an option has `href`), `UiTextField`, `UiSelect`, `UiSwitch`, `UiCheckbox`, `UiRadioGroup`, `UiSegmented` (value pickers in forms and settings), `UiChip` (assist, filter, input), `UiFilterChips` (the shared filter row, §1.5).
   - **Overlays:** `UiDialog`, `UiBottomSheet`, `UiSheet` (bottom sheet on compact, dialog otherwise), `UiMenu`, `UiSnackbarHost`.
   - **Feedback:** `UiBadge`, `UiProgress`, `UiSkeleton`, `UiEmptyState`, `UiErrorState`, `UiSaveBar`.
   - **Navigation:** `UiNavBar`, `UiNavRail`, `UiNavDrawer`.
@@ -258,7 +258,7 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 **AI provenance in the inbox:** items whose `extracted_by` is `llm` carry an **"AI" chip** (the `ai` icon) with the confidence as a percentage. Its tooltip, or a tap on compact screens, explains "suggested by the local language model". Approval works exactly as for rule-made items (D-057, D-060). Tasks carry just "AI". Wide screens show a tooltip and phones a sheet (D-104, Q-097). The Inbox has an **"AI only" filter chip**, a separate toggle that is not remembered. The message screen's decision list marks decisions with `stage_kind = llm` the same way.
 
 ## 3f. Food (M5, D-109 to D-118; detail in [Meals.md](Meals.md))
-`/food` is one destination with tabs (`UiSegmented` under the top bar on compact, a tab row otherwise): **Meal plan**, **Shopping list**, **Recipes**, and **Templates** for adults. The chosen tab is remembered per device (`fa.food.tab`). All edits follow §1.4.
+`/food` is one destination with tabs (`UiTabs`: a segmented control under the top bar on compact, a tab row otherwise): **Meal plan**, **Shopping list**, **Recipes**, and **Templates** for adults. The chosen tab is remembered per device (`fa.food.tab`). All edits follow §1.4.
 
 **Meal plan** (`/food/plan`, adults edit, everyone reads; D-110, D-111, D-112, D-116):
 - A grid of **week rows**: seven day columns starting on the household's `week_start`; the first row is the **previous week**, then the current week, then following weeks, scrolling on to the end of the horizon (`meal_plan_horizon_weeks`); scrolling up shows past weeks read-only. Today's cell is drawn **inverted** (text and background swapped), the same marker as today on the calendar. On compact the grid becomes a day list (one card per day, the same order).

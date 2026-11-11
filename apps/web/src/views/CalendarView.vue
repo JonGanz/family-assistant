@@ -20,9 +20,9 @@ import {
   UiFilterChips,
   UiErrorState,
   UiPage,
-  UiSegmented,
   UiSheet,
   UiSkeleton,
+  UiTabs,
   UiTopAppBar,
   useBreakpoint,
   useSnackbar,
@@ -222,7 +222,7 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
         @next="anchor = shiftAnchor(navMode, anchor, 1)"
         @today="anchor = dayKey(new Date(), tz)"
       />
-      <UiSegmented
+      <UiTabs
         :model-value="view"
         :options="VIEWS"
         label="View"

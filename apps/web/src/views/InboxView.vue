@@ -12,8 +12,8 @@ import {
   UiEmptyState,
   UiErrorState,
   UiPage,
-  UiSegmented,
   UiSkeleton,
+  UiTabs,
   UiTopAppBar,
 } from '../ui'
 import AiChip from '../components/mail/AiChip.vue'
@@ -80,7 +80,7 @@ function confirmReject() {
       <UiTopAppBar title="Inbox" />
     </template>
 
-    <UiSegmented
+    <UiTabs
       :model-value="tab"
       :options="tabOptions"
       label="Inbox"

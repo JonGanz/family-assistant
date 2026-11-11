@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import MemberChip from '../../components/MemberChip.vue'
+import MemberPills from '../MemberPills.vue'
 import { stripeStyle } from '../../lib/eventColors'
 import { dayKey, formatDayHeading, formatRange, groupByDay } from '../../lib/time'
 import { toEventLike, toMemberLike, visibleEvents } from '../filter'
@@ -57,14 +57,12 @@ const groups = computed(() => {
       >
         <span class="when">
           <span class="time">{{ e.all_day ? S.allDay : formatRange(e, tz) }}</span>
-          <span v-if="chipsOf(e.members).length" class="chips">
-            <MemberChip
-              v-for="m in chipsOf(e.members)"
-              :key="m.id"
-              :name="m.display_name"
-              :color="m.color"
-            />
-          </span>
+          <MemberPills
+            :members="
+              chipsOf(e.members).map((m) => ({ id: m.id, name: m.display_name, color: m.color }))
+            "
+            class="chips"
+          />
         </span>
         <span class="title">{{ e.visibility === 'busy' ? S.busy : (e.title ?? '') }}</span>
       </button>
@@ -137,9 +135,7 @@ h2 {
   font-size: var(--font-size-sm);
 }
 .chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-1);
+  min-width: 0;
 }
 .title {
   font-weight: 600;

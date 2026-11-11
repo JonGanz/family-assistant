@@ -19,9 +19,9 @@ import {
   UiFab,
   UiPage,
   UiSection,
-  UiSegmented,
   UiSheet,
   UiSkeleton,
+  UiTabs,
   UiTopAppBar,
   useSnackbar,
 } from '../ui'
@@ -125,7 +125,7 @@ const loadingFirst = computed(() => tasks.loading && !tasks.tabs[dataTab.value])
       <UiTopAppBar title="Tasks" />
     </template>
 
-    <UiSegmented
+    <UiTabs
       :model-value="tab"
       :options="tabOptions"
       label="Tasks"

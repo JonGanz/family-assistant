@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import MemberChip from '../../components/MemberChip.vue'
 import TaskItem from '../../components/tasks/TaskItem.vue'
 import type { TaskItemModel } from '../../lib/tasks'
+import MemberPills from '../MemberPills.vue'
 import { lockCheck } from '../tasksModel'
 
 const vLockCheck = lockCheck
@@ -18,15 +18,10 @@ const emit = defineEmits<{ complete: [id: string] }>()
       size="kiosk"
       @complete="(id: string) => emit('complete', id)"
     />
-    <span v-if="task.assignees.length" class="chips">
-      <MemberChip
-        v-for="m in task.assignees"
-        :key="m.id"
-        :name="m.name"
-        :color="m.color"
-        variant="app"
-      />
-    </span>
+    <MemberPills
+      :members="task.assignees.map((m) => ({ id: m.id, name: m.name, color: m.color }))"
+      class="chips"
+    />
   </li>
 </template>
 
@@ -54,14 +49,6 @@ const emit = defineEmits<{ complete: [id: string] }>()
   display: none;
 }
 .chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
   padding: 0 var(--space-4) var(--space-2) calc(var(--space-4) + 3rem + var(--space-4));
-}
-.chips :deep(.member-chip) {
-  padding: 0 var(--space-3);
-  font-size: var(--kiosk-font-small);
-  line-height: 1.6;
 }
 </style>
