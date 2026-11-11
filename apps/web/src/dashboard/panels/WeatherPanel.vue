@@ -152,7 +152,7 @@ const notices = computed(() => [
   border-left: 6px solid transparent;
   --ev-stripe-w: 6px;
   border-radius: var(--ui-radius-sm);
-  background: var(--color-surface);
+  background: var(--color-layer-2, var(--color-surface));
 }
 .notices li.warning {
   --sev: var(--color-warning);

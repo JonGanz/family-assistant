@@ -13,6 +13,7 @@ import { startKeepAlive } from '../kiosk/keepAlive'
 import { startWatchdog, type Watchdog } from '../kiosk/watchdog'
 import { watchForUpdates } from '../lib/appUpdate'
 import { useDashboardStore } from '../stores/dashboard'
+import UiIcon from '../ui/UiIcon.vue'
 
 const store = useDashboardStore()
 const hasToken = ref(!!getDeviceToken())
@@ -168,12 +169,15 @@ const mmss = computed(
       <template #nav-end>
         <button
           v-if="fullscreenSupported"
-          class="try"
+          type="button"
+          class="navbtn"
           data-testid="fullscreen"
           :aria-pressed="fullscreen"
+          :aria-label="fullscreen ? S.exitFullscreen : S.fullscreen"
+          :title="fullscreen ? S.exitFullscreen : S.fullscreen"
           @click="toggleFullscreen"
         >
-          {{ fullscreen ? S.exitFullscreen : S.fullscreen }}
+          <UiIcon :name="fullscreen ? 'fullscreen_exit' : 'fullscreen'" :size="24" />
         </button>
         <span class="conn" :class="link" data-testid="connection" :data-status="link">
           ● {{ connLabel }}
@@ -181,7 +185,20 @@ const mmss = computed(
         <span v-if="store.showStaleBadge && updatedAt" class="stale" data-testid="stale">
           {{ S.lastUpdated(updatedAt) }}
         </span>
-        <button class="try" @click="showElevation = !showElevation">{{ S.elevate }}</button>
+        <button
+          type="button"
+          class="navbtn"
+          data-testid="unlock"
+          :aria-pressed="showElevation"
+          :aria-label="S.elevate"
+          :title="S.elevate"
+          @click="showElevation = !showElevation"
+        >
+          <UiIcon
+            :name="showElevation || store.snapshot?.elevated ? 'lock_open' : 'lock'"
+            :size="24"
+          />
+        </button>
       </template>
     </DashboardCanvas>
     <div v-else class="loading">
@@ -274,13 +291,21 @@ const mmss = computed(
   font-weight: 600;
 }
 
-.try {
-  min-height: var(--min-touch);
-  padding: var(--space-1) var(--space-2);
-  border: 2px solid var(--color-border);
-  background: var(--color-bg);
+/* Same look as the Home/Week/Food nav buttons. */
+.navbtn {
+  display: grid;
+  place-items: center;
+  width: 6rem;
+  min-height: 5rem;
+  padding-inline: var(--space-2);
+  border: 0;
+  border-radius: var(--ui-radius-xl);
+  background: var(--color-layer-2);
   color: inherit;
-  font: inherit;
   cursor: pointer;
+}
+.navbtn :deep(svg) {
+  width: 2.4rem;
+  height: 2.4rem;
 }
 </style>

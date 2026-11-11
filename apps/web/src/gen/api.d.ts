@@ -1926,6 +1926,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/status/jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Failed and retrying background jobs of the household with grouped errors, for support. */
+        get: operations["get_failed_jobs"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/status/jobs/retry": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Requeues the household's dead jobs of one kind. */
+        post: operations["retry_failed_jobs"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/stream": {
         parameters: {
             query?: never;
@@ -2968,6 +3002,39 @@ export interface components {
          * @enum {string}
          */
         ExtractOrigin: "rules" | "llm";
+        /**
+         * @description One failed (`dead`) or retrying (`queued`, already attempted) background job. Payloads are
+         *     never included; `refs` holds only id-like payload keys (for example `message_id`).
+         */
+        FailedJob: {
+            /** Format: int32 */
+            attempts: number;
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            created_at: string;
+            id: string;
+            kind: string;
+            last_error?: string | null;
+            /** Format: int32 */
+            max_attempts: number;
+            refs: {
+                [key: string]: string;
+            };
+            /**
+             * Format: date-time
+             * @description RFC 3339; next attempt for a retrying job.
+             */
+            run_at: string;
+            /** @description `dead` or `queued` (retrying). */
+            status: string;
+            /**
+             * Format: date-time
+             * @description RFC 3339; when the last failure was recorded.
+             */
+            updated_at: string;
+        };
         FavouriteReq: {
             favourite: boolean;
         };
@@ -3260,6 +3327,38 @@ export interface components {
             is_staple: boolean;
             origin: components["schemas"]["IngredientOrigin"];
         };
+        /** @description Failed or retrying jobs of one kind with the same first error line. */
+        JobErrorGroup: {
+            /** Format: int64 */
+            count: number;
+            /** @description First line of the stored error. */
+            error?: string | null;
+            kind: string;
+            /**
+             * Format: date-time
+             * @description RFC 3339; most recent failure in the group.
+             */
+            last_at: string;
+            /** @description `dead` or `queued` (retrying). */
+            status: string;
+        };
+        JobFailuresView: {
+            app_version: string;
+            /**
+             * Format: int64
+             * @description Failed (dead) jobs of this household.
+             */
+            dead: number;
+            groups: components["schemas"]["JobErrorGroup"][];
+            /** @description Newest first, capped by `limit`. */
+            jobs: components["schemas"]["FailedJob"][];
+            llm?: null | components["schemas"]["LlmProblem"];
+            /**
+             * Format: int64
+             * @description Queued jobs of this household that failed before and will be retried.
+             */
+            retrying: number;
+        };
         LabelInput: {
             decision_point: components["schemas"]["DecisionPointKey"];
             /** @description `email.member_link`: an array of member ids. */
@@ -3363,6 +3462,21 @@ export interface components {
         };
         LlmModels: {
             models: string[];
+        };
+        /** @description The AI provider's most recent failed call and recent health (last 24 hours). */
+        LlmProblem: {
+            /**
+             * Format: date-time
+             * @description RFC 3339.
+             */
+            at: string;
+            /** Format: int64 */
+            calls_24h: number;
+            error_kind?: string | null;
+            /** Format: int64 */
+            failed_24h: number;
+            model: string;
+            purpose: string;
         };
         Location: {
             label: string;
@@ -4225,6 +4339,13 @@ export interface components {
         RemoteCalendar: {
             name: string;
             remote_id: string;
+        };
+        RetryJobsBody: {
+            kind: string;
+        };
+        RetryJobsResult: {
+            /** Format: int64 */
+            requeued: number;
         };
         /** @enum {string} */
         Role: "adult" | "child";
@@ -11677,6 +11798,66 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["StatusView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    get_failed_jobs: {
+        parameters: {
+            query?: {
+                limit?: number | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobFailuresView"];
+                };
+            };
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    retry_failed_jobs: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetryJobsBody"];
+            };
+        };
+        responses: {
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetryJobsResult"];
                 };
             };
             403: {

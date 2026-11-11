@@ -1742,6 +1742,118 @@ pub async fn get_status(State(s): State<AppState>, auth: Auth) -> ApiResult<Json
     }))
 }
 
+#[derive(Deserialize, utoipa::IntoParams)]
+pub struct FailedJobsQuery {
+    pub limit: Option<u32>,
+}
+
+/// Failed and retrying background jobs of the household with grouped errors, for support.
+#[utoipa::path(get, path = "/api/v1/status/jobs", tag = "status", params(FailedJobsQuery),
+    security(("cookie" = []), ("bearer" = [])),
+    responses((status = 200, body = JobFailuresView), (status = 403, body = Problem)))]
+pub async fn get_failed_jobs(
+    State(s): State<AppState>,
+    auth: Auth,
+    axum::extract::Query(q): axum::extract::Query<FailedJobsQuery>,
+) -> ApiResult<Json<JobFailuresView>> {
+    require(
+        &auth.actor,
+        Action::ManageHouseholdSettings,
+        &Resource::Household,
+    )?;
+    let hid = household(&auth.actor)?;
+    let limit = i64::from(q.limit.unwrap_or(50).clamp(1, 200));
+    let mut sys = s.store.tx_system().await?;
+    let jobs = fa_store::JobRepo::list_problems(&mut sys, hid, limit).await?;
+    let groups = fa_store::JobRepo::problem_groups(&mut sys, hid).await?;
+    let llm = fa_store::JobRepo::llm_last_failure(&mut sys, hid).await?;
+    sys.rollback().await?;
+    let sum = |status: &str| {
+        groups
+            .iter()
+            .filter(|g| g.status == status)
+            .map(|g| g.count)
+            .sum::<i64>()
+    };
+    Ok(Json(JobFailuresView {
+        dead: sum("dead"),
+        retrying: sum("queued"),
+        groups: groups
+            .into_iter()
+            .map(|g| JobErrorGroup {
+                kind: g.kind,
+                status: g.status,
+                error: g.error.filter(|e| !e.is_empty()),
+                count: g.count,
+                last_at: g.last_at,
+            })
+            .collect(),
+        jobs: jobs
+            .into_iter()
+            .map(|j| FailedJob {
+                id: j.id.to_string(),
+                kind: j.kind,
+                status: j.status,
+                attempts: j.attempts,
+                max_attempts: j.max_attempts,
+                last_error: j.last_error,
+                created_at: j.created_at,
+                updated_at: j.updated_at,
+                run_at: j.run_at,
+                refs: j
+                    .refs
+                    .as_object()
+                    .map(|o| {
+                        o.iter()
+                            .filter_map(|(k, v)| v.as_str().map(|v| (k.clone(), v.to_owned())))
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+            })
+            .collect(),
+        llm: llm.map(|l| LlmProblem {
+            purpose: l.purpose,
+            model: l.model,
+            error_kind: l.error_kind,
+            at: l.at,
+            failed_24h: l.failed_24h,
+            calls_24h: l.calls_24h,
+        }),
+        app_version: s.cfg.build.version.clone(),
+    }))
+}
+
+/// Requeues the household's dead jobs of one kind.
+#[utoipa::path(post, path = "/api/v1/status/jobs/retry", tag = "status",
+    request_body = RetryJobsBody,
+    security(("cookie" = []), ("bearer" = [])),
+    responses((status = 200, body = RetryJobsResult), (status = 403, body = Problem)))]
+pub async fn retry_failed_jobs(
+    State(s): State<AppState>,
+    auth: Auth,
+    Json(body): Json<RetryJobsBody>,
+) -> ApiResult<Json<RetryJobsResult>> {
+    require(
+        &auth.actor,
+        Action::ManageHouseholdSettings,
+        &Resource::Household,
+    )?;
+    let hid = household(&auth.actor)?;
+    let mut tx = s.store.tx_system().await?;
+    let n = fa_store::JobRepo::requeue_dead(&mut tx, hid, &body.kind).await?;
+    audit(
+        &mut tx,
+        &auth.actor,
+        "jobs.retry",
+        "job",
+        Some(body.kind.clone()),
+        None,
+    )
+    .await?;
+    tx.commit().await?;
+    Ok(Json(RetryJobsResult { requeued: n as i64 }))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -49,7 +49,7 @@ impl Modify for Security {
         feeds::list_events, feeds::get_weather, feeds::list_advisories,
         feeds::list_rules, feeds::create_rule, feeds::patch_rule, feeds::delete_rule,
         feeds::validate_rule, feeds::get_device, feeds::patch_device, feeds::get_dashboard,
-        feeds::get_status,
+        feeds::get_status, feeds::get_failed_jobs, feeds::retry_failed_jobs,
         tasks::list_tasks, tasks::create_task, tasks::get_task, tasks::patch_task,
         tasks::delete_task, tasks::complete_task, tasks::reopen_task, tasks::skip_task,
         tasks::accept_task, tasks::claim_task, tasks::release_task, tasks::tick_task_step,

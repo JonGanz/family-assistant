@@ -129,6 +129,8 @@ describe('meals panel', () => {
       'Breakfast',
       'Dinner',
     ])
+    expect(w.findAll('[data-testid="meal-slot"]')).toHaveLength(2)
+    expect(w.text()).not.toContain('Meals today')
     expect(w.findAll('[data-testid="meal-recipe"]')).toHaveLength(1)
     await w.get('[data-testid="meal-recipe"]').trigger('click')
     await flushPromises()

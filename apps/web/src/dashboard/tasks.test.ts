@@ -129,6 +129,16 @@ describe('now panel', () => {
     expect(w.text()).toContain('Task b')
   })
 
+  it('keeps the checkbox in its own column, beside the body and the member chips', () => {
+    const d = data({ tasks: [task('a', { score: 5, assignees: ['m1'] })] })
+    const w = canvas(d, [{ kind: 'now' }])
+    const li = w.find('li')
+    // Checkbox is a direct child of the task item; chips are a sibling of the task item in the row.
+    expect(li.find('.task-item > input.check').exists()).toBe(true)
+    expect(li.find('.task-item > .body').exists()).toBe(true)
+    expect(li.find(':scope > .chips').exists()).toBe(true)
+  })
+
   it('shows + only when a list allows dashboard adding', () => {
     const none = canvas(
       data({ task_lists: [{ id: 'l1', name: 'Chores', dashboard_add: false }] }),

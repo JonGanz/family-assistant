@@ -20,7 +20,8 @@ const date = computed(() =>
   <section class="clock" aria-label="Clock">
     <div class="time" data-testid="clock">{{ time }}</div>
     <div class="date">{{ date }}</div>
-    <div class="household" data-testid="household">{{ data.household.name }}</div>
+    <!-- Keeps the card as tall as the weather card (it used to hold the household name). -->
+    <div class="spacer" aria-hidden="true">&nbsp;</div>
   </section>
 </template>
 
@@ -34,8 +35,7 @@ const date = computed(() =>
 .date {
   font-size: var(--font-size-lg);
 }
-.household {
+.spacer {
   font-size: var(--font-size-base);
-  color: var(--color-muted);
 }
 </style>

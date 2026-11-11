@@ -33,12 +33,27 @@ const emit = defineEmits<{ complete: [id: string] }>()
 .ro :deep(.title) {
   opacity: 0.7;
 }
-/* Checkbox centred on the first line of the title, also when the title wraps. */
+/* Two columns: the checkbox on its own, centred against the whole content block (title, due
+   date, member chips). The task item's wrapper is flattened so its children join this grid. */
+li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  min-height: 5rem;
+}
 :deep(.task-item) {
-  align-items: flex-start;
+  display: contents;
 }
 :deep(.check) {
-  margin-top: calc((1.25 * var(--kiosk-font-base) - 3rem) / 2);
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-self: center;
+}
+:deep(.body) {
+  grid-column: 2;
+  grid-row: 1;
 }
 :deep(.title) {
   line-height: 1.25;
@@ -49,6 +64,8 @@ const emit = defineEmits<{ complete: [id: string] }>()
   display: none;
 }
 .chips {
-  padding: 0 var(--space-4) var(--space-2) calc(var(--space-4) + 3rem + var(--space-4));
+  grid-column: 2;
+  grid-row: 2;
+  padding: var(--space-1) 0 0;
 }
 </style>

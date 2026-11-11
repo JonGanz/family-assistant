@@ -10144,6 +10144,109 @@
         ]
       }
     },
+    "/api/v1/status/jobs": {
+      "get": {
+        "tags": [
+          "status"
+        ],
+        "summary": "Failed and retrying background jobs of the household with grouped errors, for support.",
+        "operationId": "get_failed_jobs",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "format": "int32",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobFailuresView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/status/jobs/retry": {
+      "post": {
+        "tags": [
+          "status"
+        ],
+        "summary": "Requeues the household's dead jobs of one kind.",
+        "operationId": "retry_failed_jobs",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RetryJobsBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RetryJobsResult"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "cookie": []
+          },
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/stream": {
       "get": {
         "tags": [
@@ -14400,6 +14503,71 @@
           "llm"
         ]
       },
+      "FailedJob": {
+        "type": "object",
+        "description": "One failed (`dead`) or retrying (`queued`, already attempted) background job. Payloads are\nnever included; `refs` holds only id-like payload keys (for example `message_id`).",
+        "required": [
+          "id",
+          "kind",
+          "status",
+          "attempts",
+          "max_attempts",
+          "created_at",
+          "updated_at",
+          "run_at",
+          "refs"
+        ],
+        "properties": {
+          "attempts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "id": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "last_error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "max_attempts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "refs": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "type": "string"
+            }
+          },
+          "run_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339; next attempt for a retrying job."
+          },
+          "status": {
+            "type": "string",
+            "description": "`dead` or `queued` (retrying)."
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339; when the last failure was recorded."
+          }
+        }
+      },
       "FavouriteReq": {
         "type": "object",
         "required": [
@@ -15567,6 +15735,89 @@
           }
         }
       },
+      "JobErrorGroup": {
+        "type": "object",
+        "description": "Failed or retrying jobs of one kind with the same first error line.",
+        "required": [
+          "kind",
+          "status",
+          "count",
+          "last_at"
+        ],
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "First line of the stored error."
+          },
+          "kind": {
+            "type": "string"
+          },
+          "last_at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339; most recent failure in the group."
+          },
+          "status": {
+            "type": "string",
+            "description": "`dead` or `queued` (retrying)."
+          }
+        }
+      },
+      "JobFailuresView": {
+        "type": "object",
+        "required": [
+          "dead",
+          "retrying",
+          "groups",
+          "jobs",
+          "app_version"
+        ],
+        "properties": {
+          "app_version": {
+            "type": "string"
+          },
+          "dead": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Failed (dead) jobs of this household."
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobErrorGroup"
+            }
+          },
+          "jobs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FailedJob"
+            },
+            "description": "Newest first, capped by `limit`."
+          },
+          "llm": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/LlmProblem"
+              }
+            ]
+          },
+          "retrying": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Queued jobs of this household that failed before and will be retried."
+          }
+        }
+      },
       "LabelInput": {
         "type": "object",
         "required": [
@@ -15889,6 +16140,44 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "LlmProblem": {
+        "type": "object",
+        "description": "The AI provider's most recent failed call and recent health (last 24 hours).",
+        "required": [
+          "purpose",
+          "model",
+          "at",
+          "failed_24h",
+          "calls_24h"
+        ],
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "description": "RFC 3339."
+          },
+          "calls_24h": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "error_kind": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "failed_24h": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "model": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
           }
         }
       },
@@ -19327,6 +19616,29 @@
           },
           "remote_id": {
             "type": "string"
+          }
+        }
+      },
+      "RetryJobsBody": {
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string"
+          }
+        }
+      },
+      "RetryJobsResult": {
+        "type": "object",
+        "required": [
+          "requeued"
+        ],
+        "properties": {
+          "requeued": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { UiButton } from '../../ui'
 import { S } from '../strings'
 import { nowTasks, taskLocked, toTaskItem } from '../tasksModel'
 import type { PanelProps } from '../types'
@@ -21,9 +22,16 @@ const canAdd = computed(() => (props.data.task_lists ?? []).some((l) => l.dashbo
   <section class="now" aria-label="Now">
     <header>
       <h2>{{ S.panelNames['now'] }}</h2>
-      <button v-if="canAdd" type="button" class="add" :aria-label="S.addTask" @click="emit('add')">
-        +
-      </button>
+      <UiButton
+        v-if="canAdd"
+        class="add"
+        variant="filled"
+        icon="add"
+        :aria-label="S.addTask"
+        @click="emit('add')"
+      >
+        {{ S.create }}
+      </UiButton>
     </header>
     <p v-if="items.length === 0" class="none">{{ S.nothingToDo }}</p>
     <ul>
@@ -57,15 +65,14 @@ h2 {
   font-weight: 600;
 }
 .add {
-  min-width: 4rem;
   min-height: 4rem;
-  border: 0;
-  border-radius: 0;
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  font-size: 2.5rem;
-  line-height: 1;
-  cursor: pointer;
+  padding-inline: var(--space-5);
+  font-size: var(--kiosk-font-small);
+}
+.add :deep(.ui-icon),
+.add :deep(svg) {
+  width: 2rem;
+  height: 2rem;
 }
 .none {
   margin: 0;

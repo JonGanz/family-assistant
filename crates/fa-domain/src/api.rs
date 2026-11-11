@@ -443,6 +443,74 @@ pub struct StatusView {
     pub queue: QueueStatus,
 }
 
+/// One failed (`dead`) or retrying (`queued`, already attempted) background job. Payloads are
+/// never included; `refs` holds only id-like payload keys (for example `message_id`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct FailedJob {
+    pub id: String,
+    pub kind: String,
+    /// `dead` or `queued` (retrying).
+    pub status: String,
+    pub attempts: i32,
+    pub max_attempts: i32,
+    pub last_error: Option<String>,
+    /// RFC 3339.
+    pub created_at: DateTime<Utc>,
+    /// RFC 3339; when the last failure was recorded.
+    pub updated_at: DateTime<Utc>,
+    /// RFC 3339; next attempt for a retrying job.
+    pub run_at: DateTime<Utc>,
+    pub refs: std::collections::BTreeMap<String, String>,
+}
+
+/// Failed or retrying jobs of one kind with the same first error line.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct JobErrorGroup {
+    pub kind: String,
+    /// `dead` or `queued` (retrying).
+    pub status: String,
+    /// First line of the stored error.
+    pub error: Option<String>,
+    pub count: i64,
+    /// RFC 3339; most recent failure in the group.
+    pub last_at: DateTime<Utc>,
+}
+
+/// The AI provider's most recent failed call and recent health (last 24 hours).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct LlmProblem {
+    pub purpose: String,
+    pub model: String,
+    pub error_kind: Option<String>,
+    /// RFC 3339.
+    pub at: DateTime<Utc>,
+    pub failed_24h: i64,
+    pub calls_24h: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, ToSchema)]
+pub struct JobFailuresView {
+    /// Failed (dead) jobs of this household.
+    pub dead: i64,
+    /// Queued jobs of this household that failed before and will be retried.
+    pub retrying: i64,
+    pub groups: Vec<JobErrorGroup>,
+    /// Newest first, capped by `limit`.
+    pub jobs: Vec<FailedJob>,
+    pub llm: Option<LlmProblem>,
+    pub app_version: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct RetryJobsBody {
+    pub kind: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+pub struct RetryJobsResult {
+    pub requeued: i64,
+}
+
 /// Mask a feed URL for display: `https://host/…` (userinfo, path and query dropped).
 pub fn mask_url(url: &str) -> String {
     let Some((scheme, rest)) = url.split_once("://") else {

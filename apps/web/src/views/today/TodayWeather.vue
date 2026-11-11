@@ -68,13 +68,13 @@ const title = computed(() => (props.mode === 'today' ? 'Today’s weather' : 'To
         </div>
       </div>
     </template>
-    <ol v-else class="rows" aria-label="Forecast">
+    <ol v-else class="strip" aria-label="Forecast">
       <li v-for="d in rest" :key="d.date" data-testid="forecast-day">
-        <span class="name">{{ dayName(d.date) }}</span>
+        <span class="muted">{{ dayName(d.date) }}</span>
         <WeatherIcon :code="d.code" />
         <span>{{ temp(d.hi) }}</span>
         <span class="muted">{{ temp(d.lo) }}</span>
-        <span class="muted">{{ d.rain !== undefined ? `${Math.round(d.rain)}%` : '' }}</span>
+        <span v-if="d.rain !== undefined" class="muted">{{ Math.round(d.rain) }}%</span>
       </li>
     </ol>
   </UiCard>
@@ -112,7 +112,25 @@ const title = computed(() => (props.mode === 'today' ? 'Today’s weather' : 'To
   font: var(--ui-type-body-md);
   margin: 0;
 }
-.rows,
+.strip {
+  display: flex;
+  gap: var(--ui-space-2);
+  list-style: none;
+  padding: 0 0 var(--ui-space-1);
+  margin: 0;
+  overflow-x: auto;
+}
+.strip li {
+  display: grid;
+  justify-items: center;
+  gap: var(--ui-space-1);
+  min-width: 4.5rem;
+  padding: var(--ui-space-2);
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-surface-container-high);
+  --ui-on-surface-variant: var(--ui-on-surface-variant-high);
+  font: var(--ui-type-body-md);
+}
 .hours {
   list-style: none;
   margin: 0;
@@ -120,7 +138,6 @@ const title = computed(() => (props.mode === 'today' ? 'Today’s weather' : 'To
   display: grid;
   gap: var(--ui-space-1);
 }
-.rows li,
 .hours li {
   display: grid;
   grid-template-columns: 4.5rem 2rem 3.5rem 3.5rem 3rem;

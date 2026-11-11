@@ -1,5 +1,8 @@
 // The only place icons are imported (R-005, D-095). Views use names from this map, never `~icons/...`.
 // Style: Material Symbols Rounded, weight 400. The SVGs use fill=currentColor.
+import I_fullscreen from '~icons/material-symbols/fullscreen-rounded'
+import I_fullscreen_exit from '~icons/material-symbols/fullscreen-exit-rounded'
+import I_lock_open from '~icons/material-symbols/lock-open-rounded'
 import I_home from '~icons/material-symbols/home-rounded'
 import I_today from '~icons/material-symbols/today-rounded'
 import I_calendar from '~icons/material-symbols/calendar-month-rounded'
@@ -74,6 +77,9 @@ import I_settings_outline from '~icons/material-symbols/settings-outline-rounded
 import I_more_outline from '~icons/material-symbols/more-horiz-outline-rounded'
 
 export const icons = {
+  fullscreen: I_fullscreen,
+  fullscreen_exit: I_fullscreen_exit,
+  lock_open: I_lock_open,
   home: I_home,
   today: I_today,
   calendar: I_calendar,

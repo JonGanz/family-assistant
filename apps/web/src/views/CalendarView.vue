@@ -215,18 +215,19 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
       <UiTopAppBar title="Calendar" />
     </template>
 
+    <UiTabs
+      :model-value="view"
+      :options="VIEWS"
+      label="View"
+      @update:model-value="setView($event as View)"
+    />
+
     <div class="controls">
       <DateRangeNav
         :label="label"
         @prev="anchor = shiftAnchor(navMode, anchor, -1)"
         @next="anchor = shiftAnchor(navMode, anchor, 1)"
         @today="anchor = dayKey(new Date(), tz)"
-      />
-      <UiTabs
-        :model-value="view"
-        :options="VIEWS"
-        label="View"
-        @update:model-value="setView($event as View)"
       />
       <UiFilterChips v-model="chosen" :options="memberOptions" label="Member" />
     </div>

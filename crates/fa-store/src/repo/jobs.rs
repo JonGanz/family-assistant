@@ -231,6 +231,117 @@ impl JobRepo {
     }
 }
 
+/// A failed or retrying job for the status page (no payload content beyond id-like keys).
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct ProblemJob {
+    pub id: Uuid,
+    pub kind: String,
+    pub status: String,
+    pub attempts: i32,
+    pub max_attempts: i32,
+    pub last_error: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+    pub run_at: DateTime<Utc>,
+    /// Only string/number values of keys ending in `id`, as text.
+    pub refs: serde_json::Value,
+}
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct ProblemGroup {
+    pub kind: String,
+    pub status: String,
+    pub error: Option<String>,
+    pub count: i64,
+    pub last_at: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, sqlx::FromRow)]
+pub struct LlmLastFailure {
+    pub purpose: String,
+    pub model: String,
+    pub error_kind: Option<String>,
+    pub at: DateTime<Utc>,
+    pub failed_24h: i64,
+    pub calls_24h: i64,
+}
+
+const PROBLEM: &str = "household_id = $1 AND (status = 'dead' OR (status = 'queued' AND attempts > 0 AND last_error IS NOT NULL))";
+
+impl JobRepo {
+    /// Recent dead jobs and retrying queued jobs (with an error) of a household, newest first.
+    pub async fn list_problems(
+        conn: &mut PgConnection,
+        household: HouseholdId,
+        limit: i64,
+    ) -> Result<Vec<ProblemJob>> {
+        Ok(sqlx::query_as::<_, ProblemJob>(&format!(
+            "SELECT id, kind, status, attempts, max_attempts, last_error, created_at, updated_at, run_at,
+                    COALESCE((SELECT jsonb_object_agg(e.key, e.value #>> '{{}}')
+                              FROM jsonb_each(CASE WHEN jsonb_typeof(payload) = 'object' THEN payload ELSE '{{}}'::jsonb END) e
+                              WHERE e.key ~* 'id$' AND jsonb_typeof(e.value) IN ('string', 'number')
+                                AND length(e.value #>> '{{}}') <= 80), '{{}}'::jsonb) AS refs
+             FROM job WHERE {PROBLEM} ORDER BY updated_at DESC LIMIT $2"
+        ))
+        .bind(household.as_uuid())
+        .bind(limit)
+        .fetch_all(conn)
+        .await?)
+    }
+
+    /// Problem jobs grouped by kind, status and the first line of the error.
+    pub async fn problem_groups(
+        conn: &mut PgConnection,
+        household: HouseholdId,
+    ) -> Result<Vec<ProblemGroup>> {
+        Ok(sqlx::query_as::<_, ProblemGroup>(&format!(
+            "SELECT kind, status, split_part(last_error, E'\n', 1) AS error,
+                    count(*) AS count, max(updated_at) AS last_at
+             FROM job WHERE {PROBLEM}
+             GROUP BY kind, status, split_part(last_error, E'\n', 1)
+             ORDER BY count(*) DESC, max(updated_at) DESC"
+        ))
+        .bind(household.as_uuid())
+        .fetch_all(conn)
+        .await?)
+    }
+
+    /// Requeues a household's dead jobs of `kind` (fresh attempts, runnable now).
+    pub async fn requeue_dead(
+        conn: &mut PgConnection,
+        household: HouseholdId,
+        kind: &str,
+    ) -> Result<u64> {
+        Ok(sqlx::query(
+            "UPDATE job SET status = 'queued', attempts = 0, run_at = now(), locked_by = NULL, locked_until = NULL
+             WHERE household_id = $1 AND kind = $2 AND status = 'dead'",
+        )
+        .bind(household.as_uuid())
+        .bind(kind)
+        .execute(conn)
+        .await?
+        .rows_affected())
+    }
+
+    /// The latest failed AI call of a household with 24 h call and failure counts.
+    pub async fn llm_last_failure(
+        conn: &mut PgConnection,
+        household: HouseholdId,
+    ) -> Result<Option<LlmLastFailure>> {
+        Ok(sqlx::query_as::<_, LlmLastFailure>(
+            "SELECT purpose, model, error_kind, started_at AS at,
+                    (SELECT count(*) FROM llm_call WHERE household_id = $1 AND NOT ok
+                       AND started_at > now() - interval '24 hours') AS failed_24h,
+                    (SELECT count(*) FROM llm_call WHERE household_id = $1
+                       AND started_at > now() - interval '24 hours') AS calls_24h
+             FROM llm_call WHERE household_id = $1 AND NOT ok ORDER BY started_at DESC LIMIT 1",
+        )
+        .bind(household.as_uuid())
+        .fetch_optional(conn)
+        .await?)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Schedule {
     pub id: Uuid,

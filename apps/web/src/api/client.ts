@@ -29,6 +29,9 @@ export type NewWeatherRule = S['NewWeatherRule']
 export type WeatherRulePatch = S['WeatherRulePatch']
 export type ValidateRuleResponse = S['ValidateRuleResponse']
 export type StatusView = S['StatusView']
+export type JobFailuresView = S['JobFailuresView']
+export type FailedJob = S['FailedJob']
+export type JobErrorGroup = S['JobErrorGroup']
 export type DashboardView = S['DashboardView']
 export type DeviceView = S['DeviceView']
 export type DevicePatch = S['DevicePatch']
@@ -290,6 +293,13 @@ export const api = {
     }),
 
   status: () => request<StatusView>('/api/v1/status', U),
+  failedJobs: () => request<JobFailuresView>('/api/v1/status/jobs?limit=100', U),
+  retryJobs: (kind: string) =>
+    request<S['RetryJobsResult']>('/api/v1/status/jobs/retry', {
+      method: 'POST',
+      body: { kind },
+      ...U,
+    }),
 
   tasks: fetchTasks,
   /** Every page of a (calendar-range) query: such views need all the rows, not the first page. */

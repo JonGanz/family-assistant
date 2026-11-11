@@ -17,10 +17,9 @@ const open = ref<{ id: string; title: string } | null>(null)
 
 <template>
   <section class="meals" :aria-label="S.mealsToday" data-testid="panel-meals">
-    <h2>{{ S.mealsToday }}</h2>
-    <p v-if="groups.length === 0" class="none">{{ S.noMeals }}</p>
+    <p v-if="groups.length === 0" class="none card">{{ S.noMeals }}</p>
     <div v-else class="slots">
-      <section v-for="g in groups" :key="g.slot_name" class="slot" data-testid="meal-slot">
+      <section v-for="g in groups" :key="g.slot_name" class="slot card" data-testid="meal-slot">
         <h3 data-testid="meal-slot-title">{{ g.slot_name }}</h3>
         <ul>
           <li v-for="(m, i) in g.meals" :key="i" data-testid="meal-row">
@@ -44,22 +43,35 @@ const open = ref<{ id: string; title: string } | null>(null)
   </section>
 </template>
 
+<style>
+/* The canvas wraps each Home panel in one card; the meals panel draws one card per slot instead. */
+.main.split .cell.k-meals {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+</style>
+
 <style scoped>
-h2 {
-  margin: 0 0 var(--space-2);
-  font-size: var(--font-size-lg);
+.card {
+  box-sizing: border-box;
+  margin: 0;
+  padding: var(--space-4) var(--space-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--ui-radius-md);
+  background: var(--color-layer-1, var(--color-surface));
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--color-text) 14%, transparent);
 }
 h3 {
-  margin: 0 0 var(--space-1);
-  font-size: var(--font-size-base);
+  margin: 0 0 var(--space-2);
+  font-size: var(--font-size-lg);
   font-weight: 700;
-  color: var(--color-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
 }
 .slots {
   display: grid;
-  gap: var(--space-3);
+  gap: var(--home-gap, var(--space-5));
 }
 ul {
   list-style: none;

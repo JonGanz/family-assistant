@@ -472,6 +472,8 @@ pub fn router(state: AppState) -> Router {
         .route("/grocery/reconcile", post(meals::reconcile_grocery))
         .route("/dashboard", get(feeds::get_dashboard))
         .route("/status", get(feeds::get_status))
+        .route("/status/jobs", get(feeds::get_failed_jobs))
+        .route("/status/jobs/retry", post(feeds::retry_failed_jobs))
         .route("/devices/elevate", post(routes::elevate))
         .route("/device/elevate", post(routes::elevate_deprecated))
         .route("/sessions", get(routes::list_sessions))
