@@ -14,7 +14,7 @@ const props = defineProps<{
   weather: WeatherView
   tz: string
   units: UnitSystem
-  /** `today`: current conditions, tap for the hours. `tomorrow`: the remaining days. */
+  /** `today`: current conditions, tap for the hours. `tomorrow`: the remaining days (no dialog). */
   mode: 'today' | 'tomorrow'
 }>()
 const u = useUnits(computed(() => props.units))
@@ -27,11 +27,12 @@ const code = computed(() => num(cur.value.weather_code) ?? 0)
 const isNight = computed(() => num(cur.value.is_day) === 0)
 const days = computed(() => dailyRows(props.weather.daily))
 const day = computed(() => days.value.find((d) => d.date === today.value))
-const nextDay = computed(() => days.value.find((d) => d.date === tomorrow.value))
 const rest = computed(() => days.value.filter((d) => d.date >= tomorrow.value))
-const hours = computed(() =>
-  hoursOf(props.weather.hourly, props.mode === 'today' ? today.value : tomorrow.value),
-)
+const hours = computed(() => hoursOf(props.weather.hourly, today.value))
+/** Only today's card opens the hours; tomorrow's card already shows the daily forecast. */
+const show = () => {
+  if (props.mode === 'today') open.value = true
+}
 const temp = (v: number | undefined) => (v === undefined ? '–' : u.format(v, 'temp'))
 const label = (c: number, night = false) => weatherInfo(c, night).label
 const dayName = (d: string) => formatDayHeading(d, props.tz, today.value).split(',')[0]!
@@ -42,13 +43,14 @@ const title = computed(() => (props.mode === 'today' ? 'Today’s weather' : 'To
   <UiCard
     variant="filled"
     class="weather"
-    role="button"
-    tabindex="0"
-    :aria-label="`${title}: show details`"
+    :class="{ tappable: mode === 'today' }"
+    :role="mode === 'today' ? 'button' : undefined"
+    :tabindex="mode === 'today' ? 0 : undefined"
+    :aria-label="mode === 'today' ? `${title}: show the hours` : title"
     data-testid="today-weather"
-    @click="open = true"
-    @keydown.enter="open = true"
-    @keydown.space.prevent="open = true"
+    @click="show"
+    @keydown.enter="show"
+    @keydown.space.prevent="show"
   >
     <template v-if="mode === 'today'">
       <div class="now">
@@ -79,24 +81,21 @@ const title = computed(() => (props.mode === 'today' ? 'Today’s weather' : 'To
     </ol>
   </UiCard>
 
-  <UiDialog v-model="open" :title="title">
-    <p v-if="mode === 'tomorrow' && nextDay" class="muted">
-      {{ label(nextDay.code) }} · High {{ temp(nextDay.hi) }} · Low {{ temp(nextDay.lo) }}
-    </p>
+  <UiDialog v-if="mode === 'today'" v-model="open" :title="title">
     <p v-if="!hours.length" class="muted">No hourly data.</p>
-    <ol v-else class="hours" aria-label="Hourly">
+    <ol v-else class="strip" aria-label="Hourly">
       <li v-for="h in hours" :key="h.time" data-testid="hour-row">
-        <span class="name">{{ h.time }}</span>
+        <span class="muted">{{ h.time }}</span>
         <WeatherIcon :code="h.code" />
         <span>{{ temp(h.temp) }}</span>
-        <span class="muted">{{ h.rain !== undefined ? `${Math.round(h.rain)}%` : '' }}</span>
+        <span v-if="h.rain !== undefined" class="muted">{{ Math.round(h.rain) }}%</span>
       </li>
     </ol>
   </UiDialog>
 </template>
 
 <style scoped>
-.weather {
+.tappable {
   cursor: pointer;
 }
 .now {
@@ -130,22 +129,5 @@ const title = computed(() => (props.mode === 'today' ? 'Today’s weather' : 'To
   background: var(--ui-surface-container-high);
   --ui-on-surface-variant: var(--ui-on-surface-variant-high);
   font: var(--ui-type-body-md);
-}
-.hours {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: var(--ui-space-1);
-}
-.hours li {
-  display: grid;
-  grid-template-columns: 4.5rem 2rem 3.5rem 3.5rem 3rem;
-  align-items: center;
-  gap: var(--ui-space-2);
-  font: var(--ui-type-body-md);
-}
-.name {
-  color: var(--ui-on-surface);
 }
 </style>

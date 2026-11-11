@@ -152,9 +152,13 @@ describe('TodayWeather', () => {
       attachTo: document.body,
     })
 
-  it('lists the remaining days for tomorrow', () => {
+  it('lists the remaining days for tomorrow and opens no dialog', async () => {
     const w = mountIt('tomorrow')
     expect(w.findAll('[data-testid=forecast-day]')).toHaveLength(2)
+    const card = w.get('[data-testid=today-weather]')
+    expect(card.attributes('role')).toBeUndefined()
+    await card.trigger('click')
+    expect(document.body.querySelectorAll('[role=dialog]')).toHaveLength(0)
     w.unmount()
   })
 
@@ -163,6 +167,9 @@ describe('TodayWeather', () => {
     expect(document.body.querySelectorAll('[data-testid=hour-row]')).toHaveLength(0)
     await w.get('[data-testid=today-weather]').trigger('click')
     expect(document.body.querySelectorAll('[data-testid=hour-row]')).toHaveLength(1)
+    expect(document.body.querySelector('ol[aria-label=Hourly]')?.classList.contains('strip')).toBe(
+      true,
+    )
     w.unmount()
   })
 })
