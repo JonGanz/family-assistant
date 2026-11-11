@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { api } from '../api/client'
 import { ApiError } from '../api/http'
 import PinPad from '../components/PinPad.vue'
@@ -72,6 +72,9 @@ onMounted(() => {
   // The page itself must not scroll: a drag that scrolls it brings the browser bar back.
   document.documentElement.classList.add('kiosk-lock')
   document.addEventListener('fullscreenchange', syncFullscreen)
+  document.addEventListener('pointerdown', onDocDown)
+  document.addEventListener('keydown', onKey)
+  window.addEventListener('resize', place)
   if (!hasToken.value) return
   stopKeepAlive = startKeepAlive()
   watchdog = startWatchdog()
@@ -89,6 +92,9 @@ onMounted(() => {
 onUnmounted(() => {
   document.documentElement.classList.remove('kiosk-lock')
   document.removeEventListener('fullscreenchange', syncFullscreen)
+  document.removeEventListener('pointerdown', onDocDown)
+  document.removeEventListener('keydown', onKey)
+  window.removeEventListener('resize', place)
   clearInterval(remainingTimer)
   stopKeepAlive?.()
   watchdog?.stop()
@@ -103,6 +109,53 @@ const elevMsg = ref('')
 const expiresAt = ref<number | null>(null)
 const remaining = ref(0)
 let remainingTimer: ReturnType<typeof setInterval> | undefined
+
+const elevated = computed(() => !!store.snapshot?.elevated)
+const lockBtn = ref<HTMLElement | null>(null)
+const popover = ref<HTMLElement | null>(null)
+const popStyle = ref<Record<string, string>>({})
+
+/** Anchor the popover under the lock button, right-aligned and kept inside the viewport. */
+function place(): void {
+  const b = lockBtn.value?.getBoundingClientRect()
+  if (!b) return
+  const gap = 8
+  const w = popover.value?.offsetWidth ?? 0
+  const h = popover.value?.offsetHeight ?? 0
+  const vw = window.innerWidth
+  const vh = window.innerHeight
+  let left = Math.min(Math.max(gap, b.right - w), Math.max(gap, vw - w - gap))
+  let top = b.bottom + gap
+  if (top + h > vh - gap) top = Math.max(gap, b.top - gap - h)
+  popStyle.value = { left: `${left}px`, top: `${top}px`, maxHeight: `${vh - 2 * gap}px` }
+}
+function openPopover(): void {
+  showElevation.value = true
+  popStyle.value = { right: '8px', top: '8px' }
+  void nextTick(place)
+}
+function stopElevation(): void {
+  clearInterval(remainingTimer)
+  expiresAt.value = null
+  remaining.value = 0
+  store.elevatedUntil = null
+  showElevation.value = false
+  pickedId.value = null
+}
+function onLock(): void {
+  if (elevated.value) stopElevation()
+  else if (showElevation.value) showElevation.value = false
+  else openPopover()
+}
+function onDocDown(e: Event): void {
+  if (!showElevation.value) return
+  const t = e.target as Node
+  if (popover.value?.contains(t) || lockBtn.value?.contains(t)) return
+  showElevation.value = false
+}
+function onKey(e: KeyboardEvent): void {
+  if (e.key === 'Escape' && showElevation.value) showElevation.value = false
+}
 
 const adults = computed(() => store.members.filter((m) => m.role === 'adult'))
 
@@ -167,6 +220,19 @@ const mmss = computed(
       @add="flow?.beginAdd()"
     >
       <template #nav-end>
+        <!-- Far right (portrait) reads: lock, fullscreen, connection. -->
+        <span
+          v-if="link !== 'open'"
+          class="conn"
+          :class="link"
+          data-testid="connection"
+          :data-status="link"
+        >
+          ● {{ connLabel }}
+        </span>
+        <span v-if="store.showStaleBadge && updatedAt" class="stale" data-testid="stale">
+          {{ S.lastUpdated(updatedAt) }}
+        </span>
         <button
           v-if="fullscreenSupported"
           type="button"
@@ -179,25 +245,18 @@ const mmss = computed(
         >
           <UiIcon :name="fullscreen ? 'fullscreen_exit' : 'fullscreen'" :size="24" />
         </button>
-        <span class="conn" :class="link" data-testid="connection" :data-status="link">
-          ● {{ connLabel }}
-        </span>
-        <span v-if="store.showStaleBadge && updatedAt" class="stale" data-testid="stale">
-          {{ S.lastUpdated(updatedAt) }}
-        </span>
         <button
+          ref="lockBtn"
           type="button"
           class="navbtn"
           data-testid="unlock"
-          :aria-pressed="showElevation"
-          :aria-label="S.elevate"
-          :title="S.elevate"
-          @click="showElevation = !showElevation"
+          :aria-pressed="elevated"
+          :aria-expanded="showElevation"
+          :aria-label="elevated ? S.lock : S.elevate"
+          :title="elevated ? S.lock : S.elevate"
+          @click="onLock"
         >
-          <UiIcon
-            :name="showElevation || store.snapshot?.elevated ? 'lock_open' : 'lock'"
-            :size="24"
-          />
+          <UiIcon :name="elevated ? 'lock_open' : 'lock'" :size="24" />
         </button>
       </template>
     </DashboardCanvas>
@@ -213,13 +272,31 @@ const mmss = computed(
       :tz="store.snapshot?.household.tz"
     />
 
-    <div v-if="showElevation" class="elevation" role="dialog" aria-label="Elevation">
+    <div
+      v-if="showElevation"
+      ref="popover"
+      class="elevation popover"
+      role="dialog"
+      aria-label="Elevation"
+      data-testid="elevation"
+      :style="popStyle"
+    >
+      <button
+        type="button"
+        class="close"
+        data-testid="elevation-close"
+        :aria-label="S.close"
+        @click="showElevation = false"
+      >
+        <UiIcon name="close" :size="24" />
+      </button>
       <div v-if="expiresAt && remaining > 0" data-testid="elevated">{{ S.elevated(mmss) }}</div>
       <template v-else>
         <div class="pick">
           <button
             v-for="m in adults"
             :key="m.id"
+            type="button"
             :class="{ on: pickedId === m.id }"
             @click="pickedId = m.id"
           >
@@ -229,7 +306,6 @@ const mmss = computed(
         <PinPad v-if="pickedId" @submit="submitPin" />
         <p v-if="elevMsg" role="alert">{{ elevMsg }}</p>
       </template>
-      <button class="close" @click="showElevation = false">✕</button>
     </div>
   </section>
 </template>
@@ -252,24 +328,50 @@ const mmss = computed(
   color: var(--color-muted);
 }
 .elevation {
-  position: absolute;
-  inset: auto 2rem 4rem auto;
-  z-index: 5;
+  position: fixed;
+  z-index: 20;
+  max-width: calc(100vw - 16px);
+  overflow-y: auto;
   padding: var(--space-4);
-  border-radius: var(--radius-lg);
-  background: var(--color-surface);
+  border-radius: var(--ui-radius-xl);
+  background: var(--color-layer-2);
+  color: var(--color-text);
   box-shadow: 0 8px 32px rgb(0 0 0 / 35%);
-  font-size: var(--font-size-lg);
+  font-size: var(--kiosk-font-base);
+}
+.elevation .pick {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0 var(--min-touch) var(--space-3) 0;
+}
+.pick button {
+  min-height: var(--min-touch);
+  padding: 0 var(--space-4);
+  border: 0;
+  border-radius: var(--ui-radius-full);
+  background: var(--color-layer-3);
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
 }
 .pick button.on {
   outline: 3px solid var(--color-accent);
 }
 .close {
   position: absolute;
-  top: 0;
-  right: 0;
+  top: var(--space-2);
+  right: var(--space-2);
+  display: grid;
+  place-items: center;
   min-width: var(--min-touch);
   min-height: var(--min-touch);
+  padding: 0;
+  border: 0;
+  border-radius: var(--ui-radius-full);
+  background: var(--color-layer-3);
+  color: inherit;
+  cursor: pointer;
 }
 .conn.open {
   color: var(--color-success);

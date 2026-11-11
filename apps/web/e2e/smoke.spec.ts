@@ -41,6 +41,7 @@ test('login, members, pair a device, dashboard shows it is connected', async ({
   const screen = await kiosk.newPage()
   await screen.goto(pairUrl!)
   await expect(screen.getByTestId('clock')).not.toBeEmpty()
-  await expect(screen.getByTestId('connection')).toHaveAttribute('data-status', 'open')
+  // Healthy shows nothing: the status indicator only appears when not connected.
+  await expect(screen.getByTestId('connection')).toHaveCount(0)
   await kiosk.close()
 })

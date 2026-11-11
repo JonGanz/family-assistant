@@ -132,7 +132,7 @@ defineExpose({ beginComplete, beginAdd })
       </form>
     </div>
 
-    <div v-if="undo" class="toast">
+    <div v-if="undo" class="undo-dock">
       <UndoToast
         :key="undo.id"
         :message="S.completedToast(undo.title)"
@@ -153,15 +153,22 @@ defineExpose({ beginComplete, beginAdd })
   place-items: center;
   background: rgb(0 0 0 / 55%);
 }
-.toast {
+/* A full-width dock; the toast inside sizes itself. (This was `.toast`, and scoped CSS also hit
+   UndoToast's own root `.toast`: it became absolute inside a zero-width box, two characters wide.) */
+.undo-dock {
   position: absolute;
-  left: 50%;
+  left: 0;
+  right: 0;
   bottom: 3.5rem;
   z-index: 11;
-  transform: translateX(-50%);
-  width: max-content;
-  max-width: 90%;
+  display: flex;
+  justify-content: center;
+  padding: 0 var(--space-4);
+  pointer-events: none;
   font-size: var(--kiosk-font-small);
+}
+.undo-dock > :deep(.toast) {
+  pointer-events: auto;
 }
 .form {
   display: grid;

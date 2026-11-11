@@ -29,14 +29,21 @@ onBeforeUnmount(() => clearInterval(timer))
 
 <style scoped>
 .toast {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: var(--space-3);
+  width: min(36rem, calc(100vw - 2 * var(--space-4)));
+  box-sizing: border-box;
   padding: var(--space-2) var(--space-4);
   background: var(--color-text);
   color: var(--color-bg);
-  border-radius: var(--radius-md);
-  box-shadow: 0 4px 16px rgb(0 0 0 / 0.25);
+  border-radius: var(--ui-radius-lg);
+  box-shadow: 0 8px 32px rgb(0 0 0 / 35%);
+}
+.msg {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 .left {
   font-variant-numeric: tabular-nums;
