@@ -1,6 +1,6 @@
 ---
 title: Log Index
-updated: 2026-11-10
+updated: 2026-11-11
 ---
 
 # Daily Logs
@@ -22,3 +22,4 @@ updated: 2026-11-10
 - [2026-11-08](2026-11-08.md): decisions; M5; meals; arch
 - [2026-11-09](2026-11-09.md): ai; llm; release
 - [2026-11-10](2026-11-10.md): dashboard; v0.1.20
+- [2026-11-11](2026-11-11.md): dashboard
