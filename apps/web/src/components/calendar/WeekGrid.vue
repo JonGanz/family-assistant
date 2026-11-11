@@ -13,7 +13,13 @@ const props = defineProps<{
   start: string
   tz: string
 }>()
-defineEmits<{ select: [event: EventLike] }>()
+const emit = defineEmits<{
+  select: [event: EventLike]
+  /** "+N events" was clicked: that day's events in that cell's column. */
+  more: [v: { day: string; events: EventLike[] }]
+}>()
+/** Events shown per cell; any further ones collapse into one "+N events" item. */
+const MAX_VISIBLE = 2
 
 const grid = computed(() =>
   buildWeekGrid({
@@ -52,7 +58,7 @@ const title = (e: EventLike) => (e.visibility === 'busy' ? 'Busy' : (e.title ?? 
           </th>
           <td v-for="c in r.cells" :key="c.key" role="cell" :data-member="c.key">
             <ul v-if="c.events.length" :aria-label="`${c.name}, ${r.weekday} ${r.dom}`">
-              <li v-for="e in c.events" :key="e.id">
+              <li v-for="e in c.events.slice(0, MAX_VISIBLE)" :key="e.id">
                 <button
                   type="button"
                   class="ev"
@@ -60,8 +66,17 @@ const title = (e: EventLike) => (e.visibility === 'busy' ? 'Busy' : (e.title ?? 
                   :style="stripeStyle(e)"
                   @click="$emit('select', e)"
                 >
-                  <span class="time">{{ formatRange(e, tz) }}</span>
                   <span class="title">{{ title(e) }}</span>
+                  <span class="time">{{ formatRange(e, tz) }}</span>
+                </button>
+              </li>
+              <li v-if="c.events.length > MAX_VISIBLE">
+                <button
+                  type="button"
+                  class="more"
+                  @click="emit('more', { day: r.key, events: c.events })"
+                >
+                  +{{ c.events.length - MAX_VISIBLE }} events
                 </button>
               </li>
             </ul>
@@ -85,6 +100,11 @@ const title = (e: EventLike) => (e.visibility === 'busy' ? 'Busy' : (e.title ?? 
   border-collapse: collapse;
   table-layout: fixed;
   font: var(--ui-type-body-md);
+  /* Every day row has this exact height: 2 two-line items, a "+N events" line and the gaps. */
+  --wg-row-h: 9.75rem;
+}
+tbody tr {
+  height: var(--wg-row-h);
 }
 th,
 td {
@@ -93,6 +113,10 @@ td {
   vertical-align: top;
   text-align: left;
   min-width: 0;
+}
+tbody td {
+  height: var(--wg-row-h);
+  overflow: hidden;
 }
 thead th {
   background: var(--ui-surface-container-low);
@@ -134,6 +158,7 @@ ul {
   --ev-stripe-w: 4px;
   display: grid;
   width: 100%;
+  min-width: 0;
   text-align: left;
   font: var(--ui-type-body-sm);
   color: var(--ui-on-surface);
@@ -155,8 +180,26 @@ ul {
   color: var(--ui-on-surface-variant);
 }
 .title {
-  font-weight: 600;
-  overflow-wrap: anywhere;
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.time {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.more {
+  background: none;
+  border: 0;
+  padding: 0 var(--ui-space-2);
+  cursor: pointer;
+  color: var(--ui-on-surface-variant);
+  font: var(--ui-type-body-sm);
+}
+.more:focus-visible {
+  outline: var(--ui-focus-ring);
 }
 .ev.busy {
   --ev-bg: repeating-linear-gradient(

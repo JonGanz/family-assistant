@@ -79,7 +79,32 @@ describe('CalendarView month overflow', () => {
     expect(document.body.querySelector('.day-list')).toBeNull()
     expect(document.body.querySelector('a.map-link')).not.toBeNull()
     const back = [...document.body.querySelectorAll('button')].find((b) =>
-      b.textContent?.includes('Back to day'),
+      b.textContent?.includes('Back to'),
+    ) as HTMLElement
+    back.click()
+    await flushPromises()
+    expect(document.body.querySelector('.day-list')).not.toBeNull()
+    w.unmount()
+  })
+})
+
+describe('CalendarView week overflow', () => {
+  it('"+N events" opens the day list, drills into an event and back', async () => {
+    localStorage.setItem('fa.calendar.view', 'week')
+    const w = mount(CalendarView, { attachTo: document.body, global: { stubs: { UiPage: false } } })
+    await flushPromises()
+    const more = w.find('button.more')
+    expect(more.text()).toBe('+3 events')
+    await more.trigger('click')
+    expect(document.body.querySelector('.day-list')).not.toBeNull()
+    const card = [...document.body.querySelectorAll('.day-list [role=button]')].find((c) =>
+      c.textContent?.includes('Event 5'),
+    ) as HTMLElement
+    card.click()
+    await flushPromises()
+    expect(document.body.querySelector('.day-list')).toBeNull()
+    const back = [...document.body.querySelectorAll('button')].find((b) =>
+      b.textContent?.includes('Back to'),
     ) as HTMLElement
     back.click()
     await flushPromises()

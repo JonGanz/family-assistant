@@ -2,7 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import type { EventView } from '../api/client'
 import DateRangeNav from '../components/DateRangeNav.vue'
-import EventCard from '../components/EventCard.vue'
+import DayListSheet, { type DayOpen } from '../components/calendar/DayListSheet.vue'
 import AgendaScroller from '../components/calendar/AgendaScroller.vue'
 import WeekGrid from '../components/calendar/WeekGrid.vue'
 import { rangeFor, shiftAnchor } from '../composables/useRange'
@@ -16,12 +16,10 @@ import { useMembersStore } from '../stores/members'
 import { chipsByDay, memberRefs, type TaskChip } from '../stores/taskMap'
 import { useTasksStore } from '../stores/tasks'
 import {
-  UiButton,
   UiCheckbox,
   UiFilterChips,
   UiErrorState,
   UiPage,
-  UiSheet,
   UiSkeleton,
   UiTabs,
   UiTopAppBar,
@@ -65,21 +63,7 @@ const anchor = ref(dayKey(new Date(), household.tz))
 const chosen = ref<string[]>([])
 const detail = ref<EventLike | null>(null)
 /** The day whose full list is open ("+N more"); an event opened from it can go back to it. */
-const dayOpen = ref<string | null>(null)
-const detailOpen = computed({
-  get: () => detail.value !== null || dayOpen.value !== null,
-  set: (v) => {
-    if (!v) {
-      detail.value = null
-      dayOpen.value = null
-    }
-  },
-})
-const dayEvents = computed(() => (dayOpen.value ? (byDay.value.get(dayOpen.value) ?? []) : []))
-const sheetTitle = computed(() => {
-  if (detail.value) return detail.value.visibility === 'busy' ? 'Busy' : (detail.value.title ?? '')
-  return dayOpen.value ? formatDayHeading(dayOpen.value, tz.value, today.value) : ''
-})
+const dayOpen = ref<DayOpen | null>(null)
 
 const VIEWS = [
   { value: 'agenda', label: 'Agenda' },
@@ -262,6 +246,7 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
         :start="grid.from"
         :tz="tz"
         @select="detail = $event"
+        @more="dayOpen = $event"
       />
     </template>
 
@@ -288,7 +273,7 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
               </button>
             </li>
             <li v-if="list.length > 3">
-              <button type="button" class="more" @click="dayOpen = k">
+              <button type="button" class="more" @click="dayOpen = { day: k, events: list }">
                 +{{ list.length - 3 }} more
               </button>
             </li>
@@ -304,25 +289,13 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
       </div>
     </div>
 
-    <UiSheet v-model="detailOpen" :title="sheetTitle">
-      <template v-if="detail">
-        <UiButton v-if="dayOpen" class="back" variant="text" icon="back" @click="detail = null">
-          Back to day
-        </UiButton>
-        <EventCard :event="detail" :tz="tz" :members="likes" />
-      </template>
-      <div v-else class="day-list">
-        <EventCard
-          v-for="e in dayEvents"
-          :key="e.id"
-          :event="e"
-          :tz="tz"
-          :members="likes"
-          selectable
-          @select="detail = $event"
-        />
-      </div>
-    </UiSheet>
+    <DayListSheet
+      v-model:day="dayOpen"
+      v-model:detail="detail"
+      :tz="tz"
+      :members="likes"
+      :today="today"
+    />
   </UiPage>
 </template>
 
@@ -423,13 +396,6 @@ h2 {
   );
   background-image: var(--ev-bg);
   color: var(--ui-on-surface-variant);
-}
-.day-list {
-  display: grid;
-  gap: var(--ui-space-2);
-}
-.back {
-  margin-bottom: var(--ui-space-2);
 }
 .more {
   background: none;
