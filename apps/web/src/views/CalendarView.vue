@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { EventView } from '../api/client'
 import DateRangeNav from '../components/DateRangeNav.vue'
 import DayListSheet, { type DayOpen } from '../components/calendar/DayListSheet.vue'
@@ -7,16 +7,14 @@ import AgendaScroller from '../components/calendar/AgendaScroller.vue'
 import WeekGrid from '../components/calendar/WeekGrid.vue'
 import { rangeFor, shiftAnchor } from '../composables/useRange'
 import { weekStartKey, type WeekStart } from '../dashboard/weekModel'
-import { stripeStyle, trimStyle } from '../lib/eventColors'
-import { addDays, dayKey, formatDayHeading, groupByDay, startOfDay } from '../lib/time'
+import { capacity, visibleCount } from '../components/calendar/monthGrid'
+import { stripeStyle } from '../lib/eventColors'
+import { addDays, dayKey, formatDayHeading, groupByDay } from '../lib/time'
 import type { EventLike, RangeMode } from '../lib/types'
 import { useCalendarStore } from '../stores/calendar'
 import { useHouseholdStore } from '../stores/household'
 import { useMembersStore } from '../stores/members'
-import { chipsByDay, memberRefs, type TaskChip } from '../stores/taskMap'
-import { useTasksStore } from '../stores/tasks'
 import {
-  UiCheckbox,
   UiFilterChips,
   UiErrorState,
   UiPage,
@@ -24,17 +22,14 @@ import {
   UiTabs,
   UiTopAppBar,
   useBreakpoint,
-  useSnackbar,
 } from '../ui'
-import { describeError, memberLikes, toEventLike } from './shared'
+import { memberLikes, toEventLike } from './shared'
 
 type View = 'agenda' | 'week' | 'month'
 
 const household = useHouseholdStore()
 const calendar = useCalendarStore()
 const members = useMembersStore()
-const tasks = useTasksStore()
-const snackbar = useSnackbar()
 const bp = useBreakpoint()
 
 const tz = computed(() => household.tz)
@@ -122,6 +117,7 @@ const memberOptions = computed(() =>
 )
 const eventLikes = computed(() => events.value.map((e) => toEventLike(e, likes.value)))
 const byDay = computed(() => groupByDay(eventLikes.value, tz.value, grid.value.from, days.value))
+const loadingFirstRaw = computed(() => calendar.loading && events.value.length === 0)
 const today = computed(() => dayKey(new Date(), tz.value))
 const label = computed(() => {
   if (view.value === 'agenda')
@@ -145,66 +141,64 @@ const weekdays = computed(() =>
   ),
 )
 
-const rangeInstants = computed(() => ({
-  from: startOfDay(tz.value, grid.value.from).toISOString(),
-  to: startOfDay(tz.value, grid.value.to).toISOString(),
-}))
-const chips = computed(() =>
-  chipsByDay(
-    tasks.rangeTasks(rangeInstants.value.from, rangeInstants.value.to),
-    memberRefs(members.items),
-    tz.value,
-  ),
-)
-const chipsOf = (k: string): TaskChip[] => chips.value.get(k) ?? []
-// Completing a task chip is instant (D-096); the store arms a 10 s undo that the snackbar offers.
-async function toggleChip(c: TaskChip) {
-  try {
-    if (c.done) await tasks.reopenDone(c.taskId)
-    else await tasks.complete({ id: c.taskId, title: c.title })
-  } catch (e) {
-    snackbar.show({ text: describeError(e, 'That did not work.') })
-  }
-}
-const UNDO_MS = 10_000
-watch(
-  () => tasks.undo,
-  (u) => {
-    if (!u) return
-    snackbar.show({
-      text: `Completed “${u.title}”`,
-      timeoutMs: UNDO_MS,
-      action: {
-        label: 'Undo',
-        run: async () => {
-          try {
-            await tasks.undoLast()
-          } catch (e) {
-            snackbar.show({ text: describeError(e, 'That did not work.') })
-          }
-        },
-      },
-    })
-    setTimeout(() => {
-      if (tasks.undo?.id === u.id) tasks.expireUndo()
-    }, UNDO_MS)
-  },
-)
-
 function load() {
   if (view.value === 'agenda') return // the Agenda loads its own chunks
   for (const m of memberKeys.value)
     void calendar.ensureRange(grid.value.from, grid.value.to, tz.value, m)
-  void tasks.loadRange(rangeInstants.value.from, rangeInstants.value.to)
 }
+// Month: the grid is sized to the viewport; each cell's capacity comes from its measured height.
+const FALLBACK_CAP = 3
+const monthEl = ref<HTMLElement | null>(null)
+const monthHeight = ref<number | null>(null)
+const cap = ref(FALLBACK_CAP)
+const weeks = computed(() => Math.max(1, Math.round(days.value / 7)))
+let ro: ResizeObserver | null = null
+function measure() {
+  const el = monthEl.value
+  if (!el) return
+  const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+  const top = el.getBoundingClientRect().top
+  const avail = Math.floor(window.innerHeight - top - rootPx)
+  if (avail > 0) monthHeight.value = Math.max(avail, 8 * rootPx)
+  const cell = el.querySelector<HTMLElement>('.cell')
+  const num = el.querySelector<HTMLElement>('.num')
+  if (!cell || cell.clientHeight === 0) return
+  const pad = parseFloat(getComputedStyle(cell).paddingTop) * 2 || 0
+  const line = 1.25 * rootPx + 2 // item height plus the list gap
+  cap.value = capacity(cell.clientHeight - pad, line, (num?.offsetHeight ?? 0) + 2)
+}
+function observe() {
+  ro?.disconnect()
+  if (typeof ResizeObserver === 'undefined' || !monthEl.value) return
+  ro = new ResizeObserver(measure)
+  ro.observe(monthEl.value)
+  ro.observe(document.body)
+}
+watch(
+  () => [view.value, weeks.value, calendar.error, loadingFirstRaw.value],
+  async () => {
+    await nextTick()
+    measure()
+    observe()
+  },
+)
 onMounted(() => {
   void members.load()
   load()
+  window.addEventListener('resize', measure)
+  void nextTick(() => {
+    measure()
+    observe()
+  })
+})
+onBeforeUnmount(() => {
+  window.removeEventListener('resize', measure)
+  ro?.disconnect()
 })
 watch([() => grid.value.from, () => grid.value.to, chosen, tz, view], load)
 
 const dayNumber = (k: string) => Number(k.slice(8))
-const loadingFirst = computed(() => calendar.loading && events.value.length === 0)
+const loadingFirst = loadingFirstRaw
 </script>
 
 <template>
@@ -251,7 +245,14 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
     </template>
 
     <div v-else class="month-scroll">
-      <div class="month">
+      <div
+        ref="monthEl"
+        class="month"
+        :style="{
+          gridTemplateRows: `auto repeat(${weeks}, minmax(0, 1fr))`,
+          ...(monthHeight ? { height: `${monthHeight}px` } : {}),
+        }"
+      >
         <div v-for="w in weekdays" :key="w" class="dow">{{ w }}</div>
         <div
           v-for="[k, list] in byDay"
@@ -261,7 +262,7 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
         >
           <div class="num">{{ dayNumber(k) }}</div>
           <ul>
-            <li v-for="e in list.slice(0, 3)" :key="e.id">
+            <li v-for="e in list.slice(0, visibleCount(list.length, cap))" :key="e.id">
               <button
                 type="button"
                 class="ev"
@@ -272,17 +273,10 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
                 {{ e.visibility === 'busy' ? 'Busy' : e.title }}
               </button>
             </li>
-            <li v-if="list.length > 3">
+            <li v-if="list.length > visibleCount(list.length, cap)">
               <button type="button" class="more" @click="dayOpen = { day: k, events: list }">
-                +{{ list.length - 3 }} more
+                +{{ list.length - visibleCount(list.length, cap) }}
               </button>
-            </li>
-            <li v-for="c in chipsOf(k)" :key="c.id" class="task-chip" :style="trimStyle(c.color)">
-              <UiCheckbox
-                :model-value="c.done"
-                :label="c.title"
-                @update:model-value="toggleChip(c)"
-              />
             </li>
           </ul>
         </div>
@@ -312,26 +306,13 @@ h2 {
   margin: 0 0 var(--ui-space-2);
   font: var(--ui-type-title-md);
 }
-.chips {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: grid;
-  gap: var(--ui-space-1);
-}
-.chips li,
-.task-chip {
-  border-left: 4px solid transparent;
-  --ev-stripe-w: 4px;
-  padding-left: var(--ui-space-2);
-  border-radius: var(--ui-radius-sm);
-}
 .month-scroll {
   overflow-x: auto;
 }
 .month {
   display: grid;
-  grid-template-columns: repeat(7, minmax(5rem, 1fr));
+  overflow: hidden;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 1px;
   background: var(--ui-outline-variant);
   border: 1px solid var(--ui-outline-variant);
@@ -344,9 +325,10 @@ h2 {
 }
 .cell {
   background: var(--ui-surface);
-  min-height: 5.5rem;
   padding: var(--ui-space-1);
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 .cell.outside {
   background: var(--ui-surface-container-low);
@@ -358,6 +340,7 @@ h2 {
 }
 .num {
   font: var(--ui-type-label-md);
+  line-height: 1.1rem;
 }
 .cell ul {
   list-style: none;
@@ -365,6 +348,10 @@ h2 {
   margin: 0;
   display: grid;
   gap: 2px;
+  min-width: 0;
+}
+.cell li {
+  min-width: 0;
 }
 .ev {
   display: block;
@@ -372,11 +359,13 @@ h2 {
   text-align: left;
   font: var(--ui-type-body-sm);
   color: inherit;
-  --ev-stripe-w: 4px;
-  background-color: var(--ui-surface-container-low);
+  --ev-stripe-w: 3px;
+  background: none;
   border: 0;
-  border-left: 4px solid transparent;
+  border-left: 3px solid transparent;
   border-radius: var(--ui-radius-sm);
+  height: 1.25rem;
+  line-height: 1.25rem;
   padding: 0 var(--ui-space-1);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -404,5 +393,8 @@ h2 {
   cursor: pointer;
   color: var(--ui-on-surface-variant);
   font: var(--ui-type-body-sm);
+  height: 1.25rem;
+  line-height: 1.25rem;
+  padding: 0 var(--ui-space-1);
 }
 </style>

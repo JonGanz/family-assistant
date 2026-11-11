@@ -66,7 +66,7 @@ describe('CalendarView month overflow', () => {
     const w = mount(CalendarView, { attachTo: document.body, global: { stubs: { UiPage: false } } })
     await flushPromises()
     const more = w.find('button.more')
-    expect(more.text()).toContain('+2 more')
+    expect(more.text()).toBe('+3')
     await more.trigger('click')
     const body = () => document.body.textContent ?? ''
     expect(body()).toContain('Event 5')
@@ -84,6 +84,18 @@ describe('CalendarView month overflow', () => {
     back.click()
     await flushPromises()
     expect(document.body.querySelector('.day-list')).not.toBeNull()
+    w.unmount()
+  })
+})
+
+describe('CalendarView month compactness', () => {
+  it('has no task chips and single-line ellipsis items', async () => {
+    const w = mount(CalendarView, { attachTo: document.body, global: { stubs: { UiPage: false } } })
+    await flushPromises()
+    expect(w.find('.task-chip').exists()).toBe(false)
+    const ev = w.find('.month button.ev')
+    expect(ev.exists()).toBe(true)
+    expect(ev.text()).toBe('Event 1')
     w.unmount()
   })
 })
