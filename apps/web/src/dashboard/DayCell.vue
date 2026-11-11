@@ -137,7 +137,7 @@ li.event .title {
 }
 li.event {
   cursor: pointer;
-  border-left: 6px solid var(--color-accent);
+  border-left: 6px solid transparent;
   --ev-stripe-w: 6px;
   border-radius: var(--ui-radius-sm);
   background: var(--color-surface);

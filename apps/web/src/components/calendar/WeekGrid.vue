@@ -139,7 +139,8 @@ ul {
   color: var(--ui-on-surface);
   background-color: var(--ui-surface-container-low);
   border: 0;
-  border-left: 4px solid var(--ui-primary);
+  border-left: 4px solid transparent;
+  --ev-stripe-w: 4px;
   border-radius: var(--ui-radius-sm);
   padding: var(--ui-space-1) var(--ui-space-2);
   cursor: pointer;

@@ -113,7 +113,7 @@ h2 {
   width: 100%;
   padding: var(--space-2) var(--space-3);
   border: 0;
-  border-left: 6px solid var(--color-accent);
+  border-left: 6px solid transparent;
   --ev-stripe-w: 6px;
   border-radius: var(--ui-radius-sm);
   background: var(--color-layer-2, var(--color-surface));

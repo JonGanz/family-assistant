@@ -42,6 +42,7 @@ const chips = computed(() =>
         <a
           v-if="map"
           class="map-link"
+          data-testid="event-map"
           :href="map.href"
           :target="map.external ? '_blank' : undefined"
           :rel="map.external ? 'noopener' : undefined"
@@ -77,7 +78,7 @@ const chips = computed(() =>
   gap: var(--ui-space-3);
   padding: var(--ui-space-3);
   --ev-stripe-w: 6px;
-  border-left: 6px solid var(--ui-primary);
+  border-left: 6px solid transparent;
   border-radius: var(--ui-radius-md);
   background-color: var(--ui-surface-container-low);
   color: var(--ui-on-surface);

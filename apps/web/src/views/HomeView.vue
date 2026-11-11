@@ -154,6 +154,7 @@ watch(
       :meals="mealsToday"
       :tasks="tasksToday"
       :events="eventsToday"
+      :members="likes"
       :tz="tz"
       completable
       @complete="complete"
@@ -167,7 +168,13 @@ watch(
       :tz="tz"
       :units="household.units"
     />
-    <TodayDay :meals="mealsTomorrow" :tasks="tasksTomorrow" :events="eventsTomorrow" :tz="tz" />
+    <TodayDay
+      :meals="mealsTomorrow"
+      :tasks="tasksTomorrow"
+      :events="eventsTomorrow"
+      :members="likes"
+      :tz="tz"
+    />
   </UiPage>
 </template>
 

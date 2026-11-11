@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { trimStyle } from '../../lib/eventColors'
 import { formatRange } from '../../lib/time'
 import Modal from '../Modal.vue'
 import { S } from '../strings'
@@ -36,7 +37,7 @@ const tks = computed(() =>
         :key="e.id"
         class="event"
         :class="{ busy: e.visibility === 'busy' }"
-        :style="{ borderLeftColor: color }"
+        :style="trimStyle(color)"
         role="button"
         tabindex="0"
         @click="emit('event', e.id)"
@@ -67,7 +68,8 @@ li {
   border-radius: var(--ui-radius-lg);
 }
 li.event {
-  border-left: 6px solid var(--color-accent);
+  border-left: 6px solid transparent;
+  --ev-stripe-w: 6px;
   background: var(--color-layer-3);
   cursor: pointer;
 }

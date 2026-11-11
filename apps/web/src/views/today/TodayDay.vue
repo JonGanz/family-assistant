@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import type { EventLike } from '../../lib/types'
+import type { EventLike, MemberLike } from '../../lib/types'
 import { dueLabel } from '../../lib/tasks'
-import { formatRange } from '../../lib/time'
-import { mapLink } from '../../lib/mapLink'
+import EventCard from '../../components/EventCard.vue'
 import type { TaskView } from '../../api/client'
 import { UiCard, UiCheckbox, UiList, UiSection } from '../../ui'
 import type { MealSlotCard } from './todayModel'
@@ -11,6 +10,7 @@ defineProps<{
   meals: MealSlotCard[]
   tasks: TaskView[]
   events: EventLike[]
+  members?: MemberLike[]
   tz: string
   /** Tasks can be completed (today only). */
   completable?: boolean
@@ -60,19 +60,8 @@ const emit = defineEmits<{ complete: [task: TaskView] }>()
     <UiSection heading="Calendar" data-testid="events-section">
       <p v-if="!events.length" class="empty">Nothing planned.</p>
       <ul v-else class="events">
-        <li v-for="e in events" :key="e.id" class="event" data-testid="event-row">
-          <span class="muted">{{ formatRange(e, tz) }}</span>
-          <span class="title">{{ e.visibility === 'busy' ? 'Busy' : e.title }}</span>
-          <template v-if="e.visibility !== 'busy' && e.location && mapLink(e.location)">
-            <a
-              class="loc"
-              data-testid="event-map"
-              :href="mapLink(e.location)!.href"
-              :target="mapLink(e.location)!.external ? '_blank' : undefined"
-              :rel="mapLink(e.location)!.external ? 'noopener' : undefined"
-              >{{ e.location }}</a
-            >
-          </template>
+        <li v-for="e in events" :key="e.id" data-testid="event-row">
+          <EventCard :event="e" :tz="tz" :members="members" />
         </li>
       </ul>
     </UiSection>
@@ -103,15 +92,5 @@ const emit = defineEmits<{ complete: [task: TaskView] }>()
   padding: 0;
   display: grid;
   gap: var(--ui-space-2);
-}
-.event {
-  display: grid;
-  gap: var(--ui-space-1);
-  padding: var(--ui-space-3);
-  border-radius: var(--ui-radius-md);
-  background: var(--ui-surface-container-low);
-}
-.title {
-  font: var(--ui-type-title-md);
 }
 </style>

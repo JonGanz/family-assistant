@@ -14,6 +14,15 @@ export function eventColors(
 }
 
 /**
+ * The single-colour trim for non-event accents (alerts, task chips, plan entries): the same
+ * technique, width (`--ev-stripe-w`, set it with the element's transparent left border) and radius
+ * as an event's stripe. `color` may be a CSS variable reference.
+ */
+export function trimStyle(color: string): Record<string, string> {
+  return stripeStyle({ color })
+}
+
+/**
  * The left stripe of an event: equal bands, one per colour (one colour is a single band).
  * Every event uses this same rendering so the trim looks identical for one or many members.
  *

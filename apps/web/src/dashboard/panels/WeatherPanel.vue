@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { trimStyle } from '../../lib/eventColors'
 import WeatherIcon from '../../components/WeatherIcon.vue'
 import { useUnits } from '../../composables/useUnits'
 import { weatherInfo } from '../../lib/weatherCodes'
@@ -88,6 +89,7 @@ const notices = computed(() => [
           :key="n.id"
           :class="n.severity"
           :data-severity="n.severity"
+          :style="trimStyle(`var(--sev)`)"
           role="status"
         >
           {{ n.text }}
@@ -147,7 +149,9 @@ const notices = computed(() => [
 }
 .notices li {
   padding: var(--space-1) var(--space-2);
-  border-left: 6px solid var(--sev);
+  border-left: 6px solid transparent;
+  --ev-stripe-w: 6px;
+  border-radius: var(--ui-radius-sm);
   background: var(--color-surface);
 }
 .notices li.warning {

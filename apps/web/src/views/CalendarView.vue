@@ -6,7 +6,7 @@ import EventCard from '../components/EventCard.vue'
 import WeekGrid from '../components/calendar/WeekGrid.vue'
 import { rangeFor, shiftAnchor } from '../composables/useRange'
 import { weekStartKey, type WeekStart } from '../dashboard/weekModel'
-import { stripeStyle } from '../lib/eventColors'
+import { stripeStyle, trimStyle } from '../lib/eventColors'
 import { addDays, dayKey, formatDayHeading, groupByDay, startOfDay } from '../lib/time'
 import type { EventLike, RangeMode } from '../lib/types'
 import { useCalendarStore } from '../stores/calendar'
@@ -284,12 +284,7 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
                 +{{ list.length - 3 }} more
               </button>
             </li>
-            <li
-              v-for="c in chipsOf(k)"
-              :key="c.id"
-              class="task-chip"
-              :style="{ borderLeftColor: c.color }"
-            >
+            <li v-for="c in chipsOf(k)" :key="c.id" class="task-chip" :style="trimStyle(c.color)">
               <UiCheckbox
                 :model-value="c.done"
                 :label="c.title"
@@ -345,7 +340,8 @@ h2 {
 }
 .chips li,
 .task-chip {
-  border-left: 4px solid var(--ui-primary);
+  border-left: 4px solid transparent;
+  --ev-stripe-w: 4px;
   padding-left: var(--ui-space-2);
   border-radius: var(--ui-radius-sm);
 }
@@ -398,7 +394,7 @@ h2 {
   --ev-stripe-w: 4px;
   background-color: var(--ui-surface-container-low);
   border: 0;
-  border-left: 4px solid var(--ui-primary);
+  border-left: 4px solid transparent;
   border-radius: var(--ui-radius-sm);
   padding: 0 var(--ui-space-1);
   overflow: hidden;

@@ -104,6 +104,26 @@ describe('TodayDay', () => {
     expect(w.findAll('[data-testid=meal-item]')).toHaveLength(2)
   })
 
+  it('shows member chips and the member colour trim on events', () => {
+    const w = mount(TodayDay, {
+      props: {
+        ...base,
+        meals: [],
+        events: [{ ...ev(null), members: ['m1', 'm2'], colors: ['#f00', '#00f'] }] as never,
+        members: [
+          { id: 'm1', display_name: 'Ann', color: '#f00' },
+          { id: 'm2', display_name: 'Bo', color: '#00f' },
+        ],
+      },
+    })
+    const card = w.get('[data-testid=event-row] .event-card')
+    expect(card.attributes('style')).toContain('linear-gradient')
+    expect(card.attributes('style')).toContain('#f00')
+    expect(card.attributes('style')).toContain('#00f')
+    expect(card.text()).toContain('Ann')
+    expect(card.text()).toContain('Bo')
+  })
+
   it('shows a map link for events with a location only', () => {
     const w = mount(TodayDay, {
       props: { ...base, meals: [], events: [ev('1 Main St'), { ...ev(null), id: 'e2' }] as never },

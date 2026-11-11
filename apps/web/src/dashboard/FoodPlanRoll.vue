@@ -5,6 +5,7 @@ import { computed, watch } from 'vue'
 import { foodKiosk } from '../api/food'
 import { entryTitle } from '../components/food/plan/planModel'
 import { useMealPlanStore } from '../stores/mealPlan'
+import { trimStyle } from '../lib/eventColors'
 import { rollingDays } from './rollModel'
 import { S } from './strings'
 
@@ -66,7 +67,12 @@ watch(
             :data-testid="`roll-cell-${r.key}-${s.name.toLowerCase()}`"
           >
             <ul>
-              <li v-for="e in store.cell(r.key, s.id)" :key="e.id" data-testid="roll-entry">
+              <li
+                v-for="e in store.cell(r.key, s.id)"
+                :key="e.id"
+                data-testid="roll-entry"
+                :style="trimStyle(r.key < today ? 'var(--color-muted)' : 'var(--color-accent)')"
+              >
                 {{ entryTitle(e) }}
               </li>
             </ul>
@@ -140,7 +146,9 @@ ul {
 }
 li {
   padding: var(--space-1) var(--space-2);
-  border-left: 6px solid var(--color-accent);
+  border-left: 6px solid transparent;
+  --ev-stripe-w: 6px;
+  border-radius: var(--ui-radius-sm);
   background: var(--color-surface);
   font-size: var(--font-size-base);
   font-weight: 600;
@@ -148,9 +156,6 @@ li {
 }
 td.past {
   color: var(--color-muted);
-}
-td.past li {
-  border-left-color: var(--color-muted);
 }
 /* Today's header is inverted (light on dark, dark on light) so it stands out. */
 tr.today > .day {
