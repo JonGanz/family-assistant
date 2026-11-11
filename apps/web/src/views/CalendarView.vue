@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import type { EventView } from '../api/client'
 import DateRangeNav from '../components/DateRangeNav.vue'
 import EventCard from '../components/EventCard.vue'
+import AgendaScroller from '../components/calendar/AgendaScroller.vue'
 import WeekGrid from '../components/calendar/WeekGrid.vue'
 import { rangeFor, shiftAnchor } from '../composables/useRange'
 import { weekStartKey, type WeekStart } from '../dashboard/weekModel'
@@ -27,7 +28,6 @@ import {
   useBreakpoint,
   useSnackbar,
 } from '../ui'
-import AgendaList from './parts/AgendaList.vue'
 import { describeError, memberLikes, toEventLike } from './shared'
 
 type View = 'agenda' | 'week' | 'month'
@@ -96,6 +96,17 @@ function rangeAt(mode: RangeMode, a: string): { from: string; to: string } {
   }
   return rangeFor(mode, a)
 }
+// Agenda: an endless list from `agendaStart`; the arrows jump its start a week, Today resets it.
+const agendaStart = ref(dayKey(new Date(), household.tz))
+const agendaNonce = ref(0)
+function nav(dir: -1 | 0 | 1) {
+  if (view.value === 'agenda') {
+    agendaStart.value = dir ? addDays(agendaStart.value, dir * 7) : dayKey(new Date(), tz.value)
+    agendaNonce.value++
+    return
+  }
+  anchor.value = dir ? shiftAnchor(navMode.value, anchor.value, dir) : dayKey(new Date(), tz.value)
+}
 const span = computed(() => rangeAt(navMode.value, anchor.value))
 /** Month view also shows the leading and trailing days of the boundary weeks. */
 const grid = computed(() => {
@@ -129,6 +140,8 @@ const eventLikes = computed(() => events.value.map((e) => toEventLike(e, likes.v
 const byDay = computed(() => groupByDay(eventLikes.value, tz.value, grid.value.from, days.value))
 const today = computed(() => dayKey(new Date(), tz.value))
 const label = computed(() => {
+  if (view.value === 'agenda')
+    return `From ${formatDayHeading(agendaStart.value, tz.value, today.value)}`
   if (view.value === 'month') {
     return new Intl.DateTimeFormat(undefined, {
       timeZone: 'UTC',
@@ -195,6 +208,7 @@ watch(
 )
 
 function load() {
+  if (view.value === 'agenda') return // the Agenda loads its own chunks
   for (const m of memberKeys.value)
     void calendar.ensureRange(grid.value.from, grid.value.to, tz.value, m)
   void tasks.loadRange(rangeInstants.value.from, rangeInstants.value.to)
@@ -203,7 +217,7 @@ onMounted(() => {
   void members.load()
   load()
 })
-watch([() => grid.value.from, () => grid.value.to, chosen, tz], load)
+watch([() => grid.value.from, () => grid.value.to, chosen, tz, view], load)
 
 const dayNumber = (k: string) => Number(k.slice(8))
 const loadingFirst = computed(() => calendar.loading && events.value.length === 0)
@@ -223,28 +237,21 @@ const loadingFirst = computed(() => calendar.loading && events.value.length === 
     />
 
     <div class="controls">
-      <DateRangeNav
-        :label="label"
-        @prev="anchor = shiftAnchor(navMode, anchor, -1)"
-        @next="anchor = shiftAnchor(navMode, anchor, 1)"
-        @today="anchor = dayKey(new Date(), tz)"
-      />
+      <DateRangeNav :label="label" @prev="nav(-1)" @next="nav(1)" @today="nav(0)" />
       <UiFilterChips v-model="chosen" :options="memberOptions" label="Member" />
     </div>
 
     <UiErrorState v-if="calendar.error" :message="calendar.error" @retry="load" />
-    <UiSkeleton v-else-if="loadingFirst" :lines="5" />
+    <UiSkeleton v-else-if="loadingFirst && view !== 'agenda'" :lines="5" />
 
     <template v-else-if="view === 'agenda' || view === 'week'">
-      <AgendaList
+      <AgendaScroller
         v-if="view === 'agenda'"
-        :events="events"
         :tz="tz"
-        :from="grid.from"
-        :days="days"
+        :start="agendaStart"
+        :nonce="agendaNonce"
         :members="likes"
-        hide-empty
-        selectable
+        :member-keys="memberKeys"
         @select="detail = $event"
       />
       <WeekGrid

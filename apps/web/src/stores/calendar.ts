@@ -70,6 +70,20 @@ export const useCalendarStore = defineStore('calendar', () => {
       .sort((a, b) => a.start_at.localeCompare(b.start_at))
   }
 
+  /** Drops a loaded range and any events only it held (the Agenda's bounded window). */
+  function release(fromDay: string, toDay: string, tz: string, member?: string): void {
+    const key = keyOf(
+      startOfDay(tz, fromDay).toISOString(),
+      startOfDay(tz, toDay).toISOString(),
+      member,
+    )
+    const i = held.value.findIndex((x) => x.key === key)
+    if (i < 0) return
+    const [h] = held.value.splice(i, 1)
+    const keep = new Set(held.value.flatMap((x) => x.ids))
+    for (const id of h!.ids) if (!keep.has(id)) delete byId.value[id]
+  }
+
   /** Refetches only the held ranges that overlap the change (`resync` refetches all). */
   async function invalidate(kind: LiveEventKind, data?: LiveEventData): Promise<void> {
     const hit = held.value.filter((h) =>
@@ -83,5 +97,5 @@ export const useCalendarStore = defineStore('calendar', () => {
     held.value = []
   }
 
-  return { byId, held, error, loading, ensureRange, eventsIn, invalidate, reset }
+  return { byId, held, error, loading, ensureRange, eventsIn, release, invalidate, reset }
 })
