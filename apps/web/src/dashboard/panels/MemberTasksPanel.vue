@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import Avatar from '../../components/Avatar.vue'
-import TaskItem from '../../components/tasks/TaskItem.vue'
 import { hueVar } from '../../lib/hues'
 import { visibleMembers } from '../filter'
 import { S } from '../strings'
 import { memberColumns, taskLocked, toTaskItem } from '../tasksModel'
 import type { PanelProps } from '../types'
+import TaskRow from './TaskRow.vue'
 
 const props = defineProps<PanelProps>()
 const emit = defineEmits<{ complete: [id: string] }>()
@@ -31,20 +31,15 @@ const cols = computed(() =>
       </h2>
       <p v-if="c.tasks.length === 0" class="none">{{ S.nothingToDo }}</p>
       <ul>
-        <li
+        <TaskRow
           v-for="t in c.tasks"
           :key="`${t.id}-${data.epoch ?? 0}`"
-          :class="{ ro: taskLocked(data, t) }"
-          :inert="taskLocked(data, t)"
-        >
-          <TaskItem
-            :task="toTaskItem(t, data.members)"
-            :now="now"
-            :tz="tz"
-            size="kiosk"
-            @complete="(id: string) => emit('complete', id)"
-          />
-        </li>
+          :task="toTaskItem(t, data.members)"
+          :locked="taskLocked(data, t)"
+          :now="now"
+          :tz="tz"
+          @complete="(id: string) => emit('complete', id)"
+        />
       </ul>
     </div>
   </section>
@@ -82,11 +77,5 @@ ul {
   padding: 0;
   display: grid;
   gap: var(--space-2);
-}
-.ro :deep(.check) {
-  display: none;
-}
-:deep(.claim) {
-  display: none;
 }
 </style>

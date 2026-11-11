@@ -71,6 +71,9 @@ dl {
   grid-template-columns: max-content 1fr;
   gap: var(--space-2) var(--space-4);
   margin: 0;
+  padding: var(--space-4);
+  border-radius: var(--ui-radius-lg);
+  background: var(--color-layer-3);
 }
 dt {
   color: var(--color-muted);

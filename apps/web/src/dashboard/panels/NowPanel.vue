@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import TaskItem from '../../components/tasks/TaskItem.vue'
 import { S } from '../strings'
 import { nowTasks, taskLocked, toTaskItem } from '../tasksModel'
 import type { PanelProps } from '../types'
+import TaskRow from './TaskRow.vue'
 
 const props = defineProps<PanelProps>()
 const emit = defineEmits<{ complete: [id: string]; add: [] }>()
@@ -27,20 +27,15 @@ const canAdd = computed(() => (props.data.task_lists ?? []).some((l) => l.dashbo
     </header>
     <p v-if="items.length === 0" class="none">{{ S.nothingToDo }}</p>
     <ul>
-      <li
+      <TaskRow
         v-for="t in items"
         :key="`${t.model.id}-${data.epoch ?? 0}`"
-        :class="{ ro: t.locked }"
-        :inert="t.locked"
-      >
-        <TaskItem
-          :task="t.model"
-          :now="now"
-          :tz="tz"
-          size="kiosk"
-          @complete="(id: string) => emit('complete', id)"
-        />
-      </li>
+        :task="t.model"
+        :locked="t.locked"
+        :now="now"
+        :tz="tz"
+        @complete="(id: string) => emit('complete', id)"
+      />
     </ul>
   </section>
 </template>
@@ -82,12 +77,5 @@ ul {
   padding: 0;
   display: grid;
   gap: var(--space-2);
-}
-.ro :deep(.check),
-.ro :deep(.claim) {
-  display: none;
-}
-:deep(.claim) {
-  display: none;
 }
 </style>

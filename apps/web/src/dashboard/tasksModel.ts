@@ -1,3 +1,4 @@
+import type { Directive } from 'vue'
 import { hueVar } from '../lib/hues'
 import { addDays, dayKey, startOfDay } from '../lib/time'
 import type { MemberRef, TaskItemModel } from '../lib/tasks'
@@ -153,4 +154,27 @@ export function datedTasks(
     out.set(k, [...(out.get(k) ?? []), t])
   }
   return out
+}
+
+export const ADULTS_ONLY = 'Adults only'
+
+/**
+ * Directive for a task row holding a shared TaskItem: `v-lock-check="locked"` disables its
+ * checkbox and gives it an accessible "Adults only" hint (the row stays visible, dimmed by CSS).
+ */
+export const lockCheck: Directive<HTMLElement, boolean> = {
+  mounted: applyLock,
+  updated: applyLock,
+}
+function applyLock(el: HTMLElement, b: { value: boolean }): void {
+  const box = el.querySelector<HTMLInputElement>('input.check')
+  if (!box) return
+  box.disabled = b.value
+  if (b.value) {
+    box.title = ADULTS_ONLY
+    box.setAttribute('aria-description', ADULTS_ONLY)
+  } else {
+    box.removeAttribute('title')
+    box.removeAttribute('aria-description')
+  }
 }

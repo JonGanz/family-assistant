@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import DashboardCanvas from './DashboardCanvas.vue'
 import { addPanel, applyPreset, isValid, movePanel, removePanel, toggleMember } from './editor'
 import { resolveMode } from './theme'
+import { sampleRoutines } from './preview'
 import LayoutEditor from './LayoutEditor.vue'
 import PanelHost from './panels/PanelHost.vue'
 import { dailyOf, hourlyOf } from './weatherModel'
@@ -447,6 +448,36 @@ describe('Home layout by screen shape', () => {
     ])
     const grid = w.find('.grid').attributes('style') ?? ''
     expect(grid).toContain('grid-template-rows: auto auto minmax(0, 1fr)')
+  })
+
+  it('portrait: routines run side by side in a full-width row at the bottom', () => {
+    sizeOf(1080, 1920)
+    const w = mount(DashboardCanvas, {
+      props: {
+        data: (() => {
+          const d = data()
+          d.routines = sampleRoutines(d.members as never, NOW, d.household.tz)
+          return d
+        })(),
+        settings: settings({
+          panels: [
+            { kind: 'clock' },
+            { kind: 'agenda' },
+            { kind: 'routine' },
+            { kind: 'routine' },
+          ] as never,
+        }),
+        now: NOW,
+      },
+    })
+    const r = w.find('.stack.s-routines')
+    expect(r.exists()).toBe(true)
+    expect(r.attributes('style')).toContain('grid-column: 1 / 13')
+    expect(r.attributes('style')).toContain('repeat(2, minmax(0, 1fr))')
+    expect(w.findAll('.stack').at(-1)!.classes()).toContain('s-routines')
+    expect(w.find('.grid').attributes('style')).toContain(
+      'grid-template-rows: auto minmax(0, 1fr) auto',
+    )
   })
 
   it('portrait: a lone column takes the full width', () => {

@@ -87,13 +87,15 @@ ul {
   gap: var(--space-1);
   min-width: 4.5rem;
   padding: var(--space-2);
-  background: var(--color-surface);
+  border-radius: var(--ui-radius-lg);
+  background: var(--color-layer-3);
 }
 /* One shared grid so each column is as wide as its widest cell and no wider. */
 .days {
   display: grid;
   grid-template-columns: repeat(6, max-content);
   column-gap: var(--space-4);
+  row-gap: var(--space-1);
   width: fit-content;
 }
 .days li {
@@ -102,8 +104,9 @@ ul {
   grid-template-columns: subgrid;
   align-items: center;
   gap: var(--space-2);
-  padding: var(--space-1) 0;
-  border-bottom: 1px solid var(--color-border);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--ui-radius-md);
+  background: var(--color-layer-3);
 }
 .label {
   white-space: nowrap;

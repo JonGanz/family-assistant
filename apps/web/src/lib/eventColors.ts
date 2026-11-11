@@ -14,16 +14,16 @@ export function eventColors(
 }
 
 /**
- * The left stripe of an event: one solid colour, or equal bands for several.
+ * The left stripe of an event: equal bands, one per colour (one colour is a single band).
+ * Every event uses this same rendering so the trim looks identical for one or many members.
  *
- * Several colours are painted as a background layer under a transparent left border, not with
- * `border-image` (which turns off `border-radius`), so multi-member events keep the same rounded
- * corners as single-member ones. The element's own left border sets the stripe's width through
+ * The bands are painted as a background layer under a transparent left border, not with
+ * `border-image` (which turns off `border-radius`), so the outer edge follows the
+ * rounded corner. The element's own left border sets the stripe's width through
  * `--ev-stripe-w` (default 4px); a background pattern of its own (busy hatching) goes in `--ev-bg`.
  */
 export function stripeStyle(ev: Pick<EventLike, 'color' | 'colors'>): Record<string, string> {
-  const colors = ev.colors ?? []
-  if (colors.length < 2) return { borderLeftColor: ev.color }
+  const colors = ev.colors?.length ? ev.colors : [ev.color]
   const band = 100 / colors.length
   const stops = colors.map((c, i) => `${c} ${i * band}% ${(i + 1) * band}%`).join(', ')
   return {

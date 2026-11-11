@@ -10,6 +10,22 @@ export function sortedMeals(data: Pick<DashboardData, 'meals'>) {
     .map((x) => x.m)
 }
 
+export interface MealSlotGroup {
+  slot_name: string
+  meals: NonNullable<DashboardData['meals']>
+}
+
+/** Today's meals grouped under their slot title, in slot order (no times shown). */
+export function mealsBySlot(data: Pick<DashboardData, 'meals'>): MealSlotGroup[] {
+  const out: MealSlotGroup[] = []
+  for (const m of sortedMeals(data)) {
+    const g = out.find((x) => x.slot_name === m.slot_name)
+    if (g) g.meals.push(m)
+    else out.push({ slot_name: m.slot_name, meals: [m] })
+  }
+  return out
+}
+
 /**
  * An empty `meals` panel is dropped, unless nothing else would share its column (then it stays and
  * says so). Its column is the right one in landscape and "coming up" in portrait.

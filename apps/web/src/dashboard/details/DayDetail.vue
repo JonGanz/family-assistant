@@ -63,11 +63,12 @@ ul {
   gap: var(--space-2);
 }
 li {
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--ui-radius-lg);
 }
 li.event {
   border-left: 6px solid var(--color-accent);
-  background: var(--color-surface);
+  background: var(--color-layer-3);
   cursor: pointer;
 }
 li.event.busy {
@@ -81,7 +82,7 @@ li.event.busy {
   color: var(--color-muted);
 }
 li.chip {
-  border: 2px dashed var(--color-accent);
+  background: var(--color-layer-1);
 }
 li.chip.done {
   text-decoration: line-through;

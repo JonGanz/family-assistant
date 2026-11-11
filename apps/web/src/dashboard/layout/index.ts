@@ -116,7 +116,9 @@ export const LEFT_PANELS = new Set(['clock', 'weather', 'members', 'now'])
  */
 export const PORTRAIT_TOP: readonly string[] = ['clock', 'weather']
 export const PORTRAIT_STRIP: readonly string[] = ['members']
-export const PORTRAIT_NOW: readonly string[] = ['now', 'routine', 'member_tasks']
+export const PORTRAIT_NOW: readonly string[] = ['now', 'member_tasks']
+/** Portrait: routines run side by side in a full-width row across the bottom. */
+export const PORTRAIT_ROUTINES: readonly string[] = ['routine']
 
 /**
  * Landscape: 12-column grid, left 4 columns hold clock/weather/members/now,

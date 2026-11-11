@@ -9,12 +9,15 @@ import {
   burnInOffset,
   normalizeTheme,
   PORTRAIT_NOW,
+  PORTRAIT_ROUTINES,
   PORTRAIT_STRIP,
   PORTRAIT_TOP,
   resolveLayout,
   withMealsPanel,
   type GridArea,
 } from './layout'
+import UiIcon from '../ui/UiIcon.vue'
+import type { IconName } from '../ui/icons'
 import Whiteboard from './Whiteboard.vue'
 import PanelHost from './panels/PanelHost.vue'
 import { prefersDark, resolveMode } from './theme'
@@ -108,13 +111,21 @@ const stacks = computed<Stack[]>(() => {
     const top = areas.value.filter((a) => PORTRAIT_TOP.includes(kind(a)))
     const strip = areas.value.filter((a) => PORTRAIT_STRIP.includes(kind(a)))
     const now = areas.value.filter((a) => PORTRAIT_NOW.includes(kind(a)))
-    const soon = areas.value.filter((a) => ![...top, ...strip, ...now].includes(a))
+    const routines = areas.value.filter((a) => PORTRAIT_ROUTINES.includes(kind(a)))
+    const soon = areas.value.filter((a) => ![...top, ...strip, ...now, ...routines].includes(a))
     const both = now.length > 0 && soon.length > 0
     return [
       { key: 'top', span: '1 / 13', cols: Math.min(2, top.length), areas: top, scroll: false },
       { key: 'strip', span: '1 / 13', cols: 1, areas: strip, scroll: false },
       { key: 'now', span: both ? '1 / 7' : '1 / 13', cols: 1, areas: now, scroll: true },
       { key: 'soon', span: both ? '7 / 13' : '1 / 13', cols: 1, areas: soon, scroll: true },
+      {
+        key: 'routines',
+        span: '1 / 13',
+        cols: Math.max(1, routines.length),
+        areas: routines,
+        scroll: false,
+      },
     ].filter((s) => s.areas.length > 0)
   }
   const left = areas.value.filter((a) => a.column === '1 / 5')
@@ -130,15 +141,23 @@ const stacks = computed<Stack[]>(() => {
  */
 const homeRows = computed(() => {
   if (!portrait.value) return 'minmax(0, 1fr)'
-  const bands = stacks.value.filter((s) => !s.scroll).length
-  const cols = stacks.value.some((s) => s.scroll) ? ' minmax(0, 1fr)' : ''
-  return `${'auto '.repeat(bands).trim()}${cols}`
+  // The scrolling columns share one row; every other band gets its own, in order.
+  const rows: string[] = []
+  let scrollDone = false
+  for (const st of stacks.value) {
+    if (!st.scroll) rows.push('auto')
+    else if (!scrollDone) {
+      rows.push('minmax(0, 1fr)')
+      scrollDone = true
+    }
+  }
+  return rows.join(' ')
 })
 type View = 'home' | 'week' | 'food' | 'whiteboard'
-const ALL_VIEWS: { id: View; label: string; icon?: boolean }[] = [
-  { id: 'home', label: S.navHome },
-  { id: 'week', label: S.navWeek },
-  { id: 'food', label: S.navFood },
+const ALL_VIEWS: { id: View; label: string; icon?: boolean; glyph?: IconName }[] = [
+  { id: 'home', label: S.navHome, glyph: 'home' },
+  { id: 'week', label: S.navWeek, glyph: 'calendar' },
+  { id: 'food', label: S.navFood, glyph: 'dinner' },
   { id: 'whiteboard', label: S.navWhiteboard, icon: true },
 ]
 /** The Food view is a per-device switch (`food_view`, on unless turned off). */
@@ -226,14 +245,14 @@ const shift = computed(() =>
         :aria-current="view === v.id ? 'page' : undefined"
         :data-view="v.id"
         :data-testid="`kiosk-view-${v.id}`"
-        :aria-label="v.icon ? v.label : undefined"
-        :title="v.icon ? v.label : undefined"
+        :aria-label="v.label"
+        :title="v.label"
         @click="setView(v.id)"
       >
         <svg v-if="v.icon" class="navicon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M3 21l3.5-1 12-12-2.5-2.5-12 12L3 21zM15 5l2.5 2.5" />
         </svg>
-        <template v-else>{{ v.label }}</template>
+        <UiIcon v-else-if="v.glyph" :name="v.glyph" :size="24" class="navglyph" />
       </button>
       <div class="navend"><slot name="nav-end" /></div>
     </nav>
@@ -374,18 +393,21 @@ const shift = computed(() =>
   align-items: center;
 }
 .nav button {
-  border: 2px solid var(--color-border);
-  background: var(--color-bg);
-  color: inherit;
-  font: inherit;
-  font-size: var(--font-size-lg);
-  cursor: pointer;
-}
-.nav button {
+  display: grid;
+  place-items: center;
   flex: none;
   width: 6rem;
   min-height: 5rem;
   padding-inline: var(--space-2);
+  border: 0;
+  border-radius: var(--ui-radius-xl);
+  background: var(--color-layer-2);
+  color: inherit;
+  cursor: pointer;
+}
+.navglyph {
+  width: 2.4rem;
+  height: 2.4rem;
 }
 .navicon {
   width: 2.2rem;
@@ -398,9 +420,7 @@ const shift = computed(() =>
 }
 .nav button.on {
   background: var(--color-accent);
-  border-color: var(--color-accent);
   color: var(--color-on-accent);
-  font-weight: 600;
 }
 /* The whole view scrolls, so no panel is cropped when another needs more room. */
 .main {
@@ -489,23 +509,20 @@ const shift = computed(() =>
   width: 1.5rem;
   height: 1.5rem;
 }
+.kiosk {
+  /* One spacing for the gap between cards and the padding around the page: the clock-weather gap. */
+  --home-gap: var(--space-5);
+}
 .grid {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));
-  gap: var(--space-5);
-  padding: var(--space-5) var(--space-6);
+  gap: var(--home-gap);
+  padding: var(--home-gap);
   align-items: start;
-}
-.portrait .main.split .grid {
-  column-gap: var(--space-6);
-}
-.portrait .stack.s-top {
-  /* More air between the clock and weather row and what follows. */
-  margin-bottom: var(--space-5);
 }
 .stack {
   display: grid;
-  gap: var(--space-5);
+  gap: var(--home-gap);
   min-width: 0;
 }
 .cell {

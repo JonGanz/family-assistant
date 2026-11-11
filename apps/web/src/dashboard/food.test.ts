@@ -2,6 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+const kioskRecipe = vi.hoisted(() => vi.fn())
 vi.mock('../api/food', async (orig) => {
   const real = await orig<typeof import('../api/food')>()
   const kiosk = {
@@ -24,6 +25,8 @@ vi.mock('../api/food', async (orig) => {
     }),
     plan: vi.fn().mockResolvedValue([]),
     slots: vi.fn().mockResolvedValue([]),
+    recipe: kioskRecipe,
+    recipeImageUrl: (id: string) => `/img/${id}`,
   }
   return { ...real, foodKiosk: kiosk, food: kiosk }
 })
@@ -31,7 +34,7 @@ vi.mock('../api/food', async (orig) => {
 import DashboardCanvas from './DashboardCanvas.vue'
 import { addPanel } from './editor'
 import { defaultSettings, KNOWN_PANELS, PRESETS, resolveLayout } from './layout'
-import { mealsPanelVisible, sortedMeals } from './mealsModel'
+import { mealsBySlot, mealsPanelVisible, sortedMeals } from './mealsModel'
 import PanelHost from './panels/PanelHost.vue'
 import type { DashboardData, DashboardSettings } from './types'
 
@@ -92,9 +95,48 @@ describe('meals panel', () => {
       props: { data: data({ meals }), settings: settings(), panel: { kind: 'meals' }, now: NOW },
     })
     const rows = w.findAll('[data-testid="meal-row"]').map((r) => r.text())
-    expect(rows[0]).toContain('Breakfast')
-    expect(rows[0]).toContain('07:30')
+    expect(rows[0]).toBe('Porridge')
+    expect(rows[0]).not.toContain('07:30')
     expect(rows[1]).toContain('Lentil soup')
+  })
+  it('groups meals under a slot title and links recipes to a full-screen modal', async () => {
+    const two = [
+      { slot_name: 'Dinner', time: '18:30', title: 'Lentil soup', recipe_id: 'r1' },
+      { slot_name: 'Dinner', time: '18:30', title: 'Bread' },
+      { slot_name: 'Breakfast', time: '07:30', title: 'Porridge' },
+    ]
+    expect(mealsBySlot({ meals: two as never }).map((g) => [g.slot_name, g.meals.length])).toEqual([
+      ['Breakfast', 1],
+      ['Dinner', 2],
+    ])
+    kioskRecipe.mockResolvedValue({
+      id: 'r1',
+      title: 'Lentil soup',
+      has_image: false,
+      lines: [{ raw_text: '200 g lentils' }],
+      steps: ['Simmer'],
+    })
+    const w = mount(PanelHost, {
+      props: {
+        data: data({ meals: two as never }),
+        settings: settings(),
+        panel: { kind: 'meals' },
+        now: NOW,
+      },
+      attachTo: document.body,
+    })
+    expect(w.findAll('[data-testid="meal-slot-title"]').map((t) => t.text())).toEqual([
+      'Breakfast',
+      'Dinner',
+    ])
+    expect(w.findAll('[data-testid="meal-recipe"]')).toHaveLength(1)
+    await w.get('[data-testid="meal-recipe"]').trigger('click')
+    await flushPromises()
+    const body = document.body.textContent ?? ''
+    expect(document.querySelector('[data-testid="recipe-detail"]')).not.toBeNull()
+    expect(body).toContain('200 g lentils')
+    expect(body).toContain('Simmer')
+    w.unmount()
   })
   it('hides when empty, unless it is the only panel in its column', () => {
     const meal = { kind: 'meals' }

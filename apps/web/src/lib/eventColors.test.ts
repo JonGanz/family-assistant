@@ -22,10 +22,22 @@ describe('eventColors', () => {
 })
 
 describe('stripeStyle', () => {
-  it('is a plain border colour for one colour', () => {
-    expect(stripeStyle({ color: '#111111', colors: ['#111111'] })).toEqual({
-      borderLeftColor: '#111111',
-    })
+  it('has the same structure for 1, 2 and 6 colours', () => {
+    const mk = (n: number) =>
+      stripeStyle({ color: '#000', colors: Array.from({ length: n }, (_, i) => `#00000${i}`) })
+    const keys = Object.keys(mk(1)).sort()
+    for (const n of [2, 6]) expect(Object.keys(mk(n)).sort()).toEqual(keys)
+    expect(mk(1).borderLeftColor).toBe('transparent')
+    expect(mk(1).backgroundImage).toBe(
+      'linear-gradient(to bottom, #000000 0% 100%), var(--ev-bg, none)',
+    )
+    expect(mk(6).backgroundImage).toContain('#000005 83.33333333333334% 100%')
+  })
+
+  it('falls back to color when colors is empty', () => {
+    expect(stripeStyle({ color: '#123456', colors: [] }).backgroundImage).toContain(
+      '#123456 0% 100%',
+    )
   })
 
   it('is equal bands for several, painted under the border so corners stay round', () => {

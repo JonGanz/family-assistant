@@ -1,24 +1,46 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
+import UiIcon from '../../ui/UiIcon.vue'
+import RecipeDetail from '../details/RecipeDetail.vue'
+import { mealsBySlot } from '../mealsModel'
 import { S } from '../strings'
-import { sortedMeals } from '../mealsModel'
 import type { PanelProps } from '../types'
 
+// Local strings: strings.ts belongs to another task.
+const T = { recipe: 'Recipe', openRecipe: 'Open recipe' }
+
 const props = defineProps<PanelProps>()
-const meals = computed(() => sortedMeals(props.data))
+const groups = computed(() => mealsBySlot(props.data))
+/** The recipe open in the full-screen modal. The panel owns it: no canvas change is needed. */
+const open = ref<{ id: string; title: string } | null>(null)
 </script>
 
 <template>
   <section class="meals" :aria-label="S.mealsToday" data-testid="panel-meals">
     <h2>{{ S.mealsToday }}</h2>
-    <p v-if="meals.length === 0" class="none">{{ S.noMeals }}</p>
-    <ul v-else>
-      <li v-for="(m, i) in meals" :key="i" data-testid="meal-row">
-        <span class="slot">{{ m.slot_name }}</span>
-        <span class="time">{{ m.time }}</span>
-        <span class="title">{{ m.title }}</span>
-      </li>
-    </ul>
+    <p v-if="groups.length === 0" class="none">{{ S.noMeals }}</p>
+    <div v-else class="slots">
+      <section v-for="g in groups" :key="g.slot_name" class="slot" data-testid="meal-slot">
+        <h3 data-testid="meal-slot-title">{{ g.slot_name }}</h3>
+        <ul>
+          <li v-for="(m, i) in g.meals" :key="i" data-testid="meal-row">
+            <span class="title">{{ m.title }}</span>
+            <button
+              v-if="m.recipe_id"
+              type="button"
+              class="recipe"
+              data-testid="meal-recipe"
+              :aria-label="`${T.openRecipe}: ${m.title}`"
+              @click="open = { id: m.recipe_id, title: m.title }"
+            >
+              <UiIcon name="recipe" :size="24" />
+              <span>{{ T.recipe }}</span>
+            </button>
+          </li>
+        </ul>
+      </section>
+    </div>
+    <RecipeDetail v-if="open" :id="open.id" :title="open.title" @close="open = null" />
   </section>
 </template>
 
@@ -26,6 +48,18 @@ const meals = computed(() => sortedMeals(props.data))
 h2 {
   margin: 0 0 var(--space-2);
   font-size: var(--font-size-lg);
+}
+h3 {
+  margin: 0 0 var(--space-1);
+  font-size: var(--font-size-base);
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.slots {
+  display: grid;
+  gap: var(--space-3);
 }
 ul {
   list-style: none;
@@ -35,26 +69,33 @@ ul {
   gap: var(--space-2);
 }
 li {
-  display: grid;
-  grid-template-columns: auto auto 1fr;
-  align-items: baseline;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-3);
-  border-left: 6px solid var(--color-accent);
-  border-radius: var(--ui-radius-sm);
+  border-radius: var(--ui-radius-md, var(--ui-radius-sm));
   background: var(--color-layer-2, var(--color-surface));
   font-size: var(--font-size-lg);
-}
-.slot {
-  font-weight: 700;
-}
-.time {
-  color: var(--color-muted);
-  font-size: var(--font-size-sm);
 }
 .title {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+.recipe {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: var(--min-touch);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--ui-radius-lg, var(--ui-radius-sm));
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+  font: inherit;
+  font-size: var(--font-size-base);
+  cursor: pointer;
 }
 .none {
   margin: 0;

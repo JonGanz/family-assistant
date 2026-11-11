@@ -144,7 +144,7 @@ describe('now panel', () => {
   it('is read-only while completion is off', () => {
     const d = data({ completion_enabled: false, tasks: [task('a')] })
     const w = canvas(d, [{ kind: 'now' }])
-    expect(w.find('li.ro').attributes('inert')).toBeDefined()
+    expect(w.find('li.ro input.check').attributes('disabled')).toBeDefined()
   })
 })
 
@@ -153,7 +153,18 @@ describe('per-task completion lock', () => {
     { id: 'adults', completion_policy: 'adult_only' },
     { id: 'all', completion_policy: 'assignee' },
   ] as never
-  it('only tasks of adults-only lists lose their checkbox', () => {
+  it('adult-only tasks keep a disabled, hinted checkbox that completes nothing', async () => {
+    const d = data({ task_lists: lists, tasks: [task('a', { list: 'adults' })] })
+    const w = canvas(d, [{ kind: 'member_tasks' }])
+    const box = w.find('li.ro input.check')
+    expect(box.exists()).toBe(true)
+    expect(box.attributes('disabled')).toBeDefined()
+    expect(box.attributes('title')).toBe('Adults only')
+    await box.trigger('change')
+    expect(w.emitted('complete')).toBeUndefined()
+    expect(w.find('[data-testid="complete-picker"]').exists()).toBe(false)
+  })
+  it('only tasks of adults-only lists are locked', () => {
     const d = data({
       task_lists: lists,
       tasks: [task('a', { list: 'adults' }), task('b', { list: 'all' })],
