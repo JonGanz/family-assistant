@@ -74,7 +74,7 @@ test('a rule evaluated by the worker shows up on the dashboard without a reload'
 test('a child login sees only permitted events', async ({ page }) => {
   await uiLogin(page, child)
   await page.goto('/calendar')
-  await page.getByRole('radio', { name: 'Agenda' }).click()
+  await page.getByRole('tab', { name: 'Agenda' }).click()
   await expect(page.getByText('Spirit Day').first()).toBeVisible() // Riley's school calendar
   // Check this week and the next (the fixture events are a couple of days out).
   for (let week = 0; week < 2; week++) {

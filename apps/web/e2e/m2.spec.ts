@@ -104,7 +104,7 @@ test('a chore made in Settings shows up as a task, completes and undoes', async 
 
   runNow() // materialise now instead of waiting for the minute job
   await page.goto('/tasks')
-  await page.getByRole('radio', { name: 'Lists' }).click()
+  await page.getByRole('tab', { name: 'Lists' }).click()
   const box = page.getByRole('checkbox', { name: `Complete ${title}` })
   await expect(box).toBeVisible()
   await expect(box).not.toBeChecked()
@@ -367,7 +367,7 @@ test('a suggested weather task is accepted from the Suggested tab', async ({ pag
   }).toPass({ timeout: 60_000 })
 
   await page.goto('/tasks')
-  await page.getByRole('radio', { name: /^Suggested/ }).click()
+  await page.getByRole('tab', { name: /^Suggested/ }).click()
   const row = page.getByRole('listitem').filter({ hasText: title })
   await expect(row).toBeVisible()
   await row.getByRole('button', { name: 'Accept' }).click()

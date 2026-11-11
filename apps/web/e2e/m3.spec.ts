@@ -168,7 +168,7 @@ test('Mail list: filter by child, open a message', async () => {
 
 test('Inbox: approve an event proposal', async () => {
   await page.goto('/inbox')
-  await page.getByRole('radio', { name: /^Events/ }).click()
+  await page.getByRole('tab', { name: /^Events/ }).click()
   const item = await eventItem(page, 'Spring Concert')
   const badge = page.getByRole('link', { name: /Inbox/ })
   await expect(badge).toContainText(/\d/)
