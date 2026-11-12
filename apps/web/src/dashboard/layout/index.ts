@@ -15,6 +15,10 @@ export interface DashboardSettings {
   agenda_days: number
   /** Shows the Food view on this device; absent means on. */
   food_view?: boolean
+  /** Confetti when a routine run is completed; absent means on. */
+  confetti?: boolean
+  /** Falling snow behind the cards; absent means on. */
+  snow?: boolean
   /** Minutes without a touch before the screensaver starts; 0 is off. Absent means the default. */
   screensaver_minutes?: number
   members: 'all' | string[]

@@ -184,6 +184,20 @@ test('the routine panel fills its progress bar to 100%', async ({ page, browser 
     await expect(bar).toHaveAttribute('aria-valuetext', '3 of 3') // 100%
     await expect(bar).toHaveAttribute('aria-valuenow', '3')
     await expect(bar).toHaveAttribute('aria-valuemax', '3')
+    // Completing the run bursts confetti once; it never blocks a click (Playwright's own
+    // actionability check would fail on a covered button) and does not fire again on a re-check.
+    const pieces = screen.locator('[data-testid=confetti-layer] .piece')
+    await expect(pieces.first()).toBeAttached()
+    const last = routine.getByRole('button', { name: steps[steps.length - 1] })
+    await last.click()
+    await expect(last).toHaveAttribute('aria-pressed', 'false')
+    await expect(pieces).toHaveCount(0, { timeout: 10_000 })
+    await last.click()
+    await expect(last).toHaveAttribute('aria-pressed', 'true')
+    await screen.waitForTimeout(1000)
+    await expect(pieces).toHaveCount(0)
+    await expect(screen.getByTestId('snow-layer')).toHaveCSS('pointer-events', 'none')
+    await expect(screen.getByTestId('confetti-layer')).toHaveCSS('pointer-events', 'none')
   } finally {
     await ctx.close()
     await setOverride(page, false)

@@ -160,8 +160,11 @@ function measure() {
   const num = el.querySelector<HTMLElement>('.num')
   if (!cell || cell.clientHeight === 0) return
   const pad = parseFloat(getComputedStyle(cell).paddingTop) * 2 || 0
-  const line = rootPx + 1 // item height plus the list gap
-  cap.value = capacity(cell.clientHeight - pad, line, (num?.offsetHeight ?? 0) + 2)
+  // Item height (the CSS --month-line, in rem) plus the 1px list gap.
+  const raw = getComputedStyle(el).getPropertyValue('--month-line').trim()
+  const lineRem = raw.endsWith('rem') ? parseFloat(raw) : NaN
+  const line = (Number.isFinite(lineRem) ? lineRem : 0.85) * rootPx + 1
+  cap.value = capacity(cell.clientHeight - pad, line, (num?.offsetHeight ?? 0) + 1)
 }
 function observe() {
   ro?.disconnect()
@@ -306,7 +309,9 @@ h2 {
 }
 .month {
   /* A day number and four one-line events. */
-  --month-row: 5.25rem;
+  --month-font: 0.75rem;
+  --month-line: 0.85rem;
+  --month-row: 4.75rem;
   display: grid;
   overflow: hidden;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -322,7 +327,7 @@ h2 {
 }
 .cell {
   background: var(--ui-surface);
-  padding: 2px;
+  padding: 1px;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -331,14 +336,19 @@ h2 {
   background: var(--ui-surface-container-low);
   color: var(--ui-on-surface-variant);
 }
+/* Today is inverted: a filled pill on the day number. */
 .cell.today .num {
-  color: var(--ui-primary);
+  background: var(--ui-on-surface);
+  color: var(--ui-surface);
   font-weight: 700;
 }
 .num {
-  font: var(--ui-type-label-sm);
-  line-height: 1rem;
-  padding: 0 2px;
+  display: inline-block;
+  font: 500 var(--month-font) / var(--month-line) var(--font-sans);
+  min-width: 1.4em;
+  text-align: center;
+  border-radius: var(--ui-radius-sm);
+  padding: 0 3px;
 }
 .cell ul {
   list-style: none;
@@ -355,15 +365,15 @@ h2 {
   display: block;
   width: 100%;
   text-align: left;
-  font: 500 0.75rem/1rem var(--font-sans);
+  font: 500 var(--month-font) / var(--month-line) var(--font-sans);
   color: inherit;
   --ev-stripe-w: 3px;
   background: none;
   border: 0;
   border-left: 3px solid transparent;
   border-radius: var(--ui-radius-sm);
-  height: 1rem;
-  line-height: 1rem;
+  height: var(--month-line);
+  line-height: var(--month-line);
   padding: 0 3px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -390,9 +400,23 @@ h2 {
   padding: 0;
   cursor: pointer;
   color: var(--ui-on-surface-variant);
-  font: var(--ui-type-label-sm);
-  height: 1rem;
-  line-height: 1rem;
+  font: 500 var(--month-font) / var(--month-line) var(--font-sans);
+  height: var(--month-line);
   padding: 0 3px;
+}
+@media (max-width: 599px) {
+  .month {
+    --month-font: 0.625rem;
+    --month-line: 0.7rem;
+    --month-row: 3.9rem;
+  }
+  .dow {
+    padding: 0 1px;
+    font-size: 0.625rem;
+  }
+  .ev {
+    padding: 0 2px;
+    border-left-width: 2px;
+  }
 }
 </style>

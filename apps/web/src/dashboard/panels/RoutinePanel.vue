@@ -1,5 +1,14 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { dayKey } from '../../lib/time'
+import {
+  fireConfetti,
+  hasFired,
+  markFired,
+  memberShades,
+  newlyCompleted,
+  runKey,
+} from '../effects/confettiModel'
 import ProgressBar from '../../components/tasks/ProgressBar.vue'
 import { shownRuns } from '../tasksModel'
 import type { PanelProps } from '../types'
@@ -13,9 +22,36 @@ const runs = computed(() =>
     return {
       run: r,
       name: m?.display_name ?? '',
+      color: m?.color ?? null,
       done: r.steps.length > 0 && r.steps.every((s) => s.done_at),
     }
   }),
+)
+
+/**
+ * Confetti when a run turns done (once per run and day, see confettiModel). Runs already done
+ * when first seen never fire. Each device can switch it off (`settings.confetti`).
+ */
+const cards = ref<HTMLElement[]>([])
+const prev = new Map<string, boolean>()
+watch(
+  runs,
+  (list) => {
+    const states = list.map((x) => ({
+      key: runKey(x.run),
+      runDate: x.run.run_date,
+      done: x.done,
+    }))
+    const fresh = newlyCompleted(prev, states, hasFired)
+    if (props.settings.confetti === false) return
+    for (const f of fresh) {
+      const x = list.find((y) => runKey(y.run) === f.key)
+      const el = cards.value.find((c) => c.dataset.run === x?.run.id)
+      markFired(f.key, f.runDate, dayKey(props.now, props.data.household.tz))
+      if (el) fireConfetti({ rect: el.getBoundingClientRect(), colors: memberShades(x?.color) })
+    }
+  },
+  { immediate: true, flush: 'post' },
 )
 </script>
 
@@ -23,6 +59,7 @@ const runs = computed(() =>
   <section v-if="runs.length" class="routine" aria-label="Routine">
     <div
       v-for="x in runs"
+      ref="cards"
       :key="x.run.id"
       class="col"
       :class="{ complete: x.done }"

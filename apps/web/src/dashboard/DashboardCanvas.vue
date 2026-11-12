@@ -20,6 +20,8 @@ import {
 } from './layout'
 import UiIcon from '../ui/UiIcon.vue'
 import type { IconName } from '../ui/icons'
+import ConfettiLayer from './effects/ConfettiLayer.vue'
+import SnowLayer from './effects/SnowLayer.vue'
 import Whiteboard from './Whiteboard.vue'
 import PanelHost from './panels/PanelHost.vue'
 import { prefersDark, resolveMode } from './theme'
@@ -243,6 +245,7 @@ const shift = computed(() =>
     :data-theme="variant.mode"
     :data-orientation="portrait ? 'portrait' : 'landscape'"
   >
+    <SnowLayer v-if="cfg.snow !== false" />
     <nav class="nav" :aria-label="S.navLabel">
       <button
         v-for="v in VIEWS"
@@ -362,6 +365,7 @@ const shift = computed(() =>
       :data="view === 'week' ? weekView : data"
       @close="detail = null"
     />
+    <ConfettiLayer v-if="cfg.confetti !== false" />
     <slot />
   </div>
 </template>
@@ -384,6 +388,8 @@ const shift = computed(() =>
   flex-direction: column;
 }
 .nav {
+  position: relative;
+  z-index: 1;
   flex: none;
   display: flex;
   gap: var(--space-2);
@@ -462,6 +468,8 @@ const shift = computed(() =>
 }
 /* The whole view scrolls, so no panel is cropped when another needs more room. */
 .main {
+  position: relative;
+  z-index: 1;
   flex: 1;
   min-width: 0;
   min-height: 0;

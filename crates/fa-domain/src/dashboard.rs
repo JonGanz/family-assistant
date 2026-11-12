@@ -75,6 +75,12 @@ pub struct DashboardSettings {
     /// Shows the Food view (meal plan and shopping list) on this device (D-117).
     #[serde(default = "default_true")]
     pub food_view: bool,
+    /// Confetti when a routine run is completed on this device.
+    #[serde(default = "default_true")]
+    pub confetti: bool,
+    /// Falling snow behind the cards on this device.
+    #[serde(default = "default_true")]
+    pub snow: bool,
 }
 
 impl DashboardSettings {
@@ -115,6 +121,8 @@ impl Default for DashboardSettings {
                 Panel::new("meals", json!({})),
             ],
             food_view: true,
+            confetti: true,
+            snow: true,
         }
     }
 }
@@ -171,6 +179,17 @@ mod tests {
     }
 
     #[test]
+    fn effects_default_on_for_old_stored_json() {
+        let j = r#"{"theme":"auto","agenda_days":3,"members":"all","panels":[]}"#;
+        let s: DashboardSettings = serde_json::from_str(j).unwrap();
+        assert!(s.confetti && s.snow);
+        assert!(DashboardSettings::default().confetti && DashboardSettings::default().snow);
+        let off = r#"{"theme":"auto","agenda_days":3,"members":"all","panels":[],"confetti":false,"snow":false}"#;
+        let s: DashboardSettings = serde_json::from_str(off).unwrap();
+        assert!(!s.confetti && !s.snow);
+    }
+
+    #[test]
     fn unknown_theme_rejected_and_old_orientation_ignored() {
         let j = r#"{"theme":"auto","agenda_days":3,"members":"all","panels":[]}"#;
         assert!(serde_json::from_str::<DashboardSettings>(j).is_ok());
@@ -196,7 +215,7 @@ mod tests {
     fn unknown_panels_round_trip() {
         let j = serde_json::json!({
             "theme": {"family": "catppuccin", "mode": "dark"}, "agenda_days": 5, "screensaver_minutes": 15,
-            "members": "all", "food_view": true,
+            "members": "all", "food_view": true, "confetti": true, "snow": true,
             "panels": [{"kind": "clock"}, {"kind": "hologram", "depth": 3, "opts": {"a": [1, 2]}}]
         });
         let s: DashboardSettings = serde_json::from_value(j.clone()).unwrap();

@@ -124,3 +124,14 @@ describe('CalendarView week overflow', () => {
     w.unmount()
   })
 })
+
+describe('CalendarView month today marker', () => {
+  it('marks exactly the cell of today', async () => {
+    const w = mount(CalendarView, { attachTo: document.body, global: { stubs: { UiPage: false } } })
+    await flushPromises()
+    const cells = w.findAll('.month .cell.today')
+    expect(cells).toHaveLength(1)
+    expect(cells[0]!.find('.num').text()).toBe(String(Number(day.slice(8))))
+    w.unmount()
+  })
+})

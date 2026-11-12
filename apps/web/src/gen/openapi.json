@@ -13769,6 +13769,10 @@
             "format": "int32",
             "minimum": 0
           },
+          "confetti": {
+            "type": "boolean",
+            "description": "Confetti when a routine run is completed on this device."
+          },
           "food_view": {
             "type": "boolean",
             "description": "Shows the Food view (meal plan and shopping list) on this device (D-117)."
@@ -13787,6 +13791,10 @@
             "format": "int32",
             "description": "Minutes without a touch before the screensaver starts; 0 turns it off.",
             "minimum": 0
+          },
+          "snow": {
+            "type": "boolean",
+            "description": "Falling snow behind the cards on this device."
           },
           "theme": {
             "$ref": "#/components/schemas/ThemeChoice"

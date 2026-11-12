@@ -2793,6 +2793,8 @@ export interface components {
         DashboardSettings: {
             /** Format: int32 */
             agenda_days: number;
+            /** @description Confetti when a routine run is completed on this device. */
+            confetti?: boolean;
             /** @description Shows the Food view (meal plan and shopping list) on this device (D-117). */
             food_view?: boolean;
             members: components["schemas"]["MemberSelection"];
@@ -2802,6 +2804,8 @@ export interface components {
              * @description Minutes without a touch before the screensaver starts; 0 turns it off.
              */
             screensaver_minutes?: number;
+            /** @description Falling snow behind the cards on this device. */
+            snow?: boolean;
             theme: components["schemas"]["ThemeChoice"];
         };
         DashboardView: {

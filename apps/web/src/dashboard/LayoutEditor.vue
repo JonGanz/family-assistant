@@ -180,6 +180,26 @@ function preset(e: Event) {
         />
         {{ S.foodView }}
       </label>
+      <label class="check">
+        <input
+          data-testid="confetti-toggle"
+          type="checkbox"
+          role="switch"
+          :checked="s.confetti !== false"
+          @change="set({ ...s, confetti: ($event.target as HTMLInputElement).checked })"
+        />
+        {{ S.confettiToggle }}
+      </label>
+      <label class="check">
+        <input
+          data-testid="snow-toggle"
+          type="checkbox"
+          role="switch"
+          :checked="s.snow !== false"
+          @change="set({ ...s, snow: ($event.target as HTMLInputElement).checked })"
+        />
+        {{ S.snowToggle }}
+      </label>
     </div>
 
     <fieldset v-if="members.length">

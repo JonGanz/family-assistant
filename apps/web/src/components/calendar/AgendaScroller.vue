@@ -148,8 +148,24 @@ async function reset() {
   stalled.value = { before: false, after: false }
   const first = chunkAt(props.start)
   chunks.value = [first]
+  const gen = generation
   await fetchChunk(first)
-  if (root.value) root.value.scrollTop = 0
+  if (gen !== generation) return
+  await nextTick()
+  pinStart()
+}
+
+/** Scrolls the pane so the start day (or the first day after it) is at its very top. */
+function pinStart() {
+  const el = root.value
+  if (!el) return
+  const secs = [...el.querySelectorAll<HTMLElement>('[data-day]')]
+  const s = secs.find((x) => x.dataset.day! >= props.start) ?? secs[0]
+  if (!s) {
+    el.scrollTop = 0
+    return
+  }
+  el.scrollTop += s.getBoundingClientRect().top - el.getBoundingClientRect().top
 }
 
 onMounted(() => {

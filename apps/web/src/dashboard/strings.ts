@@ -52,6 +52,8 @@ export const S = {
   mealsToday: 'Meals today',
   noMeals: 'No meals planned',
   foodView: 'Food view',
+  confettiToggle: 'Confetti when a routine is done',
+  snowToggle: 'Falling snow',
   wbBoard: 'Drawing board',
   wbTools: 'Whiteboard tools',
   wbPen: 'Pen',

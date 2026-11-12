@@ -80,4 +80,36 @@ describe('AgendaScroller', () => {
     expect(disconnected).toBe(1)
     expect(calendar.held).toHaveLength(0)
   })
+
+  it('pins the start day section to the top of the pane after the first load', async () => {
+    const start = dayKey(new Date(), 'UTC')
+    const rect = vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (
+      this: Element,
+    ) {
+      const top = (this as HTMLElement).dataset?.day === start ? 240 : 0
+      return {
+        top,
+        bottom: top + 10,
+        left: 0,
+        right: 0,
+        width: 0,
+        height: 10,
+        x: 0,
+        y: top,
+      } as DOMRect
+    })
+    const w = mount(AgendaScroller, {
+      props: { tz: 'UTC', start, nonce: 0, members: [], memberKeys: [undefined] },
+    })
+    await flushPromises()
+    const pane = w.get('[data-testid="agenda-scroll"]').element as HTMLElement
+    expect(pane.scrollTop).toBe(240)
+    // Today again with an unchanged start: the pane is moved back to today.
+    pane.scrollTop = 900
+    await w.setProps({ nonce: 1 })
+    await flushPromises()
+    expect(pane.scrollTop).toBe(1140)
+    rect.mockRestore()
+    w.unmount()
+  })
 })
