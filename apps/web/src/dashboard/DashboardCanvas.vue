@@ -147,7 +147,8 @@ const homeRows = computed(() => {
   const rows: string[] = []
   let scrollDone = false
   for (const st of stacks.value) {
-    if (!st.scroll) rows.push('auto')
+    if (st.key === 'routines') rows.push('minmax(0, max-content)')
+    else if (!st.scroll) rows.push('auto')
     else if (!scrollDone) {
       rows.push('minmax(0, 1fr)')
       scrollDone = true
@@ -497,14 +498,21 @@ const shift = computed(() =>
   overflow-y: auto;
   padding-bottom: 2.5rem;
 }
-/* Portrait: the routines band is pinned to the bottom; past 40% of the screen it scrolls inside its
-   card instead of pushing off the screen (the page itself never scrolls). */
+/* Portrait: the routines band is pinned to the bottom. Its row takes the routines' height up to 40%
+   of the screen and never more than what is left; past that the cards scroll inside themselves
+   instead of running off the screen (the page itself never scrolls). `vh` first: kiosk browsers
+   without `dvh` drop that declaration. */
 .main.split .stack.s-routines {
-  align-self: end;
+  align-self: stretch;
+  overflow: hidden;
+  grid-template-rows: minmax(0, 1fr);
 }
 .main.split .s-routines .cell {
+  min-height: 0;
+  max-height: 40vh;
   max-height: 40dvh;
   overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .weekview {
   grid-template-rows: minmax(0, 1fr) auto;

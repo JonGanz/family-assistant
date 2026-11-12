@@ -251,6 +251,14 @@ async function checkKiosk(
     const rects = boxes.filter((b): b is Rect => !!b)
     const clash = rects.flatMap((a, i) => rects.slice(i + 1).filter((b) => hit(a, b)))
     expect(clash, `${name}: overlapping panels`).toHaveLength(0)
+    // The routines card ends on the screen (its band is pinned to the bottom edge).
+    if (preset === 'hub' && name.startsWith('portrait')) {
+      const bottom = await screen
+        .getByRole('region', { name: 'Routine' })
+        .evaluate((el) => (el.closest('.cell') ?? el).getBoundingClientRect().bottom)
+      const inner = await screen.evaluate(() => window.innerHeight)
+      expect(bottom, `${name}: the routines run off the bottom`).toBeLessThanOrEqual(inner + 1)
+    }
     if (preset === 'board') {
       // Every member column must fit on the screen.
       const cols = await screen
@@ -292,7 +300,31 @@ test('Family hub lays out Now and the routine at 1920x1080', async ({ page, brow
 
 test('Family hub lays out Now and the routine in portrait', async ({ page, browser }) => {
   await uiLogin(page, adult)
-  await checkKiosk(page, browser, 'portrait', { width: 1080, height: 1920 }, 'hub')
+  // A second, long routine beside the seeded one: the routines band must still stay on screen.
+  const members = await (await page.request.get('/api/v1/members')).json()
+  const riley = (Array.isArray(members) ? members : members.items).find(
+    (m: { display_name: string }) => m.display_name === 'Riley',
+  )
+  const made = await page.request.post('/api/v1/routines', {
+    data: {
+      name: `Long routine ${Date.now()}`,
+      members: [riley.id],
+      starts_at: '00:00',
+      done_by: '23:59',
+      day_filter: 'daily',
+      steps: ['One', 'Two', 'Three', 'Four', 'Five', 'Six'].map((text) => ({ text })),
+    },
+    headers: { 'X-FA-Request': '1' },
+  })
+  expect(made.ok()).toBeTruthy()
+  const long = await made.json()
+  runNow()
+  try {
+    await checkKiosk(page, browser, 'portrait', { width: 1080, height: 1920 }, 'hub')
+    await checkKiosk(page, browser, 'portrait-small', { width: 720, height: 1280 }, 'hub')
+  } finally {
+    await page.request.delete(`/api/v1/routines/${long.id}`, { headers: { 'X-FA-Request': '1' } })
+  }
 })
 
 test('Chores board fits its member columns at 1920x1080', async ({ page, browser }) => {
