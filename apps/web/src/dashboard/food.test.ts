@@ -223,3 +223,50 @@ describe('kiosk shopping list', () => {
     expect((await open(false)).find('[data-testid="grocery-add-input"]').exists()).toBe(true)
   })
 })
+
+describe('kiosk meal plan roll', () => {
+  it('opens the recipe of a planned meal, plain text stays plain', async () => {
+    const { foodKiosk } = await import('../api/food')
+    ;(foodKiosk.plan as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
+      {
+        id: 'e1',
+        date: '2026-10-24',
+        slot_id: 's1',
+        ord: 0,
+        recipe_id: 'r1',
+        title: 'Lentil soup',
+        version: 1,
+      },
+      {
+        id: 'e2',
+        date: '2026-10-24',
+        slot_id: 's1',
+        ord: 1,
+        title: '',
+        free_text: 'Bread',
+        version: 1,
+      },
+    ])
+    kioskRecipe.mockResolvedValue({
+      id: 'r1',
+      title: 'Lentil soup',
+      has_image: false,
+      lines: [],
+      steps: [],
+    })
+    const { default: FoodPlanRoll } = await import('./FoodPlanRoll.vue')
+    const w = mount(FoodPlanRoll, {
+      props: { today: '2026-10-24', slots: [{ id: 's1', name: 'Dinner' }] },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    const btns = w.findAll('[data-testid="roll-recipe"]')
+    expect(btns).toHaveLength(1)
+    expect(w.text()).toContain('Bread')
+    await btns[0]!.trigger('click')
+    await flushPromises()
+    expect(document.body.textContent).toContain('Lentil soup')
+    expect(kioskRecipe).toHaveBeenCalledWith('r1')
+    w.unmount()
+  })
+})

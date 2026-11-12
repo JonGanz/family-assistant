@@ -1,13 +1,16 @@
 <script setup lang="ts">
 // The kiosk's rolling meal plan: seven day rows like the Week view, two days back, today (inverted
-// header) and four ahead; a column per meal slot. Read-only, and it never scrolls.
-import { computed, watch } from 'vue'
+// header) and four ahead; a column per meal slot. Read-only, and it never scrolls. A meal with a
+// recipe opens the full-screen recipe, as on Home.
+import { computed, ref, watch } from 'vue'
 import { foodKiosk } from '../api/food'
 import { entryTitle } from '../components/food/plan/planModel'
 import { useMealPlanStore } from '../stores/mealPlan'
 import { trimStyle } from '../lib/eventColors'
 import { rollingDays } from './rollModel'
 import { S } from './strings'
+import UiIcon from '../ui/UiIcon.vue'
+import RecipeDetail from './details/RecipeDetail.vue'
 
 const props = defineProps<{
   /** `YYYY-MM-DD` in the household's zone. */
@@ -16,6 +19,8 @@ const props = defineProps<{
 }>()
 
 const store = useMealPlanStore()
+/** The recipe open in the full-screen modal. */
+const open = ref<{ id: string; title: string } | null>(null)
 const days = computed(() => rollingDays(props.today))
 const rows = computed(() =>
   days.value.map((key) => {
@@ -73,13 +78,25 @@ watch(
                 data-testid="roll-entry"
                 :style="trimStyle(r.key < today ? 'var(--color-muted)' : 'var(--color-accent)')"
               >
-                {{ entryTitle(e) }}
+                <button
+                  v-if="e.recipe_id"
+                  type="button"
+                  class="meal"
+                  data-testid="roll-recipe"
+                  :aria-label="`Open recipe: ${entryTitle(e)}`"
+                  @click="open = { id: e.recipe_id, title: entryTitle(e) }"
+                >
+                  <span class="t">{{ entryTitle(e) }}</span>
+                  <UiIcon name="recipe" :size="24" class="ic" />
+                </button>
+                <span v-else class="t">{{ entryTitle(e) }}</span>
               </li>
             </ul>
           </td>
         </tr>
       </tbody>
     </table>
+    <RecipeDetail v-if="open" :id="open.id" :title="open.title" @close="open = null" />
   </section>
 </template>
 
@@ -150,9 +167,33 @@ li {
   --ev-stripe-w: 6px;
   border-radius: var(--ui-radius-sm);
   background: var(--color-surface);
-  font-size: var(--font-size-base);
+  /* Seven rows share the screen height: the text grows with it. */
+  font-size: clamp(var(--font-size-base), 2.8vh, 2rem);
+  line-height: 1.2;
   font-weight: 600;
   overflow-wrap: anywhere;
+}
+.meal {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  width: 100%;
+  min-height: var(--min-touch);
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.meal .ic {
+  flex: none;
+  color: var(--color-accent);
+}
+.t {
+  min-width: 0;
 }
 td.past {
   color: var(--color-muted);

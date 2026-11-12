@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // The Agenda: starts at `start`, loads earlier/later date chunks as sentinels scroll into view,
-// and keeps at most MAX_CHUNKS chunks (data and DOM), dropping the far end.
+// and keeps at most MAX_CHUNKS chunks (data and DOM), dropping the far end. It scrolls inside its
+// own pane, sized to the rest of the viewport, so the page's tabs and filters above stay put.
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import EventCard from '../EventCard.vue'
 import { dayKey, formatDayHeading, groupByDay } from '../../lib/time'
@@ -83,9 +84,10 @@ const groups = computed(() => {
 
 /** The first day section under the top of the viewport, and where it sits. */
 function anchorOf(): { day: string; top: number } | null {
+  const top = root.value?.getBoundingClientRect().top ?? 0
   for (const s of root.value?.querySelectorAll<HTMLElement>('[data-day]') ?? []) {
     const r = s.getBoundingClientRect()
-    if (r.bottom > 0) return { day: s.dataset.day!, top: r.top }
+    if (r.bottom > top) return { day: s.dataset.day!, top: r.top }
   }
   return null
 }
@@ -95,12 +97,22 @@ function restore(a: { day: string; top: number } | null) {
   const s = root.value?.querySelector<HTMLElement>(`[data-day="${a.day}"]`)
   if (!s) return
   const d = s.getBoundingClientRect().top - a.top
-  if (d) window.scrollBy(0, d)
+  if (d && root.value) root.value.scrollTop += d
 }
 const near = (el: HTMLElement | null) => {
-  if (!el) return false
+  if (!el || !root.value) return false
   const r = el.getBoundingClientRect()
-  return r.bottom > -400 && r.top < window.innerHeight + 400
+  const box = root.value.getBoundingClientRect()
+  return r.bottom > box.top - 400 && r.top < box.bottom + 400
+}
+/** The pane fills the viewport below its top edge. */
+const height = ref<number | null>(null)
+function measure() {
+  const el = root.value
+  if (!el) return
+  const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+  const avail = Math.floor(window.innerHeight - el.getBoundingClientRect().top - rootPx)
+  height.value = Math.max(avail, 12 * rootPx)
 }
 
 async function load(side: Side, chain = 0): Promise<void> {
@@ -137,10 +149,12 @@ async function reset() {
   const first = chunkAt(props.start)
   chunks.value = [first]
   await fetchChunk(first)
-  window.scrollTo({ top: 0 })
+  if (root.value) root.value.scrollTop = 0
 }
 
 onMounted(() => {
+  measure()
+  window.addEventListener('resize', measure)
   void reset()
   if (typeof IntersectionObserver === 'undefined') return
   observer = new IntersectionObserver(
@@ -150,12 +164,13 @@ onMounted(() => {
         void load(e.target === topEl.value ? 'before' : 'after')
       }
     },
-    { rootMargin: '400px 0px' },
+    { root: root.value, rootMargin: '400px 0px' },
   )
   if (topEl.value) observer.observe(topEl.value)
   if (bottomEl.value) observer.observe(bottomEl.value)
 })
 onBeforeUnmount(() => {
+  window.removeEventListener('resize', measure)
   observer?.disconnect()
   observer = null
   generation++
@@ -168,7 +183,12 @@ watch(
 </script>
 
 <template>
-  <div ref="root" class="agenda">
+  <div
+    ref="root"
+    class="agenda"
+    data-testid="agenda-scroll"
+    :style="height ? { height: `${height}px` } : undefined"
+  >
     <div ref="topEl" class="edge" data-edge="before" aria-live="polite">
       <button v-if="stalled.before" type="button" class="more" @click="load('before')">
         Load earlier
@@ -202,7 +222,10 @@ watch(
 <style scoped>
 .agenda {
   display: grid;
+  align-content: start;
   gap: var(--ui-space-4);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   /* The scroll position is kept by hand when days are added above. */
   overflow-anchor: none;
 }
@@ -212,7 +235,7 @@ watch(
 }
 .head {
   position: sticky;
-  top: var(--ui-appbar-h, 64px);
+  top: 0;
   z-index: 1;
   margin: 0 0 var(--ui-space-2);
   padding: var(--ui-space-1) 0;

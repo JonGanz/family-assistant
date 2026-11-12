@@ -46,6 +46,7 @@ import I_timer from '~icons/material-symbols/timer-rounded'
 import I_food from '~icons/material-symbols/restaurant-rounded'
 import I_dinner from '~icons/material-symbols/restaurant-rounded'
 import I_cart from '~icons/material-symbols/shopping-cart-rounded'
+import I_backspace from '~icons/material-symbols/backspace-rounded'
 import I_recipe from '~icons/material-symbols/menu-book-rounded'
 import I_template from '~icons/material-symbols/calendar-view-week-rounded'
 import I_star from '~icons/material-symbols/star-outline-rounded'
@@ -146,6 +147,7 @@ export const icons = {
   dinner: I_dinner,
   cart: I_cart,
   recipe: I_recipe,
+  backspace: I_backspace,
   template: I_template,
   star: I_star,
   star_filled: I_star_filled,
