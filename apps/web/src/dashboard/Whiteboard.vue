@@ -367,8 +367,10 @@ onBeforeUnmount(up)
   border-radius: 99px;
 }
 .ink {
+  flex: none;
   width: 3rem;
   height: 3rem;
+  aspect-ratio: 1;
   padding: 0;
   border: 2px solid var(--color-border);
   border-radius: 50%;

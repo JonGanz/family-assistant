@@ -146,10 +146,9 @@ function load() {
   for (const m of memberKeys.value)
     void calendar.ensureRange(grid.value.from, grid.value.to, tz.value, m)
 }
-// Month: the grid is sized to the viewport; each cell's capacity comes from its measured height.
+// Month: compact week rows of a fixed height; each cell's capacity comes from its measured height.
 const FALLBACK_CAP = 3
 const monthEl = ref<HTMLElement | null>(null)
-const monthHeight = ref<number | null>(null)
 const cap = ref(FALLBACK_CAP)
 const weeks = computed(() => Math.max(1, Math.round(days.value / 7)))
 let ro: ResizeObserver | null = null
@@ -157,14 +156,11 @@ function measure() {
   const el = monthEl.value
   if (!el) return
   const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
-  const top = el.getBoundingClientRect().top
-  const avail = Math.floor(window.innerHeight - top - rootPx)
-  if (avail > 0) monthHeight.value = Math.max(avail, 8 * rootPx)
   const cell = el.querySelector<HTMLElement>('.cell')
   const num = el.querySelector<HTMLElement>('.num')
   if (!cell || cell.clientHeight === 0) return
   const pad = parseFloat(getComputedStyle(cell).paddingTop) * 2 || 0
-  const line = 1.25 * rootPx + 2 // item height plus the list gap
+  const line = rootPx + 1 // item height plus the list gap
   cap.value = capacity(cell.clientHeight - pad, line, (num?.offsetHeight ?? 0) + 2)
 }
 function observe() {
@@ -249,8 +245,7 @@ const loadingFirst = loadingFirstRaw
         ref="monthEl"
         class="month"
         :style="{
-          gridTemplateRows: `auto repeat(${weeks}, minmax(0, 1fr))`,
-          ...(monthHeight ? { height: `${monthHeight}px` } : {}),
+          gridTemplateRows: `auto repeat(${weeks}, var(--month-row))`,
         }"
       >
         <div v-for="w in weekdays" :key="w" class="dow">{{ w }}</div>
@@ -310,6 +305,8 @@ h2 {
   overflow-x: auto;
 }
 .month {
+  /* A day number and four one-line events. */
+  --month-row: 5.25rem;
   display: grid;
   overflow: hidden;
   grid-template-columns: repeat(7, minmax(0, 1fr));
@@ -325,7 +322,7 @@ h2 {
 }
 .cell {
   background: var(--ui-surface);
-  padding: var(--ui-space-1);
+  padding: 2px;
   min-width: 0;
   min-height: 0;
   overflow: hidden;
@@ -339,15 +336,16 @@ h2 {
   font-weight: 700;
 }
 .num {
-  font: var(--ui-type-label-md);
-  line-height: 1.1rem;
+  font: var(--ui-type-label-sm);
+  line-height: 1rem;
+  padding: 0 2px;
 }
 .cell ul {
   list-style: none;
   padding: 0;
   margin: 0;
   display: grid;
-  gap: 2px;
+  gap: 1px;
   min-width: 0;
 }
 .cell li {
@@ -357,16 +355,16 @@ h2 {
   display: block;
   width: 100%;
   text-align: left;
-  font: var(--ui-type-body-sm);
+  font: 500 0.75rem/1rem var(--font-sans);
   color: inherit;
   --ev-stripe-w: 3px;
   background: none;
   border: 0;
   border-left: 3px solid transparent;
   border-radius: var(--ui-radius-sm);
-  height: 1.25rem;
-  line-height: 1.25rem;
-  padding: 0 var(--ui-space-1);
+  height: 1rem;
+  line-height: 1rem;
+  padding: 0 3px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -392,9 +390,9 @@ h2 {
   padding: 0;
   cursor: pointer;
   color: var(--ui-on-surface-variant);
-  font: var(--ui-type-body-sm);
-  height: 1.25rem;
-  line-height: 1.25rem;
-  padding: 0 var(--ui-space-1);
+  font: var(--ui-type-label-sm);
+  height: 1rem;
+  line-height: 1rem;
+  padding: 0 3px;
 }
 </style>

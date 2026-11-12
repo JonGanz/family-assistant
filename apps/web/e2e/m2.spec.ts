@@ -332,6 +332,77 @@ test('Chores board fits its member columns at 1920x1080', async ({ page, browser
   await checkKiosk(page, browser, 'landscape', { width: 1920, height: 1080 }, 'board')
 })
 
+/**
+ * Every kiosk view at common screen sizes: no button, field or tab may sit outside the screen
+ * unless it is inside something that scrolls (the page itself never scrolls).
+ */
+test('every kiosk view fits common screen sizes', async ({ page, browser }) => {
+  test.setTimeout(180_000)
+  await uiLogin(page, adult)
+  const sizes = [
+    { width: 1920, height: 1080 },
+    { width: 1366, height: 768 },
+    { width: 1280, height: 720 },
+    { width: 1024, height: 600 },
+    { width: 1080, height: 1920 },
+    { width: 800, height: 1280 },
+    { width: 600, height: 1024 },
+  ]
+  const views = ['home', 'week', 'food', 'timers', 'whiteboard']
+  const problems: string[] = []
+  for (const size of sizes) {
+    const { screen, ctx } = await openKiosk(page, browser, size)
+    try {
+      await expect(screen.getByTestId('kiosk-view-home')).toBeVisible()
+      for (const v of views) {
+        await screen.getByTestId(`kiosk-view-${v}`).click()
+        await screen.waitForTimeout(300)
+        const off = await screen.evaluate(() => {
+          const W = window.innerWidth
+          const H = window.innerHeight
+          const scrolls = (el: Element) => {
+            for (let p = el.parentElement; p; p = p.parentElement) {
+              const st = getComputedStyle(p)
+              if (/(auto|scroll)/.test(st.overflowY + st.overflowX)) return true
+            }
+            return false
+          }
+          const out: string[] = []
+          for (const el of document.querySelectorAll(
+            'button, input, select, textarea, [role=tab], [role=switch], output',
+          )) {
+            const r = el.getBoundingClientRect()
+            if (r.width === 0 && r.height === 0) continue
+            if (getComputedStyle(el).visibility === 'hidden') continue
+            if (scrolls(el)) continue
+            if (r.right > W + 1 || r.bottom > H + 1 || r.left < -1 || r.top < -1) {
+              const name =
+                el.getAttribute('aria-label') ||
+                el.getAttribute('data-testid') ||
+                (el.textContent ?? '').trim().slice(0, 30)
+              out.push(
+                `${el.tagName.toLowerCase()} "${name}" at ${Math.round(r.right)}x${Math.round(r.bottom)}`,
+              )
+            }
+          }
+          const root = document.querySelector('[data-testid=kiosk-layout]')!.getBoundingClientRect()
+          if (root.bottom > H + 1 || root.right > W + 1)
+            out.push('the kiosk shell is larger than the screen')
+          return out
+        })
+        for (const o of off) problems.push(`${size.width}x${size.height} ${v}: ${o}`)
+        if (v === 'week' || v === 'whiteboard')
+          await screen.screenshot({
+            path: `test-results/fit-${v}-${size.width}x${size.height}.png`,
+          })
+      }
+    } finally {
+      await ctx.close()
+    }
+  }
+  expect(problems, problems.join('\n')).toEqual([])
+})
+
 test('the dashboard + button adds a task through the member picker', async ({ page, browser }) => {
   await uiLogin(page, adult)
   const title = `Buy milk ${Date.now()}`

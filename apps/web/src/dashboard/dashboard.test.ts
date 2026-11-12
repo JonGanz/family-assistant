@@ -263,6 +263,10 @@ describe('panels', () => {
         props: { data: d, settings: settings(), now: NOW },
       })
       await w.find('[data-view="week"]').trigger('click')
+      // Past events are hidden by default: show them, all four are needed here.
+      const toggle = w.find('.hidepast input')
+      expect((toggle.element as HTMLInputElement).checked).toBe(true)
+      await toggle.setValue(false)
       const cell = w.find('tr[data-day="2026-10-24"] td[data-member="m1"]')
       expect(cell.findAll('li.event')).toHaveLength(1)
       const more = cell.find('li.more button')

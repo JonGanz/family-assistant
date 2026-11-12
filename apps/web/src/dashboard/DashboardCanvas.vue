@@ -180,7 +180,8 @@ function setView(v: View) {
 }
 const detail = ref<DetailRequest | null>(null)
 const weekOffset = ref(0)
-const hidePast = ref(false)
+/** Past events are hidden by default; the toggle shows them again. */
+const hidePast = ref(true)
 const tz = computed(() => props.data.household.tz)
 const weekStart = computed<WeekStart>(() =>
   (props.data.household as { week_start?: string }).week_start === 'sunday' ? 'sunday' : 'monday',
@@ -323,11 +324,16 @@ const shift = computed(() =>
             />
           </div>
           <div class="weekbar" role="group" :aria-label="S.weekNav">
-            <button type="button" :aria-label="S.prevWeek" @click="weekOffset -= 1">‹</button>
+            <button type="button" class="wbtn" :aria-label="S.prevWeek" @click="weekOffset -= 1">
+              <UiIcon name="chevron_left" :size="24" />
+            </button>
             <output class="weektext" data-testid="week-label">{{ weekText }}</output>
-            <button type="button" :aria-label="S.nextWeek" @click="weekOffset += 1">›</button>
-            <label class="hidepast">
+            <button type="button" class="wbtn" :aria-label="S.nextWeek" @click="weekOffset += 1">
+              <UiIcon name="chevron_right" :size="24" />
+            </button>
+            <label class="hidepast" :class="{ on: hidePast }">
               <input v-model="hidePast" type="checkbox" role="switch" />
+              <span class="track" aria-hidden="true"><span class="thumb"></span></span>
               {{ S.hidePast }}
             </label>
           </div>
@@ -523,39 +529,97 @@ const shift = computed(() =>
   min-height: 0;
   overflow: hidden;
 }
+/* The Week bar follows the menu's look: borderless rounded buttons on layer 2, a pill switch. */
 .weekbar {
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  min-width: 0;
 }
-.weekbar button {
+.wbtn {
+  display: grid;
+  place-items: center;
+  width: 4.5rem;
+  height: 4rem;
   min-width: var(--min-touch);
   min-height: var(--min-touch);
-  border: 2px solid var(--color-border);
-  background: var(--color-surface);
+  padding: 0;
+  border: 0;
+  border-radius: var(--ui-radius-xl);
+  background: var(--color-layer-2, var(--color-surface));
   color: inherit;
-  font: inherit;
-  font-size: var(--font-size-lg);
   cursor: pointer;
+}
+.wbtn:active {
+  background: var(--color-accent);
+  color: var(--color-on-accent);
+}
+.wbtn :deep(svg) {
+  width: 2.2rem;
+  height: 2.2rem;
 }
 .weektext {
   min-width: 10rem;
-  padding: var(--space-2) var(--space-3);
-  border: 2px solid var(--color-border);
-  background: var(--color-bg);
+  padding: 0 var(--space-3);
   text-align: center;
-  font-size: var(--font-size-base);
+  font-size: var(--font-size-lg);
+  font-weight: 700;
 }
 .hidepast {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  min-height: 4rem;
   margin-left: auto;
+  padding: 0 var(--space-4) 0 var(--space-3);
+  border-radius: var(--ui-radius-xl);
+  background: var(--color-layer-2, var(--color-surface));
   font-size: var(--font-size-base);
+  cursor: pointer;
 }
 .hidepast input {
-  width: 1.5rem;
-  height: 1.5rem;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.hidepast:has(input:focus-visible) {
+  outline: 3px solid var(--color-accent);
+}
+.track {
+  position: relative;
+  flex: none;
+  width: 3.5rem;
+  height: 2rem;
+  border-radius: 1rem;
+  background: var(--color-layer-3, var(--color-border));
+  border: 2px solid var(--color-border);
+  transition: background 0.15s;
+}
+.thumb {
+  position: absolute;
+  top: 50%;
+  left: 0.2rem;
+  width: 1.4rem;
+  height: 1.4rem;
+  border-radius: 50%;
+  background: var(--color-muted);
+  transform: translateY(-50%);
+  transition:
+    left 0.15s,
+    background 0.15s;
+}
+.hidepast.on .track {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+}
+.hidepast.on .thumb {
+  left: calc(100% - 1.6rem);
+  background: var(--color-on-accent);
 }
 .kiosk {
   /* One spacing for the gap between cards and the padding around the page: the clock-weather gap. */

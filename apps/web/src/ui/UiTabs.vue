@@ -1,8 +1,7 @@
 <script setup lang="ts">
-// Page-level tabs (Frontend.md §3f, UI kit): UiSegmented on compact windows, a tab row otherwise. An option with
+// Page-level tabs (Frontend.md §3f, UI kit): a tab row at every width (on compact windows the tabs share the
+// width; a row that does not fit scrolls sideways). An option with
 // `href` renders as a link (route-based tabs, the parent routes on `update:modelValue`); without it, as a tab button.
-import UiSegmented from './UiSegmented.vue'
-import { useBreakpoint } from './composables/useBreakpoint'
 
 export interface TabOption {
   value: string
@@ -17,7 +16,6 @@ const props = defineProps<{
   testidPrefix?: string
 }>()
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
-const bp = useBreakpoint()
 
 function tid(value: string) {
   return props.testidPrefix ? `${props.testidPrefix}-${value}` : undefined
@@ -26,15 +24,7 @@ function tid(value: string) {
 
 <template>
   <div class="ui-tabs">
-    <UiSegmented
-      v-if="bp === 'compact'"
-      class="ui-tabs__seg"
-      :label="label"
-      :model-value="modelValue"
-      :options="options.map((o) => ({ value: o.value, label: o.label }))"
-      @update:model-value="emit('update:modelValue', $event)"
-    />
-    <nav v-else-if="options.every((o) => o.href)" class="ui-tabs__row" :aria-label="label">
+    <nav v-if="options.every((o) => o.href)" class="ui-tabs__row" :aria-label="label">
       <a
         v-for="o in options"
         :key="o.value"
@@ -67,14 +57,23 @@ function tid(value: string) {
 </template>
 
 <style scoped>
-.ui-tabs__seg {
-  display: flex;
-  width: 100%;
-}
 .ui-tabs__row {
   display: flex;
   gap: var(--ui-space-1);
   border-bottom: 1px solid var(--ui-outline-variant);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.ui-tabs__tab {
+  flex: none;
+  justify-content: center;
+  white-space: nowrap;
+}
+@media (max-width: 599px) {
+  .ui-tabs__tab {
+    flex: 1 0 auto;
+    padding: 0 var(--ui-space-3);
+  }
 }
 .ui-tabs__tab {
   display: inline-flex;
