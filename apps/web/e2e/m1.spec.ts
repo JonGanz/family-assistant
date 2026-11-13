@@ -141,3 +141,28 @@ test('settings: a weather rule with an invalid condition shows an error, then a 
   await page.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByTestId('rule-E2E invalid then valid')).toBeVisible()
 })
+
+test('Calendar Month and Week fit the screen on a phone and a desktop', async ({ page }) => {
+  await uiLogin(page, adult)
+  for (const size of [
+    { width: 390, height: 844 },
+    { width: 1440, height: 900 },
+  ]) {
+    await page.setViewportSize(size)
+    for (const view of ['Month', 'Week']) {
+      await page.goto('/calendar')
+      await page.getByRole('tab', { name: view }).click()
+      await page.waitForTimeout(400)
+      const over = await page.evaluate(() => ({
+        x: document.documentElement.scrollWidth - window.innerWidth,
+        y: document.documentElement.scrollHeight - window.innerHeight,
+      }))
+      await page.screenshot({
+        path: `test-results/calendar-${view.toLowerCase()}-${size.width}.png`,
+      })
+      expect(over.x, `${view} at ${size.width}: horizontal overflow`).toBeLessThanOrEqual(1)
+      if (view === 'Month')
+        expect(over.y, `${view} at ${size.width}: vertical overflow`).toBeLessThanOrEqual(1)
+    }
+  }
+})

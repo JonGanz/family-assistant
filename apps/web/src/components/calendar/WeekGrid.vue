@@ -213,14 +213,62 @@ ul {
   background-image: var(--ev-bg);
   color: var(--ui-on-surface-variant);
 }
+/* Phones: the grid fits the screen like Month: a very narrow date column, equal member columns,
+   one-line ellipsized items, smaller type, no sideways scroll. */
+@media (max-width: 599px) {
+  .wg {
+    min-width: 0;
+    --wg-day-w: 1.25rem;
+    --wg-row-h: 5rem;
+    font-size: 0.625rem;
+  }
+  .wg-scroll {
+    overflow-x: hidden;
+  }
+  th,
+  td {
+    padding: 1px;
+  }
+  thead th {
+    font-size: 0.625rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-align: center;
+  }
+  .day {
+    position: static;
+    padding: 1px 0;
+    text-align: center;
+    overflow: hidden;
+  }
+  .dom {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .wd {
+    display: block;
+    overflow: hidden;
+    font-size: 0.5625rem;
+    line-height: 1.1;
+  }
+  ul {
+    gap: 1px;
+  }
+  .ev {
+    font-size: 0.625rem;
+    line-height: 0.8rem;
+    padding: 0 2px;
+    border-left-width: 2px;
+  }
+  .time {
+    display: none;
+  }
+  .more {
+    font-size: 0.625rem;
+    line-height: 0.8rem;
+    padding: 0 2px;
+  }
+}
 </style>
-
-/* Phones: the grid fits the screen like Month: a narrow date column, equal member columns, one-line
-ellipsized items, smaller type, no sideways scroll. */ @media (max-width: 599px) { .wg { min-width:
-0; --wg-day-w: 2.5rem; --wg-row-h: 5rem; font-size: 0.625rem; } .wg-scroll { overflow-x: hidden; }
-th, td { padding: 1px; } thead th { font-size: 0.625rem; overflow: hidden; text-overflow: ellipsis;
-white-space: nowrap; text-align: center; } .day { position: static; text-align: center; overflow:
-hidden; } .dom { font-size: 0.875rem; line-height: 1; } .wd { display: block; font-size: 0.5625rem;
-line-height: 1.1; } ul { gap: 1px; } .ev { font-size: 0.625rem; line-height: 0.8rem; padding: 0 2px;
-border-left-width: 2px; } .time { display: none; } .more { font-size: 0.625rem; line-height: 0.8rem;
-padding: 0 2px; } }

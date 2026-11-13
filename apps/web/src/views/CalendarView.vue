@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, inject, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { EventView } from '../api/client'
 import DateRangeNav from '../components/DateRangeNav.vue'
 import DayListSheet, { type DayOpen } from '../components/calendar/DayListSheet.vue'
@@ -16,13 +16,14 @@ import { useHouseholdStore } from '../stores/household'
 import { useMembersStore } from '../stores/members'
 import {
   UiFilterChips,
+  UiIconButton,
   UiErrorState,
   UiPage,
   UiSkeleton,
   UiTabs,
-  UiTopAppBar,
   useBreakpoint,
 } from '../ui'
+import { navControlKey } from '../ui/nav'
 import { memberLikes, toEventLike } from './shared'
 
 type View = 'agenda' | 'week' | 'month'
@@ -31,6 +32,8 @@ const household = useHouseholdStore()
 const calendar = useCalendarStore()
 const members = useMembersStore()
 const bp = useBreakpoint()
+// The page has no title bar (the menu shows where you are); on a phone its menu button lives here.
+const navControl = inject(navControlKey, null)
 
 const tz = computed(() => household.tz)
 // The view a person last used is reopened (D-103); with none stored, Agenda on phones and Week
@@ -146,7 +149,7 @@ function load() {
   for (const m of memberKeys.value)
     void calendar.ensureRange(grid.value.from, grid.value.to, tz.value, m)
 }
-// Month: compact week rows of a fixed height; each cell's capacity comes from its measured height.
+// Month: the grid fills the space below it, the week rows share the height equally; each cell's capacity comes from its measured height.
 const FALLBACK_CAP = 3
 const monthEl = ref<HTMLElement | null>(null)
 const cap = ref(FALLBACK_CAP)
@@ -156,6 +159,16 @@ function measure() {
   const el = monthEl.value
   if (!el) return
   const rootPx = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+  // The grid fills the viewport from its top edge down.
+  const avail = Math.floor(window.innerHeight - el.getBoundingClientRect().top - rootPx)
+  let h = Math.max(avail, 16 * rootPx)
+  el.style.height = `${h}px`
+  // Whatever still pushes the page past the screen (its bottom padding, a safe area) comes off too.
+  const over = document.documentElement.scrollHeight - window.innerHeight
+  if (over > 0 && h - over >= 16 * rootPx) {
+    h -= over
+    el.style.height = `${h}px`
+  }
   const cell = el.querySelector<HTMLElement>('.cell')
   const num = el.querySelector<HTMLElement>('.num')
   if (!cell || cell.clientHeight === 0) return
@@ -202,16 +215,20 @@ const loadingFirst = loadingFirstRaw
 
 <template>
   <UiPage wide>
-    <template #top>
-      <UiTopAppBar title="Calendar" />
-    </template>
-
-    <UiTabs
-      :model-value="view"
-      :options="VIEWS"
-      label="View"
-      @update:model-value="setView($event as View)"
-    />
+    <div class="top-row">
+      <UiIconButton
+        v-if="navControl && bp === 'compact'"
+        icon="menu"
+        label="Open navigation"
+        @click="navControl.openNav()"
+      />
+      <UiTabs
+        :model-value="view"
+        :options="VIEWS"
+        label="View"
+        @update:model-value="setView($event as View)"
+      />
+    </div>
 
     <div class="controls">
       <DateRangeNav :label="label" @prev="nav(-1)" @next="nav(1)" @today="nav(0)" />
@@ -243,12 +260,12 @@ const loadingFirst = loadingFirstRaw
       />
     </template>
 
-    <div v-else class="month-scroll">
+    <div v-else class="month-wrap">
       <div
         ref="monthEl"
         class="month"
         :style="{
-          gridTemplateRows: `auto repeat(${weeks}, var(--month-row))`,
+          gridTemplateRows: `auto repeat(${weeks}, minmax(0, 1fr))`,
         }"
       >
         <div v-for="w in weekdays" :key="w" class="dow">{{ w }}</div>
@@ -304,20 +321,29 @@ h2 {
   margin: 0 0 var(--ui-space-2);
   font: var(--ui-type-title-md);
 }
-.month-scroll {
-  overflow-x: auto;
+.top-row {
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-1);
+}
+.top-row > :first-child:not(:last-child) {
+  flex: none;
+}
+.top-row > :last-child {
+  flex: 1;
+  min-width: 0;
 }
 .month {
   /* A day number and four one-line events. */
   --month-font: 0.75rem;
   --month-line: 0.85rem;
-  --month-row: 4.75rem;
   display: grid;
   overflow: hidden;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: 1px;
   background: var(--ui-outline-variant);
   border: 1px solid var(--ui-outline-variant);
+  border-radius: var(--ui-radius-md);
 }
 .dow {
   background: var(--ui-surface-container-low);
@@ -336,18 +362,32 @@ h2 {
   background: var(--ui-surface-container-low);
   color: var(--ui-on-surface-variant);
 }
-/* Today is inverted: a filled pill on the day number. */
-.cell.today .num {
+/* Today is inverted: the whole cell, events included (their colour stripe stays). */
+.cell.today {
   background: var(--ui-on-surface);
   color: var(--ui-surface);
+}
+.cell.today .num {
   font-weight: 700;
+}
+.cell.today .ev.busy {
+  --ev-bg: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 4px,
+    color-mix(in srgb, var(--ui-surface) 35%, transparent) 4px,
+    color-mix(in srgb, var(--ui-surface) 35%, transparent) 6px
+  );
+  color: inherit;
+}
+.cell.today .more {
+  color: inherit;
 }
 .num {
   display: inline-block;
   font: 500 var(--month-font) / var(--month-line) var(--font-sans);
   min-width: 1.4em;
   text-align: center;
-  border-radius: var(--ui-radius-sm);
   padding: 0 3px;
 }
 .cell ul {
@@ -373,6 +413,8 @@ h2 {
   border-left: 3px solid transparent;
   border-radius: var(--ui-radius-sm);
   height: var(--month-line);
+  min-height: 0;
+  box-sizing: border-box;
   line-height: var(--month-line);
   padding: 0 3px;
   overflow: hidden;
@@ -402,17 +444,24 @@ h2 {
   color: var(--ui-on-surface-variant);
   font: 500 var(--month-font) / var(--month-line) var(--font-sans);
   height: var(--month-line);
+  min-height: 0;
   padding: 0 3px;
 }
 @media (max-width: 599px) {
   .month {
     --month-font: 0.625rem;
     --month-line: 0.7rem;
-    --month-row: 3.9rem;
   }
   .dow {
     padding: 0 1px;
     font-size: 0.625rem;
+  }
+  .num {
+    min-width: 0;
+    padding: 0 1px;
+  }
+  .cell {
+    padding: 0;
   }
   .ev {
     padding: 0 2px;

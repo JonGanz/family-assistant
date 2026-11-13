@@ -249,6 +249,10 @@ watch(
   min-height: 1px;
   text-align: center;
 }
+.head,
+.list {
+  max-width: 50rem;
+}
 .head {
   position: sticky;
   top: 0;

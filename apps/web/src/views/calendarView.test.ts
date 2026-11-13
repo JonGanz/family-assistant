@@ -135,3 +135,33 @@ describe('CalendarView month today marker', () => {
     w.unmount()
   })
 })
+
+describe('CalendarView month layout', () => {
+  it('inverts the whole cell of today, no pill on the number', async () => {
+    const w = mount(CalendarView, { attachTo: document.body, global: { stubs: { UiPage: false } } })
+    await flushPromises()
+    const src = (await import('./CalendarView.vue?raw')).default as string
+    expect(src).toMatch(/\.cell\.today \{[^}]*background: var\(--ui-on-surface\)/)
+    expect(src).toMatch(/\.cell\.today \{[^}]*color: var\(--ui-surface\)/)
+    expect(src).not.toMatch(/\.cell\.today \.num \{[^}]*background/)
+    expect(w.find('.month .cell.today .ev').exists()).toBe(true)
+    w.unmount()
+  })
+  it('shares the height with equal rows, no fixed row height', async () => {
+    const w = mount(CalendarView, { attachTo: document.body, global: { stubs: { UiPage: false } } })
+    await flushPromises()
+    const style = w.find('.month').attributes('style') ?? ''
+    expect(style).toContain('minmax(0, 1fr)')
+    expect(style).not.toContain('--month-row')
+    const src = (await import('./CalendarView.vue?raw')).default as string
+    expect(src).not.toContain('--month-row')
+    w.unmount()
+  })
+  it('has no Calendar page header', async () => {
+    const w = mount(CalendarView, { attachTo: document.body, global: { stubs: { UiPage: false } } })
+    await flushPromises()
+    expect(w.find('h1').exists()).toBe(false)
+    expect(w.find('header').exists()).toBe(false)
+    w.unmount()
+  })
+})
