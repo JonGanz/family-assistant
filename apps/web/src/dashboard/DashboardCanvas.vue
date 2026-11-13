@@ -2,7 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch, watchEffect } from 'vue'
 import { dayKey } from '../lib/time'
 import { applyTheme, loadDeviceChoice, resolveVariant } from '../themes'
-import { panelVisible } from './tasksModel'
+import { panelVisible, shownRuns } from './tasksModel'
 import { mealsPanelVisible } from './mealsModel'
 import FoodView from './FoodView.vue'
 import TimersView from './timers/TimersView.vue'
@@ -11,7 +11,10 @@ import {
   burnInOffset,
   normalizeTheme,
   PORTRAIT_NOW,
+  PORTRAIT_ROUTINE_COLS,
   PORTRAIT_ROUTINES,
+  portraitRoutineOrder,
+  splitRoutineAreas,
   PORTRAIT_STRIP,
   PORTRAIT_TOP,
   resolveLayout,
@@ -21,6 +24,7 @@ import {
 import UiIcon from '../ui/UiIcon.vue'
 import type { IconName } from '../ui/icons'
 import ConfettiLayer from './effects/ConfettiLayer.vue'
+import ConfettiStreamLayer from './effects/ConfettiStreamLayer.vue'
 import SnowLayer from './effects/SnowLayer.vue'
 import { snowModeOf } from './effects/snowModel'
 import Whiteboard from './Whiteboard.vue'
@@ -88,7 +92,7 @@ const areas = computed(() => {
   const panels = withMealsPanel(cfg.value.panels).filter((p) =>
     panelVisible(p, props.data, props.now),
   )
-  return resolveLayout(
+  const laid = resolveLayout(
     {
       ...cfg.value,
       theme: normalizeTheme(cfg.value.theme),
@@ -96,6 +100,8 @@ const areas = computed(() => {
     },
     o,
   )
+  // Every live routine run is its own card.
+  return splitRoutineAreas(laid, (p) => shownRuns(props.data, p, props.now).map((r) => r.id))
 })
 /**
  * Landscape: a left and a right stack, each scrolling on its own. Portrait: the clock and weather
@@ -110,6 +116,8 @@ interface Stack {
   areas: GridArea[]
   /** Fills the remaining height and scrolls on its own. */
   scroll: boolean
+  /** Rows of routine cards (portrait routines band). */
+  rows?: number
 }
 const stacks = computed<Stack[]>(() => {
   if (portrait.value) {
@@ -128,9 +136,10 @@ const stacks = computed<Stack[]>(() => {
       {
         key: 'routines',
         span: '1 / 13',
-        cols: Math.max(1, routines.length),
-        areas: routines,
+        cols: PORTRAIT_ROUTINE_COLS,
+        areas: portraitRoutineOrder(routines),
         scroll: false,
+        rows: Math.ceil(routines.length / PORTRAIT_ROUTINE_COLS),
       },
     ].filter((s) => s.areas.length > 0)
   }
@@ -301,9 +310,20 @@ const shift = computed(() =>
             :style="{
               gridColumn: st.span,
               gridTemplateColumns: `repeat(${st.cols}, minmax(0, 1fr))`,
+              ...(st.rows
+                ? {
+                    '--rows': st.rows,
+                    gridTemplateRows: `repeat(${st.rows}, minmax(0, max-content))`,
+                  }
+                : {}),
             }"
           >
-            <div v-for="(a, i) in st.areas" :key="i" class="cell" :class="`k-${a.panel.kind}`">
+            <div
+              v-for="(a, i) in st.areas"
+              :key="`${a.panel.kind}-${a.panel['run'] ?? i}`"
+              class="cell"
+              :class="`k-${a.panel.kind}`"
+            >
               <PanelHost
                 :data="data"
                 :settings="cfg"
@@ -367,6 +387,7 @@ const shift = computed(() =>
       :data="view === 'week' ? weekView : data"
       @close="detail = null"
     />
+    <ConfettiStreamLayer v-if="cfg.confetti !== false" />
     <ConfettiLayer v-if="cfg.confetti !== false" />
     <slot />
   </div>
@@ -521,12 +542,12 @@ const shift = computed(() =>
 .main.split .stack.s-routines {
   align-self: stretch;
   overflow: hidden;
-  grid-template-rows: minmax(0, 1fr);
 }
 .main.split .s-routines .cell {
   min-height: 0;
-  max-height: 40vh;
-  max-height: 40dvh;
+  /* The band is 40% of the screen in all; each row of cards gets its share. */
+  max-height: calc((40vh - (var(--rows, 1) - 1) * var(--space-3)) / var(--rows, 1));
+  max-height: calc((40dvh - (var(--rows, 1) - 1) * var(--space-3)) / var(--rows, 1));
   overflow-y: auto;
   overscroll-behavior: contain;
 }

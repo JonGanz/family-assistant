@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { dayKey } from '../../lib/time'
 import {
   fireConfetti,
@@ -7,7 +7,10 @@ import {
   markFired,
   memberShades,
   newlyCompleted,
+  registerStream,
   runKey,
+  scatterCount,
+  unregisterStream,
 } from '../effects/confettiModel'
 import ProgressBar from '../../components/tasks/ProgressBar.vue'
 import { shownRuns } from '../tasksModel'
@@ -17,15 +20,17 @@ const props = defineProps<PanelProps>()
 const emit = defineEmits<{ tick: [run: string, step: string, done: boolean] }>()
 const readOnly = computed(() => props.data.completion_enabled === false)
 const runs = computed(() =>
-  shownRuns(props.data, props.panel, props.now).map((r) => {
-    const m = props.data.members.find((x) => x.id === r.member)
-    return {
-      run: r,
-      name: m?.display_name ?? '',
-      color: m?.color ?? null,
-      done: r.steps.length > 0 && r.steps.every((s) => s.done_at),
-    }
-  }),
+  shownRuns(props.data, props.panel, props.now)
+    .filter((r) => props.panel['run'] === undefined || r.id === props.panel['run'])
+    .map((r) => {
+      const m = props.data.members.find((x) => x.id === r.member)
+      return {
+        run: r,
+        name: m?.display_name ?? '',
+        color: m?.color ?? null,
+        done: r.steps.length > 0 && r.steps.every((s) => s.done_at),
+      }
+    }),
 )
 
 /**
@@ -48,11 +53,56 @@ watch(
       const x = list.find((y) => runKey(y.run) === f.key)
       const el = cards.value.find((c) => c.dataset.run === x?.run.id)
       markFired(f.key, f.runDate, dayKey(props.now, props.data.household.tz))
-      if (el) fireConfetti({ rect: el.getBoundingClientRect(), colors: memberShades(x?.color) })
+      if (el)
+        fireConfetti({
+          rect: cardOf(el).getBoundingClientRect(),
+          colors: memberShades(x?.color),
+          scatter: scatterCount(),
+        })
     }
   },
   { immediate: true, flush: 'post' },
 )
+
+/** The card around a run: the canvas cell when there is one. */
+const cardOf = (el: HTMLElement): HTMLElement => el.closest<HTMLElement>('.cell') ?? el
+
+/**
+ * A completed run's card keeps a gentle stream of confetti bubbling up from behind it for as long
+ * as it is shown (the layer is the canvas's ConfettiStreamLayer). Unlike the burst this is not
+ * once-only: it runs whenever the card is visible and done.
+ */
+const streaming = new Set<string>()
+function syncStreams() {
+  const want = new Map<string, { id: string; color: string | null }>()
+  if (props.settings.confetti !== false) {
+    for (const x of runs.value)
+      if (x.done) want.set(runKey(x.run), { id: x.run.id, color: x.color })
+  }
+  for (const k of [...streaming]) {
+    if (!want.has(k)) {
+      unregisterStream(k)
+      streaming.delete(k)
+    }
+  }
+  for (const [k, w] of want) {
+    if (streaming.has(k)) continue
+    streaming.add(k)
+    registerStream(
+      k,
+      () => {
+        const el = cards.value.find((c) => c.dataset.run === w.id)
+        return el?.isConnected ? cardOf(el).getBoundingClientRect() : null
+      },
+      memberShades(w.color),
+    )
+  }
+}
+watch([runs, () => props.settings.confetti], syncStreams, { immediate: true, flush: 'post' })
+onBeforeUnmount(() => {
+  for (const k of streaming) unregisterStream(k)
+  streaming.clear()
+})
 </script>
 
 <template>
@@ -106,10 +156,6 @@ watch(
   gap: var(--space-2);
   align-content: start;
   min-width: 0;
-  padding: var(--space-3);
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
 }
 .col.complete {
   box-shadow: inset 0 0 0 3px var(--color-success);
@@ -182,14 +228,5 @@ ul {
   .step {
     transition: border-color 0.3s ease;
   }
-}
-</style>
-
-<style>
-/* Portrait: the routines band runs the full width at the bottom, so routines sit two side by side. */
-[data-orientation='portrait'] .routine.routine {
-  grid-auto-flow: row;
-  grid-auto-columns: auto;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 </style>

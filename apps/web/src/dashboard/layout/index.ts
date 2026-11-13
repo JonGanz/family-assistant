@@ -125,6 +125,45 @@ export const PORTRAIT_NOW: readonly string[] = ['now', 'member_tasks']
 /** Portrait: routines run side by side in a full-width row across the bottom. */
 export const PORTRAIT_ROUTINES: readonly string[] = ['routine']
 
+/** Portrait: the routine cards fill a grid of this many columns, from the bottom up. */
+export const PORTRAIT_ROUTINE_COLS = 2
+
+/**
+ * Splits each routine area into one area per live run (a pseudo-panel with `run` set), so every
+ * run is its own card. A run is placed once even if several routine panels would show it.
+ * `runIds` says which runs a routine panel currently shows.
+ */
+export function splitRoutineAreas(
+  areas: GridArea[],
+  runIds: (panel: PanelConfig) => string[],
+): GridArea[] {
+  const seen = new Set<string>()
+  const out: GridArea[] = []
+  for (const a of areas) {
+    if (a.panel.kind !== 'routine' || a.panel['run'] !== undefined) {
+      out.push(a)
+      continue
+    }
+    for (const id of runIds(a.panel)) {
+      if (seen.has(id)) continue
+      seen.add(id)
+      out.push({ ...a, panel: { ...a.panel, run: id } })
+    }
+  }
+  return out
+}
+
+/**
+ * Portrait routine order in a `cols`-wide grid that fills from the bottom up, left then right:
+ * the first card is bottom-left, the second bottom-right, the third above the first, and so on.
+ * Returns the items in DOM (top to bottom) order.
+ */
+export function portraitRoutineOrder<T>(items: T[], cols = PORTRAIT_ROUTINE_COLS): T[] {
+  const rows: T[][] = []
+  for (let i = 0; i < items.length; i += cols) rows.push(items.slice(i, i + cols))
+  return rows.reverse().flat()
+}
+
 /**
  * Landscape: 12-column grid, left 4 columns hold clock/weather/members/now,
  * right 8 hold agenda/week/member_tasks/routine. Portrait: full-width rows in panel order.

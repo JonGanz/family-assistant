@@ -4,7 +4,7 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import type { EventLike, MemberLike } from '../../lib/types'
 import WeekGrid from './WeekGrid.vue'
-import { buildWeekGrid, EVERYONE } from './weekGrid'
+import { buildWeekGrid, EVERYONE, weekVisible } from './weekGrid'
 
 const members: MemberLike[] = [
   { id: 'a', display_name: 'Alex', color: 'red' },
@@ -110,5 +110,18 @@ describe('WeekGrid and event style', () => {
     const [p] = w.emitted('more')![0] as [{ day: string; events: unknown[] }]
     expect(p.day).toBe('2026-11-10')
     expect(p.events).toHaveLength(4)
+  })
+})
+
+describe('weekVisible', () => {
+  it('shows two on wide screens, the rest collapse', () => {
+    expect([0, 1, 2, 3, 9].map((n) => weekVisible(n, false))).toEqual([0, 1, 2, 2, 2])
+  })
+  it('on a phone shows up to three, else two plus "+N"', () => {
+    expect([0, 1, 3, 4, 9].map((n) => weekVisible(n, true))).toEqual([0, 1, 3, 2, 2])
+  })
+  it('gives every row a fixed height through a clipped box', () => {
+    const css = readFileSync(resolve(__dirname, 'WeekGrid.vue'), 'utf8')
+    expect(css).toMatch(/\.cellbox \{[^}]*height: calc\(var\(--wg-row-h\)[^}]*overflow: hidden/)
   })
 })

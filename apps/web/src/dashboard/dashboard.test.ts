@@ -484,6 +484,47 @@ describe('Home layout by screen shape', () => {
     )
   })
 
+  it('portrait: each live run is its own card, filling bottom-up left then right', () => {
+    sizeOf(1080, 1920)
+    const mk = (n: number) => {
+      const d = data()
+      const base = sampleRoutines(d.members as never, NOW, d.household.tz)[0]!
+      d.routines = Array.from({ length: n }, (_, i) => ({ ...base, id: `run-${i + 1}` }))
+      return mount(DashboardCanvas, {
+        props: {
+          data: d,
+          settings: settings({ panels: [{ kind: 'clock' }, { kind: 'routine' }] as never }),
+          now: NOW,
+        },
+      })
+    }
+    const r = mk(3).find('.stack.s-routines')
+    expect(r.findAll('.cell')).toHaveLength(3)
+    expect(r.findAll('[data-run]').map((e) => e.attributes('data-run'))).toEqual([
+      'run-3',
+      'run-1',
+      'run-2',
+    ])
+    expect(r.attributes('style')).toContain('repeat(2, minmax(0, 1fr))')
+    expect(r.attributes('style')).toContain('--rows: 2')
+    expect(mk(1).find('.stack.s-routines').attributes('style')).toContain('--rows: 1')
+  })
+
+  it('landscape: each live run is its own card', () => {
+    sizeOf(1920, 1080)
+    const d = data()
+    const base = sampleRoutines(d.members as never, NOW, d.household.tz)[0]!
+    d.routines = [base, { ...base, id: 'run-b' }]
+    const w = mount(DashboardCanvas, {
+      props: {
+        data: d,
+        settings: settings({ panels: [{ kind: 'clock' }, { kind: 'routine' }] as never }),
+        now: NOW,
+      },
+    })
+    expect(w.findAll('.cell.k-routine')).toHaveLength(2)
+  })
+
   it('portrait: a lone column takes the full width', () => {
     sizeOf(1080, 1920)
     const w = mount(DashboardCanvas, {

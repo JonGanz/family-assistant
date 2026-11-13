@@ -161,6 +161,14 @@ test('Calendar Month and Week fit the screen on a phone and a desktop', async ({
         path: `test-results/calendar-${view.toLowerCase()}-${size.width}.png`,
       })
       expect(over.x, `${view} at ${size.width}: horizontal overflow`).toBeLessThanOrEqual(1)
+      if (view === 'Week') {
+        await expect(page.getByTestId('week-hidepast')).toBeAttached()
+        const hs = await page
+          .locator('tbody tr[data-day]')
+          .evaluateAll((rows) => rows.map((r) => Math.round(r.getBoundingClientRect().height)))
+        if (size.width === 390)
+          expect(new Set(hs).size, `Week rows at 390 differ: ${hs}`).toBeLessThanOrEqual(1)
+      }
       if (view === 'Month')
         expect(over.y, `${view} at ${size.width}: vertical overflow`).toBeLessThanOrEqual(1)
     }

@@ -70,3 +70,13 @@ export function buildWeekGrid(o: {
   })
   return { columns, rows }
 }
+
+/**
+ * Events shown in one cell; any further ones collapse into a "+N events" item. Wide screens fit
+ * two two-line items plus the "+N" line; a phone fits three one-line slots, the last being "+N"
+ * when the events do not all fit.
+ */
+export function weekVisible(total: number, phone: boolean): number {
+  if (!phone) return Math.min(total, 2)
+  return total <= 3 ? total : 2
+}

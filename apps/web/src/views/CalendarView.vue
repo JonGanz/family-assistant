@@ -8,6 +8,7 @@ import WeekGrid from '../components/calendar/WeekGrid.vue'
 import { rangeFor, shiftAnchor } from '../composables/useRange'
 import { weekStartKey, type WeekStart } from '../dashboard/weekModel'
 import { capacity, visibleCount } from '../components/calendar/monthGrid'
+import { eventEnded, readHidePast, writeHidePast } from '../components/calendar/hidePast'
 import { stripeStyle } from '../lib/eventColors'
 import { addDays, dayKey, formatDayHeading, groupByDay } from '../lib/time'
 import type { EventLike, RangeMode } from '../lib/types'
@@ -119,6 +120,14 @@ const memberOptions = computed(() =>
   members.items.map((m) => ({ value: m.id, label: m.display_name })),
 )
 const eventLikes = computed(() => events.value.map((e) => toEventLike(e, likes.value)))
+/** Week: "Hide past events" (per device); events that are over by now are left out. */
+const hidePast = ref(readHidePast())
+watch(hidePast, writeHidePast)
+const weekEvents = computed(() => {
+  if (!hidePast.value) return eventLikes.value
+  const now = new Date()
+  return eventLikes.value.filter((e) => !eventEnded(e, now, tz.value))
+})
 const byDay = computed(() => groupByDay(eventLikes.value, tz.value, grid.value.from, days.value))
 const loadingFirstRaw = computed(() => calendar.loading && events.value.length === 0)
 const today = computed(() => dayKey(new Date(), tz.value))
@@ -231,7 +240,14 @@ const loadingFirst = loadingFirstRaw
     </div>
 
     <div class="controls">
-      <DateRangeNav :label="label" @prev="nav(-1)" @next="nav(1)" @today="nav(0)" />
+      <div class="nav-row">
+        <DateRangeNav :label="label" @prev="nav(-1)" @next="nav(1)" @today="nav(0)" />
+        <label v-if="view === 'week'" class="hidepast" :class="{ on: hidePast }">
+          <input v-model="hidePast" type="checkbox" role="switch" data-testid="week-hidepast" />
+          <span class="track" aria-hidden="true"><span class="thumb"></span></span>
+          Hide past events
+        </label>
+      </div>
       <UiFilterChips v-model="chosen" :options="memberOptions" label="Member" />
     </div>
 
@@ -250,7 +266,7 @@ const loadingFirst = loadingFirstRaw
       />
       <WeekGrid
         v-else
-        :events="eventLikes"
+        :events="weekEvents"
         :members="likes"
         :chosen="chosen"
         :start="grid.from"
@@ -316,6 +332,86 @@ const loadingFirst = loadingFirstRaw
 }
 .controls > :first-child {
   width: 100%;
+}
+.nav-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--ui-space-2);
+}
+/* The switch shares the row with the arrows and Today; on phones the range label wraps below. */
+.nav-row :deep(.range-nav) {
+  display: contents;
+}
+@media (max-width: 599px) {
+  .nav-row :deep(.range-nav .label) {
+    order: 10;
+    flex-basis: 100%;
+    margin: 0;
+  }
+  .nav-row {
+    gap: var(--ui-space-1);
+  }
+  .nav-row .hidepast {
+    gap: var(--ui-space-1);
+    padding: var(--ui-space-1) var(--ui-space-2) var(--ui-space-1) var(--ui-space-1);
+    font: var(--ui-type-label-md);
+  }
+}
+.hidepast {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--ui-space-2);
+  margin-left: auto;
+  padding: var(--ui-space-1) var(--ui-space-3) var(--ui-space-1) var(--ui-space-2);
+  border-radius: var(--ui-radius-xl);
+  background: var(--ui-surface-container-low);
+  font: var(--ui-type-label-lg);
+  cursor: pointer;
+}
+.hidepast input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.hidepast:has(input:focus-visible) {
+  outline: var(--ui-focus-ring);
+}
+.track {
+  position: relative;
+  flex: none;
+  width: 2.25rem;
+  height: 1.25rem;
+  border-radius: 0.625rem;
+  background: var(--ui-surface-container-high);
+  border: 2px solid var(--ui-outline);
+  transition: background 0.15s;
+}
+.thumb {
+  position: absolute;
+  top: 50%;
+  left: 0.125rem;
+  width: 0.75rem;
+  height: 0.75rem;
+  margin-top: -0.375rem;
+  border-radius: 50%;
+  background: var(--ui-outline);
+  transition:
+    left 0.15s,
+    background 0.15s;
+}
+.hidepast.on .track {
+  background: var(--ui-primary);
+  border-color: var(--ui-primary);
+}
+.hidepast.on .thumb {
+  left: calc(100% - 1rem);
+  background: var(--ui-on-primary);
 }
 h2 {
   margin: 0 0 var(--ui-space-2);
@@ -411,7 +507,8 @@ h2 {
   background: none;
   border: 0;
   border-left: 3px solid transparent;
-  border-radius: var(--ui-radius-sm);
+  /* Square: the member-colour stripe must not be rounded away. */
+  border-radius: 0;
   height: var(--month-line);
   min-height: 0;
   box-sizing: border-box;
@@ -449,8 +546,8 @@ h2 {
 }
 @media (max-width: 599px) {
   .month {
-    --month-font: 0.625rem;
-    --month-line: 0.7rem;
+    --month-font: 0.6875rem;
+    --month-line: 0.77rem;
   }
   .dow {
     padding: 0 1px;

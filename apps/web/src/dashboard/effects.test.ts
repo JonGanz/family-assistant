@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
+import { nextTick } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import DashboardCanvas from './DashboardCanvas.vue'
 import ConfettiLayer from './effects/ConfettiLayer.vue'
@@ -13,6 +14,16 @@ import {
   memberShades,
   newlyCompleted,
   onConfetti,
+  onStreamsChange,
+  registerStream,
+  scatterCount,
+  scatterPlan,
+  SCATTER_MAX,
+  SCATTER_MIN,
+  SCATTER_SPAN_MS,
+  streamPiece,
+  streamSources,
+  unregisterStream,
   runKey,
   shades,
   type ConfettiRequest,
@@ -201,5 +212,84 @@ describe('effect layers', () => {
       expect(w.attributes('tabindex') ?? '-1').toBe('-1')
     }
     getContext.mockRestore()
+  })
+})
+
+describe('confetti scatter and stream model', () => {
+  it('picks 5 to 8 bursts', () => {
+    expect(scatterCount(() => 0)).toBe(SCATTER_MIN)
+    expect(scatterCount(() => 0.999)).toBe(SCATTER_MAX)
+    expect(SCATTER_MIN).toBe(5)
+    expect(SCATTER_MAX).toBe(8)
+  })
+  it('plans bursts on screen, staggered within the span, in order', () => {
+    const plan = scatterPlan(7, 1000, 800)
+    expect(plan).toHaveLength(7)
+    for (const b of plan) {
+      expect(b.x).toBeGreaterThan(0)
+      expect(b.x).toBeLessThan(1000)
+      expect(b.y).toBeGreaterThan(0)
+      expect(b.y).toBeLessThan(800)
+      expect(b.delay).toBeGreaterThanOrEqual(0)
+      expect(b.delay).toBeLessThanOrEqual(SCATTER_SPAN_MS)
+    }
+    expect(plan.map((b) => b.delay)).toEqual([...plan.map((b) => b.delay)].sort((a, b) => a - b))
+  })
+  it('starts stream pieces inside the card and has them rise past its top', () => {
+    const rect = { left: 100, top: 200, width: 300, height: 400 }
+    for (const r of [0, 0.5, 0.999]) {
+      const p = streamPiece(rect, () => r)
+      expect(p.x).toBeGreaterThanOrEqual(100)
+      expect(p.x).toBeLessThanOrEqual(400)
+      expect(p.y).toBeGreaterThanOrEqual(200)
+      expect(p.y).toBeLessThanOrEqual(600)
+      // It rises at least from its start to the card's top edge.
+      expect(p.rise).toBeGreaterThan(p.y - rect.top)
+    }
+  })
+  it('registers and unregisters stream sources and tells listeners', () => {
+    let n = 0
+    const off = onStreamsChange(() => n++)
+    registerStream('k', () => null, ['red'])
+    expect(streamSources().map((s) => s.key)).toContain('k')
+    unregisterStream('k')
+    unregisterStream('k')
+    expect(streamSources().map((s) => s.key)).not.toContain('k')
+    expect(n).toBe(2)
+    off()
+  })
+})
+
+describe('routine panel per-run cards and streams', () => {
+  const two = [run(false), { ...run(true), id: 'r2' }]
+  it('a panel naming a run shows only that run', () => {
+    const w = mount(RoutinePanel, {
+      props: {
+        data: data(two),
+        settings: settings(),
+        panel: { kind: 'routine', pinned: true, run: 'r2' },
+        now: NOW,
+      },
+    })
+    expect(w.findAll('[data-run]').map((e) => e.attributes('data-run'))).toEqual(['r2'])
+  })
+  it('streams while a completed run is shown, and stops when switched off or unmounted', async () => {
+    const before = streamSources().length
+    const w = mount(RoutinePanel, {
+      props: {
+        data: data([{ ...run(true), id: 'stream-run' }]),
+        settings: settings(),
+        panel: { kind: 'routine', pinned: true },
+        now: NOW,
+      },
+    })
+    await nextTick()
+    expect(streamSources().length).toBe(before + 1)
+    await w.setProps({ settings: settings({ confetti: false }) })
+    expect(streamSources().length).toBe(before)
+    await w.setProps({ settings: settings() })
+    expect(streamSources().length).toBe(before + 1)
+    w.unmount()
+    expect(streamSources().length).toBe(before)
   })
 })

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useBreakpoint } from '../../ui'
 import { stripeStyle } from '../../lib/eventColors'
 import { formatRange } from '../../lib/time'
 import type { EventLike, MemberLike } from '../../lib/types'
-import { buildWeekGrid } from './weekGrid'
+import { buildWeekGrid, weekVisible } from './weekGrid'
 
 const props = defineProps<{
   events: EventLike[]
@@ -18,8 +19,8 @@ const emit = defineEmits<{
   /** "+N events" was clicked: that day's events in that cell's column. */
   more: [v: { day: string; events: EventLike[] }]
 }>()
-/** Events shown per cell; any further ones collapse into one "+N events" item. */
-const MAX_VISIBLE = 2
+const bp = useBreakpoint()
+const phone = computed(() => bp.value === 'compact')
 
 const grid = computed(() =>
   buildWeekGrid({
@@ -57,29 +58,31 @@ const title = (e: EventLike) => (e.visibility === 'busy' ? 'Busy' : (e.title ?? 
             <span class="wd">{{ r.weekday }}</span>
           </th>
           <td v-for="c in r.cells" :key="c.key" role="cell" :data-member="c.key">
-            <ul v-if="c.events.length" :aria-label="`${c.name}, ${r.weekday} ${r.dom}`">
-              <li v-for="e in c.events.slice(0, MAX_VISIBLE)" :key="e.id">
-                <button
-                  type="button"
-                  class="ev"
-                  :class="{ busy: e.visibility === 'busy' }"
-                  :style="stripeStyle(e)"
-                  @click="$emit('select', e)"
-                >
-                  <span class="title">{{ title(e) }}</span>
-                  <span class="time">{{ formatRange(e, tz) }}</span>
-                </button>
-              </li>
-              <li v-if="c.events.length > MAX_VISIBLE">
-                <button
-                  type="button"
-                  class="more"
-                  @click="emit('more', { day: r.key, events: c.events })"
-                >
-                  +{{ c.events.length - MAX_VISIBLE }} events
-                </button>
-              </li>
-            </ul>
+            <div class="cellbox">
+              <ul v-if="c.events.length" :aria-label="`${c.name}, ${r.weekday} ${r.dom}`">
+                <li v-for="e in c.events.slice(0, weekVisible(c.events.length, phone))" :key="e.id">
+                  <button
+                    type="button"
+                    class="ev"
+                    :class="{ busy: e.visibility === 'busy' }"
+                    :style="stripeStyle(e)"
+                    @click="$emit('select', e)"
+                  >
+                    <span class="title">{{ title(e) }}</span>
+                    <span class="time">{{ formatRange(e, tz) }}</span>
+                  </button>
+                </li>
+                <li v-if="c.events.length > weekVisible(c.events.length, phone)">
+                  <button
+                    type="button"
+                    class="more"
+                    @click="emit('more', { day: r.key, events: c.events })"
+                  >
+                    +{{ c.events.length - weekVisible(c.events.length, phone) }} events
+                  </button>
+                </li>
+              </ul>
+            </div>
           </td>
         </tr>
       </tbody>
@@ -117,6 +120,11 @@ td {
 }
 tbody td {
   height: var(--wg-row-h);
+  overflow: hidden;
+}
+/* A table row only ever grows past its height, so the content sits in a box of fixed height. */
+.cellbox {
+  height: calc(var(--wg-row-h) - 2 * var(--wg-pad, var(--ui-space-1)) - 2px);
   overflow: hidden;
 }
 thead th {
@@ -219,8 +227,9 @@ ul {
   .wg {
     min-width: 0;
     --wg-day-w: 1.25rem;
-    --wg-row-h: 5rem;
-    font-size: 0.625rem;
+    --wg-row-h: 4rem;
+    --wg-pad: 1px;
+    font-size: 0.75625rem;
   }
   .wg-scroll {
     overflow-x: hidden;
@@ -256,18 +265,27 @@ ul {
   ul {
     gap: 1px;
   }
+  .cellbox {
+    display: grid;
+    align-content: center;
+  }
+  /* The global min touch height would make each one-line item several lines tall. */
+  .ev,
+  .more {
+    min-height: 0;
+  }
   .ev {
-    font-size: 0.625rem;
-    line-height: 0.8rem;
-    padding: 0 2px;
+    font-size: 0.75625rem;
+    line-height: 0.85rem;
+    padding: 2px 2px 2px 5px;
     border-left-width: 2px;
   }
   .time {
     display: none;
   }
   .more {
-    font-size: 0.625rem;
-    line-height: 0.8rem;
+    font-size: 0.75625rem;
+    line-height: 0.85rem;
     padding: 0 2px;
   }
 }

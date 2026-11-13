@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { onConfetti, reducedMotion, type ConfettiRequest } from './confettiModel'
+import { onConfetti, reducedMotion, scatterPlan, type ConfettiRequest } from './confettiModel'
 
 const PIECES = 48
 const LIFE_MS = 2800
@@ -12,6 +12,23 @@ const layer = ref<HTMLElement | null>(null)
 const pieces = ref<Piece[]>([])
 let seq = 0
 const timers = new Set<number>()
+
+/** The normal burst from the card, plus staggered bursts at random places over the screen. */
+function fire(req: ConfettiRequest) {
+  burst(req)
+  const host = layer.value?.getBoundingClientRect()
+  if (!host || !req.scatter || reducedMotion()) return
+  for (const s of scatterPlan(req.scatter, host.width, host.height)) {
+    const t = window.setTimeout(() => {
+      timers.delete(t)
+      burst({
+        rect: { left: host.left + s.x, top: host.top + s.y, width: 0, height: 0 },
+        colors: req.colors,
+      })
+    }, s.delay)
+    timers.add(t)
+  }
+}
 
 function burst(req: ConfettiRequest) {
   const host = layer.value?.getBoundingClientRect()
@@ -45,7 +62,7 @@ function burst(req: ConfettiRequest) {
 }
 
 let off: (() => void) | undefined
-onMounted(() => (off = onConfetti(burst)))
+onMounted(() => (off = onConfetti(fire)))
 onBeforeUnmount(() => {
   off?.()
   timers.forEach((t) => clearTimeout(t))

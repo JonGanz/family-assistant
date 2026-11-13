@@ -141,6 +141,50 @@ describe('meals panel', () => {
     expect(body).toContain('Simmer')
     w.unmount()
   })
+  it('recipe detail shows facts, ticks items, persists them and ignores idle', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout'] })
+    localStorage.clear()
+    kioskRecipe.mockResolvedValue({
+      id: 'r9',
+      title: 'Tick soup',
+      has_image: false,
+      lines: [{ raw_text: '1 onion' }, { raw_text: '2 carrots' }],
+      steps: ['Chop', 'Boil'],
+      prep_minutes: 10,
+      total_minutes: 90,
+      servings: 4,
+    })
+    const { default: RecipeDetail } = await import('./details/RecipeDetail.vue')
+    const w = mount(RecipeDetail, {
+      props: { id: 'r9', title: 'Tick soup' },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    const facts = document.querySelector('[data-testid="recipe-facts"]')?.textContent ?? ''
+    expect(facts).toContain('10 min')
+    expect(facts).toContain('1 h 30 min')
+    expect(facts).not.toContain('Cook')
+    const boxes = document.querySelectorAll<HTMLInputElement>('[data-testid="recipe-line-check"]')
+    expect(boxes).toHaveLength(2)
+    boxes[1]!.click()
+    await flushPromises()
+    expect(JSON.parse(localStorage.getItem('fa.recipe.checks.r9')!).lines).toEqual([1])
+    vi.advanceTimersByTime(60 * 60_000)
+    await flushPromises()
+    expect(w.emitted('close')).toBeUndefined()
+    w.unmount()
+    vi.useRealTimers()
+    const again = mount(RecipeDetail, {
+      props: { id: 'r9', title: 'Tick soup' },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    expect(
+      document.querySelectorAll<HTMLInputElement>('[data-testid="recipe-line-check"]')[1]!.checked,
+    ).toBe(true)
+    again.unmount()
+    localStorage.clear()
+  })
   it('hides when empty, unless it is the only panel in its column', () => {
     const meal = { kind: 'meals' }
     const agenda = { kind: 'agenda' }

@@ -4,8 +4,10 @@ import {
   defaultSettings,
   normalizeTheme,
   parseSettings,
+  portraitRoutineOrder,
   PRESETS,
   resolveLayout,
+  splitRoutineAreas,
   withMealsPanel,
 } from './index'
 
@@ -99,5 +101,37 @@ describe('withMealsPanel', () => {
     expect(withMealsPanel(has)).toBe(has)
     const chores = [{ kind: 'clock' }, { kind: 'member_tasks' }]
     expect(withMealsPanel(chores)).toBe(chores)
+  })
+})
+
+describe('per-run routine cards', () => {
+  const area = (kind: string, run?: string) => ({
+    panel: run ? { kind, run } : { kind },
+    column: '5 / 13',
+    row: '1 / 2',
+  })
+  it('splits a routine area into one area per run, once per run', () => {
+    const out = splitRoutineAreas([area('agenda'), area('routine'), area('routine')], () => [
+      'a',
+      'b',
+    ])
+    expect(out.map((x) => [x.panel.kind, x.panel['run']])).toEqual([
+      ['agenda', undefined],
+      ['routine', 'a'],
+      ['routine', 'b'],
+    ])
+    expect(out[1]!.column).toBe('5 / 13')
+  })
+  it('keeps an area that already names its run, and drops a routine with no runs', () => {
+    expect(splitRoutineAreas([area('routine', 'x')], () => ['a'])).toHaveLength(1)
+    expect(splitRoutineAreas([area('routine')], () => [])).toHaveLength(0)
+  })
+  it('orders portrait cards bottom-up: left then right, then the next row above', () => {
+    expect(portraitRoutineOrder(['1'])).toEqual(['1'])
+    expect(portraitRoutineOrder(['1', '2'])).toEqual(['1', '2'])
+    // DOM order is top to bottom: 3 sits above 1, 4 above 2.
+    expect(portraitRoutineOrder(['1', '2', '3', '4'])).toEqual(['3', '4', '1', '2'])
+    expect(portraitRoutineOrder(['1', '2', '3'])).toEqual(['3', '1', '2'])
+    expect(portraitRoutineOrder(['1', '2', '3', '4', '5'])).toEqual(['5', '3', '4', '1', '2'])
   })
 })

@@ -165,7 +165,10 @@ test('the routine panel fills its progress bar to 100%', async ({ page, browser 
   await setOverride(page, true)
   const { screen, ctx } = await openKiosk(page, browser)
   try {
-    const routine = screen.getByRole('region', { name: 'Routine' })
+    // Each routine run is its own card (a region): this is the seeded Morning routine.
+    const routine = screen
+      .getByRole('region', { name: 'Routine' })
+      .filter({ hasText: 'Morning routine' })
     await expect(routine).toContainText('Morning routine')
     const bar = routine.getByRole('progressbar').first()
     const steps = ['Brush teeth', 'Get dressed', 'Pack school bag']
@@ -188,6 +191,9 @@ test('the routine panel fills its progress bar to 100%', async ({ page, browser 
     // actionability check would fail on a covered button) and does not fire again on a re-check.
     const pieces = screen.locator('[data-testid=confetti-layer] .piece')
     await expect(pieces.first()).toBeAttached()
+    // Behind the finished card a gentle stream keeps bubbling up (a non-interactive z-0 layer).
+    await expect(screen.getByTestId('confetti-stream-layer')).toHaveCSS('pointer-events', 'none')
+    await expect(screen.locator('[data-testid=confetti-stream-layer] .bit').first()).toBeAttached()
     const last = routine.getByRole('button', { name: steps[steps.length - 1] })
     await last.click()
     await expect(last).toHaveAttribute('aria-pressed', 'false')
@@ -209,7 +215,9 @@ test('an unpinned routine panel shows the run inside its window', async ({ page,
   await uiLogin(page, adult)
   const { screen, ctx } = await openKiosk(page, browser, undefined, { kind: 'routine' })
   try {
-    await expect(screen.getByRole('region', { name: 'Routine' })).toContainText('Morning routine')
+    await expect(
+      screen.getByRole('region', { name: 'Routine' }).filter({ hasText: 'Morning routine' }),
+    ).toBeVisible()
   } finally {
     await ctx.close()
   }
@@ -233,7 +241,8 @@ async function checkKiosk(
       preset === 'hub'
         ? {
             Now: screen.getByRole('region', { name: 'Now' }),
-            Routine: screen.getByRole('region', { name: 'Routine' }),
+            // Each run is its own card; the first one stands for the routines.
+            Routine: screen.getByRole('region', { name: 'Routine' }).first(),
           }
         : { Columns: screen.locator('[data-member]').first() }
     for (const r of Object.values(regions)) await expect(r).toBeVisible()
@@ -268,11 +277,17 @@ async function checkKiosk(
     expect(clash, `${name}: overlapping panels`).toHaveLength(0)
     // The routines card ends on the screen (its band is pinned to the bottom edge).
     if (preset === 'hub' && name.startsWith('portrait')) {
-      const bottom = await screen
+      // Every routine run is its own card; each one must end on the screen.
+      const bottoms = await screen
         .getByRole('region', { name: 'Routine' })
-        .evaluate((el) => (el.closest('.cell') ?? el).getBoundingClientRect().bottom)
+        .evaluateAll((els) =>
+          els.map((el) => (el.closest('.cell') ?? el).getBoundingClientRect().bottom),
+        )
       const inner = await screen.evaluate(() => window.innerHeight)
-      expect(bottom, `${name}: the routines run off the bottom`).toBeLessThanOrEqual(inner + 1)
+      expect(bottoms.length, `${name}: no routine cards`).toBeGreaterThan(0)
+      expect(Math.max(...bottoms), `${name}: the routines run off the bottom`).toBeLessThanOrEqual(
+        inner + 1,
+      )
     }
     if (preset === 'board') {
       // Every member column must fit on the screen.
