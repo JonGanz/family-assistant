@@ -1,6 +1,6 @@
 ---
 title: Log Index
-updated: 2026-11-12
+updated: 2026-11-13
 ---
 
 # Daily Logs
@@ -24,3 +24,4 @@ updated: 2026-11-12
 - [2026-11-10](2026-11-10.md): dashboard; v0.1.20
 - [2026-11-11](2026-11-11.md): dashboard
 - [2026-11-12](2026-11-12.md): kiosk; release
+- [2026-11-13](2026-11-13.md): web; dashboard; calendar
