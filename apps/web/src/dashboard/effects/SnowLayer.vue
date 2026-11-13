@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { reducedMotion } from './confettiModel'
+import { SNOW_PARAMS, type SnowMode } from './snowModel'
+
+const props = defineProps<{ mode: SnowMode }>()
+const params = () => SNOW_PARAMS[props.mode === 'none' ? 'light' : props.mode]
 
 /** One flake per this many square pixels, capped. */
 const AREA_PER_FLAKE = 14_000
-const MAX_FLAKES = 140
 interface Flake {
   x: number
   y: number
@@ -40,9 +43,19 @@ function resize() {
   c.width = Math.max(1, Math.floor(w * dpr))
   c.height = Math.max(1, Math.floor(h * dpr))
   c.getContext('2d')?.setTransform(dpr, 0, 0, dpr, 0, 0)
-  const want = Math.min(MAX_FLAKES, Math.round((w * h) / AREA_PER_FLAKE))
+  fit()
+}
+
+function fit() {
+  const p = params()
+  const want = Math.min(p.max, Math.round(((w * h) / AREA_PER_FLAKE) * p.density))
   while (flakes.length < want) flakes.push(spawn(true))
   flakes.length = Math.min(flakes.length, want)
+}
+
+function stop() {
+  if (raf) cancelAnimationFrame(raf)
+  raf = 0
 }
 
 function frame(t: number) {
@@ -55,10 +68,15 @@ function frame(t: number) {
   ctx.fillStyle = 'rgba(255,255,255,0.85)'
   ctx.shadowColor = 'rgba(0,0,0,0.25)'
   ctx.shadowBlur = 2
+  const p = params()
+  // Flurries gust: the wind swells and fades.
+  const wind = p.gust * (0.6 + 0.4 * Math.sin(t / 1700))
   for (const f of flakes) {
-    f.y += f.vy * dt
-    f.phase += dt
-    const x = f.x + Math.sin(f.phase) * f.drift
+    f.y += f.vy * p.speed * dt
+    f.phase += dt * Math.min(p.speed, 1.5)
+    f.x += wind * dt
+    if (f.x > w + 10) f.x -= w + 20
+    const x = f.x + Math.sin(f.phase) * f.drift * p.drift
     if (f.y > h + 10) Object.assign(f, spawn(false))
     ctx.beginPath()
     ctx.arc(x, f.y, f.r, 0, Math.PI * 2)
@@ -92,6 +110,21 @@ onMounted(() => {
   document.addEventListener('visibilitychange', onVisibility)
   start()
 })
+// Live mode changes: refit the flake count; the layer is unmounted for 'none' by the canvas,
+// but stop and clear here too.
+watch(
+  () => props.mode,
+  (m) => {
+    if (m === 'none') {
+      stop()
+      flakes = []
+      cv.value?.getContext('2d')?.clearRect(0, 0, w, h)
+    } else if (w && h) {
+      fit()
+      start()
+    }
+  },
+)
 onBeforeUnmount(() => {
   if (raf) cancelAnimationFrame(raf)
   ro?.disconnect()

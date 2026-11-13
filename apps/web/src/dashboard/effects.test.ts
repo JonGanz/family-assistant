@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import DashboardCanvas from './DashboardCanvas.vue'
 import ConfettiLayer from './effects/ConfettiLayer.vue'
 import SnowLayer from './effects/SnowLayer.vue'
+import { SNOW_PARAMS, snowMode } from './effects/snowModel'
 import RoutinePanel from './panels/RoutinePanel.vue'
 import {
   FIRED_KEY,
@@ -135,22 +136,65 @@ describe('routine panel confetti', () => {
   })
 })
 
+const wx = (d: DashboardData, code?: number): DashboardData =>
+  code === undefined
+    ? d
+    : ({ ...d, weather: { current: { weather_code: code } } } as unknown as DashboardData)
+
+const mount2 = (over: Partial<DashboardSettings> = {}, code?: number) =>
+  mount(DashboardCanvas, {
+    props: { data: wx(data([], over), code), now: NOW },
+    global: { plugins: [createPinia()] },
+  })
+
+describe('snow model', () => {
+  it('maps WMO codes to modes', () => {
+    expect([71, 77].map(snowMode)).toEqual(['light', 'light'])
+    expect(snowMode(73)).toBe('moderate')
+    expect(snowMode(75)).toBe('heavy')
+    expect([85, 86].map(snowMode)).toEqual(['flurries', 'flurries'])
+    for (const c of [0, 3, 61, 95, undefined]) expect(snowMode(c)).toBe('none')
+  })
+  it('flurries are denser, faster and capped higher than heavy', () => {
+    const f = SNOW_PARAMS.flurries
+    const h = SNOW_PARAMS.heavy
+    expect(f.density).toBeGreaterThan(h.density)
+    expect(f.speed).toBeGreaterThan(h.speed)
+    expect(f.max).toBeGreaterThan(h.max)
+    expect(f.max).toBeLessThanOrEqual(300)
+  })
+})
+
+describe('snow layer on the canvas', () => {
+  const layer = '[data-testid="snow-layer"]'
+  it('shows only when the weather has snow', () => {
+    expect(mount2({}, 0).find(layer).exists()).toBe(false)
+    expect(mount2().find(layer).exists()).toBe(false)
+    expect(mount2({}, 73).find(layer).exists()).toBe(true)
+  })
+  it('passes flurries for snow showers', () => {
+    const w = mount2({}, 85)
+    expect(w.findComponent(SnowLayer).props('mode')).toBe('flurries')
+  })
+  it('the switch hides it even when snowing', () => {
+    expect(mount2({ snow: false }, 75).find(layer).exists()).toBe(false)
+  })
+  it('follows live weather changes', async () => {
+    const w = mount2({}, 73)
+    await w.setProps({ data: wx(data([]), 0) })
+    expect(w.find(layer).exists()).toBe(false)
+  })
+})
+
 describe('effect layers', () => {
-  const mount2 = (over: Partial<DashboardSettings> = {}) =>
-    mount(DashboardCanvas, {
-      props: { data: data([], over), now: NOW },
-      global: { plugins: [createPinia()] },
-    })
   it('are on by default and each toggle turns its layer off', () => {
     const on = mount2()
-    expect(on.find('[data-testid="snow-layer"]').exists()).toBe(true)
     expect(on.find('[data-testid="confetti-layer"]').exists()).toBe(true)
-    expect(mount2({ snow: false }).find('[data-testid="snow-layer"]').exists()).toBe(false)
     expect(mount2({ confetti: false }).find('[data-testid="confetti-layer"]').exists()).toBe(false)
   })
   it('are aria-hidden, non-interactive and do not crash without a canvas context', () => {
     const getContext = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(null)
-    const snow = mount(SnowLayer)
+    const snow = mount(SnowLayer, { props: { mode: 'moderate' } })
     const conf = mount(ConfettiLayer)
     for (const w of [snow, conf]) {
       expect(w.attributes('aria-hidden')).toBe('true')

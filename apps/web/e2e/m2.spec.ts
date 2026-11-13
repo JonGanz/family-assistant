@@ -196,7 +196,8 @@ test('the routine panel fills its progress bar to 100%', async ({ page, browser 
     await expect(last).toHaveAttribute('aria-pressed', 'true')
     await screen.waitForTimeout(1000)
     await expect(pieces).toHaveCount(0)
-    await expect(screen.getByTestId('snow-layer')).toHaveCSS('pointer-events', 'none')
+    const snowLayer = screen.getByTestId('snow-layer')
+    if (await snowLayer.count()) await expect(snowLayer).toHaveCSS('pointer-events', 'none')
     await expect(screen.getByTestId('confetti-layer')).toHaveCSS('pointer-events', 'none')
   } finally {
     await ctx.close()

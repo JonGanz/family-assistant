@@ -22,6 +22,7 @@ import UiIcon from '../ui/UiIcon.vue'
 import type { IconName } from '../ui/icons'
 import ConfettiLayer from './effects/ConfettiLayer.vue'
 import SnowLayer from './effects/SnowLayer.vue'
+import { snowModeOf } from './effects/snowModel'
 import Whiteboard from './Whiteboard.vue'
 import PanelHost from './panels/PanelHost.vue'
 import { prefersDark, resolveMode } from './theme'
@@ -62,6 +63,7 @@ const emit = defineEmits<{
 }>()
 
 const cfg = computed(() => props.settings ?? props.data.settings)
+const snow = computed(() => snowModeOf(props.data.weather))
 const root = ref<HTMLElement | null>(null)
 /**
  * The screen's shape is detected, not configured: portrait when taller than wide. It decides the
@@ -245,7 +247,7 @@ const shift = computed(() =>
     :data-theme="variant.mode"
     :data-orientation="portrait ? 'portrait' : 'landscape'"
   >
-    <SnowLayer v-if="cfg.snow !== false" />
+    <SnowLayer v-if="cfg.snow !== false && snow !== 'none'" :mode="snow" />
     <nav class="nav" :aria-label="S.navLabel">
       <button
         v-for="v in VIEWS"
