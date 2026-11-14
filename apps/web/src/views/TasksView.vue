@@ -149,6 +149,7 @@ const loadingFirst = computed(() => tasks.loading && !tasks.tabs[dataTab.value])
       <ResponsiveItems :items="current">
         <template #item="{ item }">
           <TaskItem
+            variant="app"
             :task="model(item)"
             :now="now"
             :tz="household.tz"
@@ -170,6 +171,7 @@ const loadingFirst = computed(() => tasks.loading && !tasks.tabs[dataTab.value])
         <ResponsiveItems :items="g.items">
           <template #item="{ item }">
             <TaskItem
+              variant="app"
               :task="model(item)"
               :now="now"
               :tz="household.tz"

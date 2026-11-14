@@ -9,6 +9,8 @@ const props = defineProps<{
   now: Date
   tz: string
   size?: 'normal' | 'kiosk'
+  /** `app` rounds the member avatars (signed-in UI); the kiosk keeps them square. */
+  variant?: 'kiosk' | 'app'
 }>()
 const emit = defineEmits<{ complete: [id: string]; open: [id: string]; claim: [id: string] }>()
 
@@ -52,6 +54,7 @@ const overdue = computed(() => !done.value && isOverdue(props.task.dueAt, props.
         :color="m.color"
         :src="m.avatarUrl"
         size="1.75rem"
+        :variant="variant ?? 'kiosk'"
       />
     </span>
     <span class="claim">

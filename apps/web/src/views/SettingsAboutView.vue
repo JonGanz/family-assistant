@@ -6,6 +6,7 @@ import { reloadApp } from '../lib/appUpdate'
 import { useHouseholdStore } from '../stores/household'
 import { UiButton, UiCard, UiErrorState, UiIcon, UiSkeleton } from '../ui'
 import { buildsDiffer, builtAtText } from './aboutModel'
+import { releaseNotes, sameVersion } from './releaseNotes'
 import { describeError } from './shared'
 
 const household = useHouseholdStore()
@@ -16,6 +17,10 @@ const loading = ref(true)
 // Stamped into this bundle by vite.config.ts.
 const web = { commit: __APP_COMMIT__, builtAt: __APP_BUILT_AT__ }
 const stale = computed(() => buildsDiffer(about.value?.commit, web.commit))
+const notes = releaseNotes()
+const SHOWN = 5
+const showAll = ref(false)
+const visibleNotes = computed(() => (showAll.value ? notes : notes.slice(0, SHOWN)))
 const reloading = ref(false)
 async function reload() {
   reloading.value = true
@@ -90,6 +95,47 @@ onMounted(load)
         <dd>{{ builtAtText(web.builtAt, household.tz) }}</dd>
       </dl>
     </UiCard>
+
+    <UiCard v-if="notes.length" data-testid="release-notes">
+      <template #header>Release notes</template>
+      <ol class="notes">
+        <li
+          v-for="n in visibleNotes"
+          :key="n.version"
+          class="notes__entry"
+          :data-testid="`notes-${n.version}`"
+        >
+          <h3>
+            {{ n.unreleased ? 'Unreleased' : `v${n.version}` }}
+            <span v-if="n.date" class="muted">{{ n.date }}</span>
+            <span
+              v-if="sameVersion(about?.version, n.version)"
+              class="notes__current"
+              data-testid="notes-current"
+            >
+              You're on this version
+            </span>
+          </h3>
+          <ul>
+            <li v-for="(b, i) in n.bullets" :key="i">
+              <template v-for="(s, j) in b" :key="j">
+                <code v-if="s.kind === 'code'">{{ s.text }}</code>
+                <strong v-else-if="s.kind === 'bold'">{{ s.text }}</strong>
+                <template v-else>{{ s.text }}</template>
+              </template>
+            </li>
+          </ul>
+        </li>
+      </ol>
+      <UiButton
+        v-if="notes.length > SHOWN"
+        variant="text"
+        data-testid="notes-toggle"
+        @click="showAll = !showAll"
+      >
+        {{ showAll ? 'Show fewer' : `Show all (${notes.length})` }}
+      </UiButton>
+    </UiCard>
   </SettingsPage>
 </template>
 
@@ -128,5 +174,33 @@ dd {
 }
 .reload .muted {
   margin: 0;
+}
+
+.notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--ui-space-4);
+}
+.notes h3 {
+  margin: 0 0 var(--ui-space-1);
+  font: var(--ui-type-title-sm);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--ui-space-2);
+}
+.notes h3 .muted {
+  font: var(--ui-type-body-sm);
+  color: var(--ui-on-surface-variant);
+}
+.notes ul {
+  margin: 0;
+  padding-left: var(--ui-space-5);
+}
+.notes__current {
+  font: var(--ui-type-label-md);
+  color: var(--ui-primary);
 }
 </style>

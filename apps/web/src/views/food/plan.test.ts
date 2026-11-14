@@ -36,6 +36,7 @@ import { useMealsSettingsStore } from '../../stores/mealsSettings'
 import { useSessionStore } from '../../stores/session'
 import { resetSnackbar } from '../../ui/composables/useSnackbar'
 import MealPlanView from './MealPlanView.vue'
+import { agendaRange } from './planAgendaRange'
 
 const TODAY = '2026-11-09' // a Monday
 const SLOTS = [
@@ -281,5 +282,36 @@ describe('SaveAsTemplateSheet', () => {
     h.api.templateFromPlan.mockResolvedValue({ id: 't9', version: 1 })
     await useMealPlanStore().fromPlan(body)
     expect(h.api.templateFromPlan).toHaveBeenCalledWith(body)
+  })
+})
+
+describe('agendaRange', () => {
+  it('runs from two days back to today plus the horizon', () => {
+    const r = agendaRange(TODAY, 2)
+    expect(r.from).toBe('2026-11-07')
+    expect(r.to).toBe('2026-11-23')
+    expect(r.days).toHaveLength(17)
+    expect(r.days[0]).toBe(r.from)
+    expect(r.days.at(-1)).toBe(r.to)
+  })
+  it('handles a zero horizon and month ends', () => {
+    expect(agendaRange('2026-12-01', 0).days).toEqual(['2026-11-29', '2026-11-30', '2026-12-01'])
+  })
+})
+
+describe('Meal plan agenda', () => {
+  it('lists days from two days ago, loads that range and marks today', async () => {
+    asUser('adult')
+    ready()
+    const w = mount(MealPlanView, { attachTo: document.body })
+    await flushPromises()
+    const days = w.findAll('.agenda__day').map((d) => d.attributes('data-day'))
+    expect(days[0]).toBe('2026-11-07')
+    expect(days.at(-1)).toBe('2026-11-23')
+    expect(w.findAll('.agenda__day.is-today')[0]!.attributes('data-day')).toBe(TODAY)
+    expect(h.api.plan).toHaveBeenCalledWith('2026-11-07', '2026-11-23')
+    expect(q('plan-slot-add-2026-11-08-dinner')).toBeNull()
+    expect(q(`plan-slot-add-${TODAY}-dinner`)).not.toBeNull()
+    w.unmount()
   })
 })

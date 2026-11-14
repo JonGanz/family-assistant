@@ -31,6 +31,7 @@ vi.mock('../../api/food', () => ({
     matchLine: vi.fn(),
     ingredients: vi.fn(),
     recipeImageUrl: (id: string) => `/img/${id}`,
+    uploadRecipeImage: vi.fn(),
   },
 }))
 import { food } from '../../api/food'
@@ -104,6 +105,21 @@ describe('recipes', () => {
     expect((w.find('[data-testid="recipe-title"]').element as HTMLInputElement).value).toBe('Pasta')
     expect(m.createRecipe).not.toHaveBeenCalled()
     expect(m.updateRecipe).not.toHaveBeenCalled()
+    w.unmount()
+  })
+
+  it('shows a visible error when the image cannot be decoded', async () => {
+    routeState.params = {}
+    const w = mount(RecipeEditView, { global: { stubs } })
+    await flushPromises()
+    const input = w.find('input[type="file"]')
+    expect(input.attributes('accept')).toBe('image/*')
+    Object.defineProperty(input.element, 'files', {
+      value: [new File(['x'], 'a.heic', { type: 'image/heic' })],
+    })
+    await input.trigger('change')
+    await flushPromises()
+    expect(w.find('[data-testid="image-error"]').text()).toContain('could not be read')
     w.unmount()
   })
 

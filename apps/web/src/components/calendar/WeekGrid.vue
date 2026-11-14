@@ -267,7 +267,7 @@ ul {
   }
   .cellbox {
     display: grid;
-    align-content: center;
+    align-content: start;
   }
   /* The global min touch height would make each one-line item several lines tall. */
   .ev,
@@ -279,6 +279,7 @@ ul {
     line-height: 0.85rem;
     padding: 2px 2px 2px 5px;
     border-left-width: 2px;
+    border-radius: 0;
   }
   .time {
     display: none;

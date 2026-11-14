@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import type { EventLike, MemberLike } from '../../lib/types'
 import { dueLabel } from '../../lib/tasks'
+import MemberChip from '../../components/MemberChip.vue'
 import EventCard from '../../components/EventCard.vue'
 import type { TaskView } from '../../api/client'
 import { UiCard, UiCheckbox, UiList, UiSection } from '../../ui'
 import type { MealSlotCard } from './todayModel'
 
-defineProps<{
+const props = defineProps<{
   meals: MealSlotCard[]
   tasks: TaskView[]
   events: EventLike[]
@@ -16,6 +17,15 @@ defineProps<{
   completable?: boolean
 }>()
 const emit = defineEmits<{ complete: [task: TaskView] }>()
+
+/** The task's assigned members that are known; unknown ids are dropped. */
+function assigned(t: TaskView): MemberLike[] {
+  const known = new Map((props.members ?? []).map((m) => [m.id, m]))
+  return t.assignees.flatMap((id) => {
+    const m = known.get(id)
+    return m ? [m] : []
+  })
+}
 </script>
 
 <template>
@@ -52,6 +62,15 @@ const emit = defineEmits<{ complete: [task: TaskView] }>()
               <span>{{ t.title }}</span>
               <span class="muted">{{ dueLabel(t.due_at, new Date(), tz) }}</span>
             </template>
+            <span v-if="assigned(t).length" class="people" data-testid="task-people">
+              <MemberChip
+                v-for="m in assigned(t)"
+                :key="m.id"
+                variant="app"
+                :name="m.display_name"
+                :color="m.color"
+              />
+            </span>
           </li>
         </UiList>
       </UiCard>
@@ -79,6 +98,12 @@ const emit = defineEmits<{ complete: [task: TaskView] }>()
   display: flex;
   align-items: center;
   gap: var(--ui-space-2);
+}
+.people {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: var(--ui-space-1);
+  margin-left: auto;
 }
 .muted,
 .empty {

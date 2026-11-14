@@ -779,6 +779,8 @@ tools/           Python helpers for the design docs (diagram generator, the `fa.
 STATUS.md        Generated snapshot of what is open (`python3 tools/fa.py status`)
 ```
 
+`CHANGELOG.md` holds the user-facing release notes, newest first; the app shows them under System > About. The web bundle reads them from `apps/web/src/views/releaseNotes.generated.ts`, so after editing the changelog regenerate that file with the command in its header (`pnpm test` fails while it is stale).
+
 ## How this project is designed
 Design work is recorded in the repo, and each folder has an `_index.md`:
 - [`PROJECT.md`](PROJECT.md): the original goals and requirements.

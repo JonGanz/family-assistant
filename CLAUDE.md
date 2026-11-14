@@ -71,6 +71,7 @@ Only answers to questions (and ideas the user puts inside answers) become `D-NNN
 
 ## Git
 The user commits. Their commit messages use `->` for the user's input and `<-` for Claude's output. The user has given standing permission to commit your own changes after every completed change (once the CI-equivalent checks pass). The message is a single line `<- summary` and nothing else: no body, no `Co-Authored-By` trailer. Use `git mv` for moves so history is kept.
+Every tagged release adds its `CHANGELOG.md` entry (`## vX.Y.Z — date`, plain-language bullets, no household specifics) in the release commit, then regenerates `apps/web/src/views/releaseNotes.generated.ts` (command in its header).
 
 ## README (user-facing, keep current)
 `README.md` is the entry point for people using or contributing to the project. **Update it in the same change** whenever any of these change:

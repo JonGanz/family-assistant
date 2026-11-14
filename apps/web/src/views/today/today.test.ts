@@ -104,6 +104,28 @@ describe('TodayDay', () => {
     expect(w.findAll('[data-testid=meal-item]')).toHaveLength(2)
   })
 
+  it('shows the assigned members of a task', () => {
+    const task = (assignees: string[]) =>
+      ({ id: 't1', title: 'Dishes', due_at: null, status: 'open', assignees }) as never
+    const w = mount(TodayDay, {
+      props: {
+        ...base,
+        events: [],
+        tasks: [task(['m1', 'gone'])],
+        members: [{ id: 'm1', display_name: 'Ana', color: 'red' }],
+      },
+      global: { stubs: { RouterLink: true } },
+    })
+    const people = w.get('[data-testid=task-people]')
+    expect(people.text()).toBe('Ana')
+    expect(people.find('.member-chip--app').exists()).toBe(true)
+    const none = mount(TodayDay, {
+      props: { ...base, events: [], tasks: [task([])] },
+      global: { stubs: { RouterLink: true } },
+    })
+    expect(none.find('[data-testid=task-people]').exists()).toBe(false)
+  })
+
   it('shows member chips and the member colour trim on events', () => {
     const w = mount(TodayDay, {
       props: {

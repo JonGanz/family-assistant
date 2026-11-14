@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// Food → Meal plan (Frontend.md §3f): the grid from the previous week to the horizon, with the adult actions:
+// Food → Meal plan (Frontend.md §3f): an agenda of days from two days ago to the horizon, with the adult actions:
 // add/edit/move/swap/delete, apply a template, make a grocery list, save as template, and the list-impact dialog.
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -10,17 +10,31 @@ import EntrySheet from '../../components/food/plan/EntrySheet.vue'
 import FoodTabs from '../../components/food/FoodTabs.vue'
 import ImpactDialog from '../../components/food/plan/ImpactDialog.vue'
 import MakeListSheet from '../../components/food/plan/MakeListSheet.vue'
-import MealPlanGrid from '../../components/food/plan/MealPlanGrid.vue'
 import SaveAsTemplateSheet from '../../components/food/plan/SaveAsTemplateSheet.vue'
-import { pickPayload, planSlots, type ItemPick } from '../../components/food/plan/planModel'
+import {
+  cellTestId,
+  entryTitle,
+  pickPayload,
+  planSlots,
+  type ItemPick,
+} from '../../components/food/plan/planModel'
 import { weekStartKey, type WeekStart } from '../../dashboard/weekModel'
-import { addDays, dayKey } from '../../lib/time'
+import { dayKey, formatDayHeading } from '../../lib/time'
 import { useHouseholdStore } from '../../stores/household'
 import { useMealPlanStore } from '../../stores/mealPlan'
 import { useMealsSettingsStore } from '../../stores/mealsSettings'
 import { useSessionStore } from '../../stores/session'
-import { UiButton, UiErrorState, UiPage, UiSkeleton, UiTopAppBar, useSnackbar } from '../../ui'
+import {
+  UiButton,
+  UiErrorState,
+  UiIcon,
+  UiPage,
+  UiSkeleton,
+  UiTopAppBar,
+  useSnackbar,
+} from '../../ui'
 import { describeError } from '../shared'
+import { agendaRange } from './planAgendaRange'
 
 const session = useSessionStore()
 const household = useHouseholdStore()
@@ -34,13 +48,21 @@ const isAdult = computed(() => session.isAdult)
 const today = computed(() => dayKey(new Date(), household.tz))
 const horizon = computed(() => settings.settings?.meal_plan_horizon_weeks ?? 2)
 const weekStart = computed<WeekStart>(() => (household.view?.week_start as WeekStart) ?? 'monday')
-/** Past weeks shown beyond the previous one; "Show earlier weeks" adds four. */
-const earlier = ref(0)
-const from = computed(() => weekStartKey(today.value, weekStart.value, -1 - earlier.value))
-const weeks = computed(() => earlier.value + 2 + horizon.value)
-const maxDate = computed(() => addDays(today.value, horizon.value * 7))
+const isEmptyDay = (d: string) => slots.value.every((sl) => store.cell(d, sl.id).length === 0)
+const range = computed(() => agendaRange(today.value, horizon.value))
+const from = computed(() => range.value.from)
+const maxDate = computed(() => range.value.to)
+const writable = (date: string) => isAdult.value && date >= today.value && date <= maxDate.value
 const slots = computed(() => planSlots(settings.visibleSlots))
 const ready = computed(() => household.loaded && settings.loaded)
+
+watch(
+  [ready, from, maxDate],
+  ([r, f, t]) => {
+    if (r) void store.load(f, t)
+  },
+  { immediate: true },
+)
 
 onMounted(async () => {
   await Promise.all([
@@ -55,7 +77,7 @@ async function act<T>(fn: () => Promise<T>): Promise<T | undefined> {
     return await fn()
   } catch (e) {
     if (isConflict(e)) {
-      void store.load(from.value, addDays(from.value, weeks.value * 7 - 1))
+      void store.load(from.value, maxDate.value)
       snackbar.show({ text: 'That entry changed elsewhere. The plan was refreshed; try again.' })
     } else snackbar.show({ text: describeError(e) })
     return undefined
@@ -176,17 +198,6 @@ async function deleteEntry() {
   } finally {
     sheetBusy.value = false
   }
-}
-
-async function dropSlot(id: string, date: string, slotId: string) {
-  const e = store.entries.find((x) => x.id === id)
-  if (!e || (e.date === date && e.slot_id === slotId)) return
-  const res = await act(() => store.update(e, { date, slot_id: slotId }))
-  if (res) undoable('Entry moved', res.change_id)
-}
-async function swapEntries(a: string, b: string) {
-  const res = await act(() => store.swap({ a, b }))
-  if (res) undoable('Entries swapped', res.change_id)
 }
 
 // `?add=<recipe id>` from a recipe's "Add to plan".
@@ -339,27 +350,48 @@ watch(isAdult, (a) => {
     <UiErrorState
       v-else-if="store.error && !store.loaded"
       :message="store.error"
-      @retry="store.load(from, addDays(from, weeks * 7 - 1))"
+      @retry="store.load(from, maxDate)"
     />
     <template v-else>
-      <UiButton variant="text" icon="arrow_upward" data-testid="plan-earlier" @click="earlier += 4">
-        Show earlier weeks
-      </UiButton>
-      <MealPlanGrid
-        :from="from"
-        :weeks="weeks"
-        :editable="isAdult"
-        :slots="slots"
-        :today="today"
-        :max-date="maxDate"
-        :selecting="selecting"
-        :selected="selected"
-        @add="openAdd"
-        @select="onSelect"
-        @toggle="toggleSelected"
-        @drop-slot="dropSlot"
-        @swap="swapEntries"
-      />
+      <div class="agenda" data-testid="plan-grid">
+        <section
+          v-for="d in range.days"
+          :key="d"
+          class="agenda__day"
+          :class="{ 'is-today': d === today, 'is-past': d < today }"
+          :data-day="d"
+          :aria-current="d === today ? 'date' : undefined"
+        >
+          <h2 class="agenda__head">{{ formatDayHeading(d, household.tz, today) }}</h2>
+          <div v-for="sl in slots" :key="sl.id" class="slot" :data-testid="cellTestId(d, sl.name)">
+            <span v-if="slots.length > 1" class="slot__name">{{ sl.name }}</span>
+            <ul class="slot__list">
+              <li v-for="e in store.cell(d, sl.id)" :key="e.id">
+                <button
+                  type="button"
+                  class="chip"
+                  :class="{ 'is-selected': selected.includes(e.id) }"
+                  :aria-pressed="selecting ? selected.includes(e.id) : undefined"
+                  @click="selecting ? toggleSelected(e) : onSelect(e, writable(d))"
+                >
+                  <span class="chip__title">{{ entryTitle(e) }}</span>
+                </button>
+              </li>
+            </ul>
+            <button
+              v-if="writable(d) && !selecting"
+              type="button"
+              class="slot__add"
+              :aria-label="`Add to ${sl.name} on ${formatDayHeading(d, household.tz, today)}`"
+              :data-testid="`plan-slot-add-${d}-${sl.name.toLowerCase()}`"
+              @click="openAdd(d, sl.id)"
+            >
+              <UiIcon name="add" :size="20" />
+            </button>
+          </div>
+          <p v-if="isEmptyDay(d) && !writable(d)" class="agenda__none">Nothing planned</p>
+        </section>
+      </div>
     </template>
 
     <EntrySheet
@@ -428,5 +460,100 @@ watch(isAdult, (a) => {
 }
 .plan-select > span {
   flex: 1;
+}
+.agenda {
+  display: grid;
+  gap: var(--ui-space-3);
+  max-width: 50rem;
+  margin-inline: auto;
+  width: 100%;
+}
+.agenda__day {
+  display: grid;
+  gap: var(--ui-space-1);
+  padding: var(--ui-space-3);
+  border: 1px solid var(--ui-outline-variant);
+  border-radius: var(--ui-radius-md);
+  background: var(--ui-surface-container-low);
+}
+.agenda__day.is-past {
+  background: var(--ui-surface);
+  color: var(--ui-on-surface-variant);
+}
+.agenda__day.is-today {
+  border-color: var(--ui-inverse-surface);
+  background: var(--ui-inverse-surface);
+  color: var(--ui-inverse-on-surface);
+}
+.agenda__head {
+  margin: 0;
+  font: var(--ui-type-title-sm);
+}
+.agenda__none {
+  margin: 0;
+  font: var(--ui-type-body-sm);
+  opacity: 0.7;
+}
+.slot {
+  display: grid;
+  gap: var(--ui-space-1);
+  min-width: 0;
+}
+.slot__name {
+  font: var(--ui-type-label-sm);
+  opacity: 0.75;
+}
+.slot__list {
+  display: grid;
+  gap: var(--ui-space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.chip {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: var(--ui-touch);
+  padding: var(--ui-space-1) var(--ui-space-2);
+  border: 1px solid var(--ui-outline-variant);
+  border-radius: var(--ui-radius-sm);
+  background: var(--ui-surface-container-high);
+  color: var(--ui-on-surface);
+  font: var(--ui-type-body-md);
+  text-align: left;
+  cursor: pointer;
+}
+.chip:hover {
+  background: var(--ui-surface-container-highest);
+}
+.chip.is-selected {
+  border-color: var(--ui-primary);
+  background: var(--ui-primary-container);
+  color: var(--ui-on-primary-container);
+}
+.chip__title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.slot__add {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--ui-touch);
+  border: 1px dashed var(--ui-outline);
+  border-radius: var(--ui-radius-sm);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.slot__add:hover {
+  background: var(--ui-state-hover);
+}
+.chip:focus-visible,
+.slot__add:focus-visible {
+  outline: var(--ui-focus-ring);
+  outline-offset: 1px;
 }
 </style>

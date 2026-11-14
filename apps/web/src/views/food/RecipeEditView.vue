@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { food, type RecipeInput, type RecipeView } from '../../api/food'
 import FoodTabs from '../../components/food/FoodTabs.vue'
 import LineMatch from '../../components/food/recipes/LineMatch.vue'
+import { resizeToJpeg } from '../../lib/imageResize'
 import { useRecipesStore } from '../../stores/recipes'
 import {
   UiButton,
@@ -34,10 +35,12 @@ interface Form {
 const route = useRoute()
 const router = useRouter()
 const store = useRecipesStore()
-const id = computed(() => (route.params.id ? String(route.params.id) : null))
+const createdId = ref<string | null>(null)
+const id = computed(() => (route.params.id ? String(route.params.id) : createdId.value))
 const loading = ref(!!id.value)
 const loadError = ref<string | null>(null)
 const upload = ref<File | null>(null)
+const imageError = ref<string | null>(null)
 const meta = ref<Pick<RecipeInput, 'import_method' | 'source_url' | 'yield_text'>>({
   import_method: 'manual',
   source_url: null,
@@ -133,7 +136,18 @@ async function persist(f: Form): Promise<void> {
   const saved = await store.save(id.value, input)
   if (!saved) throw new Error('This recipe changed elsewhere. Reload to see the latest.')
   if (f.removeImage && saved.has_image) await food.deleteRecipeImage(saved.id)
-  if (upload.value) await food.uploadRecipeImage(saved.id, upload.value)
+  if (upload.value) {
+    try {
+      await food.uploadRecipeImage(saved.id, upload.value)
+    } catch (e) {
+      // The recipe is stored; later saves must update it, not create a duplicate.
+      createdId.value = saved.id
+      throw new Error(
+        `The recipe was saved, but the image was not uploaded: ${e instanceof Error ? e.message : 'unknown error'}`,
+        { cause: e },
+      )
+    }
+  }
   store.pendingDraft = null
   savedId.value = saved.id
 }
@@ -142,8 +156,8 @@ const savedId = ref<string | null>(null)
 const draft = form.draft
 
 async function save() {
-  if (!id.value && !form.dirty.value && store.pendingDraft) {
-    // An imported draft is the baseline, so it is not "dirty" yet but still unsaved (D-109).
+  if (!form.dirty.value && (upload.value || (!id.value && store.pendingDraft))) {
+    // An imported draft or a lone image choice leaves the form "clean" but still unsaved (D-109).
     try {
       await persist(JSON.parse(JSON.stringify(draft.value)) as Form)
     } catch (e) {
@@ -163,11 +177,16 @@ function move(list: string[], i: number, d: number) {
   if (j < 0 || j >= list.length) return
   ;[list[i], list[j]] = [list[j]!, list[i]!]
 }
-function onFile(e: Event) {
+async function onFile(e: Event) {
   const f = (e.target as HTMLInputElement).files?.[0]
-  if (f) {
-    upload.value = f
+  imageError.value = null
+  if (!f) return
+  try {
+    upload.value = await resizeToJpeg(f)
     draft.value.removeImage = false
+  } catch (err) {
+    upload.value = null
+    imageError.value = err instanceof Error ? err.message : 'The image could not be read.'
   }
 }
 /** The view line behind row `i`, when its text is unchanged (so matching still applies). */
@@ -199,12 +218,10 @@ function viewLine(i: number) {
 
       <UiSection heading="Image">
         <p v-if="draft.imageUrl && !draft.removeImage">Using the image from the link.</p>
-        <input
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          aria-label="Upload an image"
-          @change="onFile"
-        />
+        <input type="file" accept="image/*" aria-label="Upload an image" @change="onFile" />
+        <p v-if="imageError" role="alert" class="image-error" data-testid="image-error">
+          {{ imageError }}
+        </p>
         <UiButton
           v-if="(draft.imageUrl || id) && !draft.removeImage"
           variant="text"
@@ -272,6 +289,9 @@ function viewLine(i: number) {
 </template>
 
 <style scoped>
+.image-error {
+  color: var(--ui-error, #b3261e);
+}
 .form {
   display: grid;
   gap: var(--ui-space-4);

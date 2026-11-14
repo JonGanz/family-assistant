@@ -231,7 +231,8 @@ h3 {
 .top.solo {
   grid-template-columns: 1fr;
 }
-@media (max-width: 700px), (orientation: portrait) {
+/* Side by side on any wall screen; only a phone-narrow window stacks. */
+@media (max-width: 600px) {
   .top {
     grid-template-columns: 1fr;
   }
