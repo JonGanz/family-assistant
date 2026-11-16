@@ -238,13 +238,25 @@ h3 {
   }
 }
 .imgcard {
+  position: relative;
   padding: 0;
   overflow: hidden;
+  min-height: 22vh;
+}
+.top.solo .imgcard {
+  min-height: 30vh;
+}
+@media (max-width: 600px) {
+  .imgcard {
+    min-height: 30vh;
+  }
 }
 .photo {
+  position: absolute;
+  inset: 0;
   display: block;
   width: 100%;
-  height: 22vh;
+  height: 100%;
   object-fit: cover;
 }
 .card {
@@ -254,6 +266,21 @@ h3 {
 }
 .steps {
   margin-top: var(--space-5);
+  font-size: calc(var(--font-size-lg) * 1.25);
+}
+ul[data-testid='recipe-lines'] {
+  display: block;
+  columns: 2;
+  column-gap: var(--space-5, 24px);
+}
+ul[data-testid='recipe-lines'] li {
+  break-inside: avoid;
+  margin-bottom: var(--space-2);
+}
+@media (max-width: 600px) {
+  ul[data-testid='recipe-lines'] {
+    columns: 1;
+  }
 }
 dl {
   margin: 0;

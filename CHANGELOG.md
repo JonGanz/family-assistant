@@ -6,6 +6,10 @@ Every tagged release adds its entry here, in the same commit. Newest first.
 
 - Nothing yet.
 
+## v0.1.33 — 2026-11-15
+
+- Dashboard recipe: ingredients in two columns, larger step text, and the photo fills its whole card.
+
 ## v0.1.32 — 2026-11-14
 
 - Release notes on System > About.
