@@ -73,3 +73,27 @@ export function dailyOf(w: WeatherView, count = 7): DayPoint[] {
     pop: num(d['precipitation_probability_max'], i),
   }))
 }
+
+/** Local wall-clock "YYYY-MM-DDTHH" of `now` in `tz`, comparable with Open-Meteo hour strings. */
+export function localHourKey(now: Date, tz: string): string {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now)
+  const g = (t: string) => parts.find((p) => p.type === t)?.value ?? ''
+  return `${g('year')}-${g('month')}-${g('day')}T${g('hour')}`
+}
+
+/**
+ * The next `max` (default 24) hours starting at the current local hour, crossing midnight.
+ * Hours are assumed chronological; fewer are returned when fewer remain.
+ */
+export function nextHours(points: HourPoint[], nowKey: string, max = 24): HourPoint[] {
+  const key = (h: HourPoint) => `${h.date}T${h.label.slice(0, 2)}`
+  const start = points.findIndex((h) => key(h) >= nowKey)
+  return start < 0 ? [] : points.slice(start, start + max)
+}

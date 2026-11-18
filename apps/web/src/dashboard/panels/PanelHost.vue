@@ -19,6 +19,7 @@ defineEmits<{
   tick: [run: string, step: string, done: boolean]
   add: []
   detail: [d: DetailRequest]
+  completed: [done: boolean]
 }>()
 
 const REGISTRY: Record<string, Component> = {
@@ -48,5 +49,6 @@ const comp = computed(() => REGISTRY[props.panel.kind] ?? null)
     @tick="(r: string, st: string, d: boolean) => $emit('tick', r, st, d)"
     @add="$emit('add')"
     @detail="(d: DetailRequest) => $emit('detail', d)"
+    @completed="(d: boolean) => $emit('completed', d)"
   />
 </template>

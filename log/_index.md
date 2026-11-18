@@ -27,3 +27,4 @@ updated: 2026-11-14
 - [2026-11-13](2026-11-13.md): web; dashboard; calendar
 - [2026-11-14](2026-11-14.md): web; release-notes
 - [2026-11-15](2026-11-15.md): dashboard; release
+- [2026-11-17](2026-11-17.md): dashboard; release

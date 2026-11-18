@@ -6,6 +6,13 @@ Every tagged release adds its entry here, in the same commit. Newest first.
 
 - Nothing yet.
 
+## v0.1.34 — 2026-11-17
+
+- Dashboard routines: a finished routine turns its whole card green instead of a box inside it.
+- Dashboard weather: the hourly forecast shows the next 24 hours (or as many as are available), across midnight.
+- Dashboard timers: buttons fit their labels and are evenly shaped.
+- Dashboard whiteboard: rounded tool buttons.
+
 ## v0.1.33 — 2026-11-15
 
 - Dashboard recipe: ingredients in two columns, larger step text, and the photo fills its whole card.

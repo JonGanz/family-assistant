@@ -7,7 +7,7 @@ import { weatherInfo } from '../../lib/weatherCodes'
 import Modal from '../Modal.vue'
 import { S } from '../strings'
 import type { DashboardData } from '../types'
-import { dailyOf, hourlyOf } from '../weatherModel'
+import { dailyOf, hourlyOf, localHourKey, nextHours } from '../weatherModel'
 
 const props = defineProps<{ data: DashboardData; now: Date }>()
 defineEmits<{ close: [] }>()
@@ -15,7 +15,9 @@ const { format } = useUnits(computed(() => props.data.household.units))
 const w = computed(() => props.data.weather ?? null)
 const today = computed(() => dayKey(props.now, props.data.household.tz))
 const hours = computed(() =>
-  w.value ? hourlyOf(w.value, 48).filter((h) => h.date === today.value) : [],
+  w.value
+    ? nextHours(hourlyOf(w.value, 96), localHourKey(props.now, props.data.household.tz), 24)
+    : [],
 )
 const days = computed(() => (w.value ? dailyOf(w.value, 16) : []))
 const t = (v: number | null) => (v === null ? '–' : format(v, 'temp'))
@@ -32,9 +34,12 @@ const weekday = (d: string) =>
 
 <template>
   <Modal :title="S.forecastTitle" @close="$emit('close')">
-    <h3>{{ S.hourlyToday }}</h3>
+    <h3>{{ S.hourlyNext24 }}</h3>
     <ul class="hours" aria-label="Hourly forecast">
-      <li v-for="h in hours" :key="h.label">
+      <li v-for="(h, i) in hours" :key="h.date + h.label">
+        <span v-if="h.date !== today && (i === 0 || hours[i - 1]!.date !== h.date)" class="day">
+          {{ weekday(h.date) }}
+        </span>
         <span class="muted">{{ h.label }}</span>
         <WeatherIcon :code="h.code" size="2.4rem" />
         <span class="hi">{{ t(h.temp) }}</span>
@@ -63,6 +68,10 @@ h3 {
 }
 .muted {
   color: var(--color-muted);
+}
+.day {
+  font-size: var(--font-size-sm, 0.8em);
+  font-weight: 700;
 }
 .hi {
   font-weight: 700;

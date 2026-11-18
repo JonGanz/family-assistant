@@ -48,33 +48,37 @@ const title = computed(() => props.timer.name || S.timerDefaultName)
       <output class="time" data-testid="timer-time">{{ text }}</output>
     </div>
     <div class="acts" @click.stop>
-      <button
-        v-if="ringing"
-        type="button"
-        class="a primary"
-        data-testid="timer-dismiss"
-        @click="emit('dismiss')"
-      >
-        <UiIcon name="check" :size="24" /> {{ S.timerDismiss }}
-      </button>
-      <template v-else>
-        <button type="button" class="a" data-testid="timer-add-time" @click="emit('addTime')">
-          <UiIcon name="add" :size="24" /> {{ S.timerPlusMinute }}
-        </button>
+      <div class="row main">
         <button
-          v-if="timer.state === 'running'"
+          v-if="ringing"
           type="button"
-          class="a"
-          data-testid="timer-pause"
-          @click="emit('pause')"
+          class="a primary"
+          data-testid="timer-dismiss"
+          @click="emit('dismiss')"
         >
-          {{ S.timerPause }}
+          <UiIcon name="check" :size="20" /> {{ S.timerDismiss }}
         </button>
-        <button v-else type="button" class="a" data-testid="timer-resume" @click="emit('resume')">
-          {{ timer.state === 'idle' ? S.timerStart : S.timerResume }}
-        </button>
+        <template v-else>
+          <button type="button" class="a" data-testid="timer-add-time" @click="emit('addTime')">
+            <UiIcon name="add" :size="20" /> {{ S.timerPlusMinute }}
+          </button>
+          <button
+            v-if="timer.state === 'running'"
+            type="button"
+            class="a"
+            data-testid="timer-pause"
+            @click="emit('pause')"
+          >
+            {{ S.timerPause }}
+          </button>
+          <button v-else type="button" class="a" data-testid="timer-resume" @click="emit('resume')">
+            {{ timer.state === 'idle' ? S.timerStart : S.timerResume }}
+          </button>
+        </template>
+      </div>
+      <div class="row sub">
         <button
-          v-if="timer.state !== 'idle'"
+          v-if="!ringing && timer.state !== 'idle'"
           type="button"
           class="a"
           data-testid="timer-cancel-run"
@@ -82,17 +86,17 @@ const title = computed(() => props.timer.name || S.timerDefaultName)
         >
           {{ S.timerReset }}
         </button>
-      </template>
-      <button
-        type="button"
-        class="a icon"
-        :aria-label="S.timerRemove"
-        :title="S.timerRemove"
-        data-testid="timer-remove"
-        @click="emit('remove')"
-      >
-        <UiIcon name="delete" :size="24" />
-      </button>
+        <button
+          type="button"
+          class="a icon"
+          :aria-label="S.timerRemove"
+          :title="S.timerRemove"
+          data-testid="timer-remove"
+          @click="emit('remove')"
+        >
+          <UiIcon name="delete" :size="20" />
+        </button>
+      </div>
     </div>
   </article>
 </template>
@@ -151,6 +155,12 @@ svg {
   font-variant-numeric: tabular-nums;
 }
 .acts {
+  display: grid;
+  gap: var(--space-2);
+  width: 100%;
+  font-size: clamp(0.9rem, 0.8rem + 0.4vw, 1.15rem);
+}
+.row {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
@@ -159,20 +169,29 @@ svg {
 .a {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-1);
+  flex: 1 1 auto;
+  box-sizing: border-box;
   min-width: var(--min-touch);
   min-height: var(--min-touch);
-  padding-inline: var(--space-4);
+  padding: var(--space-1) var(--space-4);
   border: 0;
-  border-radius: var(--ui-radius-full);
+  border-radius: var(--ui-radius-lg, var(--ui-radius-sm));
   background: var(--color-layer-3);
   color: inherit;
   font: inherit;
+  line-height: 1.2;
+  white-space: nowrap;
   cursor: pointer;
 }
+.main .a {
+  min-height: calc(var(--min-touch) * 1.15);
+  font-weight: 600;
+}
 .a.icon {
-  justify-content: center;
-  padding-inline: 0;
+  flex: 0 0 auto;
+  padding-inline: var(--space-3);
 }
 .a.primary {
   background: var(--color-accent);

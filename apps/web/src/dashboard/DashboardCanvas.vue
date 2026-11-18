@@ -192,6 +192,14 @@ function setView(v: View) {
   view.value = v
 }
 const detail = ref<DetailRequest | null>(null)
+/** Cells whose routine panel is fully done: the card itself gets the success highlight. */
+const doneCells = ref<Set<string>>(new Set())
+function setCellDone(key: string, done: boolean) {
+  const next = new Set(doneCells.value)
+  if (done) next.add(key)
+  else next.delete(key)
+  doneCells.value = next
+}
 const weekOffset = ref(0)
 /** Past events are hidden by default; the toggle shows them again. */
 const hidePast = ref(true)
@@ -322,7 +330,11 @@ const shift = computed(() =>
               v-for="(a, i) in st.areas"
               :key="`${a.panel.kind}-${a.panel['run'] ?? i}`"
               class="cell"
-              :class="`k-${a.panel.kind}`"
+              :class="[
+                `k-${a.panel.kind}`,
+                { complete: doneCells.has(`${a.panel.kind}-${a.panel['run'] ?? i}`) },
+              ]"
+              :data-complete="doneCells.has(`${a.panel.kind}-${a.panel['run'] ?? i}`) || undefined"
             >
               <PanelHost
                 :data="data"
@@ -334,6 +346,9 @@ const shift = computed(() =>
                 @tick="(r: string, st: string, d: boolean) => $emit('tick', r, st, d)"
                 @add="$emit('add')"
                 @detail="(d: DetailRequest) => (detail = d)"
+                @completed="
+                  (d: boolean) => setCellDone(`${a.panel.kind}-${a.panel['run'] ?? i}`, d)
+                "
               />
             </div>
           </div>
@@ -680,6 +695,12 @@ const shift = computed(() =>
   border-radius: var(--ui-radius-md);
   background: var(--color-layer-1, var(--color-surface));
   box-shadow: 0 1px 3px color-mix(in srgb, var(--color-text) 14%, transparent);
+}
+.main.split .cell.complete {
+  border-color: var(--color-success);
+  box-shadow:
+    0 0 0 2px var(--color-success),
+    0 1px 3px color-mix(in srgb, var(--color-text) 14%, transparent);
 }
 .main.split .cell :deep(h2) {
   font-weight: 700;

@@ -81,7 +81,7 @@ export const S = {
   hidePast: 'Hide past events',
   close: 'Close',
   forecastTitle: 'Forecast',
-  hourlyToday: 'Today, hour by hour',
+  hourlyNext24: 'Next 24 hours',
   upcoming: 'Upcoming days',
   location: 'Location',
   when: 'When',

@@ -345,6 +345,7 @@ onBeforeUnmount(up)
   background: var(--color-bg);
   color: inherit;
   font: inherit;
+  border-radius: var(--ui-radius-lg, var(--ui-radius-sm));
   cursor: pointer;
 }
 .tool.on {

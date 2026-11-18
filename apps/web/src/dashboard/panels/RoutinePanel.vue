@@ -17,7 +17,11 @@ import { shownRuns } from '../tasksModel'
 import type { PanelProps } from '../types'
 
 const props = defineProps<PanelProps>()
-const emit = defineEmits<{ tick: [run: string, step: string, done: boolean] }>()
+const emit = defineEmits<{
+  tick: [run: string, step: string, done: boolean]
+  /** True while every run this panel shows is done: the host card draws the highlight. */
+  completed: [done: boolean]
+}>()
 const readOnly = computed(() => props.data.completion_enabled === false)
 const runs = computed(() =>
   shownRuns(props.data, props.panel, props.now)
@@ -98,6 +102,11 @@ function syncStreams() {
     )
   }
 }
+watch(
+  () => runs.value.length > 0 && runs.value.every((x) => x.done),
+  (d) => emit('completed', d),
+  { immediate: true },
+)
 watch([runs, () => props.settings.confetti], syncStreams, { immediate: true, flush: 'post' })
 onBeforeUnmount(() => {
   for (const k of streaming) unregisterStream(k)
@@ -107,14 +116,7 @@ onBeforeUnmount(() => {
 
 <template>
   <section v-if="runs.length" class="routine" aria-label="Routine">
-    <div
-      v-for="x in runs"
-      ref="cards"
-      :key="x.run.id"
-      class="col"
-      :class="{ complete: x.done }"
-      :data-run="x.run.id"
-    >
+    <div v-for="x in runs" ref="cards" :key="x.run.id" class="col" :data-run="x.run.id">
       <h2>
         {{ x.run.routine_name }}<span v-if="x.name" class="who"> · {{ x.name }}</span>
       </h2>
@@ -157,9 +159,6 @@ onBeforeUnmount(() => {
   align-content: start;
   min-width: 0;
 }
-.col.complete {
-  box-shadow: inset 0 0 0 3px var(--color-success);
-}
 h2 {
   margin: 0;
   font-size: var(--font-size-lg);
@@ -193,7 +192,6 @@ ul {
   cursor: pointer;
 }
 .step.on {
-  border-color: var(--color-success);
   color: var(--color-muted);
 }
 .step.on .text {
