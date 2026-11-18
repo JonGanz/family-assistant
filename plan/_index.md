@@ -1,6 +1,6 @@
 ---
 title: Plans Index
-updated: 2026-11-07
+updated: 2026-11-17
 ---
 
 # Plans
@@ -20,6 +20,7 @@ There is one plan per milestone (`M<n>.md`). Its sub-agent task briefs are in `M
 | M3.7 Review follow-ups | [M3.7.md](M3.7.md) | running (C-10, C-13, C-14, P-06, P-07, second code review) | [M3.7/](M3.7/): T-01 to T-07 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)) |
 | M4 UI revamp and LLM extraction slice | [M4.md](M4.md) | done 2026-11-07 (code-complete; H-15 to H-17 open) | [M4/](M4/): T-01 to T-23 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)), plus human steps H-15 to H-17 |
 | M5 Recipes, meal plan, grocery list | [M5.md](M5.md) | planned 2026-11-08 (D-108 to D-122) | [M5/](M5/): T-01 to T-13 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)), waves 1 to 6 |
+| M5.1 Recipe sections and live scaling | [M5.1.md](M5.1.md) | planned 2026-11-17 (D-124, D-125) | [M5.1/](M5.1/): T-01 to T-05 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)), waves 1 to 3 |
 
 ## Reviews
 Time-boxed review sessions (CLAUDE.md workflow 7). Each file has findings tables with IDs, sizes and status.

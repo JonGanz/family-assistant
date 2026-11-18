@@ -1,6 +1,6 @@
 ---
 title: Decisions Index
-updated: 2026-11-08
+updated: 2026-11-17
 ---
 
 # Decisions
@@ -132,3 +132,5 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-121](D-121-aisle-order-per-store.md) | Each store has its own aisle order and hidden aisles | accepted | Q-116 | arch/Meals.md, arch/Frontend.md, arch/Domain.md |
 | [D-122](D-122-templates-from-plan-duplicate.md) | Templates from the editor, from a plan range, or by duplicating | accepted | Q-117 | arch/Meals.md, arch/Frontend.md |
 | [D-123](D-123-ui-update-after-deploy.md) | The app and kiosk pick up a new version after a deploy | accepted | (instruction) | arch/Frontend.md, arch/Platform.md |
+| [D-124](D-124-recipe-sections.md) | Recipes have named sections, each with its own ingredients and steps | accepted | (instruction) | arch/Meals.md, arch/Frontend.md |
+| [D-125](D-125-recipe-live-scaling.md) | The dashboard recipe view scales the recipe live | accepted | (instruction) | arch/Meals.md, arch/Frontend.md |

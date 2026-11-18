@@ -2,17 +2,17 @@
 title: Meals — recipes, meal plan, templates, living grocery list
 scope: recipe storage, import, images and ratings; the ingredient catalogue and normaliser; meal slots, the meal plan and meal templates; grocery generation, plan-change reconciliation, stores and aisles, the living list with the staples check and offline use; meals on the dashboard; API; authorization
 status: draft
-updated: 2026-11-08
+updated: 2026-11-17
 drawio: Meals.drawio
 drawio_src: src/Meals.py
-depends_on: [D-006, D-015, D-019, D-021, D-035, D-068, D-072, D-075, D-093, D-094, D-096, D-105, D-108, D-109, D-110, D-111, D-112, D-113, D-114, D-115, D-116, D-117, D-118, D-119, D-120, D-121, D-122]
+depends_on: [D-006, D-015, D-019, D-021, D-035, D-068, D-072, D-075, D-093, D-094, D-096, D-105, D-108, D-109, D-110, D-111, D-112, D-113, D-114, D-115, D-116, D-117, D-118, D-119, D-120, D-121, D-122, D-124, D-125]
 milestone: M5
 research: [R-007]
 ---
 
-# Meals: recipes, meal plan, templates, living grocery list (DRAFT v1.1)
+# Meals: recipes, meal plan, templates, living grocery list (DRAFT v1.2)
 
-This doc covers M5 (D-023, D-108). v1 is re-derived from the requirements, D-015, D-021 and the batch 24 answers (D-109 to D-119); it replaces the pre-answer v0. v1.1 adds the batch 25 answers: several entries per slot (D-120), an aisle order per store (D-121), and templates saved from the plan or duplicated (D-122).
+This doc covers M5 (D-023, D-108). v1 is re-derived from the requirements, D-015, D-021 and the batch 24 answers (D-109 to D-119); it replaces the pre-answer v0. v1.1 adds the batch 25 answers: several entries per slot (D-120), an aisle order per store (D-121), and templates saved from the plan or duplicated (D-122). v1.2 (M5.1) adds recipe sections (D-124) and live scaling on the kiosk recipe view (D-125).
 
 **Not in M5:** meal suggestions and dietary preferences (D-021), export (D-015), pantry inventory beyond the staples flag (D-021), a cook per meal (D-110), repeating entries (D-112), meal notifications (D-119). The M4 follow-ups go to M4.2 (D-119).
 
@@ -53,8 +53,9 @@ Every table has `id uuid`, `household_id` (RLS like the rest of the schema), `cr
 |---|---|---|
 | `recipe` | title, source_url?, servings?, yield_text?, prep_minutes?, cook_minutes?, total_minutes?, import_method `jsonld\|microdata\|llm\|manual`, tags text[], note?, favourite bool, created_by member, version | D-109 |
 | `recipe_image` | recipe (PK), mime `image/jpeg\|image/webp\|image/png`, bytes bytea ≤ 512 KB, sha256, source `import\|upload` | Same pattern as `member_avatar`; in the DB, so backups carry it |
-| `recipe_ingredient` | recipe, ord, raw_text, qty?, unit?, item?, note?, ingredient?, match_state `matched\|unmatched\|proposed`, proposal jsonb? | `raw_text` is always the source line; `proposal` = the LLM's `{ingredient_id?, new_name?, aisle?, confidence}` |
-| `recipe_step` | recipe, ord, text | |
+| `recipe_ingredient` | recipe, ord, section?, raw_text, qty?, unit?, item?, note?, ingredient?, match_state `matched\|unmatched\|proposed`, proposal jsonb? | `raw_text` is always the source line; `proposal` = the LLM's `{ingredient_id?, new_name?, aisle?, confidence}` |
+| `recipe_step` | recipe, ord, section?, text | `section` null = a finish step (D-124) |
+| `recipe_section` | recipe, ord, name | D-124. Replaced whole on every recipe save; `ord` is unique per recipe. A line or step whose section is deleted falls back to none (`ON DELETE SET NULL`) |
 | `recipe_rating` | recipe, member, stars 1–5 | Unique (recipe, member); a member rates for themself (D-109, D-110) |
 | `ingredient` | canonical_name (singular, lower case, unique per household), aliases text[], is_staple bool default false, aisle?, default_store?, default_unit?, origin `seed\|user\|llm` | `origin = llm` only after an adult confirms a proposal |
 | `aisle` | name, ord | Seeded with the seed's aisles. `ord` is the household order ("Any store" and new stores) |
@@ -68,7 +69,7 @@ Every table has `id uuid`, `household_id` (RLS like the rest of the schema), `cr
 | `grocery_item` | list, ingredient?, text, qty?, unit?, store?, aisle? (cached from ingredient), section `list\|staples`, manual bool, added_by?, added_via_device?, checked_at?, checked_by?, archived_at?, version | `id` may be client-generated (D-118) |
 | `grocery_item_source` | item, entry (meal_plan_entry), qty?, unit?, generated_for `daterange` | One per item and entry; drives D-116 |
 | `meals_change` | kind `generate\|reconcile\|template_apply\|swap\|move`, actor member?, device?, inverse jsonb (the rows to restore or delete), expires_at (now + 10 min), undone_at? | The Undo for multi-row changes (there is no generic undo endpoint yet, only per-feature ones such as mail actions); pruned daily |
-| `meals_settings` | grocery_archive_hours int default 24, ingredient_llm bool default true, trigram_threshold real default 0.45 | One row per household. `household.meal_plan_horizon_weeks` (default 2) and `household.units` stay on `household` |
+| `meals_settings` | grocery_archive_hours int default 24, ingredient_llm bool default true, trigram_threshold real default 0.45, recipe_scale_factors real[] default {0.5,1,1.5,2,3} (D-125), recipe_section_columns int 1..4 default 2 (D-124) | One row per household. `household.meal_plan_horizon_weeks` (default 2) and `household.units` stay on `household` |
 
 Each new column's writer: recipe columns and images by the recipe editor (`PUT /recipes/{id}`, `POST /recipes/{id}/image`) and the `recipe.image` job; ratings by `PUT /recipes/{id}/rating`; catalogue, aisles, stores, slots and `meals_settings` by Settings → Meals; entries by the plan routes and template apply; items by the grocery routes and generation.
 
@@ -83,6 +84,8 @@ Each new column's writer: recipe columns and images by the recipe editor (`PUT /
 ### 4.1 Recipe import, save and images (D-109)
 1. `POST /recipes/import {url}` or `{text}` → `RecipeDraft` (nothing stored; the page fetch uses the `allow_private_hosts` setting too): JSON-LD, then microdata (`origin: microdata`), then the LLM (`origin: llm`; needs an endpoint, else `422 llm_unavailable`). Pasted text goes straight to the LLM. The manual form starts from an empty draft.
 2. The adult edits and saves (`POST /recipes`). Each line runs through the normaliser (§4.2); unmatched lines are stored with `match_state = unmatched` and queue `ingredient.llm` (§4.2 step 5).
+2a. **Sections (D-124).** A draft and the save body carry ordered named sections, each holding its own lines and steps; their top-level lines and steps are the shared ingredients and the finish steps. The recipe view lists the sections and gives every line and step an optional `section_id`. Layout: shared ingredients full width on top, one column per section (ingredients card above its steps card, `recipe_section_columns` columns before wrapping, one column on phones), finish steps full width below; a recipe without sections renders as before. Ingredient `ord` stays global per recipe (shared lines first, then section by section), so matching and grocery generation ignore sections. Import, deterministic first: JSON-LD `HowToSection` names become sections; heading-like ingredient lines (no quantity, short, ending in `:` or starting "For the") start a section and are not stored as ingredients; when JSON-LD has no ingredient groups, the ingredient groups of common recipe-plugin markup in the page are read; ingredient groups and step sections are paired by a normalised name ("For the sauce:" ↔ "Sauce"); an unpaired group or step section becomes a section of its own, in page order. The LLM fallback's schema has an optional section per ingredient and step. Existing recipes stay flat.
+2b. **Live scaling (D-125).** The kiosk recipe view offers the household's `recipe_scale_factors` (1 always included). The factor is view state only, back to 1× each time a recipe opens. A line with a parsed `qty` shows `qty × factor` (fraction glyphs for ¼ ⅓ ½ ⅔ ¾ and their whole-number mixes, else up to two decimals; a range scales both ends) in place of the leading amount; lines without a quantity and step texts are unchanged; servings show scaled. `GET /recipes/{id}` carries the factors and the column count so the kiosk needs no settings route.
 3. If the draft had an `image_url`, `recipe.image` fetches it through `Http` with the instance's `allow_private_hosts` setting (off by default, as for calendars; the M4 route hard-coded it off), body cap 5 MB, decodes it with `image`, resizes to at most 800 px on the long side, encodes WebP (JPEG if WebP is unavailable), and stores it if ≤ 512 KB. Failure leaves no image and logs only the recipe id. Upload: `POST /recipes/{id}/image` (png, jpeg, webp ≤ 5 MB in, same resize).
 
 ### 4.2 Normaliser (D-113, R-007)

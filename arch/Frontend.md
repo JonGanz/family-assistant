@@ -5,13 +5,13 @@ status: draft
 updated: 2026-11-08
 drawio: Frontend.drawio
 drawio_src: src/Frontend.py
-depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078, D-079, D-080, D-081, D-093, D-094, D-095, D-096, D-097, D-098, D-099, D-100, D-101, D-102, D-103, D-104, D-105, D-106, D-109, D-110, D-111, D-112, D-115, D-116, D-117, D-118, D-120, D-121, D-122, D-123]
+depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078, D-079, D-080, D-081, D-093, D-094, D-095, D-096, D-097, D-098, D-099, D-100, D-101, D-102, D-103, D-104, D-105, D-106, D-109, D-110, D-111, D-112, D-115, D-116, D-117, D-118, D-120, D-121, D-122, D-123, D-124, D-125]
 milestone: M5
 ---
 
-# Frontend (DRAFT v5.2, M5 Food views)
+# Frontend (DRAFT v5.3, M5 Food views)
 
-This doc describes the Vue 3 PWA in `apps/web`: one app with three shells. The **setup shell** is the first-run wizard (`/setup`, D-065). The **app shell** is for signed-in people on phones and desktops. The **kiosk shell** is `/dashboard` on the Echo Show and other wall screens. v4 (M3.5) adds the wizard, the grouped Settings area with Settings, System, moves Members into Settings, makes the dashboard at-a-glance only, and makes the app work over plain HTTP. v5 (M4, D-095 to D-097) adds the design system (`ui/`, §1.2), the adaptive navigation (§1.3), one rule for applying changes (§1.4), list-detail Settings, and the Settings → AI screen with the inbox's AI provenance (§3e). v5.2 (M5, D-109 to D-118) adds the **Food** destination (meal plan, shopping list, recipes, templates, §3f), Settings → Meals, the kiosk Food view and `meals` panel (§4), and the grocery offline queue (§1.1). Backend data comes from [Feeds.md](Feeds.md), [Tasks.md](Tasks.md), [Ingest.md](Ingest.md) and [Meals.md](Meals.md); the runtime settings and setup API are in [Platform.md](Platform.md).
+This doc describes the Vue 3 PWA in `apps/web`: one app with three shells. The **setup shell** is the first-run wizard (`/setup`, D-065). The **app shell** is for signed-in people on phones and desktops. The **kiosk shell** is `/dashboard` on the Echo Show and other wall screens. v4 (M3.5) adds the wizard, the grouped Settings area with Settings, System, moves Members into Settings, makes the dashboard at-a-glance only, and makes the app work over plain HTTP. v5 (M4, D-095 to D-097) adds the design system (`ui/`, §1.2), the adaptive navigation (§1.3), one rule for applying changes (§1.4), list-detail Settings, and the Settings → AI screen with the inbox's AI provenance (§3e). v5.2 (M5, D-109 to D-118) adds the **Food** destination (meal plan, shopping list, recipes, templates, §3f), Settings → Meals, the kiosk Food view and `meals` panel (§4), and the grocery offline queue (§1.1). v5.3 (M5.1) adds recipe sections (D-124) and live scaling on the kiosk recipe view (D-125). Backend data comes from [Feeds.md](Feeds.md), [Tasks.md](Tasks.md), [Ingest.md](Ingest.md) and [Meals.md](Meals.md); the runtime settings and setup API are in [Platform.md](Platform.md).
 
 ## 1. Structure (page "Components")
 ```
@@ -280,15 +280,16 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 
 **Recipes** (`/food/recipes`, D-109):
 - **Library:** search (title and ingredient), tag chips (`UiFilterChips`), a favourites chip, cards with image, title, total time, the household's average rating, and "last planned".
-- **Recipe page:** image, servings, times, ingredients (each line with its matched ingredient on wide screens), steps, the household note, **ratings** (every signed-in member sets their own 1 to 5 stars, instant with Undo; the list of members' ratings shows under it), "Add to plan", and for adults Edit and Delete.
+- **Recipe page:** image, servings, times, ingredients (each line with its matched ingredient on wide screens), steps (with sections, D-124: shared ingredients full width, one column per section with its ingredients above its steps, `recipe_section_columns` columns before wrapping and one on compact, finish steps full width below), the household note, **ratings** (every signed-in member sets their own 1 to 5 stars, instant with Undo; the list of members' ratings shows under it), "Add to plan", and for adults Edit and Delete.
 - **New recipe** (adults): a sheet with three ways in, **From a link**, **Paste text**, **Type it in**; the first two show progress and open the **editor** on the returned draft (nothing is stored until Save). Errors (no recipe found, LLM not available) are shown with the fallback "Type it in".
-- **Editor:** a form with the Save bar: title, servings, times, tags, note, image (keep the imported one, upload, or remove), ingredient lines, steps. **Unmatched lines** are highlighted; a line with an LLM proposal shows it as a chip ("tomato, canned?") with Accept, Pick another (catalogue search) and New ingredient; a picked match becomes an alias (D-113).
+- **Editor:** a form with the Save bar: title, servings, times, tags, note, image (keep the imported one, upload, or remove), ingredient lines, steps, and **sections** (D-124): add, rename, reorder, merge into another, delete (its lines and steps fall back to shared or finish); every line and step has a section picker, so a wrong import pairing is fixed in place. **Unmatched lines** are highlighted; a line with an LLM proposal shows it as a chip ("tomato, canned?") with Accept, Pick another (catalogue search) and New ingredient; a picked match becomes an alias (D-113).
 
 **Templates** (`/food/templates`, adults, D-112): a list of templates (name, length, slots used), and an editor: name, length in days, and a grid of days × slots where each cell holds a recipe, free text or nothing; a cell can hold several items (D-120). Days are numbered (Day 1…) and shown in week rows when the length is a multiple of 7. **Duplicate** copies a template under a new name (D-122). Delete asks first.
 
 **Settings → Meals** (`/settings/meals`, adults): cards for
 - **Slots:** name, `"HH:MM"` time, shown switch (instant), order; add and rename. A new household has Breakfast, Lunch, Dinner and Snack with only Dinner shown (D-111);
 - **Plan horizon:** `meal_plan_horizon_weeks`;
+- **Recipes:** the scale factors offered on the kiosk recipe view (`recipe_scale_factors`, default ½ 1 1.5 2 3, D-125) and the section columns before wrapping (`recipe_section_columns` 1 to 4, default 2, D-124);
 - **Stores:** name and order, add, delete (items move to "Any store"). Per store, an **aisle order** editor (drag to reorder, a switch to hide an aisle the store does not have), starting from the household order (D-121);
 - **Aisles:** name and the household order (used for "Any store" and new stores);
 - **Ingredients:** the catalogue with search; per ingredient the canonical name, aliases, aisle, default store, default unit and the **staple** switch (instant); add and merge.
@@ -301,6 +302,7 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 **Food view (M5, D-117):** a third bar button, shown unless the device setting `food_view` is off (default on). Two tabs:
 - **Meal plan:** the §3f grid read-only, week rows from the previous week with today inverted, as many rows as fit the screen: it **never scrolls** (previous and next arrows page by a week, like the Week view).
 - **Shopping list:** the §3f list grouped by store then aisle, with the add box and check-off, both **without a PIN** (D-015, D-019, D-110); the member picker is not asked. Editing and deleting an item need the adult PIN step-up (D-085 unlock button); Staples **Low** needs no PIN. The store filter chips are local state.
+- **Recipe window** (from a meal): the recipe full screen with the image card filling its card, details, ingredients (two columns when there is a single ingredients card), larger step text and tick boxes keyed by line and step id (kept per device). Sections lay out as on the recipe page (D-124). A row of **scale factors** (D-125) scales the ingredient amounts and servings live; it starts at 1× every time.
 
 **Screensaver (D-092):** after `screensaver_minutes` (default 15) without a touch, key or pointer event, a black full-screen overlay shows the app icon bouncing off the screen edges like a DVD logo. A tap dismisses it. Data keeps updating underneath.
 
