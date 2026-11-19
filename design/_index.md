@@ -1,6 +1,6 @@
 ---
 title: Design Questions Index
-updated: 2026-11-08
+updated: 2026-11-18
 ---
 
 # Design Questions
@@ -27,8 +27,11 @@ decisions: []
 <!-- answer below this line -->
 ```
 
-## Open
-_None. The next question number is Q-118._
+## Batch 26, open
+| ID | Title | Area |
+|---|---|---|
+| [Q-118](Q-118-jiff-migration.md) | Move dates and time zones from chrono to jiff | tech |
+| [Q-119](Q-119-tz-rules-source.md) | Where the server gets its time-zone rules | infra |
 
 ## Resolved
 | ID | Title | Decisions |
