@@ -2,7 +2,7 @@
 title: Frontend
 scope: Vue PWA structure, design system and navigation, routes, Food views (M5), first-run wizard, settings structure, dashboard (kiosk) design and layout config, data flow (REST + SSE), offline and insecure-context behaviour
 status: draft
-updated: 2026-11-08
+updated: 2026-11-19
 drawio: Frontend.drawio
 drawio_src: src/Frontend.py
 depends_on: [D-006, D-011, D-017, D-018, D-019, D-026, D-029, D-031, D-036, D-039, D-040, D-041, D-042, D-044, D-045, D-046, D-052, D-054, D-055, D-056, D-057, D-058, D-060, D-061, D-062, D-063, D-064, D-065, D-068, D-070, D-072, D-073, D-074, D-075, D-078, D-079, D-080, D-081, D-093, D-094, D-095, D-096, D-097, D-098, D-099, D-100, D-101, D-102, D-103, D-104, D-105, D-106, D-109, D-110, D-111, D-112, D-115, D-116, D-117, D-118, D-120, D-121, D-122, D-123, D-124, D-125]
@@ -280,7 +280,7 @@ New routes (adult guard unless noted): `/mail`, `/mail/:id`, `/mail/label`, `/in
 
 **Recipes** (`/food/recipes`, D-109):
 - **Library:** search (title and ingredient), tag chips (`UiFilterChips`), a favourites chip, cards with image, title, total time, the household's average rating, and "last planned".
-- **Recipe page:** image, servings, times, ingredients (each line with its matched ingredient on wide screens), steps (with sections, D-124: shared ingredients full width, one column per section with its ingredients above its steps, `recipe_section_columns` columns before wrapping and one on compact, finish steps full width below), the household note, **ratings** (every signed-in member sets their own 1 to 5 stars, instant with Undo; the list of members' ratings shows under it), "Add to plan", and for adults Edit and Delete.
+- **Recipe page:** image, servings, times, ingredients (each line with its matched ingredient on wide screens), steps (with sections, D-124: shared ingredients full width, one column per section with its ingredients above its steps, `recipe_section_columns` columns before wrapping and one on compact, finish steps full width below), the household note, **ratings** (every signed-in member sets their own 1 to 5 stars, instant with Undo; the list of members' ratings shows under it), "Add to plan", and for adults Edit, Delete and, when the recipe has a source URL, **Re-import from source** (D-126: confirm, import, review in the editor, nothing saved until Save).
 - **New recipe** (adults): a sheet with three ways in, **From a link**, **Paste text**, **Type it in**; the first two show progress and open the **editor** on the returned draft (nothing is stored until Save). Errors (no recipe found, LLM not available) are shown with the fallback "Type it in".
 - **Editor:** a form with the Save bar: title, servings, times, tags, note, image (keep the imported one, upload, or remove), ingredient lines, steps, and **sections** (D-124): add, rename, reorder, merge into another, delete (its lines and steps fall back to shared or finish); every line and step has a section picker, so a wrong import pairing is fixed in place. **Unmatched lines** are highlighted; a line with an LLM proposal shows it as a chip ("tomato, canned?") with Accept, Pick another (catalogue search) and New ingredient; a picked match becomes an alias (D-113).
 

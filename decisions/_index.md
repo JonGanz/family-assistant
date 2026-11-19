@@ -1,6 +1,6 @@
 ---
 title: Decisions Index
-updated: 2026-11-17
+updated: 2026-11-19
 ---
 
 # Decisions
@@ -134,3 +134,4 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-123](D-123-ui-update-after-deploy.md) | The app and kiosk pick up a new version after a deploy | accepted | (instruction) | arch/Frontend.md, arch/Platform.md |
 | [D-124](D-124-recipe-sections.md) | Recipes have named sections, each with its own ingredients and steps | accepted | (instruction) | arch/Meals.md, arch/Frontend.md |
 | [D-125](D-125-recipe-live-scaling.md) | The dashboard recipe view scales the recipe live | accepted | (instruction) | arch/Meals.md, arch/Frontend.md |
+| [D-126](D-126-recipe-reimport.md) | Re-import a recipe from its source URL | accepted | (instruction) | arch/Meals.md, arch/Frontend.md |
