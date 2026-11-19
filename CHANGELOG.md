@@ -6,6 +6,14 @@ Every tagged release adds its entry here, in the same commit. Newest first.
 
 - Nothing yet.
 
+## v0.1.35 — 2026-11-18
+
+- Recipes can have sections (for example a chicken and its own sauce), each with its own ingredients and steps. Shared ingredients sit above the section columns and finish steps below.
+- Recipe import keeps the sections a recipe site publishes, turns "For the sauce:" lines into sections instead of ingredients, and pairs ingredient groups with their steps.
+- The recipe editor adds, renames, reorders, merges and deletes sections, and moves any ingredient or step between them.
+- Dashboard recipe: scale buttons (½× to 3×) adjust ingredient amounts and servings live.
+- Settings > Meals: choose the scale factors and how many section columns to show.
+
 ## v0.1.34 — 2026-11-17
 
 - Dashboard routines: a finished routine turns its whole card green instead of a box inside it.

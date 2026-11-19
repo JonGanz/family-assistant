@@ -92,7 +92,8 @@ pub use meals_plan::{
 pub use meals_recipe::{
     IngredientRepo, IngredientRow, NewIngredient, NewLine, RecipeFields, RecipeImageRepo,
     RecipeImageRow, RecipeLineRepo, RecipeLineRow, RecipeListRow, RecipeQuery, RecipeRatingRepo,
-    RecipeRepo, RecipeRow, RecipeStepRepo, ReplacedLine,
+    RecipeRepo, RecipeRow, RecipeSectionRepo, RecipeSectionRow, RecipeStepRepo, RecipeStepRow,
+    ReplacedLine,
 };
 pub use member::{MemberLockout, MemberRepo};
 pub use message::{MessageFilter, MessageRepo, NewMessage};

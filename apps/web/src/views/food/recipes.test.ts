@@ -7,6 +7,14 @@ import { ApiError } from '../../api/http'
 import { useRecipesStore } from '../../stores/recipes'
 import { useSessionStore } from '../../stores/session'
 import { resetSnackbar, useSnackbar } from '../../ui/composables/useSnackbar'
+import {
+  deleteSection,
+  fromDraft,
+  fromView,
+  mergeSection,
+  moveItem,
+  toInput,
+} from '../../components/food/recipes/sectionsForm'
 import RecipeEditView from './RecipeEditView.vue'
 import RecipeView from './RecipeView.vue'
 import RecipesView from './RecipesView.vue'
@@ -180,5 +188,99 @@ describe('recipes', () => {
     const chip = w.findAll('button.ui-fchip').find((b) => b.text() === 'quick')!
     await chip.trigger('click')
     expect(w.findAll('[data-testid^="recipe-card-"]')).toHaveLength(1)
+  })
+})
+
+describe('recipe sections', () => {
+  const sectioned = () =>
+    view({
+      lines: [
+        { id: 'l0', ord: 0, raw_text: '1 lime', match_state: 'matched', section_id: null },
+        { id: 'l1', ord: 1, raw_text: '8 drumsticks', match_state: 'matched', section_id: 's1' },
+        { id: 'l2', ord: 2, raw_text: '3 tbsp honey', match_state: 'matched', section_id: 's2' },
+      ],
+      steps: [
+        { id: 't0', ord: 0, text: 'Roast', section_id: 's1' },
+        { id: 't1', ord: 1, text: 'Warm', section_id: 's2' },
+        { id: 't2', ord: 2, text: 'Serve', section_id: null },
+      ],
+      sections: [
+        { id: 's1', ord: 0, name: 'Chicken' },
+        { id: 's2', ord: 1, name: 'Glaze' },
+      ],
+    })
+
+  it('the page renders shared, two sections and finish in that order', async () => {
+    asRole('adult')
+    m.recipe.mockResolvedValue(sectioned())
+    const w = mount(RecipeView, { global: { stubs } })
+    await flushPromises()
+    const html = w.html()
+    const at = (t: string) => html.indexOf(t)
+    expect(at('1 lime')).toBeGreaterThan(-1)
+    expect(at('1 lime')).toBeLessThan(at('Chicken'))
+    expect(at('Chicken')).toBeLessThan(at('Glaze'))
+    expect(at('Glaze')).toBeLessThan(at('Serve'))
+    expect(w.findAll('[data-testid^="recipe-section-"]')).toHaveLength(2)
+    expect(w.find('[data-testid="recipe-finish"]').text()).toContain('Finish')
+  })
+
+  it('a recipe without sections keeps the Steps heading', async () => {
+    asRole('adult')
+    m.recipe.mockResolvedValue(
+      view({ steps: [{ id: 't', ord: 0, text: 'Boil', section_id: null }], sections: [] }),
+    )
+    const w = mount(RecipeView, { global: { stubs } })
+    await flushPromises()
+    expect(w.find('[data-testid="recipe-finish"]').text()).toContain('Steps')
+    expect(w.find('[data-testid="recipe-sections"]').exists()).toBe(false)
+  })
+
+  it('the editor round-trips sections into RecipeInput', async () => {
+    asRole('adult')
+    m.recipe.mockResolvedValue(sectioned())
+    m.updateRecipe.mockResolvedValue(sectioned())
+    const w = mount(RecipeEditView, { global: { stubs } })
+    await flushPromises()
+    expect(w.find('[data-testid="recipe-section-edit-1"]').exists()).toBe(true)
+    await w.find('[data-testid="recipe-title"]').setValue('Drumsticks')
+    await w
+      .findAll('[data-testid="recipe-save"] button')
+      .find((b) => b.text() === 'Save')!
+      .trigger('click')
+    await flushPromises()
+    expect(m.updateRecipe).toHaveBeenCalled()
+    const body = m.updateRecipe.mock.calls[0]![2]
+    expect(body.lines).toEqual(['1 lime'])
+    expect(body.steps).toEqual(['Serve'])
+    expect(body.sections).toEqual([
+      { name: 'Chicken', lines: ['8 drumsticks'], steps: ['Roast'] },
+      { name: 'Glaze', lines: ['3 tbsp honey'], steps: ['Warm'] },
+    ])
+  })
+
+  it('merge appends to the target; delete moves items to shared and finish', () => {
+    const f = fromView(sectioned() as never)
+    mergeSection(f, 1, 0)
+    expect(f.sections).toEqual([
+      { name: 'Chicken', lines: ['8 drumsticks', '3 tbsp honey'], steps: ['Roast', 'Warm'] },
+    ])
+    deleteSection(f, 0)
+    expect(f.sections).toEqual([])
+    expect(f.lines).toEqual(['1 lime', '8 drumsticks', '3 tbsp honey'])
+    expect(f.steps).toEqual(['Serve', 'Roast', 'Warm'])
+  })
+
+  it('moves a line and a step between places and builds a form from a draft', () => {
+    const f = fromDraft({
+      ingredients: [{ text: 'a' }],
+      steps: ['x'],
+      sections: [{ name: 'S', ingredients: [{ text: 'b' }], steps: ['y'] }],
+    } as never)
+    moveItem(f, 'lines', 'top', 0, 0)
+    moveItem(f, 'steps', 0, 0, 'top')
+    expect(f.sections[0]).toEqual({ name: 'S', lines: ['b', 'a'], steps: [] })
+    expect(f.steps).toEqual(['x', 'y'])
+    expect(toInput(f).sections).toEqual([{ name: 'S', lines: ['b', 'a'], steps: [] }])
   })
 })

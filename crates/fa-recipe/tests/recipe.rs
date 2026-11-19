@@ -34,7 +34,12 @@ fn graph_array_type_sections() {
     assert_eq!(d.name, "Fictional Stew");
     assert_eq!(d.yield_text.as_deref(), Some("6"));
     assert_eq!(d.servings, Some(6));
-    assert_eq!(d.steps, ["Chop.", "Stir.", "Serve."]);
+    assert_eq!(d.steps, ["Serve."]);
+    assert_eq!(d.sections.len(), 1);
+    assert_eq!(d.sections[0].name, "Prep");
+    assert_eq!(d.sections[0].steps, ["Chop.", "Stir."]);
+    assert!(d.sections[0].ingredients.is_empty());
+    assert_eq!(d.ingredients.len(), 2);
     assert_eq!(d.image_url.as_deref(), Some("https://example.com/a.jpg"));
     assert_eq!(d.source_url, None);
 }
@@ -136,7 +141,7 @@ async fn stub_client(content: &str) -> LlmClient {
 #[tokio::test]
 async fn llm_fallback() {
     let c = stub_client(
-        r#"{"name":"Grandma Soup","yield_text":"","servings":2,"prep_minutes":0,"cook_minutes":10,"total_minutes":0,"ingredients":["2 cups water","1 tsp salt"],"steps":["Boil."],"tags":["soup","soup"]}"#,
+        r#"{"name":"Grandma Soup","yield_text":"","servings":2,"prep_minutes":0,"cook_minutes":10,"total_minutes":0,"ingredients":[{"text":"2 cups water","section":null},{"text":"1 tsp salt","section":null}],"steps":[{"text":"Boil.","section":null}],"tags":["soup","soup"]}"#,
     )
     .await;
     let u = url::Url::parse("https://example.com/s").unwrap();
@@ -242,7 +247,7 @@ async fn extract_microdata_without_llm() {
 #[tokio::test]
 async fn llm_pasted_text_without_url() {
     let c = stub_client(
-        r#"{"name":"Pasted","yield_text":"","servings":0,"prep_minutes":0,"cook_minutes":0,"total_minutes":0,"ingredients":["1 bunch cilantro"],"steps":["Chop."],"tags":[]}"#,
+        r#"{"name":"Pasted","yield_text":"","servings":0,"prep_minutes":0,"cook_minutes":0,"total_minutes":0,"ingredients":[{"text":"1 bunch cilantro","section":null}],"steps":[{"text":"Chop.","section":null}],"tags":[]}"#,
     )
     .await;
     let d = from_llm(&c, "pasted text", None).await.unwrap();
@@ -292,4 +297,110 @@ fn ingredients_m5() {
     assert_eq!(ing("2 qt stock").1, Some("quart"));
     assert_eq!(ing("1 gal water").1, Some("gallon"));
     assert_eq!(ing("2 litres water").1, Some("l"));
+}
+
+const SECTIONED: &str = include_str!("fixtures/sectioned.html");
+const WPRM: &str = include_str!("fixtures/wprm.html");
+const TASTY: &str = include_str!("fixtures/tasty.html");
+const MD_HEADS: &str = include_str!("fixtures/microdata_headings.html");
+
+#[test]
+fn jsonld_sections_with_headings() {
+    let d = from_html(SECTIONED, None).unwrap();
+    assert_eq!(d.sections.len(), 2);
+    assert_eq!(d.sections[0].name, "Chicken");
+    assert_eq!(d.sections[0].ingredients.len(), 2);
+    assert_eq!(d.sections[0].steps, ["Sear the chicken.", "Rest it."]);
+    assert_eq!(d.sections[1].name, "Sauce");
+    assert_eq!(d.sections[1].ingredients.len(), 2);
+    assert_eq!(d.sections[1].steps, ["Whisk the sauce."]);
+    assert_eq!(d.ingredients.len(), 1);
+    assert_eq!(d.ingredients[0].text, "1 pinch parsley");
+    assert_eq!(d.steps, ["Serve warm."]);
+    let all = d
+        .sections
+        .iter()
+        .flat_map(|s| &s.ingredients)
+        .chain(&d.ingredients);
+    assert!(
+        all.clone()
+            .all(|i| !i.text.ends_with(':') && !i.text.starts_with("For the"))
+    );
+    assert_eq!(all.count(), 5);
+}
+
+#[test]
+fn jsonld_step_sections_only() {
+    let html = r#"<script type="application/ld+json">{"@type":"Recipe","name":"X","recipeIngredient":["1 egg","2 cups milk"],
+"recipeInstructions":[{"@type":"HowToSection","name":"Base","itemListElement":[{"@type":"HowToStep","text":"Mix."}]},
+{"@type":"HowToSection","name":"Top","itemListElement":[{"@type":"HowToSection","name":"Inner","itemListElement":[{"@type":"HowToStep","text":"Spread."}]}]}]}</script>"#;
+    let d = from_html(html, None).unwrap();
+    assert_eq!(d.ingredients.len(), 2);
+    assert!(d.steps.is_empty());
+    assert_eq!(d.sections.len(), 2);
+    assert!(d.sections.iter().all(|s| s.ingredients.is_empty()));
+    assert_eq!(d.sections[1].name, "Top");
+    assert_eq!(d.sections[1].steps, ["Spread."]);
+}
+
+#[test]
+fn unpaired_groups_stay_and_plural_pairs() {
+    let html = r#"<script type="application/ld+json">{"@type":"Recipe","name":"X",
+"recipeIngredient":["Garnish:","1 lime","For the sauces:","1 cup cream"],
+"recipeInstructions":[{"@type":"HowToSection","name":"Make the sauce","itemListElement":[{"@type":"HowToStep","text":"Whisk."}]},
+{"@type":"HowToSection","name":"Plate","itemListElement":[{"@type":"HowToStep","text":"Arrange."}]}]}</script>"#;
+    let d = from_html(html, None).unwrap();
+    let names: Vec<_> = d.sections.iter().map(|s| s.name.as_str()).collect();
+    // Ingredient-group order is the backbone: Garnish (unpaired), then Sauces merged with
+    // "Make the sauce", then the leftover step section.
+    assert_eq!(names, ["Garnish", "Make the sauce", "Plate"]);
+    assert_eq!(d.sections[1].ingredients.len(), 1);
+    assert_eq!(d.sections[1].steps, ["Whisk."]);
+}
+
+#[test]
+fn wprm_groups() {
+    let d = from_html(WPRM, None).unwrap();
+    assert_eq!(d.sections.len(), 2);
+    assert_eq!(d.sections[0].name, "Dough");
+    assert_eq!(d.sections[0].ingredients.len(), 2);
+    assert_eq!(d.sections[1].name, "Filling");
+    assert_eq!(d.ingredients.len(), 1);
+    assert_eq!(d.ingredients[0].text, "1 pinch salt");
+}
+
+#[test]
+fn tasty_groups() {
+    let d = from_html(TASTY, None).unwrap();
+    assert_eq!(d.sections.len(), 1);
+    assert_eq!(d.sections[0].name, "Glaze");
+    assert_eq!(d.sections[0].ingredients.len(), 2);
+    assert_eq!(d.ingredients.len(), 2);
+}
+
+#[test]
+fn microdata_headings() {
+    let d = from_microdata(MD_HEADS, None).unwrap();
+    assert_eq!(d.ingredients.len(), 1);
+    assert_eq!(d.sections.len(), 1);
+    assert_eq!(d.sections[0].name, "Topping");
+    assert_eq!(d.sections[0].ingredients.len(), 2);
+}
+
+#[tokio::test]
+async fn llm_sections() {
+    let c = stub_client(
+        r#"{"name":"Pie","yield_text":"","servings":0,"prep_minutes":0,"cook_minutes":0,"total_minutes":0,
+"ingredients":[{"text":"1 pinch salt","section":null},{"text":"2 cups flour","section":"Crust"},{"text":"3 apples","section":"Filling"},{"text":"1 tbsp butter","section":"Crust"}],
+"steps":[{"text":"Rub in butter.","section":"Crust"},{"text":"Slice apples.","section":"Filling"},{"text":"Bake.","section":null}],"tags":[]}"#,
+    )
+    .await;
+    let d = from_llm(&c, "text", None).await.unwrap();
+    assert_eq!(d.ingredients.len(), 1);
+    assert_eq!(d.steps, ["Bake."]);
+    assert_eq!(d.sections.len(), 2);
+    assert_eq!(d.sections[0].name, "Crust");
+    assert_eq!(d.sections[0].ingredients.len(), 2);
+    assert_eq!(d.sections[0].steps, ["Rub in butter."]);
+    assert_eq!(d.sections[1].name, "Filling");
 }

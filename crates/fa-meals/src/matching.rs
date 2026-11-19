@@ -104,6 +104,7 @@ impl IngredientMatcher {
                 MatchState::Unmatched
             },
             proposal: None,
+            section_id: None,
         })
     }
 }

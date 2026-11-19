@@ -165,6 +165,7 @@ async fn lines_queue_the_llm_job_only_when_it_can_run(pool: PgPool) {
                 tags: vec![],
                 note: None,
                 image_url: None,
+                sections: vec![],
                 lines: vec![
                     "2 tomatoes".into(),
                     "2 dragonfruit".into(),
@@ -418,6 +419,7 @@ async fn recipe_image_job_fetches_resizes_and_stores(pool: PgPool) {
                 note: None,
                 image_url: Some(format!("{url}/img.png")),
                 lines: vec!["1 egg".into()],
+                sections: vec![],
                 steps: vec![],
             },
         )

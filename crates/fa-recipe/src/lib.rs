@@ -6,6 +6,7 @@ mod ingredient;
 mod jsonld;
 mod llm;
 mod microdata;
+mod sections;
 mod types;
 
 pub use ingredient::parse_ingredient;

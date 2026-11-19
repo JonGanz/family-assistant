@@ -5,7 +5,7 @@ milestone: M5.1
 wave: 2
 depends_on: [T-02]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["crates/fa-recipe/**"]
 decisions: [D-124]
 ---

@@ -1,10 +1,12 @@
 /** Per-recipe tick state for the kiosk recipe view, kept in localStorage and expiring after 12 hours. */
-export const CHECKS_PREFIX = 'fa.recipe.checks.'
+export const CHECKS_PREFIX = 'fa.recipe.checks2.'
+/** The index-keyed v1 entries (before D-124); dropped on prune. */
+const OLD_PREFIX = 'fa.recipe.checks.'
 export const CHECKS_TTL_MS = 12 * 60 * 60_000
 
 export interface Checks {
-  lines: number[]
-  steps: number[]
+  lines: string[]
+  steps: string[]
   /** Epoch ms of the last change. */
   at: number
 }
@@ -18,8 +20,8 @@ function parse(raw: string | null, now: number): Checks | null {
     if (!v || typeof v.at !== 'number' || !Array.isArray(v.lines) || !Array.isArray(v.steps))
       return null
     if (now - v.at > CHECKS_TTL_MS) return null
-    const nums = (a: unknown[]) => a.filter((n): n is number => Number.isInteger(n))
-    return { lines: nums(v.lines), steps: nums(v.steps), at: v.at }
+    const ids = (a: unknown[]) => a.filter((n): n is string => typeof n === 'string')
+    return { lines: ids(v.lines), steps: ids(v.steps), at: v.at }
   } catch {
     return null
   }
@@ -46,15 +48,15 @@ export function saveChecks(id: string, c: Checks): void {
   }
 }
 
-/** Returns a copy with item `i` of `kind` toggled and the timestamp refreshed. */
+/** Returns a copy with the line or step `id` of `kind` toggled and the timestamp refreshed. */
 export function toggleCheck(
   c: Checks,
   kind: 'lines' | 'steps',
-  i: number,
+  id: string,
   now = Date.now(),
 ): Checks {
   const cur = c[kind]
-  const next = cur.includes(i) ? cur.filter((n) => n !== i) : [...cur, i].sort((a, b) => a - b)
+  const next = cur.includes(id) ? cur.filter((n) => n !== id) : [...cur, id]
   return { ...c, [kind]: next, at: now }
 }
 
@@ -64,9 +66,11 @@ export function pruneChecks(now = Date.now()): void {
     const keys: string[] = []
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i)
-      if (k?.startsWith(CHECKS_PREFIX)) keys.push(k)
+      if (k?.startsWith(CHECKS_PREFIX) || k?.startsWith(OLD_PREFIX)) keys.push(k)
     }
-    for (const k of keys) if (!parse(localStorage.getItem(k), now)) localStorage.removeItem(k)
+    for (const k of keys)
+      if (k.startsWith(OLD_PREFIX) || !parse(localStorage.getItem(k), now))
+        localStorage.removeItem(k)
   } catch {
     /* ignore */
   }

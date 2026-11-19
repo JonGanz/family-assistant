@@ -2,7 +2,7 @@ use scraper::{Html, Selector};
 use serde_json::Value;
 use url::Url;
 
-use crate::{RecipeDraft, RecipeOrigin, parse_ingredient};
+use crate::{RecipeDraft, RecipeOrigin, parse_ingredient, sections};
 
 /// ISO 8601 duration to minutes (seconds round up). Anything unsupported is `None`.
 pub fn parse_iso_duration(s: &str) -> Option<u32> {
@@ -121,6 +121,32 @@ fn steps(v: &Value, out: &mut Vec<String>) {
     }
 }
 
+/// Splits `recipeInstructions` into named sections (`HowToSection`) and loose top-level steps.
+fn step_sections(v: &Value, loose: &mut Vec<String>, secs: &mut Vec<(String, Vec<String>)>) {
+    match v {
+        Value::Array(a) => a.iter().for_each(|x| step_sections(x, loose, secs)),
+        Value::Object(o) if o.contains_key("itemListElement") => {
+            let name = o.get("name").and_then(text);
+            let is_section = match o.get("@type") {
+                Some(Value::String(s)) => s == "HowToSection",
+                Some(Value::Array(a)) => a.iter().any(|t| t.as_str() == Some("HowToSection")),
+                _ => false,
+            } || name.is_some();
+            match name.filter(|_| is_section) {
+                Some(n) => {
+                    let mut st = Vec::new();
+                    steps(&o["itemListElement"], &mut st);
+                    if !st.is_empty() {
+                        secs.push((n, st));
+                    }
+                }
+                None => step_sections(&o["itemListElement"], loose, secs),
+            }
+        }
+        other => steps(other, loose),
+    }
+}
+
 fn image(v: &Value) -> Option<String> {
     match v {
         Value::String(s) => Some(s.trim().to_string()).filter(|s| !s.is_empty()),
@@ -153,16 +179,25 @@ fn yield_text(v: Option<&Value>) -> Option<String> {
     }
 }
 
-fn draft(r: &Value, source_url: Option<&Url>) -> Option<RecipeDraft> {
+fn draft(
+    r: &Value,
+    source_url: Option<&Url>,
+    plugin: &[(String, Vec<String>)],
+) -> Option<RecipeDraft> {
     let name = r.get("name").and_then(text)?;
-    let ingredients: Vec<_> = list_lines(r.get("recipeIngredient"))
-        .iter()
-        .map(|l| parse_ingredient(l))
-        .collect();
+    let lines = list_lines(r.get("recipeIngredient"));
+    let (ingredients, groups) = if sections::has_heading(&lines) {
+        sections::group_lines(&lines)
+    } else {
+        sections::assign_plugin(&lines, plugin)
+            .unwrap_or_else(|| (lines.iter().map(|l| parse_ingredient(l)).collect(), vec![]))
+    };
     let mut st = Vec::new();
+    let mut step_secs = Vec::new();
     if let Some(i) = r.get("recipeInstructions") {
-        steps(i, &mut st);
+        step_sections(i, &mut st, &mut step_secs);
     }
+    let sections = sections::assemble(groups, step_secs);
     let mut tags = list(r.get("keywords"));
     tags.extend(list(r.get("recipeCategory")));
     tags.extend(list(r.get("recipeCuisine")));
@@ -178,6 +213,7 @@ fn draft(r: &Value, source_url: Option<&Url>) -> Option<RecipeDraft> {
         total_minutes: minutes(r.get("totalTime")),
         ingredients,
         steps: st,
+        sections,
         tags: dedup(tags),
         image_url: r.get("image").and_then(image),
     })
@@ -201,6 +237,7 @@ fn list_lines(v: Option<&Value>) -> Vec<String> {
 pub fn from_html(html: &str, source_url: Option<&Url>) -> Option<RecipeDraft> {
     let doc = Html::parse_document(html);
     let sel = Selector::parse(r#"script[type="application/ld+json"]"#).ok()?;
+    let plugin = sections::plugin_groups(html);
     let mut best: Option<RecipeDraft> = None;
     for script in doc.select(&sel) {
         let raw: String = script.text().collect();
@@ -210,14 +247,20 @@ pub fn from_html(html: &str, source_url: Option<&Url>) -> Option<RecipeDraft> {
         let mut found = Vec::new();
         collect(&v, &mut found);
         for r in found {
-            if let Some(d) = draft(r, source_url)
-                && best
-                    .as_ref()
-                    .is_none_or(|b| d.ingredients.len() > b.ingredients.len())
+            if let Some(d) = draft(r, source_url, &plugin)
+                && best.as_ref().is_none_or(|b| count(&d) > count(b))
             {
                 best = Some(d);
             }
         }
     }
     best
+}
+
+pub(crate) fn count(d: &RecipeDraft) -> usize {
+    d.ingredients.len()
+        + d.sections
+            .iter()
+            .map(|s| s.ingredients.len())
+            .sum::<usize>()
 }

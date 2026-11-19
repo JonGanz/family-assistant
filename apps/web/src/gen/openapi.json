@@ -14141,6 +14141,30 @@
           }
         }
       },
+      "DraftSection": {
+        "type": "object",
+        "description": "A named part of a recipe with its own ingredients and steps.",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "ingredients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipeIngredient"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "ElevateReq": {
         "type": "object",
         "required": [
@@ -17332,6 +17356,24 @@
             "format": "int32",
             "minimum": 0
           },
+          "recipe_scale_factors": {
+            "type": [
+              "array",
+              "null"
+            ],
+            "items": {
+              "type": "number",
+              "format": "float"
+            }
+          },
+          "recipe_section_columns": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "format": "int32",
+            "minimum": 0
+          },
           "trigram_threshold": {
             "type": [
               "number",
@@ -17348,7 +17390,9 @@
           "ingredient_llm",
           "trigram_threshold",
           "descriptors",
-          "meal_plan_horizon_weeks"
+          "meal_plan_horizon_weeks",
+          "recipe_scale_factors",
+          "recipe_section_columns"
         ],
         "properties": {
           "descriptors": {
@@ -17366,6 +17410,18 @@
             "type": "boolean"
           },
           "meal_plan_horizon_weeks": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "recipe_scale_factors": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "float"
+            }
+          },
+          "recipe_section_columns": {
             "type": "integer",
             "format": "int32",
             "minimum": 0
@@ -19244,6 +19300,13 @@
             "format": "int32",
             "minimum": 0
           },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DraftSection"
+            },
+            "description": "Named parts; the top-level `ingredients` and `steps` are the shared lines and finish steps."
+          },
           "servings": {
             "type": [
               "integer",
@@ -19389,7 +19452,8 @@
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "Shared ingredient lines (no section)."
           },
           "note": {
             "type": [
@@ -19404,6 +19468,12 @@
             ],
             "format": "int32",
             "minimum": 0
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipeSectionInput"
+            }
           },
           "servings": {
             "type": [
@@ -19423,7 +19493,8 @@
             "type": "array",
             "items": {
               "type": "string"
-            }
+            },
+            "description": "Finish steps (no section)."
           },
           "tags": {
             "type": "array",
@@ -19522,6 +19593,16 @@
           "raw_text": {
             "type": "string"
           },
+          "section_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RecipeSectionId"
+              }
+            ]
+          },
           "unit": {
             "type": [
               "string",
@@ -19556,6 +19637,89 @@
               "string",
               "null"
             ]
+          }
+        }
+      },
+      "RecipeSectionId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "RecipeSectionInput": {
+        "type": "object",
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "name": {
+            "type": "string"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "RecipeSectionView": {
+        "type": "object",
+        "required": [
+          "id",
+          "ord",
+          "name"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/RecipeSectionId"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ord": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          }
+        }
+      },
+      "RecipeStepId": {
+        "type": "string",
+        "format": "uuid"
+      },
+      "RecipeStepView": {
+        "type": "object",
+        "required": [
+          "id",
+          "ord",
+          "text"
+        ],
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/RecipeStepId"
+          },
+          "ord": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "section_id": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/RecipeSectionId"
+              }
+            ]
+          },
+          "text": {
+            "type": "string"
           }
         }
       },
@@ -19628,9 +19792,12 @@
           "favourite",
           "has_image",
           "lines",
+          "sections",
           "steps",
           "ratings",
-          "version"
+          "version",
+          "scale_factors",
+          "section_columns"
         ],
         "properties": {
           "cook_minutes": {
@@ -19676,6 +19843,26 @@
           "ratings": {
             "$ref": "#/components/schemas/RatingsView"
           },
+          "scale_factors": {
+            "type": "array",
+            "items": {
+              "type": "number",
+              "format": "float"
+            },
+            "description": "The household's live-scaling factors (`recipe_scale_factors`), ascending, 1 included."
+          },
+          "section_columns": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Columns before wrapping (`recipe_section_columns`), 1 to 4.",
+            "minimum": 0
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipeSectionView"
+            }
+          },
           "servings": {
             "type": [
               "integer",
@@ -19693,7 +19880,7 @@
           "steps": {
             "type": "array",
             "items": {
-              "type": "string"
+              "$ref": "#/components/schemas/RecipeStepView"
             }
           },
           "tags": {

@@ -2,7 +2,7 @@ use scraper::{ElementRef, Html, Selector};
 use url::Url;
 
 use crate::jsonld::{dedup, leading_int, parse_iso_duration};
-use crate::{RecipeDraft, RecipeOrigin, parse_ingredient};
+use crate::{RecipeDraft, RecipeOrigin};
 
 fn collapse(s: &str) -> String {
     s.split_whitespace().collect::<Vec<_>>().join(" ")
@@ -122,7 +122,7 @@ pub fn from_microdata(html: &str, source_url: Option<&Url>) -> Option<RecipeDraf
                 .find(|v| !v.is_empty())
         };
         let Some(name) = first("name") else { continue };
-        let mut ingredients = Vec::new();
+        let mut lines = Vec::new();
         let mut st = Vec::new();
         let mut tags = Vec::new();
         for (n, e) in &ps {
@@ -130,7 +130,7 @@ pub fn from_microdata(html: &str, source_url: Option<&Url>) -> Option<RecipeDraf
                 "recipeIngredient" | "ingredients" => {
                     let v = value(*e);
                     if !v.is_empty() {
-                        ingredients.push(parse_ingredient(&v));
+                        lines.push(v);
                     }
                 }
                 "recipeInstructions" => instructions(*e, &mut st),
@@ -138,6 +138,8 @@ pub fn from_microdata(html: &str, source_url: Option<&Url>) -> Option<RecipeDraf
                 _ => {}
             }
         }
+        let (ingredients, groups) = crate::sections::group_lines(&lines);
+        let sections = crate::sections::assemble(groups, vec![]);
         let yt = first("recipeYield");
         let d = RecipeDraft {
             name,
@@ -150,12 +152,13 @@ pub fn from_microdata(html: &str, source_url: Option<&Url>) -> Option<RecipeDraf
             total_minutes: first("totalTime").as_deref().and_then(minutes),
             ingredients,
             steps: st,
+            sections,
             tags: dedup(tags),
             image_url: first("image"),
         };
         if best
             .as_ref()
-            .is_none_or(|b| d.ingredients.len() > b.ingredients.len())
+            .is_none_or(|b| crate::jsonld::count(&d) > crate::jsonld::count(b))
         {
             best = Some(d);
         }

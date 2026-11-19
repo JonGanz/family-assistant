@@ -2903,6 +2903,12 @@ export interface components {
             /** Format: int64 */
             count: number;
         };
+        /** @description A named part of a recipe with its own ingredients and steps. */
+        DraftSection: {
+            ingredients?: components["schemas"]["RecipeIngredient"][];
+            name: string;
+            steps?: string[];
+        };
         ElevateReq: {
             /** Format: uuid */
             member_id: string;
@@ -3820,6 +3826,9 @@ export interface components {
             ingredient_llm?: boolean | null;
             /** Format: int32 */
             meal_plan_horizon_weeks?: number | null;
+            recipe_scale_factors?: number[] | null;
+            /** Format: int32 */
+            recipe_section_columns?: number | null;
             /** Format: float */
             trigram_threshold?: number | null;
         };
@@ -3830,6 +3839,9 @@ export interface components {
             ingredient_llm: boolean;
             /** Format: int32 */
             meal_plan_horizon_weeks: number;
+            recipe_scale_factors: number[];
+            /** Format: int32 */
+            recipe_section_columns: number;
             /** Format: float */
             trigram_threshold: number;
         };
@@ -4278,6 +4290,8 @@ export interface components {
             origin: components["schemas"]["RecipeOrigin"];
             /** Format: int32 */
             prep_minutes?: number | null;
+            /** @description Named parts; the top-level `ingredients` and `steps` are the shared lines and finish steps. */
+            sections?: components["schemas"]["DraftSection"][];
             /** Format: int32 */
             servings?: number | null;
             source_url?: string | null;
@@ -4313,13 +4327,16 @@ export interface components {
             cook_minutes?: number | null;
             image_url?: string | null;
             import_method: components["schemas"]["ImportMethod"];
+            /** @description Shared ingredient lines (no section). */
             lines: string[];
             note?: string | null;
             /** Format: int32 */
             prep_minutes?: number | null;
+            sections?: components["schemas"]["RecipeSectionInput"][];
             /** Format: int32 */
             servings?: number | null;
             source_url?: string | null;
+            /** @description Finish steps (no section). */
             steps: string[];
             tags: string[];
             title: string;
@@ -4342,6 +4359,7 @@ export interface components {
             /** Format: double */
             qty?: number | null;
             raw_text: string;
+            section_id?: null | components["schemas"]["RecipeSectionId"];
             unit?: string | null;
         };
         /** @enum {string} */
@@ -4350,6 +4368,28 @@ export interface components {
         RecipePage: {
             items: components["schemas"]["RecipeSummary"][];
             next_cursor?: string | null;
+        };
+        /** Format: uuid */
+        RecipeSectionId: string;
+        RecipeSectionInput: {
+            lines?: string[];
+            name: string;
+            steps?: string[];
+        };
+        RecipeSectionView: {
+            id: components["schemas"]["RecipeSectionId"];
+            name: string;
+            /** Format: int32 */
+            ord: number;
+        };
+        /** Format: uuid */
+        RecipeStepId: string;
+        RecipeStepView: {
+            id: components["schemas"]["RecipeStepId"];
+            /** Format: int32 */
+            ord: number;
+            section_id?: null | components["schemas"]["RecipeSectionId"];
+            text: string;
         };
         RecipeSummary: {
             favourite: boolean;
@@ -4377,10 +4417,18 @@ export interface components {
             /** Format: int32 */
             prep_minutes?: number | null;
             ratings: components["schemas"]["RatingsView"];
+            /** @description The household's live-scaling factors (`recipe_scale_factors`), ascending, 1 included. */
+            scale_factors: number[];
+            /**
+             * Format: int32
+             * @description Columns before wrapping (`recipe_section_columns`), 1 to 4.
+             */
+            section_columns: number;
+            sections: components["schemas"]["RecipeSectionView"][];
             /** Format: int32 */
             servings?: number | null;
             source_url?: string | null;
-            steps: string[];
+            steps: components["schemas"]["RecipeStepView"][];
             tags: string[];
             title: string;
             /** Format: int32 */

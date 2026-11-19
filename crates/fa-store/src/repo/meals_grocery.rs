@@ -562,6 +562,8 @@ pub struct MealsSettingsRow {
     pub trigram_threshold: f32,
     /// Empty means the seed descriptor list.
     pub descriptors: Vec<String>,
+    pub recipe_scale_factors: Vec<f32>,
+    pub recipe_section_columns: i32,
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -570,9 +572,11 @@ pub struct MealsSettingsPatchRow {
     pub ingredient_llm: Option<bool>,
     pub trigram_threshold: Option<f32>,
     pub descriptors: Option<Vec<String>>,
+    pub recipe_scale_factors: Option<Vec<f32>>,
+    pub recipe_section_columns: Option<i32>,
 }
 
-const SETTINGS_COLS: &str = "grocery_archive_hours, ingredient_llm, trigram_threshold, descriptors";
+const SETTINGS_COLS: &str = "grocery_archive_hours, ingredient_llm, trigram_threshold, descriptors, recipe_scale_factors, recipe_section_columns";
 
 impl MealsSettingsRepo {
     /// The household's row, created with the defaults on first use.
@@ -603,7 +607,9 @@ impl MealsSettingsRepo {
                     grocery_archive_hours = COALESCE($2, grocery_archive_hours),
                     ingredient_llm = COALESCE($3, ingredient_llm),
                     trigram_threshold = COALESCE($4, trigram_threshold),
-                    descriptors = COALESCE($5, descriptors)
+                    descriptors = COALESCE($5, descriptors),
+                    recipe_scale_factors = COALESCE($6, recipe_scale_factors),
+                    recipe_section_columns = COALESCE($7, recipe_section_columns)
              WHERE household_id = $1 RETURNING {SETTINGS_COLS}"
         );
         Ok(sqlx::query_as::<_, MealsSettingsRow>(&sql)
@@ -612,6 +618,8 @@ impl MealsSettingsRepo {
             .bind(p.ingredient_llm)
             .bind(p.trigram_threshold)
             .bind(&p.descriptors)
+            .bind(&p.recipe_scale_factors)
+            .bind(p.recipe_section_columns)
             .fetch_one(conn)
             .await?)
     }

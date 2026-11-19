@@ -4,6 +4,20 @@ import { useRoute, useRouter } from 'vue-router'
 import { food, type RecipeInput, type RecipeView } from '../../api/food'
 import FoodTabs from '../../components/food/FoodTabs.vue'
 import LineMatch from '../../components/food/recipes/LineMatch.vue'
+import SectionItems from '../../components/food/recipes/SectionItems.vue'
+import {
+  addSection,
+  blankSections,
+  deleteSection,
+  fromDraft,
+  fromView as sectionsFromView,
+  mergeSection,
+  moveItem,
+  moveSection,
+  toInput,
+  type Place,
+  type SectionForm,
+} from '../../components/food/recipes/sectionsForm'
 import { resizeToJpeg } from '../../lib/imageResize'
 import { useRecipesStore } from '../../stores/recipes'
 import {
@@ -28,6 +42,7 @@ interface Form {
   note: string
   lines: string[]
   steps: string[]
+  sections: SectionForm[]
   imageUrl: string | null
   removeImage: boolean
 }
@@ -57,8 +72,7 @@ function blank(): Form {
     total: '',
     tags: '',
     note: '',
-    lines: [''],
-    steps: [''],
+    ...blankSections(),
     imageUrl: null,
     removeImage: false,
   }
@@ -75,8 +89,7 @@ function fromView(v: RecipeView): Form {
     total: n2s(v.total_minutes),
     tags: v.tags.join(', '),
     note: v.note ?? '',
-    lines: v.lines.map((l) => l.raw_text),
-    steps: v.steps.length ? [...v.steps] : [''],
+    ...sectionsFromView(v),
     imageUrl: null,
     removeImage: false,
   }
@@ -104,8 +117,7 @@ onMounted(async () => {
       cook: n2s(d.cook_minutes),
       total: n2s(d.total_minutes),
       tags: d.tags.join(', '),
-      lines: d.ingredients.length ? d.ingredients.map((i) => i.text) : [''],
-      steps: d.steps.length ? [...d.steps] : [''],
+      ...fromDraft(d),
       imageUrl: d.image_url ?? null,
     }
     meta.value = {
@@ -128,8 +140,7 @@ async function persist(f: Form): Promise<void> {
       .map((t) => t.trim())
       .filter(Boolean),
     note: f.note.trim() || null,
-    lines: f.lines.map((l) => l.trim()).filter(Boolean),
-    steps: f.steps.map((s) => s.trim()).filter(Boolean),
+    ...toInput(f),
     image_url: id.value ? null : f.imageUrl,
     ...meta.value,
   }
@@ -172,11 +183,6 @@ function discard() {
   form.discard()
 }
 
-function move(list: string[], i: number, d: number) {
-  const j = i + d
-  if (j < 0 || j >= list.length) return
-  ;[list[i], list[j]] = [list[j]!, list[i]!]
-}
 async function onFile(e: Event) {
   const f = (e.target as HTMLInputElement).files?.[0]
   imageError.value = null
@@ -189,10 +195,26 @@ async function onFile(e: Event) {
     imageError.value = err instanceof Error ? err.message : 'The image could not be read.'
   }
 }
-/** The view line behind row `i`, when its text is unchanged (so matching still applies). */
-function viewLine(i: number) {
-  const l = store.current?.lines.find((x) => x.ord === i)
-  return l && l.raw_text === draft.value.lines[i] && l.match_state !== 'matched' ? l : null
+/** The view line with this text, while it is unmatched or proposed (so matching still applies). */
+function viewLine(text: string) {
+  const l = store.current?.lines.find((x) => x.raw_text === text)
+  return l && l.match_state !== 'matched' ? l : null
+}
+const targets = computed<{ value: Place; label: string }[]>(() => [
+  { value: 'top', label: 'Shared / finish' },
+  ...draft.value.sections.map((s, i) => ({
+    value: i as Place,
+    label: s.name.trim() || `Section ${i + 1}`,
+  })),
+])
+const mergeTargets = (i: number) =>
+  draft.value.sections
+    .map((s, k) => ({ k, label: s.name.trim() || `Section ${k + 1}` }))
+    .filter((x) => x.k !== i)
+function onMerge(i: number, e: Event) {
+  const el = e.target as HTMLSelectElement
+  if (el.value !== '') mergeSection(draft.value, i, Number(el.value))
+  el.value = ''
 }
 </script>
 
@@ -231,48 +253,97 @@ function viewLine(i: number) {
       </UiSection>
 
       <UiSection heading="Ingredients">
-        <div v-for="(_, i) in draft.lines" :key="i" class="row">
-          <div class="grow">
-            <UiTextField
-              v-model="draft.lines[i]!"
-              label="Ingredient line"
-              :data-testid="`recipe-line-${i}`"
+        <SectionItems
+          v-model:items="draft.lines"
+          kind="line"
+          place="top"
+          :targets="targets"
+          test-prefix="recipe-line"
+          @move="(i, to) => moveItem(draft, 'lines', 'top', i, to)"
+        >
+          <template #extra="{ index }">
+            <LineMatch
+              v-if="id && viewLine(draft.lines[index]!)"
+              :recipe-id="id"
+              :line="viewLine(draft.lines[index]!)!"
             />
-            <LineMatch v-if="id && viewLine(i)" :recipe-id="id" :line="viewLine(i)!" />
-          </div>
-          <UiIconButton
-            icon="arrow_upward"
-            label="Move line up"
-            @click="move(draft.lines, i, -1)"
-          />
-          <UiIconButton
-            icon="arrow_downward"
-            label="Move line down"
-            @click="move(draft.lines, i, 1)"
-          />
-          <UiIconButton icon="delete" label="Remove line" @click="draft.lines.splice(i, 1)" />
-        </div>
-        <UiButton variant="tonal" icon="add" @click="draft.lines.push('')">Add line</UiButton>
+          </template>
+        </SectionItems>
       </UiSection>
 
-      <UiSection heading="Steps">
-        <div v-for="(_, i) in draft.steps" :key="i" class="row">
+      <UiSection
+        v-for="(sec, si) in draft.sections"
+        :key="si"
+        :heading="`Section ${si + 1}`"
+        :data-testid="`recipe-section-edit-${si}`"
+      >
+        <div class="row">
           <div class="grow">
-            <UiTextField v-model="draft.steps[i]!" :label="`Step ${i + 1}`" multiline />
+            <UiTextField
+              v-model="sec.name"
+              label="Section name"
+              :data-testid="`recipe-section-name-${si}`"
+            />
           </div>
           <UiIconButton
             icon="arrow_upward"
-            label="Move step up"
-            @click="move(draft.steps, i, -1)"
+            label="Move section up"
+            @click="moveSection(draft, si, -1)"
           />
           <UiIconButton
             icon="arrow_downward"
-            label="Move step down"
-            @click="move(draft.steps, i, 1)"
+            label="Move section down"
+            @click="moveSection(draft, si, 1)"
           />
-          <UiIconButton icon="delete" label="Remove step" @click="draft.steps.splice(i, 1)" />
+          <UiIconButton icon="delete" label="Delete section" @click="deleteSection(draft, si)" />
         </div>
-        <UiButton variant="tonal" icon="add" @click="draft.steps.push('')">Add step</UiButton>
+        <select
+          v-if="draft.sections.length > 1"
+          class="moveto"
+          aria-label="Merge this section into"
+          @change="onMerge(si, $event)"
+        >
+          <option value="" selected disabled>Merge into…</option>
+          <option v-for="t in mergeTargets(si)" :key="t.k" :value="String(t.k)">
+            {{ t.label }}
+          </option>
+        </select>
+        <h3>Ingredients</h3>
+        <SectionItems
+          v-model:items="sec.lines"
+          kind="line"
+          :place="si"
+          :targets="targets"
+          :test-prefix="`recipe-sec-${si}-line`"
+          @move="(i, to) => moveItem(draft, 'lines', si, i, to)"
+        />
+        <h3>Steps</h3>
+        <SectionItems
+          v-model:items="sec.steps"
+          kind="step"
+          :place="si"
+          :targets="targets"
+          :test-prefix="`recipe-sec-${si}-step`"
+          @move="(i, to) => moveItem(draft, 'steps', si, i, to)"
+        />
+      </UiSection>
+      <UiButton
+        variant="tonal"
+        icon="add"
+        data-testid="recipe-add-section"
+        @click="addSection(draft)"
+        >Add section</UiButton
+      >
+
+      <UiSection :heading="draft.sections.length ? 'Finish steps' : 'Steps'">
+        <SectionItems
+          v-model:items="draft.steps"
+          kind="step"
+          place="top"
+          :targets="targets"
+          test-prefix="recipe-step"
+          @move="(i, to) => moveItem(draft, 'steps', 'top', i, to)"
+        />
       </UiSection>
 
       <UiTextField v-model="draft.note" label="Household note" multiline />
@@ -315,5 +386,14 @@ function viewLine(i: number) {
   flex: 1;
   display: grid;
   gap: var(--ui-space-2);
+}
+.moveto {
+  min-height: var(--ui-touch);
+  font: inherit;
+  color: var(--ui-on-surface);
+  background: var(--ui-surface-container, transparent);
+  border: 1px solid var(--ui-outline-variant, currentColor);
+  border-radius: var(--ui-radius-md);
+  padding: 0 var(--ui-space-2);
 }
 </style>

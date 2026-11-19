@@ -107,6 +107,7 @@ fn line(raw: &str) -> NewLine {
         ingredient_id: None,
         match_state: MatchState::Unmatched,
         proposal: None,
+        section_id: None,
     }
 }
 
@@ -152,6 +153,19 @@ async fn migration_applies_and_reverts(pool: PgPool) {
     .await
     .unwrap();
     assert_eq!(rls, 18);
+    let section_rls: i64 = sqlx::query_scalar(
+        "SELECT count(*) FROM pg_class WHERE relname = 'recipe_section' AND relrowsecurity AND relforcerowsecurity",
+    )
+    .fetch_one(&pool)
+    .await
+    .unwrap();
+    assert_eq!(section_rls, 1);
+    sqlx::raw_sql(include_str!(
+        "../migrations/20261117000001_recipe_sections.down.sql"
+    ))
+    .execute(&pool)
+    .await
+    .unwrap();
     sqlx::raw_sql(include_str!(
         "../migrations/20261108000001_m5_meals.down.sql"
     ))
@@ -169,6 +183,12 @@ async fn migration_applies_and_reverts(pool: PgPool) {
         .execute(&pool)
         .await
         .unwrap();
+    sqlx::raw_sql(include_str!(
+        "../migrations/20261117000001_recipe_sections.up.sql"
+    ))
+    .execute(&pool)
+    .await
+    .unwrap();
     assert_eq!(table_count(&pool).await, 18);
 }
 
@@ -723,16 +743,20 @@ async fn lines_keep_id_and_match_when_text_is_unchanged(pool: PgPool) {
             .is_none()
     );
     // Steps are replaced whole.
-    RecipeStepRepo::replace_for_recipe(&mut tx, r.id, &["Mix".into(), "Bake".into()])
+    RecipeStepRepo::replace_for_recipe(
+        &mut tx,
+        r.id,
+        &[("Mix".into(), None), ("Bake".into(), None)],
+    )
+    .await
+    .unwrap();
+    RecipeStepRepo::replace_for_recipe(&mut tx, r.id, &[("Bake".into(), None)])
         .await
         .unwrap();
-    RecipeStepRepo::replace_for_recipe(&mut tx, r.id, &["Bake".into()])
-        .await
-        .unwrap();
-    assert_eq!(
-        RecipeStepRepo::for_recipe(&mut tx, r.id).await.unwrap(),
-        vec!["Bake"]
-    );
+    let steps = RecipeStepRepo::for_recipe(&mut tx, r.id).await.unwrap();
+    assert_eq!(steps.len(), 1);
+    assert_eq!(steps[0].text, "Bake");
+    assert_eq!(steps[0].section_id, None);
 }
 
 #[sqlx::test(migrations = "./migrations")]

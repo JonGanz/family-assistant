@@ -7,6 +7,7 @@ import PageNotices from './parts/settings-mail/PageNotices.vue'
 import AislesCard from './parts/meals/AislesCard.vue'
 import IngredientsCard from './parts/meals/IngredientsCard.vue'
 import MatchingCard from './parts/meals/MatchingCard.vue'
+import RecipesCard from './parts/meals/RecipesCard.vue'
 import SlotsCard from './parts/meals/SlotsCard.vue'
 import StoresCard from './parts/meals/StoresCard.vue'
 
@@ -21,6 +22,7 @@ onMounted(() => meals.load())
     <div v-else-if="meals.loaded" class="page">
       <SlotsCard />
       <MatchingCard />
+      <RecipesCard />
       <StoresCard />
       <AislesCard />
       <IngredientsCard />

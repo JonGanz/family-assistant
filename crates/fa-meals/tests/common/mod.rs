@@ -228,6 +228,7 @@ impl Env {
                     tags: vec![],
                     note: None,
                     image_url: None,
+                    sections: vec![],
                     lines: lines.iter().map(|s| s.to_string()).collect(),
                     steps: vec!["Cook it.".into()],
                 },
@@ -375,5 +376,7 @@ pub fn sp() -> MealsSettingsPatch {
         trigram_threshold: None,
         descriptors: None,
         meal_plan_horizon_weeks: None,
+        recipe_scale_factors: None,
+        recipe_section_columns: None,
     }
 }

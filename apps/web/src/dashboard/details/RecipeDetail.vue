@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { foodKiosk, type RecipeView } from '../../api/food'
+import { foodKiosk, type RecipeLineView, type RecipeView } from '../../api/food'
+import { groupRecipe } from '../../lib/recipeSections'
+import { formatQty, scaleLine } from '../../lib/recipeScale'
 import { getDeviceToken } from '../../kiosk/deviceToken'
 import { S } from '../strings'
 import {
@@ -12,21 +14,7 @@ import {
   type Checks,
 } from './recipeChecks'
 
-// Local strings: strings.ts belongs to another task.
-const T = {
-  ingredients: 'Ingredients',
-  steps: 'Steps',
-  failed: 'The recipe could not be loaded',
-  details: 'Details',
-  prep: 'Prep',
-  cook: 'Cook',
-  total: 'Total',
-  servings: 'Servings',
-  yield: 'Yield',
-  source: 'Source',
-  note: 'Note',
-  reset: 'Reset ticks',
-}
+const T = S.recipe
 
 const props = defineProps<{ id: string; title: string }>()
 const emit = defineEmits<{ close: [] }>()
@@ -35,7 +23,14 @@ const recipe = ref<RecipeView | null>(null)
 const failed = ref(false)
 const imageSrc = ref<string | null>(null)
 const checks = ref<Checks>(emptyChecks())
-const lines = computed(() => (recipe.value?.lines ?? []).map((l) => l.raw_text))
+const scale = ref(1)
+const factors = computed(() => {
+  const f = new Set([...(recipe.value?.scale_factors ?? []), 1])
+  return [...f].sort((a, b) => a - b)
+})
+const grouped = computed(() => (recipe.value ? groupRecipe(recipe.value) : null))
+const hasSections = computed(() => (grouped.value?.sections.length ?? 0) > 0)
+const lineText = (l: RecipeLineView) => scaleLine(l, scale.value)
 
 const mins = (n: number) =>
   n >= 60 ? `${Math.floor(n / 60)} h${n % 60 ? ` ${n % 60} min` : ''}` : `${n} min`
@@ -53,7 +48,7 @@ const facts = computed(() => {
   if (r.prep_minutes) out.push({ k: T.prep, v: mins(r.prep_minutes) })
   if (r.cook_minutes) out.push({ k: T.cook, v: mins(r.cook_minutes) })
   if (r.total_minutes) out.push({ k: T.total, v: mins(r.total_minutes) })
-  if (r.servings) out.push({ k: T.servings, v: String(r.servings) })
+  if (r.servings) out.push({ k: T.servings, v: formatQty(r.servings * scale.value) })
   if (r.yield_text) out.push({ k: T.yield, v: r.yield_text })
   if (r.source_url) out.push({ k: T.source, v: host(r.source_url) })
   if (r.note) out.push({ k: T.note, v: r.note })
@@ -61,8 +56,8 @@ const facts = computed(() => {
 })
 const anyChecked = computed(() => checks.value.lines.length + checks.value.steps.length > 0)
 
-function toggle(kind: 'lines' | 'steps', i: number) {
-  checks.value = toggleCheck(checks.value, kind, i)
+function toggle(kind: 'lines' | 'steps', id: string) {
+  checks.value = toggleCheck(checks.value, kind, id)
   saveChecks(props.id, checks.value)
 }
 function reset() {
@@ -109,6 +104,25 @@ onBeforeUnmount(() => {
     >
       <header>
         <h2>{{ recipe?.title ?? title }}</h2>
+        <div
+          v-if="recipe"
+          class="scale"
+          role="group"
+          :aria-label="T.scale"
+          data-testid="recipe-scale"
+        >
+          <button
+            v-for="f in factors"
+            :key="f"
+            type="button"
+            :class="{ on: f === scale }"
+            :aria-pressed="f === scale"
+            data-testid="recipe-scale-btn"
+            @click="scale = f"
+          >
+            {{ formatQty(f) }}×
+          </button>
+        </div>
         <button
           v-if="anyChecked"
           type="button"
@@ -138,34 +152,74 @@ onBeforeUnmount(() => {
               </dl>
             </section>
           </div>
-          <section class="card">
+          <section v-if="grouped!.shared.length" class="card" data-testid="recipe-shared">
             <h3>{{ T.ingredients }}</h3>
-            <ul data-testid="recipe-lines">
-              <li v-for="(l, i) in lines" :key="i">
-                <label :class="{ done: checks.lines.includes(i) }">
+            <ul data-testid="recipe-lines" class="cols">
+              <li v-for="l in grouped!.shared" :key="l.id">
+                <label :class="{ done: checks.lines.includes(l.id) }">
                   <input
                     type="checkbox"
-                    :checked="checks.lines.includes(i)"
+                    :checked="checks.lines.includes(l.id)"
                     data-testid="recipe-line-check"
-                    @change="toggle('lines', i)"
+                    @change="toggle('lines', l.id)"
                   />
-                  <span>{{ l }}</span>
+                  <span>{{ lineText(l) }}</span>
                 </label>
               </li>
             </ul>
           </section>
-          <section class="card steps">
-            <h3>{{ T.steps }}</h3>
+          <div
+            v-if="hasSections"
+            class="sections"
+            data-testid="recipe-sections"
+            :style="{ '--cols': recipe.section_columns }"
+          >
+            <div v-for="g in grouped!.sections" :key="g.section.id" class="col">
+              <section class="card" data-testid="recipe-section">
+                <h3>{{ g.section.name }}</h3>
+                <ul data-testid="recipe-lines">
+                  <li v-for="l in g.lines" :key="l.id">
+                    <label :class="{ done: checks.lines.includes(l.id) }">
+                      <input
+                        type="checkbox"
+                        :checked="checks.lines.includes(l.id)"
+                        data-testid="recipe-line-check"
+                        @change="toggle('lines', l.id)"
+                      />
+                      <span>{{ lineText(l) }}</span>
+                    </label>
+                  </li>
+                </ul>
+              </section>
+              <section v-if="g.steps.length" class="card steps">
+                <ol data-testid="recipe-steps">
+                  <li v-for="s in g.steps" :key="s.id">
+                    <label :class="{ done: checks.steps.includes(s.id) }">
+                      <input
+                        type="checkbox"
+                        :checked="checks.steps.includes(s.id)"
+                        data-testid="recipe-step-check"
+                        @change="toggle('steps', s.id)"
+                      />
+                      <span>{{ s.text }}</span>
+                    </label>
+                  </li>
+                </ol>
+              </section>
+            </div>
+          </div>
+          <section v-if="grouped!.finish.length" class="card steps">
+            <h3>{{ hasSections ? T.finish : T.steps }}</h3>
             <ol data-testid="recipe-steps">
-              <li v-for="(s, i) in recipe.steps" :key="i">
-                <label :class="{ done: checks.steps.includes(i) }">
+              <li v-for="s in grouped!.finish" :key="s.id">
+                <label :class="{ done: checks.steps.includes(s.id) }">
                   <input
                     type="checkbox"
-                    :checked="checks.steps.includes(i)"
+                    :checked="checks.steps.includes(s.id)"
                     data-testid="recipe-step-check"
-                    @change="toggle('steps', i)"
+                    @change="toggle('steps', s.id)"
                   />
-                  <span>{{ s }}</span>
+                  <span>{{ s.text }}</span>
                 </label>
               </li>
             </ol>
@@ -268,17 +322,17 @@ h3 {
   margin-top: var(--space-5);
   font-size: calc(var(--font-size-lg) * 1.25);
 }
-ul[data-testid='recipe-lines'] {
+ul.cols {
   display: block;
   columns: 2;
   column-gap: var(--space-5, 24px);
 }
-ul[data-testid='recipe-lines'] li {
+ul.cols li {
   break-inside: avoid;
   margin-bottom: var(--space-2);
 }
 @media (max-width: 600px) {
-  ul[data-testid='recipe-lines'] {
+  ul.cols {
     columns: 1;
   }
 }
@@ -335,8 +389,46 @@ label.done span {
   text-decoration: line-through;
   opacity: 0.5;
 }
-.reset {
+.scale {
+  display: flex;
+  gap: var(--space-1, 4px);
   margin-left: auto;
+}
+.scale button {
+  min-width: var(--min-touch);
+  min-height: var(--min-touch);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--ui-radius-lg, var(--ui-radius-sm));
+  background: var(--color-layer-2, var(--color-surface));
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.scale button.on {
+  background: var(--color-accent, currentColor);
+  color: var(--color-on-accent, var(--color-bg));
+}
+.sections {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 2), minmax(0, 1fr));
+  gap: var(--space-4);
+  align-items: start;
+}
+.col {
+  display: grid;
+  gap: var(--space-3);
+  align-content: start;
+}
+.col .steps {
+  margin-top: 0;
+}
+@media (max-width: 600px) {
+  .sections {
+    grid-template-columns: 1fr;
+  }
+}
+.reset {
   min-height: var(--min-touch);
   padding: 0 var(--space-4);
   border: 0;

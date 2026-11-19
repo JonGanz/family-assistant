@@ -22,6 +22,7 @@ fn input(title: &str, lines: &[&str]) -> RecipeInput {
         tags: vec!["quick".into(), "Quick".into(), " ".into()],
         note: None,
         image_url: None,
+        sections: vec![],
         lines: lines.iter().map(|s| s.to_string()).collect(),
         steps: vec!["Chop.".into(), "".into(), "Cook.".into()],
     }
@@ -49,7 +50,10 @@ async fn lines_are_matched_by_rules(pool: PgPool) {
         .await
         .unwrap();
     assert_eq!(r.tags, ["quick"], "tags are trimmed and deduplicated");
-    assert_eq!(r.steps, ["Chop.", "Cook."]);
+    assert_eq!(
+        r.steps.iter().map(|s| s.text.as_str()).collect::<Vec<_>>(),
+        ["Chop.", "Cook."]
+    );
     let by = |raw: &str| r.lines.iter().find(|l| l.raw_text == raw).unwrap();
     let t = by("2 tomatoes");
     assert_eq!(
@@ -750,7 +754,7 @@ async fn import_text_and_unstructured_pages_use_the_llm(pool: PgPool) {
     .await;
     state.lock().unwrap().reply = json!({
         "name": "Pasted Soup", "yield_text": "", "servings": 4, "prep_minutes": 5, "cook_minutes": 0,
-        "total_minutes": 0, "ingredients": ["2 carrots", "1 onion"], "steps": ["Simmer."], "tags": []
+        "total_minutes": 0, "ingredients": [{"text": "2 carrots", "section": null}, {"text": "1 onion", "section": null}], "steps": [{"text": "Simmer.", "section": null}], "tags": []
     });
     let draft = e
         .svc
@@ -821,4 +825,218 @@ async fn import_text_and_unstructured_pages_use_the_llm(pool: PgPool) {
             .await,
         Err(MealsError::LlmUnavailable)
     ));
+}
+
+fn sectioned() -> RecipeInput {
+    let mut i = input("Chicken and sauce", &["1 tsp salt", "2 tomatoes"]);
+    i.steps = vec!["Serve.".into()];
+    i.sections = vec![
+        RecipeSectionInput {
+            name: " Chicken ".into(),
+            lines: vec!["4 chicken thighs".into()],
+            steps: vec!["Roast.".into(), "Rest.".into()],
+        },
+        RecipeSectionInput {
+            name: "Sauce".into(),
+            lines: vec!["1 cup cream".into(), "2 dragonfruit".into()],
+            steps: vec!["Simmer.".into()],
+        },
+    ];
+    i
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn sections_group_lines_and_steps(pool: PgPool) {
+    let e = env(pool).await;
+    let r = e
+        .svc
+        .create_recipe(e.h, e.actor, sectioned())
+        .await
+        .unwrap();
+    assert_eq!(
+        r.sections
+            .iter()
+            .map(|s| s.name.as_str())
+            .collect::<Vec<_>>(),
+        ["Chicken", "Sauce"]
+    );
+    let (chicken, sauce) = (r.sections[0].id, r.sections[1].id);
+    let lines: Vec<(&str, Option<RecipeSectionId>)> = r
+        .lines
+        .iter()
+        .map(|l| (l.raw_text.as_str(), l.section_id))
+        .collect();
+    assert_eq!(
+        lines,
+        [
+            ("1 tsp salt", None),
+            ("2 tomatoes", None),
+            ("4 chicken thighs", Some(chicken)),
+            ("1 cup cream", Some(sauce)),
+            ("2 dragonfruit", Some(sauce)),
+        ]
+    );
+    let steps: Vec<(&str, Option<RecipeSectionId>)> = r
+        .steps
+        .iter()
+        .map(|s| (s.text.as_str(), s.section_id))
+        .collect();
+    assert_eq!(
+        steps,
+        [
+            ("Roast.", Some(chicken)),
+            ("Rest.", Some(chicken)),
+            ("Simmer.", Some(sauce)),
+            ("Serve.", None),
+        ]
+    );
+    assert_eq!(
+        r.steps.iter().map(|s| s.ord).collect::<Vec<_>>(),
+        [0, 1, 2, 3]
+    );
+    assert_eq!(r.scale_factors, [0.5, 1.0, 1.5, 2.0, 3.0]);
+    assert_eq!(r.section_columns, 2);
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn moving_a_line_between_sections_keeps_its_id_and_match(pool: PgPool) {
+    let e = env(pool).await;
+    let r = e
+        .svc
+        .create_recipe(e.h, e.actor, sectioned())
+        .await
+        .unwrap();
+    let tomatoes = r.lines.iter().find(|l| l.raw_text == "2 tomatoes").unwrap();
+    let (id, ingredient) = (tomatoes.id, tomatoes.ingredient_id);
+    assert!(ingredient.is_some());
+    let mut i = sectioned();
+    i.lines = vec!["1 tsp salt".into()];
+    i.sections[1].lines.push("2 tomatoes".into());
+    let r2 = e
+        .svc
+        .update_recipe(e.h, e.actor, r.id, i, r.version)
+        .await
+        .unwrap();
+    let moved = r2
+        .lines
+        .iter()
+        .find(|l| l.raw_text == "2 tomatoes")
+        .unwrap();
+    assert_eq!(moved.id, id);
+    assert_eq!(moved.ingredient_id, ingredient);
+    assert_eq!(moved.section_id, Some(r2.sections[1].id));
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn saving_without_a_section_drops_its_content(pool: PgPool) {
+    let e = env(pool).await;
+    let r = e
+        .svc
+        .create_recipe(e.h, e.actor, sectioned())
+        .await
+        .unwrap();
+    let mut i = sectioned();
+    i.sections.remove(1);
+    let r2 = e
+        .svc
+        .update_recipe(e.h, e.actor, r.id, i, r.version)
+        .await
+        .unwrap();
+    assert_eq!(r2.sections.len(), 1);
+    assert!(r2.lines.iter().all(|l| l.raw_text != "1 cup cream"));
+    assert!(r2.steps.iter().all(|s| s.text != "Simmer."));
+    let chicken = Some(r2.sections[0].id);
+    assert_eq!(
+        r2.lines.iter().filter(|l| l.section_id == chicken).count(),
+        1
+    );
+    assert_eq!(
+        r2.lines.iter().filter(|l| l.section_id.is_none()).count(),
+        2
+    );
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn section_validation(pool: PgPool) {
+    let e = env(pool).await;
+    let mut blank = sectioned();
+    blank.sections[0].name = "  ".into();
+    assert!(matches!(
+        e.svc.create_recipe(e.h, e.actor, blank).await,
+        Err(MealsError::Invalid { .. })
+    ));
+    let mut long = sectioned();
+    long.sections[0].name = "x".repeat(101);
+    assert!(matches!(
+        e.svc.create_recipe(e.h, e.actor, long).await,
+        Err(MealsError::Invalid { .. })
+    ));
+    let mut many = sectioned();
+    many.sections = (0..21)
+        .map(|n| RecipeSectionInput {
+            name: format!("S{n}"),
+            lines: vec![],
+            steps: vec![],
+        })
+        .collect();
+    assert!(matches!(
+        e.svc.create_recipe(e.h, e.actor, many).await,
+        Err(MealsError::Invalid { .. })
+    ));
+}
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn scale_and_column_settings(pool: PgPool) {
+    let e = env(pool).await;
+    let s = e.svc.get_settings(e.h).await.unwrap();
+    assert_eq!(s.recipe_scale_factors, [0.5, 1.0, 1.5, 2.0, 3.0]);
+    assert_eq!(s.recipe_section_columns, 2);
+    let s = e
+        .svc
+        .update_settings(
+            e.h,
+            MealsSettingsPatch {
+                recipe_scale_factors: Some(vec![2.0, 0.5, 2.0]),
+                recipe_section_columns: Some(3),
+                ..sp()
+            },
+        )
+        .await
+        .unwrap();
+    assert_eq!(s.recipe_scale_factors, [0.5, 1.0, 2.0]);
+    assert_eq!(s.recipe_section_columns, 3);
+    let r = e.recipe("Plain", None, &["1 egg"]).await;
+    assert_eq!(r.scale_factors, [0.5, 1.0, 2.0]);
+    assert_eq!(r.section_columns, 3);
+    for bad in [
+        MealsSettingsPatch {
+            recipe_section_columns: Some(5),
+            ..sp()
+        },
+        MealsSettingsPatch {
+            recipe_section_columns: Some(0),
+            ..sp()
+        },
+        MealsSettingsPatch {
+            recipe_scale_factors: Some(vec![]),
+            ..sp()
+        },
+        MealsSettingsPatch {
+            recipe_scale_factors: Some(vec![0.05]),
+            ..sp()
+        },
+        MealsSettingsPatch {
+            recipe_scale_factors: Some(vec![11.0]),
+            ..sp()
+        },
+        MealsSettingsPatch {
+            recipe_scale_factors: Some(vec![1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0]),
+            ..sp()
+        },
+    ] {
+        assert!(matches!(
+            e.svc.update_settings(e.h, bad).await,
+            Err(MealsError::Invalid { .. })
+        ));
+    }
 }

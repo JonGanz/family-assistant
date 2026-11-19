@@ -105,9 +105,33 @@ dto!(
         pub favourite: bool,
         pub has_image: bool,
         pub lines: Vec<RecipeLineView>,
-        pub steps: Vec<String>,
+        pub sections: Vec<RecipeSectionView>,
+        pub steps: Vec<RecipeStepView>,
         pub ratings: RatingsView,
         pub version: i32,
+        /// The household's live-scaling factors (`recipe_scale_factors`), ascending, 1 included.
+        pub scale_factors: Vec<f32>,
+        /// Columns before wrapping (`recipe_section_columns`), 1 to 4.
+        pub section_columns: u32,
+    }
+);
+
+dto!(
+    pub struct RecipeSectionView {
+        pub id: RecipeSectionId,
+        pub ord: u32,
+        pub name: String,
+    }
+);
+
+dto!(
+    pub struct RecipeStepView {
+        pub id: RecipeStepId,
+        pub ord: u32,
+        pub text: String,
+        #[serde(default)]
+        #[ts(as = "Option<RecipeSectionId>", optional = nullable)]
+        pub section_id: Option<RecipeSectionId>,
     }
 );
 
@@ -138,6 +162,9 @@ dto!(
         #[serde(default)]
         #[ts(optional = nullable)]
         pub proposal: Option<IngredientProposal>,
+        #[serde(default)]
+        #[ts(as = "Option<RecipeSectionId>", optional = nullable)]
+        pub section_id: Option<RecipeSectionId>,
     }
 );
 
@@ -187,7 +214,21 @@ dto!(
         #[serde(default)]
         #[ts(optional = nullable)]
         pub image_url: Option<String>,
+        /// Shared ingredient lines (no section).
         pub lines: Vec<String>,
+        /// Finish steps (no section).
+        pub steps: Vec<String>,
+        #[serde(default)]
+        pub sections: Vec<RecipeSectionInput>,
+    }
+);
+
+dto!(
+    pub struct RecipeSectionInput {
+        pub name: String,
+        #[serde(default)]
+        pub lines: Vec<String>,
+        #[serde(default)]
         pub steps: Vec<String>,
     }
 );
@@ -289,6 +330,8 @@ dto!(
         pub trigram_threshold: f32,
         pub descriptors: Vec<String>,
         pub meal_plan_horizon_weeks: u32,
+        pub recipe_scale_factors: Vec<f32>,
+        pub recipe_section_columns: u32,
     }
 );
 
@@ -310,6 +353,12 @@ dto!(
         #[serde(default)]
         #[ts(optional = nullable)]
         pub meal_plan_horizon_weeks: Option<u32>,
+        #[serde(default)]
+        #[ts(optional = nullable)]
+        pub recipe_scale_factors: Option<Vec<f32>>,
+        #[serde(default)]
+        #[ts(optional = nullable)]
+        pub recipe_section_columns: Option<u32>,
     }
 );
 

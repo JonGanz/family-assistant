@@ -5,7 +5,7 @@ milestone: M5.1
 wave: 2
 depends_on: [T-02]
 agent: {model: sonnet, effort: medium}
-status: todo
+status: done
 owns: ["apps/web/src/views/food/RecipeView.vue", "apps/web/src/views/food/RecipeEditView.vue", "apps/web/src/views/food/recipes.test.ts", "apps/web/src/components/food/recipes/**", "apps/web/src/views/SettingsMealsView.vue", "apps/web/src/views/parts/meals/**", "apps/web/src/stores/recipes.ts", "apps/web/src/stores/mealsSettings.ts", "apps/web/e2e/m51.spec.ts", "apps/web/e2e/stubs/**"]
 decisions: [D-124, D-125]
 ---

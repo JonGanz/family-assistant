@@ -3,7 +3,7 @@
 use chrono::{DateTime, NaiveDate, Utc};
 use fa_domain::{
     BaseUnit, HouseholdId, ImportMethod, IngredientId, IngredientOrigin, MatchState, MemberId,
-    RecipeId, RecipeLineId,
+    RecipeId, RecipeLineId, RecipeSectionId, RecipeStepId,
 };
 use serde_json::Value;
 use sqlx::{FromRow, PgConnection};
@@ -389,6 +389,7 @@ pub struct RecipeLineRow {
     pub ingredient_name: Option<String>,
     pub match_state: MatchState,
     pub proposal: Option<Value>,
+    pub section_id: Option<RecipeSectionId>,
 }
 
 #[derive(FromRow)]
@@ -405,6 +406,7 @@ struct RawLine {
     ingredient_name: Option<String>,
     match_state: String,
     proposal: Option<Value>,
+    section_id: Option<Uuid>,
 }
 
 impl TryFrom<RawLine> for RecipeLineRow {
@@ -423,13 +425,15 @@ impl TryFrom<RawLine> for RecipeLineRow {
             ingredient_name: r.ingredient_name,
             match_state: parse_enum(&r.match_state)?,
             proposal: r.proposal,
+            section_id: r.section_id.map(Into::into),
         })
     }
 }
 
 const LINE_SELECT: &str =
     "SELECT l.id, l.recipe_id, l.ord, l.raw_text, l.qty, l.unit, l.item, l.note,
-        l.ingredient_id, i.canonical_name AS ingredient_name, l.match_state, l.proposal
+        l.ingredient_id, i.canonical_name AS ingredient_name, l.match_state, l.proposal,
+        l.section_id
      FROM recipe_ingredient l LEFT JOIN ingredient i ON i.id = l.ingredient_id";
 
 /// A parsed line as the normaliser hands it over (the position is the slice index).
@@ -443,6 +447,7 @@ pub struct NewLine {
     pub ingredient_id: Option<IngredientId>,
     pub match_state: MatchState,
     pub proposal: Option<Value>,
+    pub section_id: Option<RecipeSectionId>,
 }
 
 /// One line after [`RecipeLineRepo::replace_for_recipe`].
@@ -511,7 +516,8 @@ impl RecipeLineRepo {
                     used[i] = true;
                     let id = existing[i].id;
                     sqlx::query(
-                        "UPDATE recipe_ingredient SET ord = $2, qty = $3, unit = $4, item = $5, note = $6
+                        "UPDATE recipe_ingredient SET ord = $2, qty = $3, unit = $4, item = $5, note = $6,
+                                section_id = $7
                          WHERE id = $1",
                     )
                     .bind(id.as_uuid())
@@ -520,6 +526,7 @@ impl RecipeLineRepo {
                     .bind(&l.unit)
                     .bind(&l.item)
                     .bind(&l.note)
+                    .bind(l.section_id.map(|i| i.as_uuid()))
                     .execute(&mut *conn)
                     .await?;
                     id
@@ -528,8 +535,8 @@ impl RecipeLineRepo {
                     let id = RecipeLineId::new();
                     sqlx::query(
                         "INSERT INTO recipe_ingredient (id, household_id, recipe_id, ord, raw_text, qty,
-                                unit, item, note, ingredient_id, match_state, proposal)
-                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
+                                unit, item, note, ingredient_id, match_state, proposal, section_id)
+                         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)",
                     )
                     .bind(id.as_uuid())
                     .bind(household)
@@ -543,6 +550,7 @@ impl RecipeLineRepo {
                     .bind(l.ingredient_id.map(|i| i.as_uuid()))
                     .bind(enum_str(&l.match_state))
                     .bind(&l.proposal)
+                    .bind(l.section_id.map(|i| i.as_uuid()))
                     .execute(&mut *conn)
                     .await?;
                     id
@@ -609,36 +617,116 @@ impl RecipeLineRepo {
 
 // ---- steps ----
 
+pub struct RecipeSectionRepo;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecipeSectionRow {
+    pub id: RecipeSectionId,
+    pub ord: i32,
+    pub name: String,
+}
+
+impl RecipeSectionRepo {
+    pub async fn for_recipe(
+        conn: &mut PgConnection,
+        recipe: RecipeId,
+    ) -> Result<Vec<RecipeSectionRow>> {
+        let rows: Vec<(Uuid, i32, String)> = sqlx::query_as(
+            "SELECT id, ord, name FROM recipe_section WHERE recipe_id = $1 ORDER BY ord",
+        )
+        .bind(recipe.as_uuid())
+        .fetch_all(conn)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|(id, ord, name)| RecipeSectionRow {
+                id: id.into(),
+                ord,
+                name,
+            })
+            .collect())
+    }
+
+    /// Deletes every section (lines and steps lose the link) and inserts `names` in order.
+    pub async fn replace_for_recipe(
+        conn: &mut PgConnection,
+        recipe: RecipeId,
+        names: &[String],
+    ) -> Result<Vec<RecipeSectionId>> {
+        sqlx::query("DELETE FROM recipe_section WHERE recipe_id = $1")
+            .bind(recipe.as_uuid())
+            .execute(&mut *conn)
+            .await?;
+        let mut ids = Vec::with_capacity(names.len());
+        for (ord, name) in names.iter().enumerate() {
+            let id = RecipeSectionId::new();
+            sqlx::query(
+                "INSERT INTO recipe_section (id, household_id, recipe_id, ord, name)
+                 SELECT $1, household_id, id, $3, $4 FROM recipe WHERE id = $2",
+            )
+            .bind(id.as_uuid())
+            .bind(recipe.as_uuid())
+            .bind(i32::try_from(ord).map_err(|_| StoreError::Corrupt("too many sections".into()))?)
+            .bind(name)
+            .execute(&mut *conn)
+            .await?;
+            ids.push(id);
+        }
+        Ok(ids)
+    }
+}
+
 pub struct RecipeStepRepo;
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct RecipeStepRow {
+    pub id: RecipeStepId,
+    pub ord: i32,
+    pub text: String,
+    pub section_id: Option<RecipeSectionId>,
+}
+
 impl RecipeStepRepo {
-    pub async fn for_recipe(conn: &mut PgConnection, recipe: RecipeId) -> Result<Vec<String>> {
-        Ok(
-            sqlx::query_scalar("SELECT text FROM recipe_step WHERE recipe_id = $1 ORDER BY ord")
-                .bind(recipe.as_uuid())
-                .fetch_all(conn)
-                .await?,
+    pub async fn for_recipe(
+        conn: &mut PgConnection,
+        recipe: RecipeId,
+    ) -> Result<Vec<RecipeStepRow>> {
+        let rows: Vec<(Uuid, i32, String, Option<Uuid>)> = sqlx::query_as(
+            "SELECT id, ord, text, section_id FROM recipe_step WHERE recipe_id = $1 ORDER BY ord",
         )
+        .bind(recipe.as_uuid())
+        .fetch_all(conn)
+        .await?;
+        Ok(rows
+            .into_iter()
+            .map(|(id, ord, text, section)| RecipeStepRow {
+                id: id.into(),
+                ord,
+                text,
+                section_id: section.map(Into::into),
+            })
+            .collect())
     }
 
     pub async fn replace_for_recipe(
         conn: &mut PgConnection,
         recipe: RecipeId,
-        steps: &[String],
+        steps: &[(String, Option<RecipeSectionId>)],
     ) -> Result<()> {
         sqlx::query("DELETE FROM recipe_step WHERE recipe_id = $1")
             .bind(recipe.as_uuid())
             .execute(&mut *conn)
             .await?;
-        for (ord, text) in steps.iter().enumerate() {
+        for (ord, (text, section)) in steps.iter().enumerate() {
             sqlx::query(
-                "INSERT INTO recipe_step (id, household_id, recipe_id, ord, text)
-                 SELECT $1, household_id, id, $3, $4 FROM recipe WHERE id = $2",
+                "INSERT INTO recipe_step (id, household_id, recipe_id, ord, text, section_id)
+                 SELECT $1, household_id, id, $3, $4, $5 FROM recipe WHERE id = $2",
             )
-            .bind(Uuid::now_v7())
+            .bind(RecipeStepId::new().as_uuid())
             .bind(recipe.as_uuid())
             .bind(i32::try_from(ord).map_err(|_| StoreError::Corrupt("too many steps".into()))?)
             .bind(text)
+            .bind(section.map(|i| i.as_uuid()))
             .execute(&mut *conn)
             .await?;
         }

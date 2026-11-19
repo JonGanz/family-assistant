@@ -21,6 +21,28 @@ fn name_ok(field: &'static str, n: &str) -> Result<String> {
     Ok(n.to_string())
 }
 
+/// 1 to 8 factors in 0.1..=10, sorted, deduplicated, with 1 added if missing.
+fn normalise_factors(mut f: Vec<f32>) -> Result<Vec<f32>> {
+    if f.is_empty() || f.len() > 8 {
+        return Err(MealsError::invalid(
+            "recipe_scale_factors",
+            "1 to 8 factors",
+        ));
+    }
+    if f.iter()
+        .any(|x| !x.is_finite() || !(0.1..=10.0).contains(x))
+    {
+        return Err(MealsError::invalid(
+            "recipe_scale_factors",
+            "each factor 0.1 to 10",
+        ));
+    }
+    f.push(1.0);
+    f.sort_by(f32::total_cmp);
+    f.dedup();
+    Ok(f)
+}
+
 fn unique_names<'a>(field: &'static str, names: impl Iterator<Item = &'a str>) -> Result<()> {
     let mut seen = HashSet::new();
     for n in names {
@@ -48,6 +70,8 @@ async fn settings_view(conn: &mut PgConnection, h: HouseholdId) -> Result<MealsS
             s.descriptors
         },
         meal_plan_horizon_weeks: to_u32(hh.meal_plan_horizon_weeks),
+        recipe_scale_factors: s.recipe_scale_factors,
+        recipe_section_columns: to_u32(s.recipe_section_columns),
     })
 }
 
@@ -92,6 +116,15 @@ impl MealsService {
         {
             return Err(MealsError::invalid("meal_plan_horizon_weeks", "1 to 52"));
         }
+        if let Some(c) = p.recipe_section_columns
+            && !(1..=4).contains(&c)
+        {
+            return Err(MealsError::invalid("recipe_section_columns", "1 to 4"));
+        }
+        let factors = match p.recipe_scale_factors {
+            Some(f) => Some(normalise_factors(f)?),
+            None => None,
+        };
         let descriptors = p.descriptors.map(|d| {
             let mut out: Vec<String> = Vec::new();
             for w in d {
@@ -114,6 +147,8 @@ impl MealsService {
                 ingredient_llm: p.ingredient_llm,
                 trigram_threshold: p.trigram_threshold,
                 descriptors,
+                recipe_scale_factors: factors,
+                recipe_section_columns: p.recipe_section_columns.map(to_i32),
             },
         )
         .await?;

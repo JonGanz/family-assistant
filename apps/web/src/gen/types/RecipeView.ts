@@ -3,5 +3,15 @@ import type { ImportMethod } from "./ImportMethod";
 import type { RatingsView } from "./RatingsView";
 import type { RecipeId } from "./RecipeId";
 import type { RecipeLineView } from "./RecipeLineView";
+import type { RecipeSectionView } from "./RecipeSectionView";
+import type { RecipeStepView } from "./RecipeStepView";
 
-export type RecipeView = { id: RecipeId, title: string, source_url?: string | null, servings?: number | null, yield_text?: string | null, prep_minutes?: number | null, cook_minutes?: number | null, total_minutes?: number | null, import_method: ImportMethod, tags: Array<string>, note?: string | null, favourite: boolean, has_image: boolean, lines: Array<RecipeLineView>, steps: Array<string>, ratings: RatingsView, version: number, };
+export type RecipeView = { id: RecipeId, title: string, source_url?: string | null, servings?: number | null, yield_text?: string | null, prep_minutes?: number | null, cook_minutes?: number | null, total_minutes?: number | null, import_method: ImportMethod, tags: Array<string>, note?: string | null, favourite: boolean, has_image: boolean, lines: Array<RecipeLineView>, sections: Array<RecipeSectionView>, steps: Array<RecipeStepView>, ratings: RatingsView, version: number, 
+/**
+ * The household's live-scaling factors (`recipe_scale_factors`), ascending, 1 included.
+ */
+scale_factors: Array<number>, 
+/**
+ * Columns before wrapping (`recipe_section_columns`), 1 to 4.
+ */
+section_columns: number, };

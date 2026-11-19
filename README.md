@@ -7,7 +7,7 @@ on a wall dashboard and on everyone's phone.
 Everything runs locally. Deterministic rules do most of the work, and local AI models help only
 where rules can't decide.
 
-> **Status:** M5 (recipes, meal plan, shopping list) is code-complete. M3.6 (themes) is code-complete. M3.5 (onboarding) is code-complete: one compose file, a first-run wizard and optional Tailscale and HTTPS. M3 (mail ingest) is code-complete. On top of the M0 platform (login, members, dashboard
+> **Status:** M5.1 (recipe sections and live scaling) is done. M5 (recipes, meal plan, shopping list) is code-complete. M3.6 (themes) is code-complete. M3.5 (onboarding) is code-complete: one compose file, a first-run wizard and optional Tailscale and HTTPS. M3 (mail ingest) is code-complete. On top of the M0 platform (login, members, dashboard
 > device pairing with PIN elevation, the job queue, backups, CI), M1 (calendars: Google, CalDAV,
 > ICS; the weather forecast with rule-based advisories; a real dashboard) and M2 (task lists,
 > recurring chores, routines, the "Now" list, weather tasks, ntfy push notifications) it reads
@@ -807,6 +807,7 @@ repository**. Examples use `example.com`.
 | M3.6 | Themes: eight palette families, a per-device choice, a named hue per member, the kiosk on the same catalogue (D-079 to D-081) | code-complete; integration (CI, e2e, compose smoke) is pending ([plan](plan/M3.6.md)) |
 | M4 | Two tracks (D-094, D-097): UI revamp (component library, navigation, one apply-changes model) and the LLM slice (OpenAI-compatible endpoint, LLM-first mail with rules fallback and catch-up, D-107; recipe extraction for M5; eval) | ✅ code-complete; H-15 to H-17 pending ([plan](plan/M4.md)) |
 | M5 | Recipes (link, paste or typed import; ratings; local images), meal plan with templates, one grocery list by store and aisle with staples and offline queue, a Food view on phones and the kiosk, Settings, Meals (D-108 to D-122) | ✅ code-complete ([plan](plan/M5.md)) |
+| M5.1 | Recipe sections (shared ingredients, a column per section, finish steps; import keeps site sections) and live scaling on the dashboard recipe view (D-124, D-125) | ✅ done ([plan](plan/M5.1.md)) |
 | M4.2 | M4 follow-ups (G4-01 to G4-15, D-098 to D-102, code review 2 LARGER items; D-119) | |
 | M4.1 | System One sidecar, kNN, backend registry, optional GPU agent with WoL, full eval | |
 | M6 | Smart assignment, learned calendar routing | |

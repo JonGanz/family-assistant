@@ -104,6 +104,8 @@ id_type!(MailActionId);
 id_type!(LlmEndpointId);
 id_type!(RecipeId);
 id_type!(RecipeLineId);
+id_type!(RecipeSectionId);
+id_type!(RecipeStepId);
 id_type!(IngredientId);
 id_type!(AisleId);
 id_type!(GroceryStoreId);

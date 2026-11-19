@@ -8,9 +8,9 @@ use fa_domain::recipe::{RecipeDraft, RecipeOrigin};
 use fa_domain::*;
 use fa_recipe::RecipeError;
 use fa_store::{
-    AiSettingsRepo, IngredientRepo, LlmCallRepo, LlmEndpointRepo, NewIngredient, RecipeFields,
-    RecipeImageRepo, RecipeLineRepo, RecipeLineRow, RecipeQuery, RecipeRatingRepo, RecipeRepo,
-    RecipeRow, RecipeStepRepo, ReplacedLine,
+    AiSettingsRepo, IngredientRepo, LlmCallRepo, LlmEndpointRepo, MealsSettingsRepo, NewIngredient,
+    RecipeFields, RecipeImageRepo, RecipeLineRepo, RecipeLineRow, RecipeQuery, RecipeRatingRepo,
+    RecipeRepo, RecipeRow, RecipeSectionRepo, RecipeStepRepo, ReplacedLine,
 };
 use sha2::{Digest, Sha256};
 use sqlx::PgConnection;
@@ -19,13 +19,14 @@ use url::Url;
 use crate::error::{MealsError, Result};
 use crate::image;
 use crate::matching::IngredientMatcher;
-use crate::service::{ActorRef, MealsService, enqueue, opt_u32, publish, to_i32};
+use crate::service::{ActorRef, MealsService, enqueue, opt_u32, publish, to_i32, to_u32};
 
 const MAX_LINES: usize = 200;
 const MAX_LINE_CHARS: usize = 500;
 const MAX_STEPS: usize = 100;
 const MAX_STEP_CHARS: usize = 5000;
 const MAX_TAGS: usize = 30;
+const MAX_SECTIONS: usize = 20;
 
 /// `GET /recipes` parameters.
 #[derive(Debug, Clone, Default)]
@@ -116,9 +117,20 @@ fn http_url(field: &'static str, v: &str) -> Result<Url> {
 /// Validated, trimmed parts of a [`RecipeInput`].
 struct Checked {
     fields: RecipeFields,
-    lines: Vec<String>,
-    steps: Vec<String>,
+    /// Section names in order.
+    sections: Vec<String>,
+    /// Lines in global `ord` order with their section index: shared first, then each section.
+    lines: Vec<(String, Option<usize>)>,
+    /// Steps in global `ord` order: each section's steps, then the finish steps.
+    steps: Vec<(String, Option<usize>)>,
     image_url: Option<String>,
+}
+
+fn clean_lines(raw: &[String]) -> Vec<String> {
+    raw.iter()
+        .map(|l| l.trim().to_string())
+        .filter(|l| !l.is_empty())
+        .collect()
 }
 
 fn check_input(i: &RecipeInput) -> Result<Checked> {
@@ -158,25 +170,46 @@ fn check_input(i: &RecipeInput) -> Result<Checked> {
         Some(u) => Some(http_url("image_url", u)?.to_string()),
         None => None,
     };
-    let lines: Vec<String> = i
-        .lines
-        .iter()
-        .map(|l| l.trim().to_string())
-        .filter(|l| !l.is_empty())
+    if i.sections.len() > MAX_SECTIONS {
+        return Err(MealsError::invalid(
+            "sections",
+            format!("at most {MAX_SECTIONS} sections"),
+        ));
+    }
+    let mut sections = Vec::with_capacity(i.sections.len());
+    let mut lines: Vec<(String, Option<usize>)> = clean_lines(&i.lines)
+        .into_iter()
+        .map(|l| (l, None))
         .collect();
-    if lines.len() > MAX_LINES || lines.iter().any(|l| l.chars().count() > MAX_LINE_CHARS) {
+    let mut steps: Vec<(String, Option<usize>)> = Vec::new();
+    for (n, sec) in i.sections.iter().enumerate() {
+        let name = sec.name.trim();
+        if name.is_empty() || name.chars().count() > 100 {
+            return Err(MealsError::invalid(
+                "sections",
+                "a name has 1 to 100 characters",
+            ));
+        }
+        sections.push(name.to_string());
+        lines.extend(clean_lines(&sec.lines).into_iter().map(|l| (l, Some(n))));
+        steps.extend(clean_lines(&sec.steps).into_iter().map(|l| (l, Some(n))));
+    }
+    steps.extend(clean_lines(&i.steps).into_iter().map(|l| (l, None)));
+    if lines.len() > MAX_LINES
+        || lines
+            .iter()
+            .any(|(l, _)| l.chars().count() > MAX_LINE_CHARS)
+    {
         return Err(MealsError::invalid(
             "lines",
             format!("at most {MAX_LINES} lines of {MAX_LINE_CHARS} characters"),
         ));
     }
-    let steps: Vec<String> = i
-        .steps
-        .iter()
-        .map(|l| l.trim().to_string())
-        .filter(|l| !l.is_empty())
-        .collect();
-    if steps.len() > MAX_STEPS || steps.iter().any(|l| l.chars().count() > MAX_STEP_CHARS) {
+    if steps.len() > MAX_STEPS
+        || steps
+            .iter()
+            .any(|(l, _)| l.chars().count() > MAX_STEP_CHARS)
+    {
         return Err(MealsError::invalid(
             "steps",
             format!("at most {MAX_STEPS} steps of {MAX_STEP_CHARS} characters"),
@@ -199,6 +232,7 @@ fn check_input(i: &RecipeInput) -> Result<Checked> {
             tags: clean_tags(&i.tags)?,
             note,
         },
+        sections,
         lines,
         steps,
         image_url,
@@ -220,6 +254,7 @@ fn line_view(r: RecipeLineRow) -> RecipeLineView {
         proposal: r
             .proposal
             .and_then(|p| serde_json::from_value::<IngredientProposal>(p).ok()),
+        section_id: r.section_id,
     }
 }
 
@@ -254,6 +289,8 @@ async fn ratings_view(
 async fn view(conn: &mut PgConnection, r: RecipeRow, me: Option<MemberId>) -> Result<RecipeView> {
     let lines = RecipeLineRepo::for_recipe(conn, r.id).await?;
     let steps = RecipeStepRepo::for_recipe(conn, r.id).await?;
+    let sections = RecipeSectionRepo::for_recipe(conn, r.id).await?;
+    let settings = MealsSettingsRepo::get_or_default(conn, r.household_id).await?;
     let ratings = ratings_view(conn, r.id, me).await?;
     let f = r.fields;
     Ok(RecipeView {
@@ -271,9 +308,27 @@ async fn view(conn: &mut PgConnection, r: RecipeRow, me: Option<MemberId>) -> Re
         favourite: r.favourite,
         has_image: r.has_image,
         lines: lines.into_iter().map(line_view).collect(),
-        steps,
+        sections: sections
+            .into_iter()
+            .map(|s| RecipeSectionView {
+                id: s.id,
+                ord: to_u32(s.ord),
+                name: s.name,
+            })
+            .collect(),
+        steps: steps
+            .into_iter()
+            .map(|s| RecipeStepView {
+                id: s.id,
+                ord: to_u32(s.ord),
+                text: s.text,
+                section_id: s.section_id,
+            })
+            .collect(),
         ratings,
         version: r.version,
+        scale_factors: settings.recipe_scale_factors,
+        section_columns: to_u32(settings.recipe_section_columns),
     })
 }
 
@@ -368,14 +423,17 @@ impl MealsService {
         conn: &mut PgConnection,
         h: HouseholdId,
         recipe: RecipeId,
-        raw: &[String],
+        raw: &[(String, Option<usize>)],
+        sections: &[RecipeSectionId],
         llm: bool,
     ) -> Result<Vec<ReplacedLine>> {
         let (settings, n) = self.settings_and_normaliser(conn, h).await?;
         let matcher = IngredientMatcher::new(settings.trigram_threshold);
         let mut new = Vec::with_capacity(raw.len());
-        for l in raw {
-            new.push(matcher.line(conn, &n, l).await?);
+        for (l, sec) in raw {
+            let mut nl = matcher.line(conn, &n, l).await?;
+            nl.section_id = sec.and_then(|i| sections.get(i).copied());
+            new.push(nl);
         }
         let stored = RecipeLineRepo::replace_for_recipe(conn, recipe, &new).await?;
         if settings.ingredient_llm && llm {
@@ -426,8 +484,15 @@ impl MealsService {
         let id = RecipeId::new();
         let row = RecipeRepo::insert(&mut tx, id, h, &c.fields, input.import_method, actor.member)
             .await?;
-        self.store_lines(&mut tx, h, id, &c.lines, llm).await?;
-        RecipeStepRepo::replace_for_recipe(&mut tx, id, &c.steps).await?;
+        let sec_ids = RecipeSectionRepo::replace_for_recipe(&mut tx, id, &c.sections).await?;
+        self.store_lines(&mut tx, h, id, &c.lines, &sec_ids, llm)
+            .await?;
+        let steps: Vec<(String, Option<RecipeSectionId>)> = c
+            .steps
+            .iter()
+            .map(|(t, i)| (t.clone(), i.and_then(|i| sec_ids.get(i).copied())))
+            .collect();
+        RecipeStepRepo::replace_for_recipe(&mut tx, id, &steps).await?;
         if let Some(u) = &c.image_url {
             self.queue_image(&mut tx, h, id, u).await?;
         }
@@ -453,8 +518,15 @@ impl MealsService {
         let llm = self.llm_ready(h).await;
         let mut tx = self.store.tx_for(h).await?;
         RecipeRepo::update(&mut tx, id, &c.fields, if_match).await?;
-        self.store_lines(&mut tx, h, id, &c.lines, llm).await?;
-        RecipeStepRepo::replace_for_recipe(&mut tx, id, &c.steps).await?;
+        let sec_ids = RecipeSectionRepo::replace_for_recipe(&mut tx, id, &c.sections).await?;
+        self.store_lines(&mut tx, h, id, &c.lines, &sec_ids, llm)
+            .await?;
+        let steps: Vec<(String, Option<RecipeSectionId>)> = c
+            .steps
+            .iter()
+            .map(|(t, i)| (t.clone(), i.and_then(|i| sec_ids.get(i).copied())))
+            .collect();
+        RecipeStepRepo::replace_for_recipe(&mut tx, id, &steps).await?;
         if let Some(u) = &c.image_url {
             self.queue_image(&mut tx, h, id, u).await?;
         }

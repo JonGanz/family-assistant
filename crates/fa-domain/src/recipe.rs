@@ -29,6 +29,17 @@ pub struct RecipeIngredient {
     pub item: Option<String>,
 }
 
+/// A named part of a recipe with its own ingredients and steps.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, utoipa::ToSchema)]
+#[ts(export, export_to = "../../../apps/web/src/gen/types/")]
+pub struct DraftSection {
+    pub name: String,
+    #[serde(default)]
+    pub ingredients: Vec<RecipeIngredient>,
+    #[serde(default)]
+    pub steps: Vec<String>,
+}
+
 /// A recipe extracted from a page. Minutes are integers; `source_url` is an absolute URL.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS, utoipa::ToSchema)]
 #[ts(export, export_to = "../../../apps/web/src/gen/types/")]
@@ -55,6 +66,9 @@ pub struct RecipeDraft {
     pub total_minutes: Option<u32>,
     pub ingredients: Vec<RecipeIngredient>,
     pub steps: Vec<String>,
+    /// Named parts; the top-level `ingredients` and `steps` are the shared lines and finish steps.
+    #[serde(default)]
+    pub sections: Vec<DraftSection>,
     pub tags: Vec<String>,
     #[serde(default)]
     #[ts(optional = nullable)]

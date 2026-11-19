@@ -2,12 +2,15 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { food } from '../../api/food'
+import { groupRecipe } from '../../lib/recipeSections'
+import { useMealsSettingsStore } from '../../stores/mealsSettings'
 import FoodTabs from '../../components/food/FoodTabs.vue'
 import StarRating from '../../components/food/recipes/StarRating.vue'
 import { useRecipesStore } from '../../stores/recipes'
 import { useSessionStore } from '../../stores/session'
 import {
   UiButton,
+  UiCard,
   UiDialog,
   UiErrorState,
   UiIconButton,
@@ -24,8 +27,14 @@ const session = useSessionStore()
 const id = computed(() => String(route.params.id))
 const confirmDelete = ref(false)
 const r = computed(() => store.current)
+const g = computed(() => groupRecipe(r.value ?? { lines: [], steps: [], sections: [] }))
+const mealsSettings = useMealsSettingsStore()
+const columns = computed(() => mealsSettings.settings?.recipe_section_columns ?? 2)
 
-onMounted(() => store.open(id.value))
+onMounted(() => {
+  void store.open(id.value)
+  if (!mealsSettings.loaded) void mealsSettings.load()
+})
 
 const mine = ref<number | null>(null)
 const { set: setMine } = useInstantSave(
@@ -96,17 +105,49 @@ const mins = (n?: number | null) => (n ? `${n} min` : null)
           >
         </template>
       </div>
-      <UiSection heading="Ingredients">
-        <ul class="lines">
-          <li v-for="l in r.lines" :key="l.id" :data-testid="`recipe-line-${l.ord}`">
+      <UiSection v-if="g.shared.length" heading="Ingredients">
+        <ul class="lines" data-testid="recipe-shared">
+          <li v-for="l in g.shared" :key="l.id" :data-testid="`recipe-line-${l.ord}`">
             {{ l.raw_text }}
             <span v-if="l.ingredient_name" class="matched">{{ l.ingredient_name }}</span>
           </li>
         </ul>
       </UiSection>
-      <UiSection heading="Steps">
+      <div
+        v-if="g.sections.length"
+        class="sections"
+        :style="{ '--cols': Math.min(g.sections.length, columns) }"
+        data-testid="recipe-sections"
+      >
+        <section
+          v-for="sec in g.sections"
+          :key="sec.section.id"
+          class="sec"
+          :data-testid="`recipe-section-${sec.section.ord}`"
+        >
+          <h2 class="sec__name">{{ sec.section.name }}</h2>
+          <UiCard v-if="sec.lines.length" variant="filled">
+            <ul class="lines">
+              <li v-for="l in sec.lines" :key="l.id" :data-testid="`recipe-line-${l.ord}`">
+                {{ l.raw_text }}
+                <span v-if="l.ingredient_name" class="matched">{{ l.ingredient_name }}</span>
+              </li>
+            </ul>
+          </UiCard>
+          <UiCard v-if="sec.steps.length" variant="filled">
+            <ol class="steps">
+              <li v-for="s in sec.steps" :key="s.id">{{ s.text }}</li>
+            </ol>
+          </UiCard>
+        </section>
+      </div>
+      <UiSection
+        v-if="g.finish.length"
+        :heading="g.sections.length ? 'Finish' : 'Steps'"
+        data-testid="recipe-finish"
+      >
         <ol class="steps">
-          <li v-for="(s, i) in r.steps" :key="i">{{ s }}</li>
+          <li v-for="s in g.finish" :key="s.id">{{ s.text }}</li>
         </ol>
       </UiSection>
       <UiSection v-if="r.note" heading="Note"
@@ -156,6 +197,24 @@ const mins = (n?: number | null) => (n ? `${n} min` : null)
   padding-left: var(--ui-space-5);
   display: grid;
   gap: var(--ui-space-2);
+}
+.sections {
+  display: grid;
+  gap: var(--ui-space-4);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 600px) {
+  .sections {
+    grid-template-columns: repeat(var(--cols, 1), 1fr);
+  }
+}
+.sec {
+  display: grid;
+  gap: var(--ui-space-3);
+  align-content: start;
+}
+.sec__name {
+  margin: 0;
 }
 .matched {
   display: none;

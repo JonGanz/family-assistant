@@ -303,7 +303,7 @@ async fn pin_and_device(fx: &Fx, adult: &str) -> String {
     format!("Bearer {}", paired.json()["token"].as_str().unwrap())
 }
 
-const RECIPE_LLM: &str = r#"{"name":"Plain Soup","yield_text":"4 bowls","servings":4,"prep_minutes":5,"cook_minutes":10,"total_minutes":15,"ingredients":["2 cups water","1 tsp salt"],"steps":["Boil the water."],"tags":[]}"#;
+const RECIPE_LLM: &str = r#"{"name":"Plain Soup","yield_text":"4 bowls","servings":4,"prep_minutes":5,"cook_minutes":10,"total_minutes":15,"ingredients":[{"text":"2 cups water","section":null},{"text":"1 tsp salt","section":null}],"steps":[{"text":"Boil the water.","section":null}],"tags":[]}"#;
 
 /// A stub OpenAI-compatible server; returns its base URL (`.../v1`).
 async fn stub_llm() -> String {

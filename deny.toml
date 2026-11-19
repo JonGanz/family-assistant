@@ -9,8 +9,11 @@ yanked = "deny"
 # ttf-parser 0.25.1 is flagged unmaintained (no vulnerability, no safe upgrade). It is a transitive
 # dep of pdf-extract (lopdf), which fa-rules uses to read the text of PDF bills; the PDF text is
 # extracted off the async runtime with a time limit. Revisit when pdf-extract/lopdf move to skrifa.
+# chrono and chrono-tz are flagged unmaintained (RUSTSEC-2026-0543, RUSTSEC-2026-0555; no vulnerability,
+# no safe upgrade). They are the workspace's date and time-zone types. Ignored with the user's approval
+# on 2026-11-18. Revisit when a maintained successor or fork is published.
 # (The zip ignores were removed on 2026-11-08: cargo-deny no longer detects them.)
-ignore = ["RUSTSEC-2026-0441", "RUSTSEC-2026-0192"]
+ignore = ["RUSTSEC-2026-0441", "RUSTSEC-2026-0192", "RUSTSEC-2026-0543", "RUSTSEC-2026-0555"]
 
 [licenses]
 version = 2

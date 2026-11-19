@@ -3,5 +3,6 @@ import type { IngredientId } from "./IngredientId";
 import type { IngredientProposal } from "./IngredientProposal";
 import type { MatchState } from "./MatchState";
 import type { RecipeLineId } from "./RecipeLineId";
+import type { RecipeSectionId } from "./RecipeSectionId";
 
-export type RecipeLineView = { id: RecipeLineId, ord: number, raw_text: string, qty?: number | null, unit?: string | null, item?: string | null, note?: string | null, ingredient_id?: IngredientId | null, ingredient_name?: string | null, match_state: MatchState, proposal?: IngredientProposal | null, };
+export type RecipeLineView = { id: RecipeLineId, ord: number, raw_text: string, qty?: number | null, unit?: string | null, item?: string | null, note?: string | null, ingredient_id?: IngredientId | null, ingredient_name?: string | null, match_state: MatchState, proposal?: IngredientProposal | null, section_id?: RecipeSectionId | null, };

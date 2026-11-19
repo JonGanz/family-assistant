@@ -1225,3 +1225,48 @@ async fn setup_seeds_the_catalogue(pool: PgPool) {
     assert_eq!((slots, lists), (1, 1));
     let _ = std::fs::remove_file(key_path);
 }
+
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn recipe_get_returns_sections_step_ids_and_settings(pool: PgPool) {
+    let fx = seed(pool).await;
+    let mut body = recipe_body("Chicken and sauce", &["1 tsp salt"]);
+    body["sections"] = json!([
+        {"name": "Chicken", "lines": ["4 chicken thighs"], "steps": ["Roast."]},
+        {"name": "Sauce", "lines": ["1 cup cream"], "steps": ["Simmer."]}
+    ]);
+    let r = as_(
+        &fx,
+        Who::Adult,
+        Method::POST,
+        &format!("{API}/recipes"),
+        Some(body),
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::CREATED, "{}", r.text());
+    let rid = id(&r.json());
+    // The kiosk (a device) reads it too.
+    let r = as_(
+        &fx,
+        Who::Device,
+        Method::GET,
+        &format!("{API}/recipes/{rid}"),
+        None,
+    )
+    .await;
+    assert_eq!(r.status, StatusCode::OK, "{}", r.text());
+    let v = r.json();
+    let sections = v["sections"].as_array().unwrap();
+    assert_eq!(sections.len(), 2);
+    assert_eq!(sections[0]["name"], "Chicken");
+    let steps = v["steps"].as_array().unwrap();
+    assert_eq!(steps.len(), 3);
+    assert!(steps.iter().all(|s| s["id"].is_string()));
+    assert_eq!(steps[0]["section_id"], sections[0]["id"]);
+    assert_eq!(steps[2]["text"], "Cook it.");
+    assert!(steps[2]["section_id"].is_null());
+    let lines = v["lines"].as_array().unwrap();
+    assert!(lines[0]["section_id"].is_null());
+    assert_eq!(lines[1]["section_id"], sections[0]["id"]);
+    assert_eq!(v["scale_factors"], json!([0.5, 1.0, 1.5, 2.0, 3.0]));
+    assert_eq!(v["section_columns"], 2);
+}

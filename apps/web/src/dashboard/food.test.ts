@@ -113,8 +113,11 @@ describe('meals panel', () => {
       id: 'r1',
       title: 'Lentil soup',
       has_image: false,
-      lines: [{ raw_text: '200 g lentils' }],
-      steps: ['Simmer'],
+      lines: [{ id: 'l1', ord: 0, raw_text: '200 g lentils' }],
+      steps: [{ id: 's1', ord: 0, text: 'Simmer' }],
+      sections: [],
+      scale_factors: [0.5, 1, 1.5, 2, 3],
+      section_columns: 2,
     })
     const w = mount(PanelHost, {
       props: {
@@ -148,8 +151,17 @@ describe('meals panel', () => {
       id: 'r9',
       title: 'Tick soup',
       has_image: false,
-      lines: [{ raw_text: '1 onion' }, { raw_text: '2 carrots' }],
-      steps: ['Chop', 'Boil'],
+      lines: [
+        { id: 'l1', ord: 0, raw_text: '1 onion' },
+        { id: 'l2', ord: 1, raw_text: '2 carrots' },
+      ],
+      steps: [
+        { id: 's1', ord: 0, text: 'Chop' },
+        { id: 's2', ord: 1, text: 'Boil' },
+      ],
+      sections: [],
+      scale_factors: [0.5, 1, 1.5, 2, 3],
+      section_columns: 2,
       prep_minutes: 10,
       total_minutes: 90,
       servings: 4,
@@ -168,7 +180,7 @@ describe('meals panel', () => {
     expect(boxes).toHaveLength(2)
     boxes[1]!.click()
     await flushPromises()
-    expect(JSON.parse(localStorage.getItem('fa.recipe.checks.r9')!).lines).toEqual([1])
+    expect(JSON.parse(localStorage.getItem('fa.recipe.checks2.r9')!).lines).toEqual(['l2'])
     vi.advanceTimersByTime(60 * 60_000)
     await flushPromises()
     expect(w.emitted('close')).toBeUndefined()

@@ -3,4 +3,4 @@
 /**
  * Every field optional; absent keeps the stored value.
  */
-export type MealsSettingsPatch = { grocery_archive_hours?: number | null, ingredient_llm?: boolean | null, trigram_threshold?: number | null, descriptors?: Array<string> | null, meal_plan_horizon_weeks?: number | null, };
+export type MealsSettingsPatch = { grocery_archive_hours?: number | null, ingredient_llm?: boolean | null, trigram_threshold?: number | null, descriptors?: Array<string> | null, meal_plan_horizon_weeks?: number | null, recipe_scale_factors?: Array<number> | null, recipe_section_columns?: number | null, };
