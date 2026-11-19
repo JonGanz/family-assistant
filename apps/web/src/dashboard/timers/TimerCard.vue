@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import UiIcon from '../../ui/UiIcon.vue'
+import UiButton from '../../ui/UiButton.vue'
+import UiIconButton from '../../ui/UiIconButton.vue'
 import { S } from '../strings'
 import { formatRemaining, fraction, remaining, type Timer } from './timersModel'
 
@@ -47,66 +48,64 @@ const title = computed(() => props.timer.name || S.timerDefaultName)
       </svg>
       <output class="time" data-testid="timer-time">{{ text }}</output>
     </div>
+    <UiIconButton
+      class="remove"
+      icon="delete"
+      :label="S.timerRemove"
+      data-testid="timer-remove"
+      @click.stop="emit('remove')"
+    />
     <div class="acts" @click.stop>
-      <div class="row main">
-        <button
-          v-if="ringing"
-          type="button"
-          class="a primary"
-          data-testid="timer-dismiss"
-          @click="emit('dismiss')"
+      <UiButton
+        v-if="ringing"
+        class="wide"
+        icon="check"
+        data-testid="timer-dismiss"
+        @click="emit('dismiss')"
+      >
+        {{ S.timerDismiss }}
+      </UiButton>
+      <template v-else>
+        <UiButton
+          v-if="timer.state === 'running'"
+          variant="tonal"
+          data-testid="timer-pause"
+          @click="emit('pause')"
         >
-          <UiIcon name="check" :size="20" /> {{ S.timerDismiss }}
-        </button>
-        <template v-else>
-          <button type="button" class="a" data-testid="timer-add-time" @click="emit('addTime')">
-            <UiIcon name="add" :size="20" /> {{ S.timerPlusMinute }}
-          </button>
-          <button
-            v-if="timer.state === 'running'"
-            type="button"
-            class="a"
-            data-testid="timer-pause"
-            @click="emit('pause')"
-          >
-            {{ S.timerPause }}
-          </button>
-          <button v-else type="button" class="a" data-testid="timer-resume" @click="emit('resume')">
-            {{ timer.state === 'idle' ? S.timerStart : S.timerResume }}
-          </button>
-        </template>
-      </div>
-      <div class="row sub">
-        <button
-          v-if="!ringing && timer.state !== 'idle'"
-          type="button"
-          class="a"
+          {{ S.timerPause }}
+        </UiButton>
+        <UiButton v-else data-testid="timer-resume" @click="emit('resume')">
+          {{ timer.state === 'idle' ? S.timerStart : S.timerResume }}
+        </UiButton>
+        <UiButton variant="tonal" icon="add" data-testid="timer-add-time" @click="emit('addTime')">
+          {{ S.timerPlusMinute }}
+        </UiButton>
+        <UiButton
+          v-if="timer.state !== 'idle'"
+          class="wide"
+          variant="tonal"
           data-testid="timer-cancel-run"
           @click="emit('cancel')"
         >
           {{ S.timerReset }}
-        </button>
-        <button
-          type="button"
-          class="a icon"
-          :aria-label="S.timerRemove"
-          :title="S.timerRemove"
-          data-testid="timer-remove"
-          @click="emit('remove')"
-        >
-          <UiIcon name="delete" :size="20" />
-        </button>
-      </div>
+        </UiButton>
+      </template>
     </div>
   </article>
 </template>
 
 <style scoped>
 .card {
+  position: relative;
+  container-type: inline-size;
   display: grid;
+  /* title, ring, actions: the ring sits under the title and the actions at the bottom, so
+     rings and buttons line up across cards of one grid row whatever the state */
+  grid-template-rows: auto auto 1fr;
   justify-items: center;
   gap: var(--space-3);
-  padding: var(--space-4) var(--space-5);
+  padding: var(--space-4);
+  font-size: var(--kiosk-font-small);
   border: 1px solid var(--color-border);
   border-radius: var(--ui-radius-md);
   background: var(--color-layer-1, var(--color-surface));
@@ -115,14 +114,18 @@ const title = computed(() => props.timer.name || S.timerDefaultName)
 h3 {
   margin: 0;
   max-width: 100%;
+  padding-inline: var(--ui-touch);
+  box-sizing: border-box;
+  text-align: center;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: var(--font-size-lg);
+  font-size: var(--kiosk-font-base);
 }
 .ring {
   position: relative;
   width: min(100%, 13rem);
+  margin-inline: auto;
   aspect-ratio: 1;
 }
 svg {
@@ -150,53 +153,49 @@ svg {
   inset: 0;
   display: grid;
   place-items: center;
-  font-size: 2.2rem;
+  font-size: clamp(1.6rem, 14cqi, 2.2rem);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .acts {
+  --btn-h: max(var(--ui-touch, 48px), 2.4em);
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-auto-rows: var(--btn-h);
+  align-self: end;
   gap: var(--space-2);
   width: 100%;
-  font-size: clamp(0.9rem, 0.8rem + 0.4vw, 1.15rem);
 }
-.row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--space-2);
-}
-.a {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-1);
-  flex: 1 1 auto;
+/* The shared button sized from the kiosk text (its own label and height are app-sized) */
+.acts :deep(.ui-btn) {
   box-sizing: border-box;
-  min-width: var(--min-touch);
-  min-height: var(--min-touch);
-  padding: var(--space-1) var(--space-4);
-  border: 0;
-  border-radius: var(--ui-radius-lg, var(--ui-radius-sm));
-  background: var(--color-layer-3);
-  color: inherit;
+  min-width: 0;
+  width: 100%;
+  height: var(--btn-h);
+  min-height: 0;
+  padding-inline: 0.5em;
+  gap: 0.3em;
   font: inherit;
-  line-height: 1.2;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.main .a {
-  min-height: calc(var(--min-touch) * 1.15);
   font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
 }
-.a.icon {
-  flex: 0 0 auto;
-  padding-inline: var(--space-3);
+.acts :deep(.ui-btn svg) {
+  flex: none;
+  width: 1.1em;
+  height: 1.1em;
 }
-.a.primary {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  font-weight: 700;
+.acts .wide {
+  grid-column: 1 / -1;
+}
+.remove {
+  position: absolute;
+  top: var(--space-1);
+  right: var(--space-1);
+}
+.remove :deep(svg) {
+  width: 1.3em;
+  height: 1.3em;
 }
 .ringing {
   border-color: var(--color-accent);

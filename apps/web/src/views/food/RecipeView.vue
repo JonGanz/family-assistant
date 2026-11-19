@@ -26,6 +26,7 @@ const store = useRecipesStore()
 const session = useSessionStore()
 const id = computed(() => String(route.params.id))
 const confirmDelete = ref(false)
+const confirmReimport = ref(false)
 const r = computed(() => store.current)
 const g = computed(() => groupRecipe(r.value ?? { lines: [], steps: [], sections: [] }))
 const mealsSettings = useMealsSettingsStore()
@@ -57,6 +58,10 @@ async function del() {
   await store.remove(id.value)
   confirmDelete.value = false
   await router.push('/food/recipes')
+}
+async function reimport() {
+  confirmReimport.value = false
+  await router.push(`/food/recipes/${id.value}/edit?reimport=1`)
 }
 const addToPlan = () => router.push(`/food/plan?add=${id.value}`)
 const mins = (n?: number | null) => (n ? `${n} min` : null)
@@ -95,6 +100,14 @@ const mins = (n?: number | null) => (n ? `${n} min` : null)
             data-testid="recipe-edit"
             :to="`/food/recipes/${r.id}/edit`"
             >Edit</UiButton
+          >
+          <UiButton
+            v-if="r.source_url"
+            variant="text"
+            icon="refresh"
+            data-testid="recipe-reimport"
+            @click="confirmReimport = true"
+            >Re-import from source</UiButton
           >
           <UiButton
             variant="text"
@@ -161,6 +174,16 @@ const mins = (n?: number | null) => (n ? `${n} min` : null)
       </UiSection>
       <p v-if="r.source_url" class="src">Source: {{ r.source_url }}</p>
     </template>
+    <UiDialog v-model="confirmReimport" title="Re-import from source?">
+      <p>
+        Ingredients, steps and sections will be replaced by the page's current version. Nothing is
+        saved until you press Save.
+      </p>
+      <template #actions>
+        <UiButton variant="text" @click="confirmReimport = false">Cancel</UiButton>
+        <UiButton data-testid="recipe-reimport-confirm" @click="reimport">Re-import</UiButton>
+      </template>
+    </UiDialog>
     <UiDialog v-model="confirmDelete" title="Delete this recipe?">
       <p>Planned meals keep the name as text.</p>
       <template #actions>

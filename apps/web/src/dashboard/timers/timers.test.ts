@@ -69,4 +69,20 @@ describe('timers UI', () => {
     expect(w.find('[data-testid="timer-card"]').attributes('data-state')).toBe('idle')
     w.unmount()
   })
+
+  it('shows the right actions per state', async () => {
+    const w = mount(TimersView)
+    await addOne(w)
+    const has = (id: string) => w.find(`[data-testid="${id}"]`).exists()
+    expect(['timer-pause', 'timer-add-time', 'timer-cancel-run', 'timer-remove'].every(has)).toBe(
+      true,
+    )
+    expect(has('timer-resume')).toBe(false)
+    await w.find('[data-testid="timer-pause"]').trigger('click')
+    expect(has('timer-resume')).toBe(true)
+    await w.find('[data-testid="timer-cancel-run"]').trigger('click')
+    expect(w.find('[data-testid="timer-card"]').attributes('data-state')).toBe('idle')
+    expect(has('timer-cancel-run')).toBe(false)
+    w.unmount()
+  })
 })

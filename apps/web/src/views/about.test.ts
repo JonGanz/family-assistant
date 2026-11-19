@@ -2,6 +2,10 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { describe, expect, it, vi } from 'vitest'
 import { buildsDiffer, builtAtText } from './aboutModel'
+import { changelogRaw } from './releaseNotes.generated'
+
+// The newest released version, so the test does not age out of the first entries shown.
+const newest = /^## v(\S+)/m.exec(changelogRaw)![1]
 
 describe('about model', () => {
   it('flags differing commits only when both are known', () => {
@@ -24,7 +28,7 @@ describe('About release notes', () => {
     const mod = await import('./SettingsAboutView.vue')
     const { api } = await import('../api/client')
     vi.spyOn(api, 'about').mockResolvedValue({
-      version: '0.1.31',
+      version: newest,
       commit: null,
       built_at: null,
     } as never)
@@ -33,7 +37,7 @@ describe('About release notes', () => {
     })
     await flushPromises()
     expect(w.find('[data-testid="release-notes"]').exists()).toBe(true)
-    expect(w.find('[data-testid="notes-0.1.31"]').text()).toContain("You're on this version")
+    expect(w.find(`[data-testid="notes-${newest}"]`).text()).toContain("You're on this version")
     expect(w.findAll('.notes__entry')).toHaveLength(5)
     await w.find('[data-testid="notes-toggle"]').trigger('click')
     expect(w.findAll('.notes__entry').length).toBeGreaterThan(30)

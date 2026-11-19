@@ -1040,3 +1040,91 @@ async fn scale_and_column_settings(pool: PgPool) {
         ));
     }
 }
+
+/// A re-import is an ordinary update (D-126): the id, the plan and template entries that use the
+/// recipe, its ratings and the matches of unchanged lines all survive.
+#[sqlx::test(migrations = "../fa-store/migrations")]
+async fn reimport_as_update_keeps_plan_template_rating_and_matches(pool: PgPool) {
+    let e = env(pool).await;
+    let dinner = e.dinner().await;
+    let r = e
+        .svc
+        .create_recipe(
+            e.h,
+            e.actor,
+            input("Chicken and sauce", &["1 tsp salt", "2 tomatoes"]),
+        )
+        .await
+        .unwrap();
+    let tomatoes = r.lines.iter().find(|l| l.raw_text == "2 tomatoes").unwrap();
+    let (line_id, ingredient) = (tomatoes.id, tomatoes.ingredient_id);
+    assert!(ingredient.is_some());
+    let entry = e
+        .svc
+        .plan_add(
+            e.h,
+            e.actor,
+            MealPlanEntryInput {
+                date: d(10),
+                slot_id: dinner,
+                recipe_id: Some(r.id),
+                free_text: None,
+                servings: None,
+            },
+        )
+        .await
+        .unwrap()
+        .entries
+        .remove(0);
+    let template = e
+        .svc
+        .template_create(
+            e.h,
+            MealTemplateInput {
+                name: "Week".into(),
+                days: 1,
+                note: None,
+                cells: vec![TemplateCellInput {
+                    day: 1,
+                    slot_id: dinner,
+                    ord: 0,
+                    recipe_id: Some(r.id),
+                    free_text: None,
+                    servings: None,
+                }],
+            },
+        )
+        .await
+        .unwrap();
+    e.svc.set_rating(e.h, e.adult, r.id, Some(4)).await.unwrap();
+
+    // The page now has sections; the tomatoes line is unchanged.
+    let mut i = input("Chicken and sauce", &["2 tomatoes"]);
+    i.sections = vec![RecipeSectionInput {
+        name: "Chicken".into(),
+        lines: vec!["4 chicken thighs".into()],
+        steps: vec!["Roast.".into()],
+    }];
+    let r2 = e
+        .svc
+        .update_recipe(e.h, e.actor, r.id, i, r.version)
+        .await
+        .unwrap();
+
+    assert_eq!(r2.id, r.id);
+    assert_eq!(r2.sections.len(), 1);
+    let kept = r2
+        .lines
+        .iter()
+        .find(|l| l.raw_text == "2 tomatoes")
+        .unwrap();
+    assert_eq!((kept.id, kept.ingredient_id), (line_id, ingredient));
+    let day = e.svc.plan_range(e.h, d(10), d(10)).await.unwrap();
+    assert_eq!(day.len(), 1);
+    assert_eq!((day[0].id, day[0].recipe_id), (entry.id, Some(r.id)));
+    let t = e.svc.template_get(e.h, template.id).await.unwrap();
+    assert_eq!(t.cells.len(), 1);
+    assert_eq!(t.cells[0].recipe_id, Some(r.id));
+    let again = e.svc.get_recipe(e.h, Some(e.adult), r.id).await.unwrap();
+    assert_eq!(again.ratings.mine, Some(4));
+}

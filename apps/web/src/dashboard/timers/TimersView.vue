@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import UiIcon from '../../ui/UiIcon.vue'
+import UiButton from '../../ui/UiButton.vue'
 import { S } from '../strings'
 import AddTimerModal from './AddTimerModal.vue'
 import TimerCard from './TimerCard.vue'
@@ -16,9 +16,9 @@ function save(name: string, ms: number) {
 
 <template>
   <section class="timers" data-testid="timers-view">
-    <button type="button" class="add" data-testid="timer-add" @click="adding = true">
-      <UiIcon name="add" :size="24" /> {{ S.timerAdd }}
-    </button>
+    <UiButton class="add" icon="add" data-testid="timer-add" @click="adding = true">
+      {{ S.timerAdd }}
+    </UiButton>
     <p v-if="tm.timers.value.length === 0" class="empty">{{ S.timerNone }}</p>
     <div class="cards">
       <TimerCard
@@ -51,20 +51,15 @@ function save(name: string, ms: number) {
   position: relative;
 }
 .add {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-2);
   width: 100%;
-  min-height: 5rem;
-  border: 0;
-  border-radius: var(--ui-radius-xl);
-  background: var(--color-accent);
-  color: var(--color-on-accent);
+  height: max(var(--ui-touch, 48px), 2.4em);
   font: inherit;
-  font-size: var(--font-size-lg);
-  font-weight: 700;
-  cursor: pointer;
+  font-size: var(--kiosk-font-small);
+  font-weight: 600;
+}
+.add :deep(svg) {
+  width: 1.1em;
+  height: 1.1em;
 }
 .empty {
   margin: 0;
@@ -73,7 +68,7 @@ function save(name: string, ms: number) {
 }
 .cards {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
   gap: var(--space-5);
 }
 </style>

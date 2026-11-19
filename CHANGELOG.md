@@ -6,6 +6,11 @@ Every tagged release adds its entry here, in the same commit. Newest first.
 
 - Nothing yet.
 
+## v0.1.36 — 2026-11-19
+
+- Recipes: "Re-import from source" fetches a URL recipe again (for example to pick up sections) and opens it in the editor to review; nothing changes until you save, and meal plans, templates and ratings stay attached.
+- Dashboard timers: buttons use the app's button style, scale with the screen, share one height and line up across cards.
+
 ## v0.1.35 — 2026-11-18
 
 - Recipes can have sections (for example a chicken and its own sauce), each with its own ingredients and steps. Shared ingredients sit above the section columns and finish steps below.

@@ -15,6 +15,7 @@ import {
   moveItem,
   toInput,
 } from '../../components/food/recipes/sectionsForm'
+import { applyReimport } from '../../stores/recipesReimport'
 import RecipeEditView from './RecipeEditView.vue'
 import RecipeView from './RecipeView.vue'
 import RecipesView from './RecipesView.vue'
@@ -282,5 +283,70 @@ describe('recipe sections', () => {
     expect(f.sections[0]).toEqual({ name: 'S', lines: ['b', 'a'], steps: [] })
     expect(f.steps).toEqual(['x', 'y'])
     expect(toInput(f).sections).toEqual([{ name: 'S', lines: ['b', 'a'], steps: [] }])
+  })
+
+  it('re-import replaces ingredients, steps, sections and times and keeps title, tags, note', () => {
+    const form = {
+      title: 'Mine',
+      tags: 'quick',
+      note: 'less salt',
+      servings: '4',
+      prep: '5',
+      cook: '',
+      total: '',
+      lines: ['old line'],
+      steps: ['old step'],
+      sections: [],
+    }
+    const meta = applyReimport(
+      form as never,
+      {
+        name: 'Other title',
+        origin: 'jsonld',
+        yield_text: '6 servings',
+        servings: 6,
+        prep_minutes: 10,
+        cook_minutes: 20,
+        total_minutes: 30,
+        tags: ['x'],
+        ingredients: [{ text: '1 egg' }],
+        steps: ['Serve'],
+        sections: [{ name: 'Base', ingredients: [{ text: '2 eggs' }], steps: ['Whisk'] }],
+      } as never,
+    )
+    expect(form.title).toBe('Mine')
+    expect(form.tags).toBe('quick')
+    expect(form.note).toBe('less salt')
+    expect(form.lines).toEqual(['1 egg'])
+    expect(form.steps).toEqual(['Serve'])
+    expect(form.sections).toEqual([{ name: 'Base', lines: ['2 eggs'], steps: ['Whisk'] }])
+    expect([form.servings, form.prep, form.cook, form.total]).toEqual(['6', '10', '20', '30'])
+    expect(meta).toEqual({ import_method: 'jsonld', yield_text: '6 servings' })
+  })
+
+  it('the editor re-imports from the source URL and leaves the form on failure', async () => {
+    m.recipe.mockResolvedValue(view({ source_url: 'https://example.com/r', lines: [] }))
+    asRole('adult')
+    const w = mount(RecipeEditView, { global: { stubs: { ...stubs, teleport: true } } })
+    await flushPromises()
+    m.importRecipe.mockRejectedValueOnce(new Error('boom'))
+    await w.find('[data-testid="recipe-reimport"]').trigger('click')
+    await w.find('[data-testid="recipe-reimport-confirm"]').trigger('click')
+    await flushPromises()
+    expect(m.importRecipe).toHaveBeenCalledWith({ url: 'https://example.com/r' })
+    expect(w.find('[data-testid="recipe-reimport-error"]').text()).toContain('boom')
+    m.importRecipe.mockResolvedValueOnce({
+      name: 'X',
+      origin: 'jsonld',
+      ingredients: [{ text: '1 egg' }],
+      steps: ['Serve'],
+      tags: [],
+    } as never)
+    await w.find('[data-testid="recipe-reimport"]').trigger('click')
+    await w.find('[data-testid="recipe-reimport-confirm"]').trigger('click')
+    await flushPromises()
+    expect(w.find('[data-testid="recipe-reimport-notice"]').exists()).toBe(true)
+    expect(m.updateRecipe).not.toHaveBeenCalled()
+    w.unmount()
   })
 })

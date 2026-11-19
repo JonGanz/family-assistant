@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import Modal from '../Modal.vue'
-import UiIcon from '../../ui/UiIcon.vue'
+import UiButton from '../../ui/UiButton.vue'
 import { S } from '../strings'
 import { durationMs, PRESET_MINUTES } from './timersModel'
 
@@ -34,9 +34,13 @@ function save() {
     <form class="form" data-testid="timer-form" @submit.prevent="save">
       <div class="dur">
         <div class="field">
-          <button type="button" class="step" :aria-label="S.timerMinPlus" @click="step('m', 1)">
-            <UiIcon name="add" :size="24" />
-          </button>
+          <UiButton
+            variant="tonal"
+            icon="add"
+            class="step"
+            :aria-label="S.timerMinPlus"
+            @click="step('m', 1)"
+          />
           <input
             v-model.number="minutes"
             type="number"
@@ -46,16 +50,25 @@ function save() {
             :aria-label="S.timerMinutes"
             data-testid="timer-minutes"
           />
-          <button type="button" class="step" :aria-label="S.timerMinMinus" @click="step('m', -1)">
+          <UiButton
+            variant="tonal"
+            class="step"
+            :aria-label="S.timerMinMinus"
+            @click="step('m', -1)"
+          >
             <span class="minus" aria-hidden="true">–</span>
-          </button>
+          </UiButton>
           <span class="unit">{{ S.timerMin }}</span>
         </div>
         <span class="colon">:</span>
         <div class="field">
-          <button type="button" class="step" :aria-label="S.timerSecPlus" @click="step('s', 5)">
-            <UiIcon name="add" :size="24" />
-          </button>
+          <UiButton
+            variant="tonal"
+            icon="add"
+            class="step"
+            :aria-label="S.timerSecPlus"
+            @click="step('s', 5)"
+          />
           <input
             v-model.number="seconds"
             type="number"
@@ -65,23 +78,27 @@ function save() {
             :aria-label="S.timerSeconds"
             data-testid="timer-seconds"
           />
-          <button type="button" class="step" :aria-label="S.timerSecMinus" @click="step('s', -5)">
+          <UiButton
+            variant="tonal"
+            class="step"
+            :aria-label="S.timerSecMinus"
+            @click="step('s', -5)"
+          >
             <span class="minus" aria-hidden="true">–</span>
-          </button>
+          </UiButton>
           <span class="unit">{{ S.timerSec }}</span>
         </div>
       </div>
       <div class="presets" role="group" :aria-label="S.timerPresets">
-        <button
+        <UiButton
           v-for="m in PRESET_MINUTES"
           :key="m"
-          type="button"
-          class="chip"
+          variant="tonal"
           :data-testid="`timer-preset-${m}`"
           @click="preset(m)"
         >
           {{ m }} {{ S.timerMin }}
-        </button>
+        </UiButton>
       </div>
       <label class="name">
         <span>{{ S.timerName }}</span>
@@ -94,12 +111,12 @@ function save() {
         />
       </label>
       <div class="actions">
-        <button type="button" class="btn" data-testid="timer-cancel" @click="emit('close')">
+        <UiButton variant="tonal" data-testid="timer-cancel" @click="emit('close')">
           {{ S.timerCancelAdd }}
-        </button>
-        <button type="submit" class="btn primary" :disabled="ms <= 0" data-testid="timer-save">
+        </UiButton>
+        <UiButton type="submit" :disabled="ms <= 0" data-testid="timer-save">
           {{ S.timerSave }}
-        </button>
+        </UiButton>
       </div>
     </form>
   </Modal>
@@ -143,21 +160,6 @@ function save() {
   color: var(--color-muted);
   font-size: var(--font-size-sm, 0.9rem);
 }
-.step,
-.chip,
-.btn {
-  display: inline-grid;
-  place-items: center;
-  min-width: var(--min-touch);
-  min-height: var(--min-touch);
-  padding-inline: var(--space-4);
-  border: 0;
-  border-radius: var(--ui-radius-full);
-  background: var(--color-layer-3);
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
 .step {
   width: 100%;
 }
@@ -189,13 +191,5 @@ function save() {
   display: flex;
   justify-content: flex-end;
   gap: var(--space-3);
-}
-.btn.primary {
-  background: var(--color-accent);
-  color: var(--color-on-accent);
-  font-weight: 700;
-}
-.btn:disabled {
-  opacity: 0.5;
 }
 </style>

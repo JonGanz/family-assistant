@@ -20,8 +20,10 @@ import {
 } from '../../components/food/recipes/sectionsForm'
 import { resizeToJpeg } from '../../lib/imageResize'
 import { useRecipesStore } from '../../stores/recipes'
+import { applyReimport } from '../../stores/recipesReimport'
 import {
   UiButton,
+  UiDialog,
   UiErrorState,
   UiIconButton,
   UiPage,
@@ -62,6 +64,10 @@ const meta = ref<Pick<RecipeInput, 'import_method' | 'source_url' | 'yield_text'
   yield_text: null,
 })
 const source = ref<Form>(blank())
+const confirmReimport = ref(false)
+const reimporting = ref(false)
+const reimported = ref(false)
+const reimportError = ref<string | null>(null)
 
 function blank(): Form {
   return {
@@ -107,6 +113,11 @@ onMounted(async () => {
       }
     } else loadError.value = store.error ?? 'Could not load the recipe'
     loading.value = false
+    if (route.query.reimport === '1') {
+      // Handled once: a reload must not import again.
+      await router.replace({ query: { ...route.query, reimport: undefined } })
+      await reimport()
+    }
   } else if (store.pendingDraft) {
     const d = store.pendingDraft
     source.value = {
@@ -127,6 +138,24 @@ onMounted(async () => {
     }
   }
 })
+
+/** Replaces the imported parts of the form with the source page's current version (D-126). */
+async function reimport() {
+  confirmReimport.value = false
+  const url = store.current?.source_url
+  if (!url || reimporting.value) return
+  reimporting.value = true
+  reimportError.value = null
+  try {
+    const d = await food.importRecipe({ url })
+    meta.value = { ...meta.value, ...applyReimport(draft.value, d) }
+    reimported.value = true
+  } catch (e) {
+    reimportError.value = e instanceof Error ? e.message : 'The page could not be imported.'
+  } finally {
+    reimporting.value = false
+  }
+}
 
 async function persist(f: Form): Promise<void> {
   const input: RecipeInput = {
@@ -180,6 +209,13 @@ async function save() {
 }
 function discard() {
   upload.value = null
+  reimported.value = false
+  if (store.current)
+    meta.value = {
+      import_method: store.current.import_method,
+      source_url: store.current.source_url ?? null,
+      yield_text: store.current.yield_text ?? null,
+    }
   form.discard()
 }
 
@@ -230,6 +266,27 @@ function onMerge(i: number, e: Event) {
     <UiErrorState v-if="loadError" :message="loadError" @retry="$router.go(0)" />
     <form v-else-if="!loading" class="form" @submit.prevent="save">
       <UiTextField v-model="draft.title" label="Title" required data-testid="recipe-title" />
+      <div v-if="id && meta.source_url" class="reimport">
+        <UiButton
+          variant="tonal"
+          icon="refresh"
+          :disabled="reimporting"
+          data-testid="recipe-reimport"
+          @click="confirmReimport = true"
+          >{{ reimporting ? 'Importing…' : 'Re-import from source' }}</UiButton
+        >
+        <p v-if="reimported" role="status" data-testid="recipe-reimport-notice">
+          The form holds the re-imported version. Press Save to keep it or Discard to go back.
+        </p>
+        <p
+          v-if="reimportError"
+          role="alert"
+          class="image-error"
+          data-testid="recipe-reimport-error"
+        >
+          {{ reimportError }}
+        </p>
+      </div>
       <div class="nums">
         <UiTextField v-model="draft.servings" label="Servings" type="number" />
         <UiTextField v-model="draft.prep" label="Prep (min)" type="number" />
@@ -348,6 +405,16 @@ function onMerge(i: number, e: Event) {
 
       <UiTextField v-model="draft.note" label="Household note" multiline />
     </form>
+    <UiDialog v-model="confirmReimport" title="Re-import from source?">
+      <p>
+        Ingredients, steps and sections will be replaced by the page's current version. Nothing is
+        saved until you press Save.
+      </p>
+      <template #actions>
+        <UiButton variant="text" @click="confirmReimport = false">Cancel</UiButton>
+        <UiButton data-testid="recipe-reimport-confirm" @click="reimport">Re-import</UiButton>
+      </template>
+    </UiDialog>
     <UiSaveBar
       :dirty="form.dirty.value || !!upload || (!id && !!store.pendingDraft)"
       :saving="form.saving.value"
@@ -362,6 +429,11 @@ function onMerge(i: number, e: Event) {
 <style scoped>
 .image-error {
   color: var(--ui-error, #b3261e);
+}
+.reimport {
+  display: grid;
+  gap: var(--ui-space-2);
+  justify-items: start;
 }
 .form {
   display: grid;
