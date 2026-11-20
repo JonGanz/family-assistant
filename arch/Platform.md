@@ -2,7 +2,7 @@
 title: Platform
 scope: code layout, runtime, security, deployment, backups, dev workflow
 status: draft
-updated: 2026-11-08
+updated: 2026-11-20
 drawio: Platform.drawio
 drawio_src: src/Platform.py
 depends_on: [D-002, D-003, D-004, D-005, D-006, D-010, D-018, D-019, D-020, D-023, D-025, D-026, D-031, D-032, D-033, D-034, D-035, D-064, D-065, D-069, D-072, D-073, D-074, D-075, D-076, D-077, D-093, D-094, D-102, D-123]
@@ -156,7 +156,7 @@ We ship **`deploy/compose.yaml`**, which has every service (D-033, D-065). The d
 | default | `app` | `ghcr.io/jonganz/fa-server:<tag>` | `serve all` (D-076). Publishes `${FA_HTTP_HOST_IP:-0.0.0.0}:${FA_HTTP_PORT:-8080}`, and `${FA_LAN_DASHBOARD_HOST_IP:-127.0.0.1}:8081` for the opt-in D-064 listener. Mounts `fa-secrets` read-only and the backup directory read-only (for `backup.verify`) |
 | default | `ntfy` | `binwiederhier/ntfy:v2.17.0` | Published on `${FA_NTFY_PORT:-8090}`; reached by `app` as `http://ntfy:80` on the compose network |
 | default | `backup` | `prodrigestivill/postgres-backup-local:16` | Nightly, keeping 7 daily, 4 weekly, and 6 monthly. Writes to volume `fa-backups` by default; `BACKUP_DIR` points it at a NAS mount instead (D-005) |
-| `tailscale` | `tailscale` | `tailscale/tailscale:v1.104.2` | `TS_AUTHKEY`, `TS_HOSTNAME` (default `family`), `TS_STATE_DIR` on volume `ts-state`, `TS_USERSPACE=true`, `TS_SERVE_CONFIG` from the inline compose config `ts_serve` (443 → `app:8080`, 8443 → `ntfy:80`). Fixed address `172.30.89.10` on the compose subnet, which compose passes to `app` as `FA_DEFAULT_TRUSTED_PROXIES` (a default, editable in Settings, System; D-069) |
+| `tailscale` | `tailscale` | `tailscale/tailscale:v1.104.2` | `TS_AUTHKEY`, `TS_HOSTNAME` (default `family`), `TS_STATE_DIR` on volume `ts-state`, `TS_USERSPACE=true`, `TS_SERVE_CONFIG` from the inline compose config `ts_serve` (443 → `app:8080`, 8443 → `ntfy:80`). Fixed address `172.30.89.10` on the compose subnet, which compose passes to `app` as `FA_DEFAULT_TRUSTED_PROXIES` (a default, editable in Settings, System; D-069). `TS_OUTBOUND_HTTP_PROXY_LISTEN=172.30.89.10:1055` runs tailscaled's outbound proxy on that address only (unpublished, no authentication; D-127), and `app` gets `FA_TAILNET_PROXY=http://tailscale:1055`: the LLM client sends requests to `*.ts.net`, `100.64.0.0/10` and `fd7a:115c:a1e0::/48` through it so an Ollama host on the tailnet works by name or tailnet address (R-009) |
 | `ai-cpu` | `s1-small`, `embed` | pinned sidecar images | M4.1 (D-025, D-026, D-094) |
 | `gpu` | `ollama` (M4), `s1-large` (M4.1) | pinned, NVIDIA runtime | On a GPU node, or on a single machine that runs everything (D-026, D-033). A natively installed Ollama works the same: the app only needs its URL (D-093) |
 

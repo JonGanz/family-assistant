@@ -1,6 +1,6 @@
 ---
 title: Decisions Index
-updated: 2026-11-19
+updated: 2026-11-20
 ---
 
 # Decisions
@@ -135,3 +135,4 @@ Each record is `D-NNN-slug.md`. Superseded decisions stay here and are marked wi
 | [D-124](D-124-recipe-sections.md) | Recipes have named sections, each with its own ingredients and steps | accepted | (instruction) | arch/Meals.md, arch/Frontend.md |
 | [D-125](D-125-recipe-live-scaling.md) | The dashboard recipe view scales the recipe live | accepted | (instruction) | arch/Meals.md, arch/Frontend.md |
 | [D-126](D-126-recipe-reimport.md) | Re-import a recipe from its source URL | accepted | (instruction) | arch/Meals.md, arch/Frontend.md |
+| [D-127](D-127-tailnet-proxy-for-ai.md) | Reach tailnet AI hosts through the Tailscale sidecar's outbound proxy | accepted | (instruction) | arch/Platform.md |
