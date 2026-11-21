@@ -49,13 +49,17 @@ test('re-importing a recipe keeps its id, rating and plan entry and shows the ne
       ).ok(),
     ).toBeTruthy()
     const slots = await page.request.get('/api/v1/meals/slots').then((r) => r.json())
-    const tomorrow = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
+    // Nine-plus days out, so other specs' cells for tomorrow are not shared.
+    const tomorrow = new Date(Date.now() + 10 * 86_400_000).toISOString().slice(0, 10)
     const added = await page.request.post('/api/v1/meal-plan', {
       headers: hdr,
       data: { date: tomorrow, slot_id: slots[0].id, recipe_id: id },
     })
     expect(added.ok()).toBeTruthy()
-    const entryId = (await added.json()).entries[0].id
+    // The slot may hold other entries (specs run in parallel): find ours by recipe.
+    const entryId = (await added.json()).entries.find(
+      (e: { recipe_id?: string }) => e.recipe_id === id,
+    ).id
 
     // The page now has sections: move the source link to that version of the page.
     const res = await page.request.get(`/api/v1/recipes/${id}`)
@@ -79,7 +83,6 @@ test('re-importing a recipe keeps its id, rating and plan entry and shows the ne
       },
     })
     expect(put.ok()).toBeTruthy()
-
     await page.reload()
     await page.getByTestId('recipe-reimport').click()
     await page.getByTestId('recipe-reimport-confirm').click()

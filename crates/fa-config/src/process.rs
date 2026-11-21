@@ -91,6 +91,10 @@ pub struct ProcessConfig {
     /// `FA_TAILNET_BASE_URL`: the HTTPS tailnet address.
     #[serde(default, deserialize_with = "empty_none")]
     pub tailnet_base_url: Option<String>,
+    /// `FA_TAILNET_PROXY`: the Tailscale sidecar's outbound HTTP proxy (`http://tailscale:1055`).
+    /// The LLM client sends requests for tailnet hosts through it; empty or unset is off (D-127).
+    #[serde(default, deserialize_with = "empty_none")]
+    pub tailnet_proxy: Option<Url>,
     /// `FA_NTFY_PUBLIC_URL`: the ntfy address phones subscribe to, when it differs from
     /// `ntfy_url` (which in compose is the internal `http://ntfy:80`). See `ntfy_subscribe_base`.
     #[serde(default, deserialize_with = "empty_none")]
@@ -343,6 +347,14 @@ impl ProcessConfig {
                 "FA_IMAP_TLS_INSECURE is set: IMAPS certificates are not verified (tests only)"
             );
         }
+        if let Some(u) = &self.tailnet_proxy
+            && (u.scheme() != "http" || u.host_str().is_none_or(str::is_empty))
+        {
+            errs.push(
+                "FA_TAILNET_PROXY must be an http:// URL with a host (e.g. http://tailscale:1055)"
+                    .to_string(),
+            );
+        }
         if self.log_level.trim().is_empty() {
             errs.push("FA_LOG_LEVEL must not be empty".to_string());
         }
@@ -464,6 +476,17 @@ mod tests {
             .as_deref(),
             Some("http://192.168.1.10:9000")
         );
+    }
+
+    #[test]
+    fn tailnet_proxy_is_optional_and_http_only() {
+        let c = |extra: &str| ProcessConfig::from_figment(fig(&format!("{BASE}{extra}")));
+        assert!(c("").unwrap().tailnet_proxy.is_none());
+        assert!(c("tailnet_proxy=''").unwrap().tailnet_proxy.is_none());
+        let on = c("tailnet_proxy='http://tailscale:1055'").unwrap();
+        assert_eq!(on.tailnet_proxy.unwrap().host_str(), Some("tailscale"));
+        assert!(c("tailnet_proxy='https://tailscale:1055'").is_err());
+        assert!(c("tailnet_proxy='nonsense'").is_err());
     }
 
     #[test]

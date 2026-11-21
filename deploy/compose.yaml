@@ -67,6 +67,11 @@ services:
       # Defaults, not locks: the UI (Settings, System) can change them (D-075).
       FA_DEFAULT_NTFY_URL: http://ntfy:80
       FA_DEFAULT_TRUSTED_PROXIES: 127.0.0.0/8,::1/128,172.30.89.10/32
+      # AI requests to tailnet hosts (*.ts.net, 100.64.0.0/10) go through the tailscale sidecar's
+      # proxy (D-127). Without the tailscale profile that host is unreachable, which only matters
+      # for tailnet addresses that could not work anyway. `-` (not `:-`): an explicitly empty
+      # value turns it off.
+      FA_TAILNET_PROXY: ${FA_TAILNET_PROXY-http://tailscale:1055}
     ports:
       - "${FA_HTTP_HOST_IP:-0.0.0.0}:${FA_HTTP_PORT:-8080}:8080"
     volumes:
@@ -131,6 +136,9 @@ services:
       TS_STATE_DIR: /var/lib/tailscale
       TS_USERSPACE: "true"
       TS_SERVE_CONFIG: /config/serve.json
+      # Outbound HTTP proxy for the app's AI client (D-127): reaches tailnet hosts such as an
+      # Ollama PC. Bound to this container's compose address only; never publish the port.
+      TS_OUTBOUND_HTTP_PROXY_LISTEN: 172.30.89.10:1055
     volumes:
       - ts-state:/var/lib/tailscale
     configs:

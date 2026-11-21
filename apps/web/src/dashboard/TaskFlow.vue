@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import MemberPicker from '../components/tasks/MemberPicker.vue'
 import UndoToast from '../components/tasks/UndoToast.vue'
 import { useDashboardStore } from '../stores/dashboard'
+import Modal from './Modal.vue'
 import { S } from './strings'
 import { taskLocked, tasksOf, toMemberRef } from './tasksModel'
 
@@ -83,54 +84,64 @@ defineExpose({ beginComplete, beginAdd })
 
 <template>
   <div class="flow">
-    <div v-if="completing" class="modal" data-testid="complete-picker">
-      <MemberPicker
-        :members="members"
-        :preselected="completing.pre"
-        :title="S.whoDidIt"
-        size="kiosk"
-        @pick="picked"
-        @cancel="cancelComplete"
-      />
-    </div>
+    <Modal v-if="completing" :title="S.whoDidIt" @close="cancelComplete">
+      <div data-testid="complete-picker">
+        <MemberPicker
+          embedded
+          :members="members"
+          :preselected="completing.pre"
+          :title="S.whoDidIt"
+          size="kiosk"
+          @pick="picked"
+          @cancel="cancelComplete"
+        />
+      </div>
+    </Modal>
 
-    <div v-if="adding" class="modal" data-testid="add-form">
-      <MemberPicker
-        v-if="asking"
-        :members="members"
-        :title="S.whoAdds"
-        size="kiosk"
-        @pick="addBy"
-        @cancel="asking = false"
-      />
-      <form v-else class="form" @submit.prevent="canSubmit && (asking = true)">
-        <h2>{{ S.addTask }}</h2>
-        <label>
-          {{ S.taskTitle }}
-          <input v-model="title" data-testid="add-title" type="text" autocomplete="off" />
-        </label>
-        <label>
-          {{ S.taskList }}
-          <select v-model="list" data-testid="add-list">
-            <option v-for="l in lists" :key="l.id" :value="l.id">{{ l.name }}</option>
-          </select>
-        </label>
-        <label>
-          {{ S.assignee }}
-          <select v-model="assignee" data-testid="add-assignee">
-            <option value="">{{ S.anyone }}</option>
-            <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}</option>
-          </select>
-        </label>
-        <p v-if="failed" role="alert" class="err">{{ S.addFailed }}</p>
-        <div class="buttons">
-          <button type="button" @click="adding = false">{{ S.cancel }}</button>
-          <button type="submit" class="primary" :disabled="!canSubmit" data-testid="add-submit">
-            {{ S.create }}
-          </button>
-        </div>
-      </form>
-    </div>
+    <Modal
+      v-if="adding"
+      :title="asking ? S.whoAdds : S.addTask"
+      :idle-close="false"
+      @close="adding = false"
+    >
+      <div data-testid="add-form">
+        <MemberPicker
+          v-if="asking"
+          embedded
+          :members="members"
+          :title="S.whoAdds"
+          size="kiosk"
+          @pick="addBy"
+          @cancel="asking = false"
+        />
+        <form v-else class="form" @submit.prevent="canSubmit && (asking = true)">
+          <label>
+            {{ S.taskTitle }}
+            <input v-model="title" data-testid="add-title" type="text" autocomplete="off" />
+          </label>
+          <label>
+            {{ S.taskList }}
+            <select v-model="list" data-testid="add-list">
+              <option v-for="l in lists" :key="l.id" :value="l.id">{{ l.name }}</option>
+            </select>
+          </label>
+          <label>
+            {{ S.assignee }}
+            <select v-model="assignee" data-testid="add-assignee">
+              <option value="">{{ S.anyone }}</option>
+              <option v-for="m in members" :key="m.id" :value="m.id">{{ m.name }}</option>
+            </select>
+          </label>
+          <p v-if="failed" role="alert" class="err">{{ S.addFailed }}</p>
+          <div class="buttons">
+            <button type="button" @click="adding = false">{{ S.cancel }}</button>
+            <button type="submit" class="primary" :disabled="!canSubmit" data-testid="add-submit">
+              {{ S.create }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </Modal>
 
     <div v-if="undo" class="undo-dock">
       <UndoToast
@@ -145,14 +156,6 @@ defineExpose({ beginComplete, beginAdd })
 </template>
 
 <style scoped>
-.modal {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  display: grid;
-  place-items: center;
-  background: rgb(0 0 0 / 55%);
-}
 /* A full-width dock; the toast inside sizes itself. (This was `.toast`, and scoped CSS also hit
    UndoToast's own root `.toast`: it became absolute inside a zero-width box, two characters wide.) */
 .undo-dock {
@@ -173,15 +176,8 @@ defineExpose({ beginComplete, beginAdd })
 .form {
   display: grid;
   gap: var(--space-3);
-  width: min(48rem, 90%);
-  padding: var(--space-5);
-  background: var(--color-bg);
-  color: var(--color-text);
-  border-radius: var(--radius-lg);
+  width: min(48rem, 80vw);
   font-size: var(--kiosk-font-base);
-}
-h2 {
-  margin: 0;
 }
 label {
   display: grid;

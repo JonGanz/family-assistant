@@ -260,8 +260,12 @@ fn dialect(d: LlmDialect) -> Dialect {
     }
 }
 
-fn http() -> ApiResult<reqwest::Client> {
-    fa_llm::default_http().map_err(|e| ApiError::Internal(e.to_string()))
+/// The provider's client, so the test and model listing take the same (tailnet) path as real calls.
+fn http(s: &AppState) -> ApiResult<reqwest::Client> {
+    match &s.services.mail.llm {
+        Some(p) => Ok(p.http()),
+        None => fa_llm::default_http().map_err(|e| ApiError::Internal(e.to_string())),
+    }
 }
 
 fn view(ep: &LlmEndpoint, has_api_key: bool) -> LlmEndpointView {
@@ -450,7 +454,7 @@ pub async fn test_endpoint(
             // The test only lists models; thinking does not apply.
             thinking: false,
         },
-        http()?,
+        http(&s)?,
     );
     let started_at = Utc::now();
     let t0 = Instant::now();
@@ -536,7 +540,7 @@ pub async fn list_models(State(s): State<AppState>, auth: Auth) -> ApiResult<Jso
             dialect: dialect(ep.dialect),
             thinking: ep.thinking,
         },
-        http()?,
+        http(&s)?,
     );
     match client.models().await {
         Ok(models) => Ok(Json(LlmModels { models })),

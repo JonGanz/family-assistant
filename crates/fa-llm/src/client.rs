@@ -107,6 +107,36 @@ pub fn default_http() -> reqwest::Result<reqwest::Client> {
         .build()
 }
 
+/// [`default_http`], sending requests for tailnet hosts through `proxy` (D-127); every other
+/// destination is dialled directly.
+pub fn http_client(proxy: Option<&url::Url>) -> reqwest::Result<reqwest::Client> {
+    let mut b = reqwest::Client::builder().redirect(reqwest::redirect::Policy::none());
+    if let Some(p) = proxy {
+        let target = p.clone();
+        b = b.proxy(reqwest::Proxy::custom(move |u| {
+            is_tailnet_host(u).then(|| target.clone())
+        }));
+    }
+    b.build()
+}
+
+/// Whether the URL's host is on the tailnet: a MagicDNS name (`*.ts.net`), an IPv4 address in
+/// `100.64.0.0/10` or an IPv6 address in `fd7a:115c:a1e0::/48`.
+pub fn is_tailnet_host(u: &url::Url) -> bool {
+    match u.host() {
+        Some(url::Host::Domain(d)) => {
+            let d = d.trim_end_matches('.').to_ascii_lowercase();
+            d.strip_suffix(".ts.net").is_some_and(|h| !h.is_empty())
+        }
+        Some(url::Host::Ipv4(a)) => {
+            let o = a.octets();
+            o[0] == 100 && (64..=127).contains(&o[1])
+        }
+        Some(url::Host::Ipv6(a)) => a.segments()[..3] == [0xfd7a, 0x115c, 0xa1e0],
+        None => false,
+    }
+}
+
 #[derive(Clone)]
 pub struct LlmClient {
     cfg: EndpointConfig,
@@ -325,5 +355,37 @@ fn map_err(e: reqwest::Error) -> LlmError {
         LlmError::BadJson("unreadable response body".into())
     } else {
         LlmError::Unavailable("request failed".into())
+    }
+}
+
+#[cfg(test)]
+mod tailnet_tests {
+    use super::is_tailnet_host;
+
+    #[test]
+    fn host_table() {
+        let cases = [
+            ("http://gpu.example.ts.net:11434/", true),
+            ("http://GPU.Example.TS.NET/", true),
+            ("http://gpu.example.ts.net./", true),
+            ("http://evil-ts.net/", false),
+            ("http://ts.net/", false),
+            ("http://gpu.ts.net.evil.com/", false),
+            ("http://100.63.255.255/", false),
+            ("http://100.64.0.1/", true),
+            ("http://100.127.255.255/", true),
+            ("http://100.128.0.1/", false),
+            ("http://[fd7a:115c:a1e0::1]:11434/", true),
+            ("http://[fd7a:115c:a1e0:ffff::1]/", true),
+            ("http://[fd7a:115c:a1e1::1]/", false),
+            ("http://[fd00::1]/", false),
+            ("http://192.168.1.10:11434/", false),
+            ("http://ollama:11434/", false),
+            ("http://localhost:11434/", false),
+        ];
+        for (u, want) in cases {
+            let u = url::Url::parse(u).unwrap();
+            assert_eq!(is_tailnet_host(&u), want, "{u}");
+        }
     }
 }

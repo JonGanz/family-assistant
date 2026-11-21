@@ -7,13 +7,20 @@ defineProps<{
   preselected?: string | null
   title?: string
   size?: 'normal' | 'kiosk'
+  /** Inside a modal that already has the dialog role and title. */
+  embedded?: boolean
 }>()
 const emit = defineEmits<{ pick: [memberId: string]; cancel: [] }>()
 </script>
 
 <template>
-  <div class="picker" :class="size ?? 'normal'" role="dialog" :aria-label="title ?? 'Who did it?'">
-    <h2>{{ title ?? 'Who did it?' }}</h2>
+  <div
+    class="picker"
+    :class="[size ?? 'normal', { embedded }]"
+    :role="embedded ? undefined : 'dialog'"
+    :aria-label="embedded ? undefined : (title ?? 'Who did it?')"
+  >
+    <h2 v-if="!embedded">{{ title ?? 'Who did it?' }}</h2>
     <div class="grid">
       <button
         v-for="m in members"
@@ -42,6 +49,11 @@ const emit = defineEmits<{ pick: [memberId: string]; cancel: [] }>()
   background: var(--ui-surface-container-high);
   color: var(--ui-on-surface);
   border-radius: var(--ui-radius-lg);
+}
+.picker.embedded {
+  padding: 0;
+  background: none;
+  border-radius: 0;
 }
 h2 {
   margin: 0;

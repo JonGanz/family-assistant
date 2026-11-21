@@ -24,3 +24,17 @@ describe('Modal', () => {
     expect(w.emitted('close')).toHaveLength(1)
   })
 })
+
+describe('Modal options', () => {
+  it('idle-close=false never closes by itself; the actions slot renders', () => {
+    vi.useFakeTimers()
+    const w = mount(Modal, {
+      props: { title: 'x', idleClose: false },
+      slots: { actions: '<b data-testid="act">a</b>' },
+    })
+    vi.advanceTimersByTime(10 * 60_000)
+    expect(w.emitted('close')).toBeUndefined()
+    expect(w.find('[data-testid=act]').exists()).toBe(true)
+    vi.useRealTimers()
+  })
+})

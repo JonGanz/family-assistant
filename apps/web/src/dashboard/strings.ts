@@ -78,6 +78,7 @@ export const S = {
   weekNav: 'Week navigation',
   prevWeek: 'Previous week',
   nextWeek: 'Next week',
+  weekToday: 'Today',
   hidePast: 'Hide past events',
   close: 'Close',
   forecastTitle: 'Forecast',

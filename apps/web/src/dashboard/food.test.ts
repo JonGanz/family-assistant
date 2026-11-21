@@ -197,6 +197,31 @@ describe('meals panel', () => {
     again.unmount()
     localStorage.clear()
   })
+  it('the recipe window is the shared Modal, fullscreen, and closes through it', async () => {
+    kioskRecipe.mockResolvedValue({
+      id: 'r8',
+      title: 'Shared soup',
+      has_image: false,
+      lines: [],
+      steps: [],
+      sections: [],
+      scale_factors: [1],
+      section_columns: 2,
+    })
+    const { default: RecipeDetail } = await import('./details/RecipeDetail.vue')
+    const w = mount(RecipeDetail, {
+      props: { id: 'r8', title: 'Shared soup' },
+      attachTo: document.body,
+    })
+    await flushPromises()
+    const dlg = document.querySelector(
+      '[data-testid="recipe-detail"] [data-testid="detail-modal"] [role="dialog"]',
+    )
+    expect(dlg).not.toBeNull()
+    document.querySelector<HTMLButtonElement>('[data-testid="recipe-detail"] button.close')!.click()
+    expect(w.emitted('close')).toHaveLength(1)
+    w.unmount()
+  })
   it('hides when empty, unless it is the only panel in its column', () => {
     const meal = { kind: 'meals' }
     const agenda = { kind: 'agenda' }

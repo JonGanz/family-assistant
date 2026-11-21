@@ -8,7 +8,7 @@ mod schema;
 
 pub use client::{
     Dialect, EndpointConfig, ExtractRequest, Extracted, LlmClient, LlmError, Ping,
-    THINKING_EXTRA_TOKENS, default_http,
+    THINKING_EXTRA_TOKENS, default_http, http_client, is_tailnet_host,
 };
 pub use provider::Provider;
 pub use schema::json_schema_for;

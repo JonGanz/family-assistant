@@ -2,6 +2,7 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { food } from '../../api/food'
+import { goBack } from './goBack'
 import { groupRecipe } from '../../lib/recipeSections'
 import { useMealsSettingsStore } from '../../stores/mealsSettings'
 import FoodTabs from '../../components/food/FoodTabs.vue'
@@ -70,7 +71,7 @@ const mins = (n?: number | null) => (n ? `${n} min` : null)
 <template>
   <UiPage>
     <template #top
-      ><UiTopAppBar :title="r?.title ?? 'Recipe'" back @back="router.push('/food/recipes')"
+      ><UiTopAppBar :title="r?.title ?? 'Recipe'" back @back="goBack(router)"
     /></template>
     <FoodTabs />
     <UiErrorState v-if="store.error && !r" :message="store.error" @retry="store.open(id)" />

@@ -6,6 +6,15 @@ Every tagged release adds its entry here, in the same commit. Newest first.
 
 - Nothing yet.
 
+## v0.1.37 — 2026-11-20
+
+- Dashboard: the Add task form, its member pickers and the recipe window now use the same popup as the other dashboard windows.
+- Dashboard Home: clicking anywhere on the weather card opens the weather window.
+- Dashboard Week: a Today button returns to the current week.
+- Food > Meal plan: each day has a right-aligned + button in its heading instead of a row of add buttons per meal slot, and a Today button scrolls to today.
+- Recipe page: the back button goes to the previous page instead of always the recipe list.
+- Tailscale: an Ollama host on your tailnet now works by its tailnet name or 100.x address from Settings > AI (the sidecar's outbound proxy carries the AI requests; other traffic is unchanged).
+
 ## v0.1.36 — 2026-11-19
 
 - Recipes: "Re-import from source" fetches a URL recipe again (for example to pick up sections) and opens it in the editor to review; nothing changes until you save, and meal plans, templates and ratings stay attached.

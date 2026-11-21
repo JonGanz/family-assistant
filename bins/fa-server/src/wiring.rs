@@ -102,7 +102,7 @@ pub fn llm_provider(cfg: &ProcessConfig, store: &Store) -> Result<Arc<Provider>>
     Ok(Arc::new(Provider::new(
         store.clone(),
         Arc::new(load_key(cfg)?),
-        fa_llm::default_http().context("llm http client")?,
+        fa_llm::http_client(cfg.tailnet_proxy.as_ref()).context("llm http client")?,
     )))
 }
 

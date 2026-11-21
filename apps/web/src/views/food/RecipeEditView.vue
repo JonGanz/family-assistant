@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { goBack } from './goBack'
 import { food, type RecipeInput, type RecipeView } from '../../api/food'
 import FoodTabs from '../../components/food/FoodTabs.vue'
 import LineMatch from '../../components/food/recipes/LineMatch.vue'
@@ -257,10 +258,7 @@ function onMerge(i: number, e: Event) {
 <template>
   <UiPage>
     <template #top
-      ><UiTopAppBar
-        :title="id ? 'Edit recipe' : 'New recipe'"
-        back
-        @back="router.push('/food/recipes')"
+      ><UiTopAppBar :title="id ? 'Edit recipe' : 'New recipe'" back @back="goBack(router)"
     /></template>
     <FoodTabs />
     <UiErrorState v-if="loadError" :message="loadError" @retry="$router.go(0)" />

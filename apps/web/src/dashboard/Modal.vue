@@ -3,7 +3,10 @@ import { onBeforeUnmount, onMounted } from 'vue'
 import UiIcon from '../ui/UiIcon.vue'
 import { S } from './strings'
 
-defineProps<{ title: string; fullscreen?: boolean }>()
+const props = withDefaults(
+  defineProps<{ title: string; fullscreen?: boolean; idleClose?: boolean }>(),
+  { idleClose: true },
+)
 const emit = defineEmits<{ close: [] }>()
 
 /** A popup nobody touches for this long closes itself, so the dashboard returns to its view. */
@@ -11,6 +14,7 @@ const IDLE_CLOSE_MS = 60_000
 let timer: ReturnType<typeof setTimeout> | undefined
 function arm() {
   clearTimeout(timer)
+  if (!props.idleClose) return
   timer = setTimeout(() => emit('close'), IDLE_CLOSE_MS)
 }
 onMounted(arm)
@@ -34,6 +38,7 @@ onBeforeUnmount(() => clearTimeout(timer))
     >
       <header>
         <h2>{{ title }}</h2>
+        <div class="actions"><slot name="actions" /></div>
         <button type="button" class="close" :aria-label="S.close" @click="emit('close')">
           <UiIcon name="close" :size="24" />
         </button>
@@ -82,7 +87,13 @@ header {
 }
 h2 {
   margin: 0;
+  margin-right: auto;
   font-size: var(--font-size-lg);
+}
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
 }
 .close {
   display: grid;
@@ -97,6 +108,8 @@ h2 {
   cursor: pointer;
 }
 .body {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: var(--space-2) var(--space-5) var(--space-5);
 }

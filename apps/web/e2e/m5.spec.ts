@@ -103,7 +103,7 @@ test("an adult adds it to tomorrow's dinner", async () => {
   const page = adultPage
   await page.goto('/food/plan')
   await expect(page.getByTestId('food-tab-plan')).toBeVisible()
-  await page.getByTestId(`plan-slot-add-${day(1)}-dinner`).click()
+  await page.getByTestId(`plan-day-add-${day(1)}`).click()
   const sheet = page.getByTestId('entry-sheet')
   await sheet.getByLabel('Search recipes').fill('Lentil')
   await page

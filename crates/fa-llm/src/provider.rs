@@ -45,6 +45,12 @@ impl Provider {
         }
     }
 
+    /// The HTTP client the provider's calls use (same proxy routing), for ad-hoc calls such as
+    /// the Settings test.
+    pub fn http(&self) -> reqwest::Client {
+        self.http.clone()
+    }
+
     /// `None` when the household has no endpoint row or it is disabled.
     pub async fn client_for(&self, household: HouseholdId) -> Result<Option<LlmClient>, LlmError> {
         Ok(self.cached(household).await?.map(|c| c.client))

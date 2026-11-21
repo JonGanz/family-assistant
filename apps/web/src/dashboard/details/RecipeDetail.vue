@@ -4,6 +4,7 @@ import { foodKiosk, type RecipeLineView, type RecipeView } from '../../api/food'
 import { groupRecipe } from '../../lib/recipeSections'
 import { formatQty, scaleLine } from '../../lib/recipeScale'
 import { getDeviceToken } from '../../kiosk/deviceToken'
+import Modal from '../Modal.vue'
 import { S } from '../strings'
 import {
   emptyChecks,
@@ -95,186 +96,149 @@ onBeforeUnmount(() => {
 
 <template>
   <Teleport to="body">
-    <div
-      class="full"
-      role="dialog"
-      aria-modal="true"
-      :aria-label="recipe?.title ?? title"
-      data-testid="recipe-detail"
-    >
-      <header>
-        <h2>{{ recipe?.title ?? title }}</h2>
-        <div
-          v-if="recipe"
-          class="scale"
-          role="group"
-          :aria-label="T.scale"
-          data-testid="recipe-scale"
-        >
-          <button
-            v-for="f in factors"
-            :key="f"
-            type="button"
-            :class="{ on: f === scale }"
-            :aria-pressed="f === scale"
-            data-testid="recipe-scale-btn"
-            @click="scale = f"
-          >
-            {{ formatQty(f) }}×
-          </button>
-        </div>
-        <button
-          v-if="anyChecked"
-          type="button"
-          class="reset"
-          data-testid="recipe-reset"
-          @click="reset"
-        >
-          {{ T.reset }}
-        </button>
-        <button type="button" class="close" :aria-label="S.close" @click="emit('close')">✕</button>
-      </header>
-      <div class="body">
-        <p v-if="failed" class="none" data-testid="recipe-error">{{ T.failed }}</p>
-        <p v-else-if="!recipe" class="none">{{ S.loading }}</p>
-        <template v-else>
-          <div class="top" :class="{ solo: !imageSrc || !facts.length }">
-            <div v-if="imageSrc" class="card imgcard">
-              <img :src="imageSrc" alt="" class="photo" data-testid="recipe-image" />
-            </div>
-            <section v-if="facts.length" class="card facts" data-testid="recipe-facts">
-              <h3>{{ T.details }}</h3>
-              <dl>
-                <template v-for="f in facts" :key="f.k">
-                  <dt>{{ f.k }}</dt>
-                  <dd>{{ f.v }}</dd>
-                </template>
-              </dl>
-            </section>
-          </div>
-          <section v-if="grouped!.shared.length" class="card" data-testid="recipe-shared">
-            <h3>{{ T.ingredients }}</h3>
-            <ul data-testid="recipe-lines" class="cols">
-              <li v-for="l in grouped!.shared" :key="l.id">
-                <label :class="{ done: checks.lines.includes(l.id) }">
-                  <input
-                    type="checkbox"
-                    :checked="checks.lines.includes(l.id)"
-                    data-testid="recipe-line-check"
-                    @change="toggle('lines', l.id)"
-                  />
-                  <span>{{ lineText(l) }}</span>
-                </label>
-              </li>
-            </ul>
-          </section>
+    <div class="cover" data-testid="recipe-detail">
+      <Modal :title="recipe?.title ?? title" fullscreen :idle-close="false" @close="emit('close')">
+        <template #actions>
           <div
-            v-if="hasSections"
-            class="sections"
-            data-testid="recipe-sections"
-            :style="{ '--cols': recipe.section_columns }"
+            v-if="recipe"
+            class="scale"
+            role="group"
+            :aria-label="T.scale"
+            data-testid="recipe-scale"
           >
-            <div v-for="g in grouped!.sections" :key="g.section.id" class="col">
-              <section class="card" data-testid="recipe-section">
-                <h3>{{ g.section.name }}</h3>
-                <ul data-testid="recipe-lines">
-                  <li v-for="l in g.lines" :key="l.id">
-                    <label :class="{ done: checks.lines.includes(l.id) }">
-                      <input
-                        type="checkbox"
-                        :checked="checks.lines.includes(l.id)"
-                        data-testid="recipe-line-check"
-                        @change="toggle('lines', l.id)"
-                      />
-                      <span>{{ lineText(l) }}</span>
-                    </label>
-                  </li>
-                </ul>
-              </section>
-              <section v-if="g.steps.length" class="card steps">
-                <ol data-testid="recipe-steps">
-                  <li v-for="s in g.steps" :key="s.id">
-                    <label :class="{ done: checks.steps.includes(s.id) }">
-                      <input
-                        type="checkbox"
-                        :checked="checks.steps.includes(s.id)"
-                        data-testid="recipe-step-check"
-                        @change="toggle('steps', s.id)"
-                      />
-                      <span>{{ s.text }}</span>
-                    </label>
-                  </li>
-                </ol>
+            <button
+              v-for="f in factors"
+              :key="f"
+              type="button"
+              :class="{ on: f === scale }"
+              :aria-pressed="f === scale"
+              data-testid="recipe-scale-btn"
+              @click="scale = f"
+            >
+              {{ formatQty(f) }}×
+            </button>
+          </div>
+          <button
+            v-if="anyChecked"
+            type="button"
+            class="reset"
+            data-testid="recipe-reset"
+            @click="reset"
+          >
+            {{ T.reset }}
+          </button>
+        </template>
+        <div class="content">
+          <p v-if="failed" class="none" data-testid="recipe-error">{{ T.failed }}</p>
+          <p v-else-if="!recipe" class="none">{{ S.loading }}</p>
+          <template v-else>
+            <div class="top" :class="{ solo: !imageSrc || !facts.length }">
+              <div v-if="imageSrc" class="card imgcard">
+                <img :src="imageSrc" alt="" class="photo" data-testid="recipe-image" />
+              </div>
+              <section v-if="facts.length" class="card facts" data-testid="recipe-facts">
+                <h3>{{ T.details }}</h3>
+                <dl>
+                  <template v-for="f in facts" :key="f.k">
+                    <dt>{{ f.k }}</dt>
+                    <dd>{{ f.v }}</dd>
+                  </template>
+                </dl>
               </section>
             </div>
-          </div>
-          <section v-if="grouped!.finish.length" class="card steps">
-            <h3>{{ hasSections ? T.finish : T.steps }}</h3>
-            <ol data-testid="recipe-steps">
-              <li v-for="s in grouped!.finish" :key="s.id">
-                <label :class="{ done: checks.steps.includes(s.id) }">
-                  <input
-                    type="checkbox"
-                    :checked="checks.steps.includes(s.id)"
-                    data-testid="recipe-step-check"
-                    @change="toggle('steps', s.id)"
-                  />
-                  <span>{{ s.text }}</span>
-                </label>
-              </li>
-            </ol>
-          </section>
-        </template>
-      </div>
+            <section v-if="grouped!.shared.length" class="card" data-testid="recipe-shared">
+              <h3>{{ T.ingredients }}</h3>
+              <ul data-testid="recipe-lines" class="cols">
+                <li v-for="l in grouped!.shared" :key="l.id">
+                  <label :class="{ done: checks.lines.includes(l.id) }">
+                    <input
+                      type="checkbox"
+                      :checked="checks.lines.includes(l.id)"
+                      data-testid="recipe-line-check"
+                      @change="toggle('lines', l.id)"
+                    />
+                    <span>{{ lineText(l) }}</span>
+                  </label>
+                </li>
+              </ul>
+            </section>
+            <div
+              v-if="hasSections"
+              class="sections"
+              data-testid="recipe-sections"
+              :style="{ '--cols': recipe.section_columns }"
+            >
+              <div v-for="g in grouped!.sections" :key="g.section.id" class="col">
+                <section class="card" data-testid="recipe-section">
+                  <h3>{{ g.section.name }}</h3>
+                  <ul data-testid="recipe-lines">
+                    <li v-for="l in g.lines" :key="l.id">
+                      <label :class="{ done: checks.lines.includes(l.id) }">
+                        <input
+                          type="checkbox"
+                          :checked="checks.lines.includes(l.id)"
+                          data-testid="recipe-line-check"
+                          @change="toggle('lines', l.id)"
+                        />
+                        <span>{{ lineText(l) }}</span>
+                      </label>
+                    </li>
+                  </ul>
+                </section>
+                <section v-if="g.steps.length" class="card steps">
+                  <ol data-testid="recipe-steps">
+                    <li v-for="s in g.steps" :key="s.id">
+                      <label :class="{ done: checks.steps.includes(s.id) }">
+                        <input
+                          type="checkbox"
+                          :checked="checks.steps.includes(s.id)"
+                          data-testid="recipe-step-check"
+                          @change="toggle('steps', s.id)"
+                        />
+                        <span>{{ s.text }}</span>
+                      </label>
+                    </li>
+                  </ol>
+                </section>
+              </div>
+            </div>
+            <section v-if="grouped!.finish.length" class="card steps">
+              <h3>{{ hasSections ? T.finish : T.steps }}</h3>
+              <ol data-testid="recipe-steps">
+                <li v-for="s in grouped!.finish" :key="s.id">
+                  <label :class="{ done: checks.steps.includes(s.id) }">
+                    <input
+                      type="checkbox"
+                      :checked="checks.steps.includes(s.id)"
+                      data-testid="recipe-step-check"
+                      @change="toggle('steps', s.id)"
+                    />
+                    <span>{{ s.text }}</span>
+                  </label>
+                </li>
+              </ol>
+            </section>
+          </template>
+        </div>
+      </Modal>
     </div>
   </Teleport>
 </template>
 
 <style scoped>
-.full {
+.cover {
   position: fixed;
   inset: 0;
   z-index: 50;
-  display: flex;
-  flex-direction: column;
-  background: var(--color-bg);
-  color: var(--color-text);
-}
-header {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-5);
-  background: var(--color-layer-1, var(--color-surface));
-}
-h2 {
-  margin: 0;
-  font-size: var(--font-size-xl, var(--font-size-lg));
 }
 h3 {
   margin: 0 0 var(--space-2);
   font-size: var(--font-size-lg);
 }
-.close {
-  min-width: var(--min-touch);
-  min-height: var(--min-touch);
-  border: 0;
-  border-radius: var(--ui-radius-lg, var(--ui-radius-sm));
-  background: var(--color-layer-2, var(--color-surface));
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-}
-.body {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
+.content {
   display: grid;
   gap: var(--space-4);
   align-content: start;
-  padding: var(--space-4) var(--space-5);
   font-size: var(--font-size-lg);
 }
 .top {

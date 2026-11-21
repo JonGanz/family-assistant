@@ -22,7 +22,7 @@ There is one plan per milestone (`M<n>.md`). Its sub-agent task briefs are in `M
 | M5 Recipes, meal plan, grocery list | [M5.md](M5.md) | planned 2026-11-08 (D-108 to D-122) | [M5/](M5/): T-01 to T-13 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)), waves 1 to 6 |
 | M5.1 Recipe sections and live scaling | [M5.1.md](M5.1.md) | done 2026-11-18 (D-124, D-125; v0.1.35) | [M5.1/](M5.1/): T-01 to T-05 (+ `_rules.md`, on top of [`_rules-common.md`](_rules-common.md)), waves 1 to 3 |
 | M5.2 Recipe re-import and timer buttons | [M5.2.md](M5.2.md) | done 2026-11-19 (D-126; v0.1.36) | [M5.2/](M5.2/): T-01 to T-03 (+ `_rules.md`), waves 1 to 2 |
-| M5.3 Dashboard and food polish, tailnet path to Ollama | [M5.3.md](M5.3.md) | running | [M5.3/](M5.3/): T-01 to T-05 (+ `_rules.md`), waves 1 to 3 |
+| M5.3 Dashboard and food polish, tailnet path to Ollama | [M5.3.md](M5.3.md) | done 2026-11-20 (D-127; v0.1.37) | [M5.3/](M5.3/): T-01 to T-05 (+ `_rules.md`), waves 1 to 3 |
 
 ## Reviews
 Time-boxed review sessions (CLAUDE.md workflow 7). Each file has findings tables with IDs, sizes and status.

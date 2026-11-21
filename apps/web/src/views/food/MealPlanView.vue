@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // Food → Meal plan (Frontend.md §3f): an agenda of days from two days ago to the horizon, with the adult actions:
 // add/edit/move/swap/delete, apply a template, make a grocery list, save as template, and the list-impact dialog.
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { food, type MealPlanEntryView } from '../../api/food'
 import { isConflict } from '../../api/http'
@@ -63,6 +63,28 @@ watch(
   },
   { immediate: true },
 )
+
+// Today control: scrolls today's section into view; inactive while it already is in view.
+const todayInView = ref(false)
+let observer: IntersectionObserver | null = null
+function observeToday() {
+  observer?.disconnect()
+  if (typeof IntersectionObserver === 'undefined') return
+  const el = document.querySelector(`.agenda__day[data-day="${today.value}"]`)
+  if (!el) return
+  observer = new IntersectionObserver((entries) => {
+    todayInView.value = entries.some((e) => e.isIntersecting)
+  })
+  observer.observe(el)
+}
+function scrollToday() {
+  const el = document.querySelector(`.agenda__day[data-day="${today.value}"]`)
+  if (!el) return
+  const calm = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+  el.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'start' })
+}
+watch([ready, today], () => void nextTick(observeToday), { flush: 'post' })
+onBeforeUnmount(() => observer?.disconnect())
 
 onMounted(async () => {
   await Promise.all([
@@ -309,6 +331,15 @@ watch(isAdult, (a) => {
       <UiButton icon="add" data-testid="plan-add" @click="addToday">Add meal</UiButton>
       <UiButton
         variant="tonal"
+        icon="today"
+        :disabled="todayInView"
+        data-testid="plan-today"
+        @click="scrollToday"
+      >
+        Today
+      </UiButton>
+      <UiButton
+        variant="tonal"
         icon="template"
         data-testid="plan-apply-template"
         @click="((applyError = null), (applyOpen = true))"
@@ -362,7 +393,19 @@ watch(isAdult, (a) => {
           :data-day="d"
           :aria-current="d === today ? 'date' : undefined"
         >
-          <h2 class="agenda__head">{{ formatDayHeading(d, household.tz, today) }}</h2>
+          <div class="agenda__row">
+            <h2 class="agenda__head">{{ formatDayHeading(d, household.tz, today) }}</h2>
+            <button
+              v-if="writable(d)"
+              type="button"
+              class="agenda__add"
+              :aria-label="`Add meal on ${formatDayHeading(d, household.tz, today)}`"
+              :data-testid="`plan-day-add-${d}`"
+              @click="openAdd(d, slots[0]?.id ?? '')"
+            >
+              <UiIcon name="add" :size="24" />
+            </button>
+          </div>
           <div v-for="sl in slots" :key="sl.id" class="slot" :data-testid="cellTestId(d, sl.name)">
             <span v-if="slots.length > 1" class="slot__name">{{ sl.name }}</span>
             <ul class="slot__list">
@@ -378,16 +421,6 @@ watch(isAdult, (a) => {
                 </button>
               </li>
             </ul>
-            <button
-              v-if="writable(d) && !selecting"
-              type="button"
-              class="slot__add"
-              :aria-label="`Add to ${sl.name} on ${formatDayHeading(d, household.tz, today)}`"
-              :data-testid="`plan-slot-add-${d}-${sl.name.toLowerCase()}`"
-              @click="openAdd(d, sl.id)"
-            >
-              <UiIcon name="add" :size="20" />
-            </button>
           </div>
           <p v-if="isEmptyDay(d) && !writable(d)" class="agenda__none">Nothing planned</p>
         </section>
@@ -485,6 +518,12 @@ watch(isAdult, (a) => {
   background: var(--ui-inverse-surface);
   color: var(--ui-inverse-on-surface);
 }
+.agenda__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ui-space-2);
+}
 .agenda__head {
   margin: 0;
   font: var(--ui-type-title-sm);
@@ -536,23 +575,25 @@ watch(isAdult, (a) => {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.slot__add {
+.agenda__add {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
-  min-height: var(--ui-touch);
-  border: 1px dashed var(--ui-outline);
-  border-radius: var(--ui-radius-sm);
+  flex: none;
+  width: var(--ui-touch);
+  height: var(--ui-touch);
+  margin-block: calc(var(--ui-space-2) * -1);
+  border: 0;
+  border-radius: 50%;
   background: transparent;
   color: inherit;
   cursor: pointer;
 }
-.slot__add:hover {
+.agenda__add:hover {
   background: var(--ui-state-hover);
 }
 .chip:focus-visible,
-.slot__add:focus-visible {
+.agenda__add:focus-visible {
   outline: var(--ui-focus-ring);
   outline-offset: 1px;
 }

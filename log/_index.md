@@ -1,6 +1,6 @@
 ---
 title: Log Index
-updated: 2026-11-19
+updated: 2026-11-20
 ---
 
 # Daily Logs
@@ -30,3 +30,4 @@ updated: 2026-11-19
 - [2026-11-17](2026-11-17.md): dashboard; release
 - [2026-11-18](2026-11-18.md): M5.1; release
 - [2026-11-19](2026-11-19.md): plan; M5.2; recipes; dashboard
+- [2026-11-20](2026-11-20.md): plan; M5.3; dashboard; food; tailscale

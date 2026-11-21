@@ -21,10 +21,11 @@ import RecipeView from './RecipeView.vue'
 import RecipesView from './RecipesView.vue'
 
 const push = vi.fn()
+const back = vi.fn()
 const routeState = { params: { id: 'r1' } as Record<string, string> }
 vi.mock('vue-router', async (orig) => ({
   ...(await orig<typeof import('vue-router')>()),
-  useRouter: () => ({ push, replace: vi.fn(), go: vi.fn() }),
+  useRouter: () => ({ push, back, replace: vi.fn(), go: vi.fn() }),
   useRoute: () => ({ params: routeState.params, query: {} }),
   onBeforeRouteLeave: vi.fn(),
 }))
@@ -164,6 +165,22 @@ describe('recipes', () => {
     expect(snack.state.current?.action?.label).toBe('Undo')
     await snack.state.current?.action?.run()
     expect(m.setRating).toHaveBeenLastCalledWith('r1', null)
+  })
+
+  it('top-left back returns to the previous page when there is history, else to the list', async () => {
+    asRole('adult')
+    m.recipe.mockResolvedValue(view())
+    const w = mount(RecipeView, { global: { stubs } })
+    await flushPromises()
+    window.history.replaceState({ back: '/food/plan' }, '')
+    await w.find('button[aria-label="Back"]').trigger('click')
+    expect(back).toHaveBeenCalledTimes(1)
+    expect(push).not.toHaveBeenCalledWith('/food/recipes')
+    window.history.replaceState({ back: null }, '')
+    await w.find('button[aria-label="Back"]').trigger('click')
+    expect(back).toHaveBeenCalledTimes(1)
+    expect(push).toHaveBeenCalledWith('/food/recipes')
+    window.history.replaceState(null, '')
   })
 
   it('hides New, Edit and Delete from a child', async () => {

@@ -31,6 +31,7 @@ import Whiteboard from './Whiteboard.vue'
 import PanelHost from './panels/PanelHost.vue'
 import { prefersDark, resolveMode } from './theme'
 import { S } from './strings'
+import { currentOf } from './weatherModel'
 import { weekLabel, weekStartKey, type WeekStart } from './weekModel'
 import EventDetail from './details/EventDetail.vue'
 import DayDetail from './details/DayDetail.vue'
@@ -201,6 +202,8 @@ function setCellDone(key: string, done: boolean) {
   doneCells.value = next
 }
 const weekOffset = ref(0)
+/** The whole weather card opens the forecast, but only when there is a forecast to show. */
+const weatherReady = computed(() => !!props.data.weather && !!currentOf(props.data.weather))
 /** Past events are hidden by default; the toggle shows them again. */
 const hidePast = ref(true)
 const tz = computed(() => props.data.household.tz)
@@ -335,6 +338,7 @@ const shift = computed(() =>
                 { complete: doneCells.has(`${a.panel.kind}-${a.panel['run'] ?? i}`) },
               ]"
               :data-complete="doneCells.has(`${a.panel.kind}-${a.panel['run'] ?? i}`) || undefined"
+              @click="a.panel.kind === 'weather' && weatherReady && (detail = { kind: 'weather' })"
             >
               <PanelHost
                 :data="data"
@@ -370,6 +374,16 @@ const shift = computed(() =>
             <output class="weektext" data-testid="week-label">{{ weekText }}</output>
             <button type="button" class="wbtn" :aria-label="S.nextWeek" @click="weekOffset += 1">
               <UiIcon name="chevron_right" :size="24" />
+            </button>
+            <button
+              type="button"
+              class="wbtn wtoday"
+              data-testid="week-today"
+              :disabled="weekOffset === 0"
+              :aria-disabled="weekOffset === 0"
+              @click="weekOffset = 0"
+            >
+              {{ S.weekToday }}
             </button>
             <label class="hidepast" :class="{ on: hidePast }">
               <input v-model="hidePast" type="checkbox" role="switch" />
@@ -603,6 +617,19 @@ const shift = computed(() =>
 .wbtn :deep(svg) {
   width: 2.2rem;
   height: 2.2rem;
+}
+.wtoday {
+  width: auto;
+  padding: 0 var(--space-4);
+  font-size: var(--font-size-base);
+  font-weight: 600;
+}
+.wtoday:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.cell.k-weather {
+  cursor: pointer;
 }
 .weektext {
   min-width: 10rem;

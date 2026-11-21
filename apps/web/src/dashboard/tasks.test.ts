@@ -356,6 +356,18 @@ describe('completion flow', () => {
       member: 'm2',
     })
   })
+
+  it('the add form and the picker render inside the shared Modal and close through it', async () => {
+    const { w } = flow(data({ task_lists: [{ id: 'l1', name: 'Chores', dashboard_add: true }] }))
+    ;(w.vm as unknown as { beginAdd(): void }).beginAdd()
+    await nextTick()
+    expect(w.find('[data-testid=detail-modal] [role=dialog] [data-testid=add-form]').exists()).toBe(
+      true,
+    )
+    await w.find('button.close').trigger('click')
+    expect(w.find('[data-testid=add-form]').exists()).toBe(false)
+    ;(w.vm as unknown as { beginComplete(id: string): void }).beginComplete('a')
+  })
 })
 
 describe('layout editor and preview', () => {

@@ -7,7 +7,7 @@ on a wall dashboard and on everyone's phone.
 Everything runs locally. Deterministic rules do most of the work, and local AI models help only
 where rules can't decide.
 
-> **Status:** M5.2 (recipe re-import, timer buttons) is done. M5.1 (recipe sections and live scaling) is done. M5 (recipes, meal plan, shopping list) is code-complete. M3.6 (themes) is code-complete. M3.5 (onboarding) is code-complete: one compose file, a first-run wizard and optional Tailscale and HTTPS. M3 (mail ingest) is code-complete. On top of the M0 platform (login, members, dashboard
+> **Status:** M5.3 (dashboard and food polish, tailnet path to Ollama) is done. M5.2 (recipe re-import, timer buttons) is done. M5.1 (recipe sections and live scaling) is done. M5 (recipes, meal plan, shopping list) is code-complete. M3.6 (themes) is code-complete. M3.5 (onboarding) is code-complete: one compose file, a first-run wizard and optional Tailscale and HTTPS. M3 (mail ingest) is code-complete. On top of the M0 platform (login, members, dashboard
 > device pairing with PIN elevation, the job queue, backups, CI), M1 (calendars: Google, CalDAV,
 > ICS; the weather forecast with rule-based advisories; a real dashboard) and M2 (task lists,
 > recurring chores, routines, the "Now" list, weather tasks, ntfy push notifications) it reads
@@ -511,6 +511,14 @@ everything works as before. Any OpenAI-compatible server works (D-093); the defa
 > **Security:** Ollama has no authentication. Never bind it to a public address and never forward its port.
 > LAN or tailnet only.
 
+**Ollama on your tailnet:** with the `tailscale` profile on, enter the PC's MagicDNS name or `100.x` address and port
+in Settings, AI (for example `http://gpu-pc.example.ts.net:11434/v1`). The app's AI client sends those requests through
+the Tailscale sidecar's outbound proxy (`FA_TAILNET_PROXY`, D-127); other addresses, such as a LAN IP or the `ollama`
+container, are reached directly. Ollama must listen on the tailnet interface (`OLLAMA_HOST=0.0.0.0:11434` or the
+tailnet address). The proxy has no authentication: anything on the compose network can reach your tailnet through it, so
+never publish port 1055 and restrict the sidecar's node with Tailscale ACLs. Only the AI client uses it (calendars,
+feeds and recipes are unchanged). Verified against Tailscale's source and a local fake proxy, not a live tailnet.
+
 **Connect the app:** Settings, AI. Enter the base URL (`http://192.168.1.20:11434/v1`) and the model, press
 **Test connection** (it reports latency and whether the model exists), then enable the endpoint. In "rules first" mode, also
 switch on the AI stage of each decision point you want. If the server needs a key, add it there; it is stored encrypted and never shown again.
@@ -605,6 +613,7 @@ value. Saving a changed setting restarts the app by itself in about a second, on
 |---|---|---|---|
 | Public address (`public_base_url`) | `FA_PUBLIC_BASE_URL` | the wizard saves the browser's address | URL users reach: pairing links, the links in notifications. Optional |
 | Tailscale address (`tailnet_base_url`) | `FA_TAILNET_BASE_URL` | unset | The HTTPS tailnet address; used for the Google redirect and as a notification link base |
+| (process only, not a setting) | `FA_TAILNET_PROXY` | compose: `http://tailscale:1055`; unset or empty: off | Tailscale sidecar's outbound HTTP proxy. Only the AI client uses it, and only for tailnet hosts (`*.ts.net`, `100.64.0.0/10`, `fd7a:115c:a1e0::/48`); everything else is dialled directly. Must be an `http://` URL |
 | Notifications server (`ntfy_url`) | `FA_NTFY_URL` | compose: `http://ntfy:80` | ntfy server the app publishes to (`http` or `https`; independent of the feeds switch). Unset turns notifications off |
 | Notifications address for phones (`ntfy_public_url`) | `FA_NTFY_PUBLIC_URL` | empty: the tailnet address on `:8443`, else this server on `:8090`, else the server above | The ntfy address in subscribe links and QR codes |
 | Notifications token (`ntfy_token`) | `FA_NTFY_TOKEN` | unset | Bearer token (secret) for an ntfy server with access control. Never logged |
@@ -809,6 +818,7 @@ repository**. Examples use `example.com`.
 | M5 | Recipes (link, paste or typed import; ratings; local images), meal plan with templates, one grocery list by store and aisle with staples and offline queue, a Food view on phones and the kiosk, Settings, Meals (D-108 to D-122) | ✅ code-complete ([plan](plan/M5.md)) |
 | M5.1 | Recipe sections (shared ingredients, a column per section, finish steps; import keeps site sections) and live scaling on the dashboard recipe view (D-124, D-125) | ✅ done ([plan](plan/M5.1.md)) |
 | M5.2 | Re-import one recipe from its source URL, keeping plan entries and ratings (D-126); kiosk timer buttons | ✅ done ([plan](plan/M5.2.md)) |
+| M5.3 | Shared dashboard modal, weather card click, week Today, compact meal plan add and Today, recipe back, Ollama over the tailnet (D-127) | ✅ done ([plan](plan/M5.3.md)) |
 | M4.2 | M4 follow-ups (G4-01 to G4-15, D-098 to D-102, code review 2 LARGER items; D-119) | |
 | M4.1 | System One sidecar, kNN, backend registry, optional GPU agent with WoL, full eval | |
 | M6 | Smart assignment, learned calendar routing | |

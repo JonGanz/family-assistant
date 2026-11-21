@@ -422,7 +422,7 @@ See [4.5](#45-the-wall-screen-dashboard): a second port that serves the wall-scr
 devices on the home network only. Its settings are under **Settings, System**.
 
 ### 8.5 Other profiles
-The `gpu` profile's `ollama` service is one option; **a natively installed Ollama on the GPU PC is the default** (see [Local AI](../README.md#local-ai-optional): bind it to a LAN or tailnet address, never a public one, because it has no authentication). `--profile gpu` runs Ollama in a container (a GPU node, or one machine running everything; needs an NVIDIA GPU, its driver and
+The `gpu` profile's `ollama` service is one option; **a natively installed Ollama on the GPU PC is the default** (see [Local AI](../README.md#local-ai-optional): bind it to a LAN or tailnet address, never a public one, because it has no authentication). With the `tailscale` profile on, enter a tailnet Ollama host by its MagicDNS name or `100.x` address in Settings, AI: the app reaches it through the sidecar's outbound proxy (`TS_OUTBOUND_HTTP_PROXY_LISTEN` on the sidecar, `FA_TAILNET_PROXY` on the app, default `http://tailscale:1055`; empty turns it off). That proxy has no authentication, so keep port 1055 unpublished and restrict the sidecar's node with Tailscale ACLs. Only the AI client uses it. Verified against Tailscale's source and a local fake proxy, not a live tailnet. `--profile gpu` runs Ollama in a container (a GPU node, or one machine running everything; needs an NVIDIA GPU, its driver and
 nvidia-container-toolkit). `--profile ai-cpu` is a placeholder until M4.1. Profiles combine:
 `docker compose --profile tailscale --profile gpu up -d`. For two machines, the GPU machine runs
 `docker compose --profile gpu up -d ollama` with `OLLAMA_BIND` set so the server can reach it.

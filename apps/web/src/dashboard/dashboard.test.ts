@@ -308,6 +308,36 @@ describe('panels', () => {
     expect(w.findAll('[aria-label="Daily forecast"] li')).toHaveLength(2)
   })
 
+  it('clicking the weather card padding opens the forecast', async () => {
+    const d = data({
+      weather: { current: { weather_code: 1, temperature_2m: 9 } },
+    } as unknown as Partial<DashboardData>)
+    const w = mount(DashboardCanvas, {
+      props: {
+        data: d,
+        settings: settings({ panels: [{ kind: 'weather' }] } as Partial<DashboardSettings>),
+        now: NOW,
+      },
+    })
+    await w.find('.cell.k-weather').trigger('click')
+    expect(w.find('[aria-label="Hourly forecast"]').exists()).toBe(true)
+  })
+
+  it('the week Today button returns to the current week and is inactive there', async () => {
+    const w = mount(DashboardCanvas, {
+      props: { data: data(), settings: settings(), now: NOW },
+    })
+    await w.find('[data-testid="kiosk-view-week"]').trigger('click')
+    const today = () => w.find('[data-testid="week-today"]')
+    expect(today().attributes('disabled')).toBeDefined()
+    await w.find('[aria-label="Next week"]').trigger('click')
+    expect(w.find('[data-testid="week-label"]').text()).not.toBe('Current')
+    expect(today().attributes('disabled')).toBeUndefined()
+    await today().trigger('click')
+    expect(w.find('[data-testid="week-label"]').text()).toBe('Current')
+    expect(today().attributes('disabled')).toBeDefined()
+  })
+
   it('weather shows the day forecast before noon only', () => {
     const wx = {
       current: { weather_code: 1, temperature_2m: 10 },
