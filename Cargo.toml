@@ -24,7 +24,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.37"
 edition = "2024"
 rust-version = "1.88"
 license = "AGPL-3.0-or-later"
@@ -45,6 +45,12 @@ opt-level = 3
 
 [profile.dev.package.blake2]
 opt-level = 3
+
+# Smaller, faster release binaries (image and GPU agent) at the cost of a slower release build.
+[profile.release]
+lto = "thin"
+strip = "symbols"
+codegen-units = 1
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
