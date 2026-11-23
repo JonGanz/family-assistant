@@ -10,6 +10,41 @@ question first.
 Findings from the 2026-11-23 review that were **not** fixed on the `review-fixes-2026-11-23` branch because the fix
 changes behaviour, security posture or process. Each needs an answer (a `Q-NNN` where it is a design question).
 
+### Answer first (with the recommended answer)
+| Item | Question | Recommendation |
+|---|---|---|
+| V-01 | Turn CI back on for pull requests and tags, and gate the release on it? | Yes: a tag publishes an image with no checks today |
+| S-01 | Hash session tokens in the database (logs everyone out once)? | Yes: a backup holds live sessions |
+| S-02 | Master key download over plain HTTP: refuse or warn? | Refuse unless the connection is secure or loopback |
+| S-03 | PIN lockout alert: who, how often? | All adults, once per lockout |
+| S-04 | Require the secret again when an AI endpoint or CalDAV host changes? | Yes, as for IMAP (C2-07) |
+| B-01 | Settings save takes the API down until running jobs finish | Restart only the API |
+| B-02 | AI calls of 120 to 600 s inside a 30 s request timeout | Move extraction to a job; exempt the AI routes as a stopgap |
+| S-05 | LLM-set mail categories trigger auto-actions with no human step | Configurable, default: LLM categories do not auto-act |
+| B-06 | Events deleted at the provider stay in the family calendar | Delete synced copies; keep mail-proposed ones, marked |
+
+Quick yes or no: B-04 (digest latest hour, default noon), B-05, B-08 (three misses before archiving), V-03, V-04, V-08, V-09,
+L-01, L-05, B-14. Also: should the design questions in this section become `Q-NNN` files (workflow 1)?
+
+### Left open by the `review-fixes-2026-11-23` branch
+The branch compiles (`cargo check --workspace --all-targets`, 2026-11-23). Nothing else was run.
+| ID | Item | Size |
+|---|---|---|
+| X-01 | Not run on the branch: tests, clippy, `scripts/ci-local.sh`, `scripts/e2e.sh`, `scripts/compose-smoke.sh`, `fa.py check`, YAML validation of `release.yml` and `deploy/compose.yaml` | QUICK |
+| X-02 | Project rules not yet met for the branch: no `log/2026-11-23.md` entry, no `CHANGELOG.md` Unreleased bullets, no README note for the new image tags (`0.1.37`, `0.1`) or the version-bump step of a release | QUICK |
+| X-03 | `serve` exits non-zero only when the API task fails or any task panics; worker, scheduler, LAN listener and bridge tasks return `()`, so their errors are still not seen (`bins/fa-server/src/serve.rs`) | QUICK |
+| X-04 | `mail.process` is now queued per chunk, but if the enqueue itself fails after the chunk commits, those messages stay pending; needs a pending-message rescan in the worker (only `mail process-now` sweeps them) (`fa-mail/src/sync.rs`) | QUICK |
+| X-05 | Not repaired by the upgrade: after-done chores that stalled before it, and mail already stuck as pending. Decide: a one-off repair job, or the manual steps on the impact page | QUICK |
+| X-06 | The first done-job prune deletes the whole backlog in one transaction; batch it if installs with large `job` tables matter. Retention is a constant (14 days, `fa-jobs/src/handlers.rs`), not a setting | QUICK |
+| X-07 | Season start `02-29` maps to `03-01` in non-leap years (not `02-28`, which fails `in_season`); confirm | — |
+| X-08 | Per-second and per-minute recurrence rules are refused; an existing chore with one stops producing tasks without a message in the UI | QUICK |
+| X-09 | A day and month more than 183 days in the past is read as next year, for bills too; confirm the threshold | — |
+| X-10 | Recipe import drops `data:` images and relative images with no source URL | — |
+| X-11 | `X-Frame-Options: SAMEORIGIN` on every response blocks embedding the app in another origin's iframe; confirm nobody needs that (make it a setting if so) | QUICK |
+| X-12 | The GPU agent stub exits 1, so an installed systemd unit restarts until the start limit (see V-08) | — |
+| X-13 | The release profile (thin LTO, one codegen unit) slows release builds, most of all the emulated arm64 image; measure on the first tag | — |
+| X-14 | The new DST test expects America/Havana 2026-03-08 midnight at 05:00 UTC from memory of tzdata; check when tests run (`fa-api/src/feeds.rs`) | QUICK |
+
 ### Release and process
 | ID | Finding | Decision needed | Size |
 |---|---|---|---|
