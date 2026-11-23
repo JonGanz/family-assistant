@@ -156,6 +156,13 @@ impl AuthService {
         if let Some(pin) = &new.pin {
             validate_pin(pin)?;
         }
+        // Cheap check before the costly hashing; repeated under the lock below.
+        let mut tx = self.store.tx_for(household).await?;
+        let closed = SetupRepo::state(&mut tx).await?.has_adult_account;
+        tx.rollback().await?;
+        if closed {
+            return Err(AuthError::SetupClosed);
+        }
         let password_hash = password::hash_blocking(new.password.clone()).await?;
         let pin_hash = match &new.pin {
             Some(p) => Some(password::hash_blocking(p.clone()).await?),

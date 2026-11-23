@@ -43,11 +43,14 @@ test('only the dashboard is served, to devices only', async ({ playwright }) => 
   // PIN entry is off by default.
   const me = await (await lan.get('/api/v1/me', { headers: dev })).json()
   expect(me.actor.kind).toBe('device')
-  const el = await lan.post('/api/v1/device/elevate', {
-    data: { member_id: '00000000-0000-0000-0000-000000000000', pin: '0000' },
-    headers: { ...dev, ...W },
-  })
-  expect(el.status()).toBe(403)
+  // Both the current path and the deprecated one are refused.
+  for (const path of ['/api/v1/devices/elevate', '/api/v1/device/elevate']) {
+    const el = await lan.post(path, {
+      data: { member_id: '00000000-0000-0000-0000-000000000000', pin: '0000' },
+      headers: { ...dev, ...W },
+    })
+    expect(el.status(), path).toBe(403)
+  }
   await lan.dispose()
 })
 

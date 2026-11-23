@@ -45,7 +45,8 @@ impl LanConfig {
 #[derive(Debug, Clone, Copy)]
 pub struct LanOrigin;
 
-const ELEVATE: &str = "device/elevate";
+/// PIN elevation: the current path and the deprecated one older clients still post.
+const ELEVATE: &[&str] = &["devices/elevate", "device/elevate"];
 
 /// The `/api/v1` calls of the dashboard; `*` matches one path segment.
 const ALLOWED: &[(Method, &str)] = &[
@@ -59,7 +60,8 @@ const ALLOWED: &[(Method, &str)] = &[
     (Method::POST, "tasks/*/complete"),
     (Method::POST, "tasks/*/reopen"),
     (Method::PATCH, "routine-runs/*/steps/*"),
-    (Method::POST, ELEVATE),
+    (Method::POST, "devices/elevate"),
+    (Method::POST, "device/elevate"),
     // M5 kiosk Food view, meals panel and Week view meals (D-117). Adding and checking need no PIN (D-015,
     // D-019); edit and delete pass here but the route's authz still requires an elevated device (D-110).
     (Method::GET, "meals/slots"),
@@ -111,7 +113,7 @@ async fn guard(State(cfg): State<LanConfig>, mut req: Request, next: Next) -> Re
         {
             return ApiError::NotFound.into_response();
         }
-        if api == ELEVATE && !cfg.allow_pin {
+        if ELEVATE.contains(&api) && !cfg.allow_pin {
             return ApiError::Forbidden(
                 "PIN entry is turned off on the home-network address".into(),
             )
