@@ -127,6 +127,14 @@ pub fn parse(raw: &[u8]) -> Result<ParsedMessage> {
         .date()
         .and_then(|d| DateTime::from_timestamp(d.to_timestamp(), 0));
     out.message_id = msg.message_id().map(str::to_owned);
+    // Same cap as the kept headers (C2-06): subject, sender name and Message-ID.
+    out.truncated |= cap_str(&mut out.subject, MAX_HEADER_CHARS);
+    if let Some(n) = out.from_name.as_mut() {
+        out.truncated |= cap_str(n, MAX_HEADER_CHARS);
+    }
+    if let Some(id) = out.message_id.as_mut() {
+        out.truncated |= cap_str(id, MAX_HEADER_CHARS);
+    }
     out.in_reply_to = msg
         .in_reply_to()
         .map(|l| l.iter().map(str::to_owned).collect())
@@ -326,6 +334,19 @@ mod tests {
     fn mail(ctype: &str, body: &str) -> Vec<u8> {
         format!("From: a@example.com\r\nSubject: s\r\nContent-Type: {ctype}\r\n\r\n{body}\r\n")
             .into_bytes()
+    }
+
+    #[test]
+    fn caps_subject_from_name_and_message_id() {
+        let long = "é".repeat(MAX_HEADER_CHARS);
+        let raw = format!(
+            "From: \"{long}\" <a@example.org>\r\nSubject: {long}\r\nMessage-ID: <{long}@x>\r\n\r\nhi\r\n"
+        );
+        let m = parse(raw.as_bytes()).unwrap();
+        assert!(m.subject.len() <= MAX_HEADER_CHARS);
+        assert!(m.from_name.as_deref().unwrap().len() <= MAX_HEADER_CHARS);
+        assert!(m.message_id.as_deref().unwrap().len() <= MAX_HEADER_CHARS);
+        assert!(m.truncated);
     }
 
     #[test]

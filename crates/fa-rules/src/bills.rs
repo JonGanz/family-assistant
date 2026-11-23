@@ -185,7 +185,8 @@ fn generic_amount(text: &str, default_currency: &str) -> Option<Found> {
     if ms.is_empty() {
         return None;
     }
-    let lower = text.to_lowercase();
+    // ASCII-only lowering keeps byte offsets equal to `text` (labels are ASCII).
+    let lower = text.to_ascii_lowercase();
     let strong_labels = [
         "total amount due",
         "amount due",
@@ -230,7 +231,8 @@ fn first_date(snippet: &str, received: chrono::DateTime<chrono::Utc>) -> Option<
 }
 
 fn generic_due(text: &str, received: chrono::DateTime<chrono::Utc>) -> Option<NaiveDate> {
-    let lower = text.to_lowercase();
+    // ASCII-only lowering keeps byte offsets equal to `text` (labels are ASCII).
+    let lower = text.to_ascii_lowercase();
     let mut hits: Vec<usize> = Vec::new();
     hits.extend(lower.match_indices("due").map(|(p, _)| p + 3));
     hits.sort_unstable();
@@ -425,6 +427,19 @@ mod tests {
             ("1,234", 0, 1234),
         ] {
             assert_eq!(parse_amount(s, exp), Some(want), "{s}");
+        }
+    }
+
+    #[test]
+    fn non_ascii_case_does_not_panic() {
+        let r = chrono::Utc::now();
+        for s in [
+            "İİİİ due İ Jan 5 İ",
+            "İİİİİİİİ amount due \u{130} $45.00 is due",
+            "İ pay by İİ 1/2/2030 total $3",
+        ] {
+            let _ = generic_amount(s, "USD");
+            let _ = generic_due(s, r);
         }
     }
 }

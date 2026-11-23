@@ -70,6 +70,9 @@ pub struct Ping {
     pub model_found: bool,
 }
 
+/// Cap on an LLM response body, so a misbehaving endpoint cannot exhaust memory.
+const MAX_BODY_BYTES: usize = 8 * 1024 * 1024;
+
 #[derive(Debug, thiserror::Error)]
 pub enum LlmError {
     #[error("llm endpoint unavailable: {0}")]
@@ -185,7 +188,21 @@ impl LlmClient {
         if !status.is_success() {
             return Err(LlmError::Http(status.as_u16()));
         }
-        let bytes = resp.bytes().await.map_err(map_err)?;
+        let too_large = || LlmError::BadJson(format!("response body over {MAX_BODY_BYTES} bytes"));
+        if resp
+            .content_length()
+            .is_some_and(|n| n > MAX_BODY_BYTES as u64)
+        {
+            return Err(too_large());
+        }
+        let mut resp = resp;
+        let mut bytes: Vec<u8> = Vec::new();
+        while let Some(chunk) = resp.chunk().await.map_err(map_err)? {
+            if bytes.len() + chunk.len() > MAX_BODY_BYTES {
+                return Err(too_large());
+            }
+            bytes.extend_from_slice(&chunk);
+        }
         serde_json::from_slice(&bytes).map_err(|e| LlmError::BadJson(e.to_string()))
     }
 
