@@ -156,6 +156,15 @@ impl JobRepo {
         worker: &str,
         lock_secs: i64,
     ) -> Result<Option<Job>> {
+        // A running job whose lease expired after its last attempt (it likely killed the worker)
+        // is buried instead of being reclaimed forever.
+        sqlx::query(
+            "UPDATE job SET status = 'dead', locked_by = NULL, locked_until = NULL,
+                    last_error = COALESCE(last_error, 'lease expired after max attempts')
+             WHERE status = 'running' AND locked_until < now() AND attempts >= max_attempts",
+        )
+        .execute(&mut *conn)
+        .await?;
         let row = sqlx::query_as!(
             Row,
             "UPDATE job SET status = 'running', locked_by = $1, attempts = attempts + 1,
@@ -228,6 +237,17 @@ impl JobRepo {
         .fetch_all(conn)
         .await?;
         Ok(rows.into_iter().map(Into::into).collect())
+    }
+
+    /// Deletes `done` jobs last updated before `older_than`. Returns how many were removed.
+    pub async fn prune_done(conn: &mut PgConnection, older_than: DateTime<Utc>) -> Result<u64> {
+        Ok(
+            sqlx::query("DELETE FROM job WHERE status = 'done' AND updated_at < $1")
+                .bind(older_than)
+                .execute(conn)
+                .await?
+                .rows_affected(),
+        )
     }
 }
 

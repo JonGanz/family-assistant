@@ -2,11 +2,14 @@ use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 
 use chrono::{DateTime, Utc};
-use fa_store::{DeviceElevationRepo, ScheduleRepo, SessionRepo, SystemStatusRepo};
+use fa_store::{DeviceElevationRepo, JobRepo, ScheduleRepo, SessionRepo, SystemStatusRepo};
 
 use crate::{BoxFuture, JobContext, JobError, JobHandler};
 
 const BACKUP_MAX_AGE_HOURS: f64 = 26.0;
+/// Finished (`done`) jobs older than this many days are deleted by `session.cleanup`, so the
+/// queue table does not grow without bound. Dead jobs are kept for the status page.
+const DONE_JOB_RETENTION_DAYS: i64 = 14;
 
 /// `session.cleanup`: deletes expired sessions and device elevations.
 pub struct SessionCleanup;
@@ -25,11 +28,14 @@ impl JobHandler for SessionCleanup {
             let mut tx = ctx.store.tx_system().await?;
             let sessions = SessionRepo::delete_expired(&mut tx).await?;
             let elevations = DeviceElevationRepo::delete_expired(&mut tx).await?;
+            let cutoff = Utc::now() - chrono::Duration::days(DONE_JOB_RETENTION_DAYS);
+            let done_jobs = JobRepo::prune_done(&mut tx, cutoff).await?;
             tx.commit().await?;
             tracing::info!(
                 sessions,
                 elevations,
-                "expired sessions and elevations removed"
+                done_jobs,
+                "expired sessions, elevations and old done jobs removed"
             );
             Ok(())
         })

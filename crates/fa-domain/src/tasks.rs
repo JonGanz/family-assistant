@@ -124,8 +124,15 @@ pub fn next_in_season(date: NaiveDate, from: i32, until: i32) -> NaiveDate {
         return date;
     }
     let (m, d) = ((from / 100) as u32, (from % 100) as u32);
+    // A 02-29 start falls on 03-01 in non-leap years (the first in-season day there).
     (date.year()..date.year() + 9)
-        .filter_map(|y| NaiveDate::from_ymd_opt(y, m, d))
+        .filter_map(|y| {
+            NaiveDate::from_ymd_opt(y, m, d).or_else(|| {
+                (m == 2 && d == 29)
+                    .then(|| NaiveDate::from_ymd_opt(y, 3, 1))
+                    .flatten()
+            })
+        })
         .find(|c| *c >= date)
         .unwrap_or(date)
 }
@@ -324,6 +331,14 @@ mod tests {
         for md in [301, 701, 1031] {
             assert!(!in_season(md, f, u), "{md}");
         }
+    }
+
+    #[test]
+    fn next_in_season_leap_day_start() {
+        let d = |y, m, day| NaiveDate::from_ymd_opt(y, m, day).unwrap();
+        // Season 02-29..05-31: in a non-leap year it starts the next day (03-01).
+        assert_eq!(next_in_season(d(2026, 1, 10), 229, 531), d(2026, 3, 1));
+        assert_eq!(next_in_season(d(2028, 1, 10), 229, 531), d(2028, 2, 29));
     }
 
     #[test]

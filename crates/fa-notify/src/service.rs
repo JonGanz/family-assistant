@@ -123,6 +123,13 @@ impl NotifyService {
             return Err(NotifyError::NotFound);
         };
         let is_adult = m.value.role == Role::Adult;
+        // Serialise concurrent first reads for one member (released at commit), so two
+        // requests cannot both miss the row and race the insert into a unique violation.
+        sqlx::query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))")
+            .bind(format!("notify_pref:{}", member.as_uuid()))
+            .execute(&mut *conn)
+            .await
+            .map_err(fa_store::StoreError::from)?;
         if let Some(p) = NotifyPrefRepo::get_for_member(conn, member).await? {
             return Ok(p);
         }
