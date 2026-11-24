@@ -9,6 +9,7 @@
 #      FA_E2E_SETUP_PORT (18094, empty-database instance for the API setup spec),
 #      FA_E2E_WIZARD_PORT (18095, empty-database instance for the UI wizard, bound on all
 #      interfaces and browsed through the host's LAN address: a plain-HTTP, non-secure context),
+#      FA_E2E_PW_TIMEOUT=1800 seconds each Playwright run may take before it is killed,
 #      FA_E2E_SKIP_BUILD=1 to reuse apps/web/dist,
 #      FA_E2E_HOLD=<seconds> to keep the seeded stack up for that long before the specs (debugging).
 set -euo pipefail
@@ -28,8 +29,27 @@ WIZARD_PORT=${FA_E2E_WIZARD_PORT:-18095}
 PROJECT=fa-e2e-$$
 WORK=$(mktemp -d)
 PIDS=()
+PW_PGID=
+
+# Playwright runs in its own session with a hard timeout, so the trap (and a hang) can kill the
+# whole process group. Without this, a killed run left workers orphaned under systemd for weeks.
+run_pw() {
+  setsid timeout -k 30 "${FA_E2E_PW_TIMEOUT:-1800}" "$@" &
+  PW_PGID=$!
+  local rc=0
+  wait "$PW_PGID" || rc=$?
+  PW_PGID=
+  return $rc
+}
+
+# Kill Playwright workers orphaned (re-parented to init or systemd) by an earlier killed run.
+for p in $(pgrep -f "$ROOT/e2e/node_modules/.*playwright/lib/common/process.js" 2>/dev/null || true); do
+  pp=$(ps -o ppid= -p "$p" 2>/dev/null | tr -d ' ')
+  if [[ $pp == 1 || $(ps -o comm= -p "${pp:-0}" 2>/dev/null) == systemd ]]; then kill "$p" 2>/dev/null || true; fi
+done
 
 cleanup() {
+  [[ -n ${PW_PGID:-} ]] && kill -- "-$PW_PGID" 2>/dev/null || true
   for p in "${PIDS[@]:-}"; do [[ -n $p ]] && kill "$p" 2>/dev/null || true; done
   docker rm -f -v "$PROJECT-pg" "$PROJECT-radicale" "$PROJECT-ntfy" "$PROJECT-greenmail" >/dev/null 2>&1 || true
   rm -rf "$WORK"
@@ -172,7 +192,7 @@ echo "== playwright (API specs, e2e/)"
 cd e2e
 corepack pnpm@9 install >/dev/null
 corepack pnpm@9 exec playwright install chromium
-if ! corepack pnpm@9 exec playwright test; then dump_logs; exit 1; fi
+if ! run_pw corepack pnpm@9 exec playwright test; then dump_logs; exit 1; fi
 cd ..
 
 echo "== playwright (UI specs, apps/web/e2e/)"
@@ -181,6 +201,6 @@ if ! E2E_BASE_URL=$FA_PUBLIC_BASE_URL E2E_USERNAME=$FA_E2E_USER E2E_PASSWORD=$FA
   E2E_CHILD_USERNAME=$FA_E2E_CHILD_USER E2E_CHILD_PASSWORD=$FA_E2E_CHILD_PASSWORD \
   E2E_FIXTURES=$FA_E2E_FIXTURES E2E_PG_CONTAINER=$FA_E2E_PG_CONTAINER \
   E2E_IMAP_PORT=$IMAP_PORT E2E_SMTP_PORT=$SMTP_PORT E2E_WIZARD_URL=$WIZARD_URL E2E_NTFY_URL=$FA_NTFY_URL \
-  corepack pnpm@9 exec playwright test; then dump_logs; exit 1; fi
+  run_pw corepack pnpm@9 exec playwright test; then dump_logs; exit 1; fi
 cd ../..
 echo "e2e OK"
