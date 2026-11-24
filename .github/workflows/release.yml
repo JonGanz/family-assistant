@@ -65,23 +65,3 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  gpu-agent:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-      - name: Install toolchain from rust-toolchain.toml
-        run: rustup show active-toolchain || rustup toolchain install
-      - uses: Swatinem/rust-cache@2201cc584a476d1b508be977bbe4b7d1c7a52e9c # v2.9.3
-      - run: cargo build --release --locked -p fa-gpu-agent --target x86_64-unknown-linux-gnu
-      - name: Package
-        run: |
-          cp target/x86_64-unknown-linux-gnu/release/fa-gpu-agent fa-gpu-agent-x86_64-linux
-          sha256sum fa-gpu-agent-x86_64-linux > fa-gpu-agent-x86_64-linux.sha256
-      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
-        with:
-          files: |
-            fa-gpu-agent-x86_64-linux
-            fa-gpu-agent-x86_64-linux.sha256

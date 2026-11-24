@@ -427,7 +427,7 @@ nvidia-container-toolkit). `--profile ai-cpu` is a placeholder until M4.1. Profi
 `docker compose --profile tailscale --profile gpu up -d`. For two machines, the GPU machine runs
 `docker compose --profile gpu up -d ollama` with `OLLAMA_BIND` set so the server can reach it.
 `fa-gpu-agent` runs natively there with [`systemd/fa-gpu-agent.service`](systemd/fa-gpu-agent.service) (a stub
-until M4.1).
+until M4.1, so releases no longer ship its binary).
 
 ## 9. Recovery and the command line
 Everyday setup needs no command line. For recovery and scripting, `fa-server` runs inside the app container:

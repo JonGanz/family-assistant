@@ -23,7 +23,7 @@ changes behaviour, security posture or process. Each needs an answer (a `Q-NNN` 
 | S-05 | LLM-set mail categories trigger auto-actions with no human step | Configurable, default: LLM categories do not auto-act |
 | B-06 | Events deleted at the provider stay in the family calendar | Delete synced copies; keep mail-proposed ones, marked |
 
-Quick yes or no: B-04 (digest latest hour, default noon), B-05, B-08 (three misses before archiving), V-03, V-04, V-08, V-09,
+Quick yes or no: B-04 (digest latest hour, default noon), B-05, B-08 (three misses before archiving), V-03, V-04, V-09,
 L-01, L-05, B-14. Also: should the design questions in this section become `Q-NNN` files (workflow 1)?
 
 ### Left open by the `review-fixes-2026-11-23` branch
@@ -41,7 +41,7 @@ The branch compiles (`cargo check --workspace --all-targets`, 2026-11-23). Nothi
 | X-09 | A day and month more than 183 days in the past is read as next year, for bills too; confirm the threshold | — |
 | X-10 | Recipe import drops `data:` images and relative images with no source URL | — |
 | X-11 | `X-Frame-Options: SAMEORIGIN` on every response blocks embedding the app in another origin's iframe; confirm nobody needs that (make it a setting if so) | QUICK |
-| X-12 | The GPU agent stub exits 1, so an installed systemd unit restarts until the start limit (see V-08) | — |
+| X-12 | The GPU agent stub exits 1, so an installed systemd unit restarts until the start limit (no longer released; the release job was dropped until M4.1) | — |
 | X-13 | The release profile (thin LTO, one codegen unit) slows release builds, most of all the emulated arm64 image; measure on the first tag | — |
 | X-14 | The new DST test expects America/Havana 2026-03-08 midnight at 05:00 UTC from memory of tzdata; check when tests run (`fa-api/src/feeds.rs`) | QUICK |
 
@@ -55,7 +55,6 @@ The branch compiles (`cargo check --workspace --all-targets`, 2026-11-23). Nothi
 | V-05 | Only a container image and a stub GPU agent are released | `fa-server` tarballs (amd64, arm64), a `.deb` with a systemd unit, image signing (cosign)? | LARGER |
 | V-06 | The version is bumped by hand in three places (workspace, web, changelog) | Adopt `cargo-release` or `release-plz`? | QUICK |
 | V-07 | No upgrade test from the previous release's schema; no documented rollback or "minimum upgradable from" version | Add both to the release checklist? | LARGER |
-| V-08 | `fa-gpu-agent` is a stub that is built, released and given a systemd unit | Keep releasing it, or drop it from the release until M4.1? | QUICK |
 | V-09 | No `CONTRIBUTING.md`, `SECURITY.md`, issue or PR templates; no in-app link to the source (AGPL, network use) | Add them; where does the source link go (About page)? | QUICK |
 | V-10 | `README.md` is 66 KB; `STATUS.md` is stale (2026-11-08); `plan/_index.md` shows M3.7 "running" and M5 "planned"; code review 2 status column is stale | Split the README into `docs/`? Regenerate or drop `STATUS.md`? | QUICK |
 
