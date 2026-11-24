@@ -142,7 +142,12 @@ pub async fn setup_owner(
     headers: HeaderMap,
     ApiJson(new): ApiJson<NewSetupOwner>,
 ) -> ApiResult<Response> {
-    let hid = state(&s).await?.household.ok_or_else(|| {
+    let st = state(&s).await?;
+    // Refuse before the service hashes anything (argon2 is costly).
+    if st.has_adult_account {
+        return Err(closed());
+    }
+    let hid = st.household.ok_or_else(|| {
         ApiError::coded(
             StatusCode::CONFLICT,
             "setup_required",

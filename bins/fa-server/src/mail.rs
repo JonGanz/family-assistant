@@ -87,16 +87,23 @@ pub async fn run(
                 }
             }
             let sync = SyncService::new(deps.clone());
+            let mut sync_failed = 0usize;
             for (id, name) in sources {
                 match sync.sync_source(household, id).await {
                     Ok(()) => println!("source '{name}': synced"),
-                    Err(e) => println!("source '{name}': {e}"),
+                    Err(e) => {
+                        eprintln!("source '{name}': {e}");
+                        sync_failed += 1;
+                    }
                 }
             }
             let (ok, failed) = process_pending(store, &deps, household)
                 .await
                 .context("processing")?;
             println!("processed: {ok} message(s), {failed} failed");
+            if sync_failed > 0 {
+                bail!("{sync_failed} mail source(s) failed to sync");
+            }
         }
         MailAction::Reset { yes } => crate::ops::mail_reset(store, household, yes).await?,
         MailAction::ProcessNow => {

@@ -1,6 +1,7 @@
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use anyhow::{Context, Result};
@@ -134,13 +135,22 @@ async fn resolve(store: &Store, key: &MasterKey) -> Result<Resolved> {
 /// A running set of tasks built from one resolved configuration.
 struct Pass {
     cancel: CancellationToken,
+    /// Set when a task of the pass ended by an error (the api server failing, a panic).
+    failed: Arc<AtomicBool>,
     tasks: JoinSet<()>,
 }
 
 impl Pass {
-    async fn stop(mut self) {
+    /// Stops the pass; `true` when one of its tasks failed.
+    async fn stop(mut self) -> bool {
         self.cancel.cancel();
-        while self.tasks.join_next().await.is_some() {}
+        while let Some(joined) = self.tasks.join_next().await {
+            if let Err(e) = joined {
+                tracing::error!(error = %e, "a server task ended abnormally");
+                self.failed.store(true, Ordering::SeqCst);
+            }
+        }
+        self.failed.load(Ordering::SeqCst)
     }
 }
 
@@ -157,6 +167,7 @@ async fn start_pass(
     let cancel = parent.child_token();
     let mut pass = Pass {
         cancel: cancel.clone(),
+        failed: Arc::new(AtomicBool::new(false)),
         tasks: JoinSet::new(),
     };
     let run_api = matches!(mode, ServeMode::Api | ServeMode::All);
@@ -249,6 +260,7 @@ async fn start_pass(
         let app = fa_api::router(state);
         tracing::info!(addr = %cfg.bind_addr, "api listening");
         let c = cancel.clone();
+        let failed = pass.failed.clone();
         pass.tasks.spawn(async move {
             if let Err(e) = axum::serve(
                 listener,
@@ -261,6 +273,7 @@ async fn start_pass(
             .await
             {
                 tracing::error!(error = %e, "api server failed");
+                failed.store(true, Ordering::SeqCst);
             }
             // The api ending on its own ends the process.
             c.cancel();
@@ -389,7 +402,10 @@ pub async fn run(env_cfg: ProcessConfig, store: Store, mode: ServeMode) -> Resul
                 }
             }
         };
-        pass.stop().await;
+        if pass.stop().await && !cancel.is_cancelled() {
+            cancel.cancel();
+            anyhow::bail!("a server task failed; see the log above");
+        }
         match next {
             Some(r) if !cancel.is_cancelled() => {
                 tracing::info!("settings changed, restarting");

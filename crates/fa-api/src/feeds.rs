@@ -1543,28 +1543,28 @@ pub struct DashboardQuery {
 }
 
 /// `[start of today, start of today + days)` in the household time zone.
-/// `from` replaces today as the first day.
+/// `from` replaces today as the first day. `None` when the window leaves chrono's date range.
 fn day_window(
     tz: &str,
     days: u8,
     now: DateTime<Utc>,
     from: Option<chrono::NaiveDate>,
-) -> (DateTime<Utc>, DateTime<Utc>) {
+) -> Option<(DateTime<Utc>, DateTime<Utc>)> {
     let tz: chrono_tz::Tz = tz.parse().unwrap_or(chrono_tz::UTC);
-    let midnight = |d: chrono::NaiveDate| {
-        tz.from_local_datetime(&d.and_time(NaiveTime::MIN))
-            .earliest()
-            .or_else(|| tz.from_local_datetime(&d.and_time(NaiveTime::MIN)).latest())
-            .map_or_else(
-                || d.and_time(NaiveTime::MIN).and_utc(),
-                |t| t.with_timezone(&Utc),
-            )
+    // The first local time of the day; when midnight falls in a DST gap, step forward by the hour.
+    let start_of = |d: chrono::NaiveDate| {
+        let mut local = d.and_time(NaiveTime::MIN);
+        for _ in 0..48 {
+            if let Some(t) = tz.from_local_datetime(&local).earliest() {
+                return Some(t.with_timezone(&Utc));
+            }
+            local = local.checked_add_signed(ChronoDuration::hours(1))?;
+        }
+        None
     };
     let today = from.unwrap_or_else(|| now.with_timezone(&tz).date_naive());
-    (
-        midnight(today),
-        midnight(today + ChronoDuration::days(i64::from(days))),
-    )
+    let end = today.checked_add_days(chrono::Days::new(u64::from(days)))?;
+    Some((start_of(today)?, start_of(end)?))
 }
 
 #[utoipa::path(get, path = "/api/v1/dashboard", tag = "dashboard", params(DashboardQuery),
@@ -1627,7 +1627,8 @@ pub async fn get_dashboard(
                 .map_err(|_| ApiError::BadRequest("from must be YYYY-MM-DD".into()))
         })
         .transpose()?;
-    let (from, to) = day_window(&h.tz, days, Utc::now(), start);
+    let (from, to) = day_window(&h.tz, days, Utc::now(), start)
+        .ok_or_else(|| ApiError::BadRequest("from is out of range".into()))?;
     let events = s
         .services
         .calendar
@@ -1754,7 +1755,7 @@ pub struct FailedJobsQuery {
 pub async fn get_failed_jobs(
     State(s): State<AppState>,
     auth: Auth,
-    axum::extract::Query(q): axum::extract::Query<FailedJobsQuery>,
+    ApiQuery(q): ApiQuery<FailedJobsQuery>,
 ) -> ApiResult<Json<JobFailuresView>> {
     require(
         &auth.actor,
@@ -1831,7 +1832,7 @@ pub async fn get_failed_jobs(
 pub async fn retry_failed_jobs(
     State(s): State<AppState>,
     auth: Auth,
-    Json(body): Json<RetryJobsBody>,
+    ApiJson(body): ApiJson<RetryJobsBody>,
 ) -> ApiResult<Json<RetryJobsResult>> {
     require(
         &auth.actor,
@@ -1895,17 +1896,23 @@ mod tests {
     fn day_window_follows_the_household_zone() {
         let now = Utc.with_ymd_and_hms(2026, 3, 28, 23, 30, 0).unwrap();
         // Berlin is already on 29 March, the day the clocks go forward: that day has 23 hours.
-        let (from, to) = day_window("Europe/Berlin", 1, now, None);
+        let (from, to) = day_window("Europe/Berlin", 1, now, None).unwrap();
         assert_eq!(from, Utc.with_ymd_and_hms(2026, 3, 28, 23, 0, 0).unwrap());
         assert_eq!(to - from, ChronoDuration::hours(23));
-        let (from, to) = day_window("not/a-zone", 2, now, None);
+        let (from, to) = day_window("not/a-zone", 2, now, None).unwrap();
         assert_eq!(from, Utc.with_ymd_and_hms(2026, 3, 28, 0, 0, 0).unwrap());
         assert_eq!(to - from, ChronoDuration::days(2));
         // An explicit start date spanning the spring-forward day in Berlin: 28 + 29 March.
         let d = chrono::NaiveDate::from_ymd_opt(2026, 3, 28);
-        let (from, to) = day_window("Europe/Berlin", 2, now, d);
+        let (from, to) = day_window("Europe/Berlin", 2, now, d).unwrap();
         assert_eq!(from, Utc.with_ymd_and_hms(2026, 3, 27, 23, 0, 0).unwrap());
         assert_eq!(to, Utc.with_ymd_and_hms(2026, 3, 29, 22, 0, 0).unwrap());
         assert_eq!(to - from, ChronoDuration::hours(47));
+        // A start at the end of chrono's range does not panic.
+        assert!(day_window("UTC", 14, now, Some(chrono::NaiveDate::MAX)).is_none());
+        // Midnight missing in a DST gap (Havana springs forward at 00:00) starts at 01:00 local.
+        let d = chrono::NaiveDate::from_ymd_opt(2026, 3, 8);
+        let (from, _) = day_window("America/Havana", 1, now, d).unwrap();
+        assert_eq!(from, Utc.with_ymd_and_hms(2026, 3, 8, 5, 0, 0).unwrap());
     }
 }

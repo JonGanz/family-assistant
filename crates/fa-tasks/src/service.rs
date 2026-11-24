@@ -709,7 +709,9 @@ impl TaskService {
                 })
                 .unwrap_or(def.rotation_cursor);
             let next = match def.schedule {
-                Schedule::AfterDone { .. } => schedule::after_done_next(&def, tz, now),
+                Schedule::AfterDone { .. } => {
+                    schedule::after_done_next_after(&def, tz, now, t.due_at)
+                }
                 Schedule::Rrule { .. } => def.next_due_at,
             };
             TaskDefinitionRepo::set_schedule_state(&mut tx, did, cursor, Some(now), next).await?;
@@ -749,7 +751,9 @@ impl TaskService {
                 })
                 .unwrap_or(def.rotation_cursor);
             let next = match def.schedule {
-                Schedule::AfterDone { .. } => schedule::after_done_next(&def, tz, now),
+                Schedule::AfterDone { .. } => {
+                    schedule::after_done_next_after(&def, tz, now, t.due_at)
+                }
                 Schedule::Rrule { .. } => def.next_due_at,
             };
             TaskDefinitionRepo::set_schedule_state(&mut tx, did, cursor, def.last_done_at, next)

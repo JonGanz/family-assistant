@@ -51,6 +51,9 @@ services:
   app:
     <<: *fa-server
     command: ["serve", "all"]
+    # tini as PID 1 forwards SIGTERM; jobs can run up to 240 s, so allow them to finish on stop.
+    init: true
+    stop_grace_period: 5m
     depends_on:
       init:
         condition: service_completed_successfully

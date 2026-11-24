@@ -234,6 +234,15 @@ fn rule_starts(
     {
         return Vec::new();
     }
+    // Sub-hourly rules iterate from an old DTSTART for a very long time; no calendar needs them.
+    if rule.split(';').any(|p| {
+        let p = p.trim().to_ascii_uppercase();
+        p == "FREQ=SECONDLY" || p == "FREQ=MINUTELY"
+    }) {
+        ctx.warnings
+            .insert("unsupported recurrence rule ignored: FREQ=SECONDLY/MINUTELY".to_string());
+        return Vec::new();
+    }
     let text = format!("DTSTART:{}Z\nRRULE:{rule}", base.format("%Y%m%dT%H%M%S"));
     let set: RRuleSet = match text.parse() {
         Ok(s) => s,

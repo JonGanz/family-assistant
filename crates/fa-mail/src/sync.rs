@@ -173,14 +173,18 @@ impl SyncService {
             let fetched = p.fetch_many(chunk).await?;
             let dedupe = chunk.iter().any(|r| r.refetch);
             let mut tx = self.deps.store.tx_for(h).await?;
+            let mut stored: Vec<MessageId> = Vec::new();
             for f in fetched {
                 if let Some(id) = ingest(&mut tx, src, f, dedupe, now).await? {
-                    inserted.push(id);
+                    stored.push(id);
                 }
             }
             tx.commit().await?;
+            // Enqueue per committed chunk, so a later failing chunk cannot strand these
+            // as `pending` (the next run skips them as already stored).
+            self.enqueue_process(h, &stored, None).await?;
+            inserted.extend(stored);
         }
-        self.enqueue_process(h, &inserted, None).await?;
 
         let (label_changes, recategorise) = self.apply_labels(src, &delta).await?;
         self.enqueue_process(h, &recategorise, Some("email.category"))

@@ -1,6 +1,6 @@
 //! Next-due computation for both schedule kinds (plan/M2.md, Time semantics).
 
-use chrono::{DateTime, Duration, NaiveDate, NaiveTime, TimeZone, Utc};
+use chrono::{DateTime, Duration, NaiveDate, NaiveTime, Utc};
 use chrono_tz::Tz;
 use fa_domain::tasks::{due_instant, next_in_season};
 use fa_domain::{Schedule, TaskDefinition};
@@ -19,6 +19,9 @@ fn parse_set(
         return Err("give only the RRULE body, such as FREQ=WEEKLY;BYDAY=SA".into());
     }
     let body = body.strip_prefix("RRULE:").unwrap_or(body);
+    if is_sub_hourly(body) {
+        return Err("FREQ=SECONDLY and FREQ=MINUTELY are not supported for tasks".into());
+    }
     let t = due_time.unwrap_or(NaiveTime::MIN);
     let text = format!(
         "DTSTART;TZID={}:{}\nRRULE:{body}",
@@ -26,6 +29,15 @@ fn parse_set(
         start.and_time(t).format("%Y%m%dT%H%M%S")
     );
     text.parse::<rrule::RRuleSet>().map_err(|e| e.to_string())
+}
+
+/// Does the RRULE body use `FREQ=SECONDLY` or `FREQ=MINUTELY`? Iterating those from an old
+/// start date spins the CPU, and no task repeats that often.
+fn is_sub_hourly(body: &str) -> bool {
+    body.split(';').any(|p| {
+        let p = p.trim().to_ascii_uppercase();
+        p == "FREQ=SECONDLY" || p == "FREQ=MINUTELY"
+    })
 }
 
 /// Checks an RRULE body (no DTSTART), such as `FREQ=WEEKLY;BYDAY=SA`.
@@ -46,12 +58,8 @@ fn instances_from(
     let Ok(set) = parse_set(rrule, start, due_time, tz) else {
         return Vec::new();
     };
-    let Some(from_dt) = tz
-        .from_local_datetime(&from.and_time(NaiveTime::MIN))
-        .earliest()
-    else {
-        return Vec::new();
-    };
+    // Local midnight can fall in a DST gap; take the first valid instant after it.
+    let from_dt = fa_domain::tasks::local_to_utc(from.and_time(NaiveTime::MIN), tz);
     set.after(from_dt.with_timezone(&rrule::Tz::Tz(tz)))
         .all(n)
         .dates
@@ -143,6 +151,29 @@ pub fn after_done_next(d: &TaskDefinition, tz: Tz, t: DateTime<Utc>) -> Option<D
         return None;
     };
     let mut date = local_date(t, tz) + Duration::days(i64::from(*interval_days));
+    if let Some((f, u)) = d.season {
+        date = next_in_season(date, f, u);
+    }
+    Some(due_instant(date, d.due_time, tz))
+}
+
+/// [`after_done_next`], but strictly after `floor` (the due instant of the occurrence just
+/// closed). An early completion could otherwise land on that same due instant again, which the
+/// unique occurrence key rejects, and `next_due_at` would never move.
+pub fn after_done_next_after(
+    d: &TaskDefinition,
+    tz: Tz,
+    t: DateTime<Utc>,
+    floor: Option<DateTime<Utc>>,
+) -> Option<DateTime<Utc>> {
+    let Schedule::AfterDone { interval_days } = &d.schedule else {
+        return None;
+    };
+    let next = after_done_next(d, tz, t)?;
+    let Some(floor) = floor.filter(|f| next <= *f) else {
+        return Some(next);
+    };
+    let mut date = local_date(floor, tz) + Duration::days(i64::from((*interval_days).max(1)));
     if let Some((f, u)) = d.season {
         date = next_in_season(date, f, u);
     }
@@ -249,6 +280,27 @@ mod tests {
         Schedule::Rrule {
             rrule: "FREQ=WEEKLY;BYDAY=SA".into(),
         }
+    }
+
+    #[test]
+    fn after_done_next_after_moves_past_the_closed_occurrence() {
+        let x = def(Schedule::AfterDone { interval_days: 7 }, d(2026, 1, 1));
+        // Completed 7 days early: plain after_done_next lands on the closed occurrence.
+        let closed = due_instant(d(2026, 1, 12), None, LONDON);
+        let at = utc(2026, 1, 5, 9, 0);
+        assert_eq!(after_done_next(&x, LONDON, at), Some(closed));
+        assert_eq!(
+            after_done_next_after(&x, LONDON, at, Some(closed)),
+            Some(due_instant(d(2026, 1, 19), None, LONDON))
+        );
+        assert_eq!(after_done_next_after(&x, LONDON, at, None), Some(closed));
+    }
+
+    #[test]
+    fn rrule_rejects_sub_hourly() {
+        assert!(validate_rrule("FREQ=MINUTELY").is_err());
+        assert!(validate_rrule("freq=secondly;INTERVAL=5").is_err());
+        assert!(validate_rrule("FREQ=HOURLY").is_ok());
     }
 
     #[test]

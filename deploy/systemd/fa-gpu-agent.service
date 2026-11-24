@@ -13,6 +13,11 @@ ExecStart=/usr/local/bin/fa-gpu-agent
 EnvironmentFile=-/etc/fa-gpu-agent.env
 Restart=on-failure
 RestartSec=5
+# Conservative hardening: keeps /dev (GPU, nvidia-smi) and process visibility intact.
+NoNewPrivileges=true
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target

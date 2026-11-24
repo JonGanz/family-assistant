@@ -6,6 +6,17 @@ Every tagged release adds its entry here, in the same commit. Newest first.
 
 - Nothing yet.
 
+## v0.1.38 — 2026-11-23
+
+- Hardening review: many small fixes across the server, mail, calendar, tasks and notifications (see below).
+- Network and sign-in: the home-network PIN path is stricter, the first-run owner check happens before any password hashing, responses carry no-sniff and frame-blocking headers, the dashboard window is clamped to a safe range, and commands exit non-zero on failure.
+- Mail and rules: weekday words match on word boundaries, past dates roll to the next year, calendar (ICS) and ISO durations cannot overflow, bill amounts are sliced safely, mail processing is queued per chunk, header and AI body sizes are capped, and access tokens no longer appear in debug output.
+- Jobs: a job becomes dead after its maximum attempts, finished jobs are cleaned up after a retention period, jobs needing re-authorisation are not retried, and a stalled job after completion is handled.
+- Calendar and tasks: events that start in a daylight-saving gap keep a valid midnight, repeat rules finer than hourly are refused with a warning, 29 February seasons work, and a race when saving notification preferences is closed.
+- Recipes: relative image links resolve against the recipe page.
+- Dependencies: updated the cookie and url libraries to fix two newly published security advisories.
+- Release and packaging: one release workflow that refuses a tag that does not match the app version or lacks a changelog entry, smaller and faster release binaries (thin LTO, stripped), semantic-version image tags (full, major.minor and latest), build provenance and an SBOM attached to the image, compose gives the app a clean 5-minute shutdown with a proper init process, the GPU agent stub exits non-zero, and its systemd unit gains basic hardening.
+
 ## v0.1.37 — 2026-11-20
 
 - Dashboard: the Add task form, its member pickers and the recipe window now use the same popup as the other dashboard windows.

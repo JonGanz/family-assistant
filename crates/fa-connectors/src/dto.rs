@@ -31,7 +31,7 @@ pub struct RemoteCalendar {
     pub ctag: Option<String>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TokenSet {
     pub access: String,
     /// Absent on refresh responses (the existing refresh token stays valid).
@@ -39,6 +39,22 @@ pub struct TokenSet {
     pub expires_at: DateTime<Utc>,
     pub scopes: Vec<String>,
     pub id_token_email: Option<String>,
+}
+
+/// Tokens and the account email stay out of logs.
+impl std::fmt::Debug for TokenSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TokenSet")
+            .field("access", &"<redacted>")
+            .field("refresh", &self.refresh.as_ref().map(|_| "<redacted>"))
+            .field("expires_at", &self.expires_at)
+            .field("scopes", &self.scopes)
+            .field(
+                "id_token_email",
+                &self.id_token_email.as_ref().map(|_| "<redacted>"),
+            )
+            .finish()
+    }
 }
 
 /// A time-range window for a full sync.

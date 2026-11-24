@@ -162,11 +162,11 @@ fn ics_duration(s: &str) -> Option<Duration> {
         } else {
             let n: i64 = num.parse().ok()?;
             num.clear();
-            total += match ch {
-                'W' => Duration::weeks(n),
-                'D' => Duration::days(n),
+            total = total.checked_add(&match ch {
+                'W' => Duration::try_weeks(n)?,
+                'D' => Duration::try_days(n)?,
                 _ => return None,
-            };
+            })?;
         }
     }
     for ch in time_part.chars() {
@@ -175,12 +175,12 @@ fn ics_duration(s: &str) -> Option<Duration> {
         } else {
             let n: i64 = num.parse().ok()?;
             num.clear();
-            total += match ch {
-                'H' => Duration::hours(n),
-                'M' => Duration::minutes(n),
-                'S' => Duration::seconds(n),
+            total = total.checked_add(&match ch {
+                'H' => Duration::try_hours(n)?,
+                'M' => Duration::try_minutes(n)?,
+                'S' => Duration::try_seconds(n)?,
                 _ => return None,
-            };
+            })?;
         }
     }
     Some(total)
@@ -211,7 +211,7 @@ fn ics_events(body: &str, subject: &str, tz: Tz) -> Vec<ExtractedEvent> {
                 Some((e, _)) if e > start => Some(e),
                 _ => prop_text(c, "DURATION")
                     .and_then(|d| ics_duration(&d))
-                    .map(|d| start + d),
+                    .and_then(|d| start.checked_add_signed(d)),
             };
             let end = if all_day {
                 let min_end = start.with_timezone(&tz).date_naive() + Duration::days(1);
@@ -655,4 +655,20 @@ fn phrase_events(f: &MessageFacts<'_>, ctx: &Context) -> Vec<ExtractedEvent> {
             }
         })
         .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn ics_duration_overflow_is_none() {
+        assert_eq!(ics_duration("PT1H30M"), Some(Duration::minutes(90)));
+        assert_eq!(ics_duration("P1W2D"), Some(Duration::days(9)));
+        // Fits a Duration, but not when added to a start time.
+        let d = ics_duration("P100000000D").unwrap();
+        assert!(Utc::now().checked_add_signed(d).is_none());
+        assert_eq!(ics_duration("P99999999999999999W"), None);
+        assert_eq!(ics_duration("P9000000000000DT9000000000000H"), None);
+    }
 }

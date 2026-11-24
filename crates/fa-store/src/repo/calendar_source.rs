@@ -268,10 +268,17 @@ impl CalendarSourceRepo {
              ORDER BY last_synced_at NULLS FIRST, id",
             now
         )
-        .fetch_all(conn)
+        .fetch_all(&mut *conn)
+        .await?;
+        // A source waiting for re-authorisation cannot sync; retrying it every tick is noise.
+        let reauth: Vec<uuid::Uuid> = sqlx::query_scalar(
+            "SELECT id FROM calendar_source WHERE state::text = 'needs_reauth' AND archived_at IS NULL",
+        )
+        .fetch_all(&mut *conn)
         .await?;
         Ok(rows
             .into_iter()
+            .filter(|r| !reauth.contains(&r.id))
             .map(|r| (r.household_id.into(), r.id.into()))
             .collect())
     }

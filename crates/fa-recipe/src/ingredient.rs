@@ -69,6 +69,10 @@ fn unicode_fraction_char(c: char) -> Option<(f64, usize)> {
 /// Quantity with an optional range; the low end wins.
 fn quantity(s: &str) -> Option<(f64, &str)> {
     let (v, rest) = number(s)?;
+    // A 400-digit number parses to infinity: treat it as no quantity.
+    if !v.is_finite() {
+        return None;
+    }
     let t = rest.trim_start();
     let after = t
         .strip_prefix(['-', '–', '—'])
@@ -178,4 +182,18 @@ pub fn parse_ingredient(line: &str) -> RecipeIngredient {
         out.item = Some(rest.to_string());
     }
     out
+}
+
+#[cfg(test)]
+mod unit_tests {
+    use super::*;
+
+    #[test]
+    fn non_finite_quantity_is_none() {
+        let line = format!("{} cups flour", "9".repeat(400));
+        let i = parse_ingredient(&line);
+        assert_eq!(i.quantity, None);
+        assert_eq!(i.text, line);
+        assert_eq!(parse_ingredient("2 cups flour").quantity, Some(2.0));
+    }
 }

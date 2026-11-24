@@ -73,17 +73,23 @@ fn read_secret(prompt: &str, from_stdin: bool) -> Result<String> {
 }
 
 fn prompt_hidden(prompt: &str) -> Result<String> {
-    let stty = |arg: &str| {
+    /// Turns terminal echo back on when dropped, on every exit path (errors, panics).
+    struct EchoGuard;
+    impl Drop for EchoGuard {
+        fn drop(&mut self) {
+            stty("echo");
+            eprintln!();
+        }
+    }
+    fn stty(arg: &str) {
         let _ = std::process::Command::new("stty").arg(arg).status();
-    };
+    }
     eprint!("{prompt}");
     std::io::stderr().flush()?;
     stty("-echo");
+    let _guard = EchoGuard;
     let mut line = String::new();
-    let res = std::io::stdin().lock().read_line(&mut line);
-    stty("echo");
-    eprintln!();
-    res?;
+    std::io::stdin().lock().read_line(&mut line)?;
     Ok(line.trim_end_matches(['\r', '\n']).to_owned())
 }
 

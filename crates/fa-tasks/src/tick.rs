@@ -14,7 +14,7 @@ use fa_store::{
 use crate::error::Result;
 use crate::materialize::household_ids;
 use crate::producers::task_path;
-use crate::service::{TaskService, household_of, local_date, publish_tasks, tz_of};
+use crate::service::{TaskService, household_of, publish_tasks, tz_of};
 
 fn enabled(p: &Versioned<NotifyPref>, t: NotifyTrigger) -> bool {
     p.value.triggers.iter().any(|x| x == t.as_str())
@@ -257,7 +257,6 @@ impl TaskService {
             )
             .await?;
         }
-        let _ = local_date(now, tz);
         tx.commit().await?;
         Ok(())
     }

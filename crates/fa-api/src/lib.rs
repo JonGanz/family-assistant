@@ -645,6 +645,15 @@ async fn request_id(mut req: Request, next: Next) -> Response {
         axum::http::header::REFERRER_POLICY,
         HeaderValue::from_static("no-referrer"),
     );
+    res.headers_mut().insert(
+        axum::http::header::X_CONTENT_TYPE_OPTIONS,
+        HeaderValue::from_static("nosniff"),
+    );
+    // The app is never framed by another site (the kiosk loads it top-level).
+    res.headers_mut().insert(
+        axum::http::header::X_FRAME_OPTIONS,
+        HeaderValue::from_static("SAMEORIGIN"),
+    );
     res
 }
 

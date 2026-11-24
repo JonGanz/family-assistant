@@ -1,6 +1,6 @@
 [package]
 name = "fa-connectors"
-description = "Family Assistant: HTTP clients for calendars and weather"
+description = "Family Assistant: connectors for mail (IMAP, Gmail), Google OAuth, calendars, weather and ntfy"
 version.workspace = true
 edition.workspace = true
 license.workspace = true

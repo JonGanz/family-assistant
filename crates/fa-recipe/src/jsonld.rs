@@ -27,7 +27,7 @@ pub fn parse_iso_duration(s: &str) -> Option<u32> {
                 .iter()
                 .find(|(u, m)| *m > 0 && u.eq_ignore_ascii_case(&c.to_string()))?
                 .1;
-            secs += num.parse::<u64>().ok()? * mult;
+            secs = secs.checked_add(num.parse::<u64>().ok()?.checked_mul(mult)?)?;
             num.clear();
             any = true;
         }
@@ -160,6 +160,15 @@ fn minutes(v: Option<&Value>) -> Option<u32> {
     v.and_then(Value::as_str).and_then(parse_iso_duration)
 }
 
+/// Resolves a relative or protocol-relative image against the page; keeps only http(s).
+fn resolve_image(raw: &str, base: Option<&Url>) -> Option<String> {
+    let url = match base {
+        Some(b) => b.join(raw).ok()?,
+        None => Url::parse(raw).ok()?,
+    };
+    matches!(url.scheme(), "http" | "https").then(|| url.to_string())
+}
+
 pub(crate) fn leading_int(s: &str) -> Option<u32> {
     let t = s.trim_start();
     let n = t.find(|c: char| !c.is_ascii_digit()).unwrap_or(t.len());
@@ -215,7 +224,10 @@ fn draft(
         steps: st,
         sections,
         tags: dedup(tags),
-        image_url: r.get("image").and_then(image),
+        image_url: r
+            .get("image")
+            .and_then(image)
+            .and_then(|i| resolve_image(&i, source_url)),
     })
 }
 
@@ -263,4 +275,36 @@ pub(crate) fn count(d: &RecipeDraft) -> usize {
             .iter()
             .map(|s| s.ingredients.len())
             .sum::<usize>()
+}
+
+#[cfg(test)]
+mod unit_tests {
+    use super::*;
+
+    #[test]
+    fn iso_duration_overflow_is_none() {
+        assert_eq!(parse_iso_duration("PT1H30M"), Some(90));
+        assert_eq!(parse_iso_duration("P99999999999999999999W"), None);
+        assert_eq!(parse_iso_duration("P18446744073709551615W"), None);
+    }
+
+    #[test]
+    fn image_resolved_against_source() {
+        let base = Url::parse("https://example.org/recipes/soup").unwrap();
+        let r = |s: &str| resolve_image(s, Some(&base));
+        assert_eq!(
+            r("/img/a.jpg").as_deref(),
+            Some("https://example.org/img/a.jpg")
+        );
+        assert_eq!(
+            r("//cdn.example.net/b.jpg").as_deref(),
+            Some("https://cdn.example.net/b.jpg")
+        );
+        assert_eq!(
+            r("https://x.example/c.jpg").as_deref(),
+            Some("https://x.example/c.jpg")
+        );
+        assert_eq!(r("javascript:alert(1)"), None);
+        assert_eq!(resolve_image("/img/a.jpg", None), None);
+    }
 }

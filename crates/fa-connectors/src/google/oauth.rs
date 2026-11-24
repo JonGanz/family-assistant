@@ -9,12 +9,24 @@ use crate::{ConnectorError, Http, TokenSet, error::Result};
 pub const DEFAULT_AUTH_URL: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 pub const DEFAULT_TOKEN_URL: &str = "https://oauth2.googleapis.com/token";
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct GoogleOAuth {
     pub client_id: String,
     pub client_secret: String,
     pub auth_url: String,
     pub token_url: String,
+}
+
+/// The client secret stays out of logs.
+impl std::fmt::Debug for GoogleOAuth {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("GoogleOAuth")
+            .field("client_id", &self.client_id)
+            .field("client_secret", &"<redacted>")
+            .field("auth_url", &self.auth_url)
+            .field("token_url", &self.token_url)
+            .finish()
+    }
 }
 
 #[derive(Deserialize)]

@@ -233,7 +233,7 @@ fn per_sync_cap_warns() {
     for i in 0..6 {
         events.push_str(&format!(
             "BEGIN:VEVENT\r\nUID:h{i}@example.com\r\nDTSTART:20260105T100000Z\r\n\
-RRULE:FREQ=MINUTELY\r\nSUMMARY:Flood\r\nEND:VEVENT\r\n"
+RRULE:FREQ=HOURLY\r\nSUMMARY:Flood\r\nEND:VEVENT\r\n"
         ));
     }
     let e = parse_expand(

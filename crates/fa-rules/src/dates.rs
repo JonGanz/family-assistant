@@ -60,7 +60,7 @@ static NUMERIC: LazyLock<Regex> = LazyLock::new(|| {
 static RELATIVE: LazyLock<Regex> = LazyLock::new(|| re(r"\b(?P<rel>today|tomorrow|tonight)\b"));
 static WEEKDAY: LazyLock<Regex> = LazyLock::new(|| {
     re(&format!(
-        r"\b(?:(?P<next>next|this|coming)\s+)?(?P<wd>{WD})"
+        r"\b(?:(?P<next>next|this|coming)\s+)?(?P<wd>{WD})\b"
     ))
 });
 static TIME: LazyLock<Regex> = LazyLock::new(|| {
@@ -209,9 +209,15 @@ fn resolve_md(
         }
         None => {
             let date = NaiveDate::from_ymd_opt(received.year(), m, d);
+            let next = || NaiveDate::from_ymd_opt(received.year() + 1, m, d);
             match date {
-                Some(date) if date >= received || allow_past => Some(date),
-                _ if received.month() >= 11 => NaiveDate::from_ymd_opt(received.year() + 1, m, d),
+                Some(date) if date >= received => Some(date),
+                // Over ~6 months past reads as next year ("due Jan 15" in December).
+                Some(date) if allow_past && (received - date).num_days() > 183 => {
+                    next().or(Some(date))
+                }
+                Some(date) if allow_past => Some(date),
+                _ if received.month() >= 11 => next(),
                 _ => None,
             }
         }
@@ -508,6 +514,32 @@ mod tests {
         let r = at("2026-03-20 09:00", ny());
         assert!(find_dates("Feb 9", r, ny(), false).is_empty());
         assert_eq!(find_dates("Feb 9", r, ny(), true).len(), 1);
+    }
+
+    #[test]
+    fn past_far_back_rolls_to_next_year() {
+        // Received 20 Dec: "due Jan 15" is next January even when past dates are allowed.
+        let r = at("2026-12-20 09:00", ny());
+        let v = find_dates("due Jan 15", r, ny(), true);
+        assert_eq!(v.len(), 1, "{v:?}");
+        assert_eq!(v[0].date, d(2027, 1, 15));
+        // A recent past date stays in this year.
+        let v = find_dates("due Dec 1", r, ny(), true);
+        assert_eq!(v[0].date, d(2026, 12, 1));
+    }
+
+    #[test]
+    fn weekday_needs_word_end() {
+        let p = one("return the money by Friday", "2026-10-28 09:00");
+        assert_eq!(p.date, d(2026, 10, 30));
+        let r = at("2026-10-28 09:00", ny());
+        for s in ["month", "friend", "sunny", "wedding", "satisfied"] {
+            assert!(find_dates(s, r, ny(), false).is_empty(), "{s}");
+        }
+        assert_eq!(
+            one("see you Tue. at 5", "2026-10-28 09:00").date,
+            d(2026, 11, 3)
+        );
     }
 
     #[test]
