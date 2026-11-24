@@ -10,6 +10,9 @@ question first.
 Findings from the 2026-11-23 review that were **not** fixed on the `review-fixes-2026-11-23` branch because the fix
 changes behaviour, security posture or process. Each needs an answer (a `Q-NNN` where it is a design question).
 
+The nine "Answer first" items are now questions Q-120 to Q-128 in [design/](design/_index.md) (batch 27): V-01 = Q-120,
+S-01 = Q-121, S-02 = Q-122, S-03 = Q-123, S-04 = Q-124, B-01 = Q-125, B-02 = Q-126, S-05 = Q-127, B-06 = Q-128.
+
 ### Answer first (with the recommended answer)
 | Item | Question | Recommendation |
 |---|---|---|
@@ -27,11 +30,9 @@ Quick yes or no: B-04 (digest latest hour, default noon), B-05, B-08 (three miss
 L-01, L-05, B-14. Also: should the design questions in this section become `Q-NNN` files (workflow 1)?
 
 ### Left open by the `review-fixes-2026-11-23` branch
-The branch compiles (`cargo check --workspace --all-targets`, 2026-11-23). Nothing else was run.
+The branch was merged and released as v0.1.38. Its checks all passed on 2026-11-23, except YAML validation of `release.yml`.
 | ID | Item | Size |
 |---|---|---|
-| X-01 | Not run on the branch: tests, clippy, `scripts/ci-local.sh`, `scripts/e2e.sh`, `scripts/compose-smoke.sh`, `fa.py check`, YAML validation of `release.yml` and `deploy/compose.yaml` | QUICK |
-| X-02 | Project rules not yet met for the branch: no `log/2026-11-23.md` entry, no `CHANGELOG.md` Unreleased bullets, no README note for the new image tags (`0.1.37`, `0.1`) or the version-bump step of a release | QUICK |
 | X-03 | `serve` exits non-zero only when the API task fails or any task panics; worker, scheduler, LAN listener and bridge tasks return `()`, so their errors are still not seen (`bins/fa-server/src/serve.rs`) | QUICK |
 | X-04 | `mail.process` is now queued per chunk, but if the enqueue itself fails after the chunk commits, those messages stay pending; needs a pending-message rescan in the worker (only `mail process-now` sweeps them) (`fa-mail/src/sync.rs`) | QUICK |
 | X-05 | Not repaired by the upgrade: after-done chores that stalled before it, and mail already stuck as pending. Decide: a one-off repair job, or the manual steps on the impact page | QUICK |
@@ -42,7 +43,7 @@ The branch compiles (`cargo check --workspace --all-targets`, 2026-11-23). Nothi
 | X-10 | Recipe import drops `data:` images and relative images with no source URL | — |
 | X-11 | `X-Frame-Options: SAMEORIGIN` on every response blocks embedding the app in another origin's iframe; confirm nobody needs that (make it a setting if so) | QUICK |
 | X-12 | The GPU agent stub exits 1, so an installed systemd unit restarts until the start limit (no longer released; the release job was dropped until M4.1) | — |
-| X-13 | The release profile (thin LTO, one codegen unit) slows release builds, most of all the emulated arm64 image; measure on the first tag | — |
+| X-13 | The release profile (thin LTO, one codegen unit) slows release builds, most of all the emulated arm64 image; measure from the `v0.1.38` Release run | — |
 | X-14 | The new DST test expects America/Havana 2026-03-08 midnight at 05:00 UTC from memory of tzdata; check when tests run (`fa-api/src/feeds.rs`) | QUICK |
 
 ### Release and process

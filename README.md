@@ -790,6 +790,8 @@ STATUS.md        Generated snapshot of what is open (`python3 tools/fa.py status
 
 `CHANGELOG.md` holds the user-facing release notes, newest first; the app shows them under System > About. The web bundle reads them from `apps/web/src/views/releaseNotes.generated.ts`, so after editing the changelog regenerate that file with the command in its header (`pnpm test` fails while it is stale).
 
+To release: set the same version in the workspace `Cargo.toml` and `apps/web/package.json`, add the `## vX.Y.Z — date` changelog entry, regenerate the notes file, commit, then push the tag `vX.Y.Z`. The release workflow refuses a tag that differs from the `Cargo.toml` version or has no changelog heading.
+
 ## How this project is designed
 Design work is recorded in the repo, and each folder has an `_index.md`:
 - [`PROJECT.md`](PROJECT.md): the original goals and requirements.

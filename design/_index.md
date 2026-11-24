@@ -1,6 +1,6 @@
 ---
 title: Design Questions Index
-updated: 2026-11-18
+updated: 2026-11-23
 ---
 
 # Design Questions
@@ -32,6 +32,19 @@ decisions: []
 |---|---|---|
 | [Q-118](Q-118-jiff-migration.md) | Move dates and time zones from chrono to jiff | tech |
 | [Q-119](Q-119-tz-rules-source.md) | Where the server gets its time-zone rules | infra |
+
+## Batch 27, open
+| ID | Title | Area |
+|---|---|---|
+| [Q-120](Q-120-ci-gate-for-releases.md) | Gate releases on CI | infra |
+| [Q-121](Q-121-session-token-hashing.md) | Hash session tokens in the database | security |
+| [Q-122](Q-122-master-key-download-transport.md) | Master key download over plain HTTP | security |
+| [Q-123](Q-123-pin-lockout-alert.md) | PIN lockout notification | security |
+| [Q-124](Q-124-secret-reentry-on-host-change.md) | Require the secret when an endpoint host changes | security |
+| [Q-125](Q-125-settings-save-restart-scope.md) | Settings save and the API restart | tech |
+| [Q-126](Q-126-ai-request-timeout.md) | Long AI calls inside a 30 s request timeout | tech |
+| [Q-127](Q-127-llm-category-auto-actions.md) | LLM-set mail categories and auto-actions | security |
+| [Q-128](Q-128-provider-deleted-events.md) | Events deleted at the provider | domain |
 
 ## Resolved
 | ID | Title | Decisions |

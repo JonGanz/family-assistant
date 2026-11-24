@@ -344,7 +344,7 @@ To restore, follow [`runbooks/restore.md`](runbooks/restore.md); rehearse it onc
 ## 6. Updates
 ```sh
 docker compose exec backup /backup.sh   # a backup first
-docker compose pull                     # fetch the new release (set FA_VERSION in .env to pin a tag)
+docker compose pull                     # fetch the new release (set FA_VERSION in .env to pin a tag; images are tagged `latest`, `X.Y.Z` and `X.Y`, for example `0.1.38` and `0.1`)
 docker compose up -d
 ```
 The database is upgraded automatically when the app starts. Read the release notes before updating.
