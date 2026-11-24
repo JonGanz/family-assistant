@@ -351,8 +351,8 @@ mod tests {
         assert_eq!(next_in_season(d(2026, 11, 2), 401, 1031), d(2027, 4, 1));
         assert_eq!(next_in_season(d(2026, 2, 1), 401, 1031), d(2026, 4, 1));
         assert_eq!(next_in_season(d(2026, 4, 1), 401, 1031), d(2026, 4, 1));
-        // Feb 29th start skips to the next leap year.
-        assert_eq!(next_in_season(d(2026, 6, 1), 229, 301), d(2028, 2, 29));
+        // A Feb 29th start falls on 03-01 in a non-leap year.
+        assert_eq!(next_in_season(d(2026, 6, 1), 229, 301), d(2027, 3, 1));
     }
 
     fn input(vf: Option<DateTime<Utc>>, due: Option<DateTime<Utc>>) -> ScoreInput {
