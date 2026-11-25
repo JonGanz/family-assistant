@@ -77,6 +77,8 @@ onBeforeUnmount(() => clearTimeout(timer))
   max-width: none;
   height: 100%;
   border-radius: var(--ui-radius-lg);
+  /* The page's own background, so the cards inside (layer 2) stand out. */
+  background: var(--color-bg);
 }
 header {
   display: flex;
