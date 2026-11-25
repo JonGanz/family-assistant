@@ -6,6 +6,11 @@ Every tagged release adds its entry here, in the same commit. Newest first.
 
 - Nothing yet.
 
+## v0.1.40 — 2026-11-25
+
+- Release build is fast again (about 10 minutes instead of 90+): removed the LTO and single-codegen-unit release settings added in v0.1.38. Binaries stay stripped.
+- The release image is built for amd64 only; arm64 is off by default (nobody needs it yet). Set the repository variable `RELEASE_PLATFORMS` to `linux/amd64,linux/arm64` to turn it back on.
+
 ## v0.1.39 — 2026-11-24
 
 - Recipe editor: after moving an ingredient or step to another section, the "Move to…" menu resets, so you can keep moving items without saving and reloading.

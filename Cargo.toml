@@ -24,7 +24,7 @@ members = [
 ]
 
 [workspace.package]
-version = "0.1.39"
+version = "0.1.40"
 edition = "2024"
 rust-version = "1.88"
 license = "AGPL-3.0-or-later"
@@ -46,11 +46,10 @@ opt-level = 3
 [profile.dev.package.blake2]
 opt-level = 3
 
-# Smaller, faster release binaries (image and GPU agent) at the cost of a slower release build.
+# Stripped release binaries. Do NOT add `lto` or `codegen-units = 1`: v0.1.38/0.1.39 had them and the
+# tagged image build (single-threaded, partly under QEMU) went from ~10 to 90+ minutes for a few percent.
 [profile.release]
-lto = "thin"
 strip = "symbols"
-codegen-units = 1
 
 [workspace.lints.rust]
 unsafe_code = "forbid"
