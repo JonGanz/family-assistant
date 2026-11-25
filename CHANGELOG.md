@@ -6,6 +6,13 @@ Every tagged release adds its entry here, in the same commit. Newest first.
 
 - Nothing yet.
 
+## v0.1.39 — 2026-11-24
+
+- Recipe editor: after moving an ingredient or step to another section, the "Move to…" menu resets, so you can keep moving items without saving and reloading.
+- Dashboard portrait: with an odd number of routines, the lone card spans the full row instead of leaving a gap.
+- Dashboard routines: the green ring on a finished card is no longer clipped at the top and bottom.
+- Dashboard: full-screen windows (such as the recipe) use the page background so their cards stand out.
+
 ## v0.1.38 — 2026-11-23
 
 - Hardening review: many small fixes across the server, mail, calendar, tasks and notifications (see below).

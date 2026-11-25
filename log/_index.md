@@ -32,3 +32,4 @@ updated: 2026-11-20
 - [2026-11-19](2026-11-19.md): plan; M5.2; recipes; dashboard
 - [2026-11-20](2026-11-20.md): plan; M5.3; dashboard; food; tailscale
 - [2026-11-23](2026-11-23.md): release; review-fixes
+- [2026-11-24](2026-11-24.md): release; dashboard; recipes
