@@ -337,6 +337,11 @@ const shift = computed(() =>
                 `k-${a.panel.kind}`,
                 { complete: doneCells.has(`${a.panel.kind}-${a.panel['run'] ?? i}`) },
               ]"
+              :style="
+                st.key === 'routines' && i === 0 && st.areas.length % st.cols !== 0
+                  ? { gridColumn: '1 / -1' }
+                  : undefined
+              "
               :data-complete="doneCells.has(`${a.panel.kind}-${a.panel['run'] ?? i}`) || undefined"
               @click="a.panel.kind === 'weather' && weatherReady && (detail = { kind: 'weather' })"
             >
@@ -726,7 +731,7 @@ const shift = computed(() =>
 .main.split .cell.complete {
   border-color: var(--color-success);
   box-shadow:
-    0 0 0 2px var(--color-success),
+    inset 0 0 0 2px var(--color-success),
     0 1px 3px color-mix(in srgb, var(--color-text) 14%, transparent);
 }
 .main.split .cell :deep(h2) {

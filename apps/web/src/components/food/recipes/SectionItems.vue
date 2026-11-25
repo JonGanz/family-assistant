@@ -23,7 +23,10 @@ function swap(i: number, d: number) {
 const setAt = (i: number, v: string) => (items.value = items.value.map((x, k) => (k === i ? v : x)))
 const removeAt = (i: number) => (items.value = items.value.filter((_, k) => k !== i))
 const onMove = (i: number, e: Event) => {
-  const v = (e.target as HTMLSelectElement).value
+  const sel = e.target as HTMLSelectElement
+  const v = sel.value
+  // Rows are keyed by index, so the next item reuses this <select>: put it back on the prompt.
+  sel.value = ''
   emit('move', i, v === 'top' ? 'top' : Number(v))
 }
 </script>
