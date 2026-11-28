@@ -26,6 +26,9 @@ import type { IconName } from '../ui/icons'
 import ConfettiLayer from './effects/ConfettiLayer.vue'
 import ConfettiStreamLayer from './effects/ConfettiStreamLayer.vue'
 import SnowLayer from './effects/SnowLayer.vue'
+import RainLayer from './effects/RainLayer.vue'
+import LightsLayer from './effects/LightsLayer.vue'
+import { rainModeOf } from './effects/rainModel'
 import { snowModeOf } from './effects/snowModel'
 import Whiteboard from './Whiteboard.vue'
 import PanelHost from './panels/PanelHost.vue'
@@ -69,6 +72,8 @@ const emit = defineEmits<{
 
 const cfg = computed(() => props.settings ?? props.data.settings)
 const snow = computed(() => snowModeOf(props.data.weather))
+// Snow wins when both are forecast for the day: one weather layer at a time.
+const rain = computed(() => (snow.value === 'none' ? rainModeOf(props.data.weather) : 'none'))
 const root = ref<HTMLElement | null>(null)
 /**
  * The screen's shape is detected, not configured: portrait when taller than wide. It decides the
@@ -268,6 +273,8 @@ const shift = computed(() =>
     :data-orientation="portrait ? 'portrait' : 'landscape'"
   >
     <SnowLayer v-if="cfg.snow !== false && snow !== 'none'" :mode="snow" />
+    <RainLayer v-if="cfg.rain !== false && rain !== 'none'" :mode="rain" />
+    <LightsLayer v-if="cfg.christmas_lights === true" />
     <nav class="nav" :aria-label="S.navLabel">
       <button
         v-for="v in VIEWS"

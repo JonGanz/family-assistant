@@ -10265,8 +10265,8 @@
         "parameters": [
           {
             "name": "limit",
-            "in": "query",
-            "required": false,
+            "in": "path",
+            "required": true,
             "schema": {
               "type": [
                 "integer",
@@ -13769,6 +13769,10 @@
             "format": "int32",
             "minimum": 0
           },
+          "christmas_lights": {
+            "type": "boolean",
+            "description": "Gently blinking Christmas lights along the top of the screen; off unless switched on."
+          },
           "confetti": {
             "type": "boolean",
             "description": "Confetti when a routine run is completed on this device."
@@ -13785,6 +13789,10 @@
             "items": {
               "$ref": "#/components/schemas/Panel"
             }
+          },
+          "rain": {
+            "type": "boolean",
+            "description": "Falling rain behind the cards on this device when it rains or rain is forecast."
           },
           "screensaver_minutes": {
             "type": "integer",

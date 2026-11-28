@@ -2793,12 +2793,16 @@ export interface components {
         DashboardSettings: {
             /** Format: int32 */
             agenda_days: number;
+            /** @description Gently blinking Christmas lights along the top of the screen; off unless switched on. */
+            christmas_lights?: boolean;
             /** @description Confetti when a routine run is completed on this device. */
             confetti?: boolean;
             /** @description Shows the Food view (meal plan and shopping list) on this device (D-117). */
             food_view?: boolean;
             members: components["schemas"]["MemberSelection"];
             panels: components["schemas"]["Panel"][];
+            /** @description Falling rain behind the cards on this device when it rains or rain is forecast. */
+            rain?: boolean;
             /**
              * Format: int32
              * @description Minutes without a touch before the screensaver starts; 0 turns it off.
@@ -11997,11 +12001,11 @@ export interface operations {
     };
     get_failed_jobs: {
         parameters: {
-            query?: {
-                limit?: number | null;
-            };
+            query?: never;
             header?: never;
-            path?: never;
+            path: {
+                limit: number | null;
+            };
             cookie?: never;
         };
         requestBody?: never;

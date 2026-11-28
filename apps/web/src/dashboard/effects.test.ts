@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import DashboardCanvas from './DashboardCanvas.vue'
 import ConfettiLayer from './effects/ConfettiLayer.vue'
 import SnowLayer from './effects/SnowLayer.vue'
-import { SNOW_PARAMS, snowMode } from './effects/snowModel'
+import { SNOW_PARAMS, snowMode, snowModeOf } from './effects/snowModel'
+import { RAIN_PARAMS, rainMode, rainModeOf } from './effects/rainModel'
 import RoutinePanel from './panels/RoutinePanel.vue'
 import {
   FIRED_KEY,
@@ -291,5 +292,60 @@ describe('routine panel per-run cards and streams', () => {
     expect(streamSources().length).toBe(before + 1)
     w.unmount()
     expect(streamSources().length).toBe(before)
+  })
+})
+
+describe('snow and rain from current weather or today forecast', () => {
+  const w = (cur?: number, day?: number) => ({
+    current: cur === undefined ? undefined : { weather_code: cur },
+    daily: day === undefined ? undefined : { weather_code: [day, 0, 0] },
+  })
+  it('snow when either the current reading or today has snow', () => {
+    expect(snowModeOf(w(0, 73))).toBe('moderate')
+    expect(snowModeOf(w(71, 0))).toBe('light')
+    expect(snowModeOf(w(71, 86))).toBe('flurries')
+    expect(snowModeOf(w(0, 3))).toBe('none')
+    expect(snowModeOf(null)).toBe('none')
+  })
+  it('maps rain codes and takes the stronger of current and today', () => {
+    expect(rainMode(53)).toBe('drizzle')
+    expect(rainMode(63)).toBe('moderate')
+    expect(rainMode(95)).toBe('heavy')
+    for (const c of [0, 3, 71, undefined]) expect(rainMode(c)).toBe('none')
+    expect(rainModeOf(w(61, 65))).toBe('heavy')
+    expect(rainModeOf(w(undefined, 80))).toBe('light')
+    expect(RAIN_PARAMS.heavy.max).toBeLessThanOrEqual(300)
+  })
+})
+
+describe('rain and lights layers on the canvas', () => {
+  const rainSel = '[data-testid="rain-layer"]'
+  const lights = '[data-testid="lights-layer"]'
+  const wx2 = (over: Partial<DashboardSettings>, cur: number, day?: number) =>
+    mount(DashboardCanvas, {
+      props: {
+        data: {
+          ...data([], over),
+          weather: { current: { weather_code: cur }, daily: { weather_code: [day ?? 0] } },
+        } as unknown as DashboardData,
+        now: NOW,
+      },
+      global: { plugins: [createPinia()] },
+    })
+  it('rain shows for current rain or a rainy day, and the switch hides it', () => {
+    expect(wx2({}, 0).find(rainSel).exists()).toBe(false)
+    expect(wx2({}, 61).find(rainSel).exists()).toBe(true)
+    expect(wx2({}, 0, 63).find(rainSel).exists()).toBe(true)
+    expect(wx2({ rain: false }, 63).find(rainSel).exists()).toBe(false)
+  })
+  it('snow wins over rain, and a snowy forecast alone shows snow', () => {
+    const s = wx2({}, 63, 73)
+    expect(s.find('[data-testid="snow-layer"]').exists()).toBe(true)
+    expect(s.find(rainSel).exists()).toBe(false)
+    expect(wx2({}, 0, 75).find('[data-testid="snow-layer"]').exists()).toBe(true)
+  })
+  it('lights are off by default and on with the setting', () => {
+    expect(mount2().find(lights).exists()).toBe(false)
+    expect(mount2({ christmas_lights: true }).find(lights).exists()).toBe(true)
   })
 })

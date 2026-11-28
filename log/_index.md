@@ -34,3 +34,4 @@ updated: 2026-11-20
 - [2026-11-23](2026-11-23.md): release; review-fixes
 - [2026-11-24](2026-11-24.md): release; dashboard; recipes
 - [2026-11-25](2026-11-25.md): release; ci
+- [2026-11-28](2026-11-28.md): dashboard; effects; release

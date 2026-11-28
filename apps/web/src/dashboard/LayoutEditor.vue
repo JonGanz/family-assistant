@@ -200,6 +200,26 @@ function preset(e: Event) {
         />
         {{ S.snowToggle }}
       </label>
+      <label class="check">
+        <input
+          data-testid="rain-toggle"
+          type="checkbox"
+          role="switch"
+          :checked="s.rain !== false"
+          @change="set({ ...s, rain: ($event.target as HTMLInputElement).checked })"
+        />
+        {{ S.rainToggle }}
+      </label>
+      <label class="check">
+        <input
+          data-testid="lights-toggle"
+          type="checkbox"
+          role="switch"
+          :checked="s.christmas_lights === true"
+          @change="set({ ...s, christmas_lights: ($event.target as HTMLInputElement).checked })"
+        />
+        {{ S.lightsToggle }}
+      </label>
     </div>
 
     <fieldset v-if="members.length">

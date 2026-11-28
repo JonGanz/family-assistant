@@ -81,6 +81,12 @@ pub struct DashboardSettings {
     /// Falling snow behind the cards on this device.
     #[serde(default = "default_true")]
     pub snow: bool,
+    /// Falling rain behind the cards on this device when it rains or rain is forecast.
+    #[serde(default = "default_true")]
+    pub rain: bool,
+    /// Gently blinking Christmas lights along the top of the screen; off unless switched on.
+    #[serde(default)]
+    pub christmas_lights: bool,
 }
 
 impl DashboardSettings {
@@ -123,6 +129,8 @@ impl Default for DashboardSettings {
             food_view: true,
             confetti: true,
             snow: true,
+            rain: true,
+            christmas_lights: false,
         }
     }
 }
@@ -182,11 +190,11 @@ mod tests {
     fn effects_default_on_for_old_stored_json() {
         let j = r#"{"theme":"auto","agenda_days":3,"members":"all","panels":[]}"#;
         let s: DashboardSettings = serde_json::from_str(j).unwrap();
-        assert!(s.confetti && s.snow);
+        assert!(s.confetti && s.snow && s.rain && !s.christmas_lights);
         assert!(DashboardSettings::default().confetti && DashboardSettings::default().snow);
-        let off = r#"{"theme":"auto","agenda_days":3,"members":"all","panels":[],"confetti":false,"snow":false}"#;
+        let off = r#"{"theme":"auto","agenda_days":3,"members":"all","panels":[],"confetti":false,"snow":false,"rain":false,"christmas_lights":true}"#;
         let s: DashboardSettings = serde_json::from_str(off).unwrap();
-        assert!(!s.confetti && !s.snow);
+        assert!(!s.confetti && !s.snow && !s.rain && s.christmas_lights);
     }
 
     #[test]
@@ -215,7 +223,7 @@ mod tests {
     fn unknown_panels_round_trip() {
         let j = serde_json::json!({
             "theme": {"family": "catppuccin", "mode": "dark"}, "agenda_days": 5, "screensaver_minutes": 15,
-            "members": "all", "food_view": true, "confetti": true, "snow": true,
+            "members": "all", "food_view": true, "confetti": true, "snow": true, "rain": true, "christmas_lights": false,
             "panels": [{"kind": "clock"}, {"kind": "hologram", "depth": 3, "opts": {"a": [1, 2]}}]
         });
         let s: DashboardSettings = serde_json::from_value(j.clone()).unwrap();

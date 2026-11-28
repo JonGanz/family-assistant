@@ -6,6 +6,12 @@ Every tagged release adds its entry here, in the same commit. Newest first.
 
 - Nothing yet.
 
+## v0.1.41 — 2026-11-28
+
+- Dashboard snow: it now falls when the current weather or today's forecast has snow (it only looked at the current reading before).
+- Dashboard rain: new falling-rain effect when it is raining or rain is forecast for today, lighter for drizzle and heavier for storms. Snow takes precedence. A per-device switch (Settings > Dashboard), on by default.
+- Dashboard Christmas lights: new gently blinking string of lights along the top of the screen. A per-device switch, off by default.
+
 ## v0.1.40 — 2026-11-25
 
 - Release build is fast again (about 10 minutes instead of 90+): removed the LTO and single-codegen-unit release settings added in v0.1.38. Binaries stay stripped.

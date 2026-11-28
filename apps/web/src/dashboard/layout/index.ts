@@ -19,6 +19,10 @@ export interface DashboardSettings {
   confetti?: boolean
   /** Falling snow behind the cards; absent means on. */
   snow?: boolean
+  /** Falling rain behind the cards when it rains or rain is forecast; absent means on. */
+  rain?: boolean
+  /** Blinking Christmas lights along the top; absent means off. */
+  christmas_lights?: boolean
   /** Minutes without a touch before the screensaver starts; 0 is off. Absent means the default. */
   screensaver_minutes?: number
   members: 'all' | string[]

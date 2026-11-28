@@ -39,9 +39,31 @@ export function snowMode(code: number | null | undefined): SnowMode {
   }
 }
 
-/** Snow mode for the current weather; no current reading means no snow. */
-export function snowModeOf(weather: { current?: unknown } | null | undefined): SnowMode {
+const SNOW_RANK: SnowMode[] = ['none', 'light', 'moderate', 'heavy', 'flurries']
+const stronger = (a: SnowMode, b: SnowMode): SnowMode =>
+  SNOW_RANK.indexOf(a) >= SNOW_RANK.indexOf(b) ? a : b
+
+/** The first value of a column-oriented block (`{ weather_code: [..] }`), when it is a number. */
+export function firstCode(block: unknown): number | undefined {
+  const col = (block as Record<string, unknown> | null | undefined)?.['weather_code']
+  const v = Array.isArray(col) ? col[0] : undefined
+  return typeof v === 'number' ? v : undefined
+}
+
+/** The codes that decide the effects: the current reading and today's daily forecast code. */
+export function weatherCodes(
+  weather: { current?: unknown; daily?: unknown } | null | undefined,
+): number[] {
   const c = weather?.current as Record<string, unknown> | null | undefined
-  const code = c?.['weather_code']
-  return snowMode(typeof code === 'number' ? code : undefined)
+  const cur = c?.['weather_code']
+  return [typeof cur === 'number' ? cur : undefined, firstCode(weather?.daily)].filter(
+    (x): x is number => x !== undefined,
+  )
+}
+
+/** Snow mode when the current weather or today's forecast has snow (the stronger wins). */
+export function snowModeOf(
+  weather: { current?: unknown; daily?: unknown } | null | undefined,
+): SnowMode {
+  return weatherCodes(weather).map(snowMode).reduce(stronger, 'none')
 }
